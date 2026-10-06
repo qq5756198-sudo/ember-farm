@@ -1,0 +1,35 @@
+.supply-planner,.supply-panel{margin:14px 0;border-color:#867951;background:linear-gradient(120deg,#303a2d,#252f28)}
+.supply-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.supply-title h3{margin:0}
+.supply-tag{display:inline-block;color:#edcf87;font-size:13px;line-height:1.5}
+.supply-picker,.supply-form{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:14px 0}
+.supply-form label,.supply-picker{font-size:14px;color:#d8dcc9}
+.supply-form label{display:grid;gap:6px;flex:1 1 175px;min-width:0}
+.supply-picker select{flex:1 1 200px;min-width:0}
+.supply-panel select,.supply-planner select,.supply-panel input{min-height:44px;max-width:100%;font-size:14px;background:#1e2b25;color:#f0e6cb;border:1px solid #67725b;border-radius:6px;padding:8px}
+.supply-materials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.supply-materials article,.supply-plan-list article{border:1px solid #50614c;border-radius:8px;padding:12px;background:#202b2480;min-width:0}
+.supply-materials article>div:first-child{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.supply-materials p,.supply-choice p{font-size:14px;line-height:1.65;margin:8px 0}
+.supply-materials small{display:block;line-height:1.6;color:#c1cbb5}
+.supply-done{color:#b4d89a}
+.supply-status,.supply-shortage{border-left:3px solid #cdb976;background:#17241e66;padding:10px 12px;line-height:1.7;font-size:14px;overflow-wrap:anywhere}
+.supply-plan-list{display:grid;gap:10px;margin:14px 0}
+.supply-panel details{margin:16px 0;border-top:1px solid #52604d;padding-top:14px}
+.supply-panel summary{cursor:pointer;min-height:36px;color:#ecd397}
+.supply-choice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}
+.supply-choice>div{border:1px solid #52604d;border-radius:6px;padding:10px;min-width:0}
+.supply-choice>div.chosen{border-color:#d8bd76;background:#46523666}
+.supply-cooperation{margin:22px 0}
+.supply-panel button,.supply-planner button,.supply-cooperation button{min-height:44px;white-space:normal;line-height:1.45;max-width:100%;overflow-wrap:anywhere}
+.supply-planner .missing{color:#f1aa85}
+.supply-cooperation h4{font-size:16px;line-height:1.6}
+.supply-cooperation .rebuild-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr))}
+@media(max-width:650px){.supply-materials,.supply-choice{grid-template-columns:1fr}
+.supply-picker{display:grid;grid-template-columns:minmax(0,1fr)}
+.supply-picker button{width:100%}
+.supply-form{align-items:stretch}
+.supply-form>button{flex:1 1 100%}
+.supply-materials article,.supply-panel{padding:12px}
+.supply-plan-list .button-row>*{flex:1 1 130px}}
+@media(prefers-reduced-motion:reduce){.supply-panel *,.supply-planner *{scroll-behavior:auto}}

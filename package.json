@@ -1,0 +1,9 @@
+{
+  "name": "ember-farm",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:ui": "node scripts/check-ui-controller.mjs"
+  }
+}

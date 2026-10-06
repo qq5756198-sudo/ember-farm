@@ -1,0 +1,88 @@
+余烬农场：完整源码与开发交接
+导出日期：2026-10-06
+
+一、请先确认实际起点
+当前实际游戏：v0.12.0「路与目标」。
+代码快照：619e3b932652648d382d22bfe7bace7898351633。
+现有在线地址：https://ember-farm.qq5756198.chatgpt.site
+原站点项目：appgprj_6abf490ef69c8191926bf1cb6ac2e989。
+本交接包保留当前仓库全部已跟踪文件；不含 .git 历史、安装依赖、平台凭据、浏览器个人存档。
+“联盟前哨”大改造仅完成设计并获得用户同意，尚未实施。请不要把计划写成已完成。
+根目录 README.md 沿用历史版本说明，当前事实以 dist/version.js、docs/releases/v0.12.0.md 和实际代码为准。
+
+二、哪些文件是真正源码
+这不是只含压缩产物的发布包。dist/ 中的 JavaScript 是可直接编辑的 ES modules，CSS/HTML 和像素素材也全部包含。
+入口：dist/index.html → dist/game.js。
+状态与系统继承链（从底层到游戏实际入口）：
+engine.js → expansion.js → frontier.js → rebuild.js → supply.js → echoes.js → districts.js → beyond.js → guidance-engine.js。
+game.js 实际使用 guidance-engine.js 的 Engine、beyond-renderer.js 的 Renderer。
+修改基础系统前检查各层覆盖的方法、freshState、migrateState、serialize / parse 的配合，避免绕开后续版本能力。
+*-data.js：配方、地图、人物、事件、任务等配置。
+*-ui.js：对应操作界面与动作路由；game.js 负责标题、设置、输入与总控制。
+wayfinding.js：当前世界地图和本地地图。atlas.js 为已有地图能力的一部分，不要只改旧入口。
+guidance-data.js / guidance-ui.js / guidance-engine.js：任务引导、目标定位、真实状态判定与保存。
+player-session.js：正式存档、备份、偏好、导入恢复。
+*-renderer.js、*-art.js、dist/assets/：Canvas 绘制、程序生成像素场景、全部五张 PNG 图集。
+docs/：既有迭代记录、发布记录、设计与待验证事项。
+tests/：自动化回归测试；scripts/：控制器检查、绘制检查和历史进度页生成。
+
+三、运行与验证
+无运行时后端，也不需要打包构建。请使用 HTTP 服务，不要双击 index.html 以 file:// 打开。
+在解压后的项目根目录运行：
+  python3 -m http.server 8000 --directory dist
+Windows 若没有 python3 命令，可使用：
+  python -m http.server 8000 --directory dist
+然后打开：http://localhost:8000
+仅试玩不需要安装 Node 依赖。
+
+自动化测试需要支持 node:test 的 Node.js。本次使用 Node v24.19.0、Python 3.12.14。
+  npm test
+UI 控制器脚本另依赖 @napi-rs/canvas；原仓库 package.json 没有记录这项环境依赖，换电脑后先安装：
+  npm install --no-save @napi-rs/canvas@0.1.100
+  npm run test:ui
+该 UI 脚本使用 DOM 替身与原生 Canvas，不等同真实浏览器界面验收。
+本次导出重新执行结果：npm test 348 / 348 通过；npm run test:ui 通过。
+尚未完成的真实浏览器检查：1366×768、1920×1080、触屏、200% 缩放的布局、遮挡、滚动、焦点和字体。
+
+四、保护已有进度
+玩家存档存在玩家自己的浏览器 localStorage，不在源码仓库，也没有随本 ZIP 自动导出。
+请先在原试玩地址进入“设置 → 存档与备份 → 导出存档”，另可“导出历史与恢复备份”。
+换网址、端口或浏览器后，进入新版本“设置 → 导入存档”恢复。仅复制源代码不会复制个人进度。
+正式存档键：ember-farm-save-v1。
+备份键：ember-farm-backup-v1。
+设置键：ember-farm-preferences-v1。
+替换前检查点：ember-farm-before-new-v1、ember-farm-before-import-v1。
+旧 demo 历史档由 player-session.js 的 HISTORY_KEYS 保留，不能自动拿它们覆盖正式档。
+增加字段时做兼容迁移；已有资源、田地、建筑、人物、地区、章节与设备状态应完整保留。
+
+五、现有内容与产品方向
+六大玩法：农业供给、生产工程、远征收复、居民生活、防御战斗、调查复兴。
+十五张地图：余烬农场、幸存者集市、废弃居民区、旧医院、工业仓库、溪谷试验田、旧站商街、雨巷住区、检疫科研园、北线货运站、雾松林场、沉湾船坞、地底避难城、白霜气象站、余晖档案岛。
+保留 HTML/Canvas、像素风、单人经营、正式存档、统一高难度；不要添加难度选择，也不要把已提高的难度再次乘 1.5。
+玩家反复反馈：操作复杂、功能用途不清、地图像管理面板、界面遮挡。
+v0.12.0 已重点处理这些问题：地图只负责地名、路线、目标和开放条件；任务解释为何做、怎么做、获得什么；主目标加少量可选行动。
+后续不能恢复密集管理仪表盘式地图，不能为了简化删掉既有玩法或玩家成果。
+开发清单、出处、测试路线与实现说明留在 docs，不放入玩家界面。
+
+六、接续已批准方案
+完整方案：handoff/联盟前哨_大改造设计方案.txt。
+用户已同意按方案改造，随后因额度原因转交其他模型；本包没有开始修改游戏。
+建议继续按原定三轮顺序交付：
+  v0.13.0「联盟来信」：前两幕、联盟联络、故事化新手任务、首位协作居民、旧档兼容。
+  v0.14.0「商路与火光」：医疗、工业、运输、灰隼团与第三至第六幕。
+  v0.15.0「寒潮之后」：寒潮、污染调查、远域故事与长期经营。
+先读方案的任务、真实收益、可见变化、验收标准，再改现有系统。不要只换角色名与大段文案。
+所有奖励、工作、资源扣除、生产和运输必须调用真实系统，并处理材料不足、背包满、重复点击、失败重试与保存恢复。
+关键依赖：余晖档案岛既有入口受 r.ended、船坞渡船、白霜方位等条件限制；第六幕应兼容完成旧区域广播及 r.ended，第八幕是扩展调查和新广播，不能互为解锁前置。具体以方案和代码核实。
+
+七、发布与交付
+dist/ 是静态托管目录，.openai/hosting.json 保留原项目标识。
+原网址发布需要原平台的站点权限；此包不包含账户权限或部署令牌。
+若接手环境有原站点权限，验证后更新原地址；若没有，请给本地可运行版本、可用的新预览链接或修改包，不要声称已覆盖原站点。
+每轮界面标题角落和设置显示真实版本号，更新 dist/version.js 及 docs 的变更与待验证清单。
+保留实际测试结果；不能把 DOM 替身、Canvas 绘制或代码静态审查当作浏览器实测。
+
+八、包的完整性
+CHECKSUMS.sha256 记录包内文件的 SHA-256（不包含校验清单本身）。
+EXPORT_MANIFEST.json 记录仓库基线、原始源文件数量和导出核验结果。
+源文件逐字节保留；本次只增加交接文档，不改变游戏、不发布新版本。

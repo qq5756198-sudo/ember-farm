@@ -1,0 +1,287 @@
+import {Engine as CoreEngine, freshState as coreFreshState} from './engine.js';
+import {CROPS,ITEMS,BUILDINGS,RECIPES,REGIONS,TRADERS,WEAPONS,ZOMBIES,WORLD} from './data.js';
+import {TRAITS,SPECS,TECH,PROJECTS,RESIDENTS,WEATHER,EVENTS,STORIES,REP_TIERS,DIALOGUES,HORDE_DIRECTIONS,ENCOUNTERS} from './expansion-data.js';
+
+const copy=v=>JSON.parse(JSON.stringify(v));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
+const weatherFor=day=>WEATHER[(day-1)%WEATHER.length];
+function colonyDefaults(day=1) {
+  return {reputation:0,ordersDay:0,orders:[],projects:{},residents:[],specializations:{},genes:{},
+    production:[],buffs:[],technologies:{},researchCredits:0,researchOffers:[],relationships:{food:{trust:0,talkDay:0,giftDay:0,claimed:[]},mechanic:{trust:0,talkDay:0,giftDay:0,claimed:[]}},
+    stall:[],stallClock:0,stallLog:[],energy:0,workClock:0,residentMealsDay:0,freeMealDay:0,toolLevel:1,
+    visits:{},salvaged:{},fishClock:0,fishing:null,fishTrapDays:{},animals:{chicken:false,goat:false,feedDay:0,ready:{},claimedDay:0},
+    event:null,eventLog:[],nextEventDay:Math.max(2,day+1),nextHordeDay:0,hordeTheme:0,clinicDay:0,metrics:{orders:0,fish:0,salvage:0},lastNotice:'',
+    water:24,waterCapacity:24,geneLibrary:{},autoMeals:false,marketBoosts:[],stallCursor:0,encounters:{},pendingEncounter:null,
+    recoveryUntil:0,rng:Math.floor(Math.random()*2147483646)+1};
+}
+export function migrateState(state) {
+  const defaults=colonyDefaults(state.day);const legacy=!state.expansionVersion;if(legacy)state.weather=weatherFor(state.day);
+  state.colony={...defaults,...state.colony,relationships:{...defaults.relationships,...state.colony?.relationships},animals:{...defaults.animals,...state.colony?.animals},metrics:{...defaults.metrics,...state.colony?.metrics}};
+  state.expansionVersion=3;
+  if(state.stats.rescued && !state.colony.residents.some(r=>r.id==='medic')) state.colony.residents.push({id:'medic',role:'medic',fed:false,status:'等待工作餐'});
+  if(state.stats.hordes>0&&!state.colony.nextHordeDay&&state.horde.phase==='won')state.colony.nextHordeDay=state.day+3;
+  for(const [crop,trait]of Object.entries(state.colony.genes))state.colony.geneLibrary[crop]??=[trait];
+  for(const r of state.colony.residents){r.priorities??=Object.fromEntries(['farmer','mechanic','medic','guard'].map(role=>[role,role===r.role?1:0]));r.x??=755+state.colony.residents.indexOf(r)*65;r.y??=350;r.target??={x:r.x,y:r.y};}
+  for(const p of state.plots)if(p.wateredDay===state.day&&p.waterUnits==null)p.waterUnits=p.trait==='abundant'?2:1;
+  return state;
+}
+export function freshState(difficulty='casual') {return migrateState(coreFreshState(difficulty));}
+
+export class Engine extends CoreEngine {
+  constructor(state=freshState(),notify=()=>{}) {super(migrateState(state),notify);this.ensureOrders();this.ensureResearchOffers();}
+  get c(){return this.s.colony;}
+  hasBuilding(type){return this.s.buildings.some(b=>b.type===type&&b.hp>0);}
+  projectStage(id){return this.c.projects[id]||0;}
+  projectDone(id){return this.projectStage(id)>=PROJECTS[id].stages.length;}
+  spec(skill,id){return this.c.specializations[skill]===id;}
+  isNight(){return this.s.minute>=1110||this.s.minute<360;}
+  buff(id){return this.c.buffs.some(b=>b.id===id&&b.remaining>0);}
+  effectiveCost(cost){return Object.fromEntries(Object.entries(cost).map(([id,n])=>[id,this.spec('manufacturing','economy')?Math.max(1,Math.floor(n*.8)):n]));}
+  random(){this.c.rng=this.c.rng*16807%2147483647;return (this.c.rng-1)/2147483646;}
+  shuffle(values){const out=[...values];for(let i=out.length-1;i>0;i--){const j=Math.floor(this.random()*(i+1));[out[i],out[j]]=[out[j],out[i]];}return out;}
+  quantityForCost(id,farm=this.s.region==='farm'){return this.qty(id,farm)+(CROPS[id]?this.qty('hardy_'+id,farm)+this.qty('fine_'+id,farm):0);}
+  costPlan(cost,farm=this.s.region==='farm',variants=true){const plan={};for(const [id,n]of Object.entries(cost)){let left=n;const ids=variants&&CROPS[id]?[id,'hardy_'+id,'fine_'+id]:[id];for(const key of ids){const used=Math.min(left,Math.max(0,this.qty(key,farm)-(plan[key]||0)));if(used){plan[key]=(plan[key]||0)+used;left-=used;}}if(left)return null;}return plan;}
+  afford(cost){return !!this.costPlan(cost);}
+  pay(cost,farm=this.s.region==='farm',variants=true){const plan=this.costPlan(cost,farm,variants);if(!plan)return false;for(const [id,n]of Object.entries(plan)){const bag=Math.min(this.s.inventory[id]||0,n);if(bag){this.s.inventory[id]-=bag;if(!this.s.inventory[id])delete this.s.inventory[id];}const stock=n-bag;if(stock){this.s.storage[id]-=stock;if(!this.s.storage[id])delete this.s.storage[id];}}this.lastPayment=plan;return true;}
+  spend(cost){return this.pay(cost);}
+  putStorage(bundle){for(const [id,n] of Object.entries(bundle))this.s.storage[id]=(this.s.storage[id]||0)+n;}
+  takeFarm(cost){return this.pay(cost,true);}
+  forecast(){return [0,1,2].map(n=>({day:this.s.day+n,weather:weatherFor(this.s.day+n)}));}
+  residentsCapacity(){return 1+this.s.buildings.filter(b=>b.type==='bed'&&b.hp>0).length;}
+  residentActive(r){const guard=(r.workRole==='guard'||r.role==='guard')&&['warning','active'].includes(this.s.horde.phase),awake=this.s.minute>=360&&this.s.minute<1320;return r.fed&&this.c.residents.indexOf(r)<this.residentsCapacity()&&r.role!=='rest'&&(awake||guard);}
+
+  ensureOrders() {
+    if(this.c.ordersDay===this.s.day)return;
+    const templates=[{title:'公共餐桌的萝卜',cost:{radish:6},trader:'food'},{title:'暖一暖这一天',cost:{stew:1},trader:'food'},{title:'维修物资',cost:{wood:8,scrap:3},trader:'mechanic'}];
+    if(this.s.day>=2)templates.push({title:'新鲜土豆',cost:{potato:6},trader:'food'},{title:'防守补给',cost:{bandage:2},trader:'mechanic'});
+    if(this.projectDone('market')||this.c.reputation>=30)templates.push({title:'罐头储备',cost:{jam:2},trader:'food'},{title:'豆类采购',cost:{bean:6},trader:'food'},{title:'集市配送',cost:{parcel:1},trader:'mechanic'});
+    this.c.ordersDay=this.s.day;
+    this.c.orders=[0,1,2].map(i=>{const t=templates[(i+(this.s.day-1)*2)%templates.length];return {...copy(t),id:'order-'+this.s.day+'-'+i,money:Math.round(Object.entries(t.cost).reduce((sum,[id,n])=>sum+(ITEMS[id].sell||5)*n,0)*1.45)+15,rep:10,accepted:false,done:false};});
+    const life=[];if(this.c.metrics.fish>0)life.push({title:'池塘鲜鱼订单',cost:{fish:2},trader:'food'},{title:'雨日蓝背鱼餐',cost:{riverMeal:1},trader:'food'},{title:'夜鱼药膳储备',cost:{nightMeal:1},trader:'food'});
+    if(this.c.animals.chicken)life.push({title:'诊所的鸡蛋早餐',cost:{egg:2},trader:'food'});if(this.c.animals.goat)life.push({title:'公共餐桌的羊奶',cost:{milk:1},trader:'food'},{title:'暖胃玉米粥',cost:{milkMeal:1},trader:'food'});
+    if(life.length){const t=life[(this.s.day-1)%life.length],i=2;this.c.orders[i]={...copy(t),id:'order-'+this.s.day+'-'+i,money:Math.round(Object.entries(t.cost).reduce((sum,[id,n])=>sum+(ITEMS[id].sell||5)*n,0)*1.45)+15,rep:10,accepted:false,done:false};}
+  }
+  acceptOrder(id){const o=this.c.orders.find(o=>o.id===id);if(!o||o.done||o.accepted)return false;if(this.c.orders.filter(o=>o.accepted).length>=2){this.toast('每天最多接两份订单，明天会有新订单。');return false;}o.accepted=true;this.toast('已接单：'+o.title);return true;}
+  deliverOrder(id){const o=this.c.orders.find(o=>o.id===id);if(!o||!o.accepted||o.done)return false;if(!this.spend(o.cost)){this.toast('订单材料不足。','warn');return false;}o.done=true;this.s.money+=o.money;this.addReputation(o.rep);this.c.relationships[o.trader].trust+=5;this.c.metrics.orders++;this.toast('交付完成 · '+o.money+'金币 · 声望+'+o.rep,'gold');this.emit('quest');return true;}
+  contributeProject(id){const p=PROJECTS[id],stage=this.projectStage(id);if(!p||stage>=p.stages.length||this.s.region!=='farm')return false;if(!this.spend(p.stages[stage].cost)){this.toast('这一阶段的材料还没准备齐。','warn');return false;}this.c.projects[id]=stage+1;this.addReputation(15);this.grantResearch(1);if(this.projectDone(id)){if(id==='bridge')this.c.toolLevel=Math.max(2,this.c.toolLevel);if(id==='water')for(const plot of this.s.plots)if(plot.crop)plot.wateredDay=this.s.day;this.toast(p.name+'完成 · '+p.reward,'gold');}else this.toast(p.name+'第一阶段完成，营地正在恢复。','gold');this.assignRegion();this.emit('quest');return true;}
+  grantResearch(n){this.c.researchCredits+=n;this.ensureResearchOffers();}
+  addReputation(n){const old=this.c.reputation;this.c.reputation+=n;const earned=Math.floor(this.c.reputation/30)-Math.floor(old/30);if(earned>0)this.grantResearch(earned);}
+  ensureResearchOffers(){const pool=Object.keys(TECH).filter(id=>!this.c.technologies[id]);this.c.researchOffers=this.c.researchOffers.filter(id=>pool.includes(id));if(!this.c.researchOffers.length&&pool.length)this.c.researchOffers=this.shuffle(pool).slice(0,3);}
+  chooseTech(id){if(!TECH[id]||this.c.technologies[id]||this.c.researchCredits<1||!this.c.researchOffers.includes(id))return false;this.c.researchCredits--;this.c.technologies[id]=true;this.c.researchOffers=[];this.ensureResearchOffers();this.toast('获得蓝图 · '+TECH[id].name,'gold');this.emit('quest');return true;}
+  researchTech(id){if(!TECH[id]||this.c.technologies[id]||this.s.region!=='farm')return false;if(this.s.money<80||!this.afford(TECH[id].cost)){this.toast('研究需要80金币与对应材料。','warn');return false;}this.spend(TECH[id].cost);this.s.money-=80;this.c.technologies[id]=true;this.ensureResearchOffers();this.toast('研究完成 · '+TECH[id].name,'gold');this.emit('craft');return true;}
+  chooseSpec(skill,id){if(!SPECS[skill]?.some(s=>s.id===id)||this.level(skill)<3||this.c.specializations[skill])return false;this.c.specializations[skill]=id;this.toast('选择专精 · '+SPECS[skill].find(s=>s.id===id).name,'gold');return true;}
+  resetSpec(skill){if(!this.c.specializations[skill]||this.s.money<60)return false;this.s.money-=60;delete this.c.specializations[skill];this.toast('专精已重置，可重新选择。');return true;}
+  geneCost(crop,trait){return {[crop]:2,...(this.spec('agriculture','quality')||this.c.geneLibrary[crop]?.includes(trait)?{}:{parts:1})};}
+  breedTrait(crop,trait){if(!CROPS[crop]||!TRAITS[trait]||!this.stationAvailable('breeder'))return false;const cost=this.geneCost(crop,trait),out={['seed_'+crop+'_'+trait]:2};if(!this.canAdd(out)||!this.spend(cost)){this.toast('育种需要2份作物；首次研究特性还需1零件。','warn');return false;}this.add(out);this.c.genes[crop]=trait;this.c.geneLibrary[crop]??=[];if(!this.c.geneLibrary[crop].includes(trait))this.c.geneLibrary[crop].push(trait);this.xp('agriculture',8);this.toast('培育成功 · '+TRAITS[trait].name+CROPS[crop].name+'种子 ×2','gold');this.emit('craft');return true;}
+  plotWatered(p){return (p.wateredDay===this.s.day&&(p.waterUnits??(p.trait==='abundant'?2:1))>=(TRAITS[p.trait]?.water||1))||(p.trait==='hardy'&&p.wateredDay>0&&p.wateredDay>=this.s.day-1);}
+  waterPlot(p){p.wateredDay=this.s.day;p.waterUnits=TRAITS[p.trait]?.water||1;p.care=(p.care||0)+1;}
+  canRefillWater(){return this.s.region==='farm'&&(this.projectDone('water')||distance(this.s.player,{x:880,y:300})<95||this.s.buildings.some(b=>b.type==='rain'&&b.hp>0&&distance(this.s.player,b)<95));}
+  refillWater(){if(!this.canRefillWater())return false;this.c.water=this.c.waterCapacity;this.toast('浇水壶已补满 · '+this.c.water+'格水');return true;}
+  toolPlot(p,id){if(id==='water'&&p.crop&&!this.plotDebris(p)){if(this.paused||this.plotWatered(p))return false;const need=TRAITS[p.trait]?.water||1;if(this.c.water<need){this.toast('浇水壶缺水：到旧水井或雨桶补水；N生活页也可补满。','warn');return false;}this.c.water-=need;this.waterPlot(p);this.s.player.stamina=Math.max(0,this.s.player.stamina-need*2);this.particlesAt(p.x,p.y,'#89c6d0',14);this.emit('water');return true;}const planted=ITEMS[id]?.type==='seed'&&!p.crop;const ok=super.toolPlot(p,id);if(ok&&planted&&p.crop){p.trait=ITEMS[id].trait||null;p.care=0;p.waterUnits=0;p.qualityRoll=this.s.stats.planted%5;}return ok;}
+  harvest(p,worker=false){if(!p.crop||p.growth<CROPS[p.crop].grow)return false;const crop=p.crop,trait=p.trait,t=TRAITS[trait],n=Math.max(1,CROPS[crop].yield+(this.level('agriculture')>=3?1:0)+(t?.yield||0)+(this.spec('agriculture','yield')?2:0));const fine=trait!=='hardy'&&(p.care||0)>0&&((p.qualityRoll||0)<(this.spec('agriculture','quality')?3:1));const bundle=trait==='hardy'?{['hardy_'+crop]:n}:fine?{[crop]:Math.max(1,n-1),['fine_'+crop]:1}:{[crop]:n};if(trait)bundle['seed_'+crop+'_'+trait]=1;if(worker)this.putStorage(bundle);else if(!this.add(bundle))return false;p.crop=null;p.growth=0;p.wateredDay=0;p.waterUnits=0;p.trait=null;this.s.stats.harvested++;this.xp('agriculture',worker?3:7);this.milestone('harvest');if(!worker){this.toast(CROPS[crop].name+'收获'+(fine?' · 获得优质收成':'')+(trait?' · 已留下1颗特性种子':''),'gold');this.particlesAt(p.x,p.y,'#e8d886',18);this.emit('harvest');}return true;}
+
+  recipeReason(r){if(r.id==='parcel'&&!this.c.technologies.canner)return'需要罐装工艺蓝图';const reason=super.recipeReason({...r,cost:this.effectiveCost(r.cost)});if(reason)return reason;if(r.minutes&&this.c.production.length>=12)return'加工队列已满，先领取成品';if(['flashlight','crowbar'].includes(r.id)&&this.qty(r.id))return'已经拥有这件工具';return'';}
+  batchReason(id,n){const r=RECIPES.find(r=>r.id===id);if(!r?.minutes||![1,3,5].includes(n))return'无效批次数量';const reason=this.recipeReason(r);if(reason)return reason;if(this.c.production.length+n>12)return'加工队列没有足够空位';const total=Object.fromEntries(Object.entries(this.effectiveCost(r.cost)).map(([k,v])=>[k,v*n]));return this.afford(total)?'':'批量材料不足';}
+  craftBatch(id,n=1){const r=RECIPES.find(r=>r.id===id),reason=this.batchReason(id,n);if(reason){this.toast(reason,'warn');return false;}const cost=this.effectiveCost(r.cost);for(let i=0;i<n;i++){this.spend(cost);this.c.production.push({id:'job-'+this.s.idCounter++,recipe:id,out:copy(r.out),cost:copy(this.lastPayment),station:r.station,remaining:r.minutes,ready:false});}this.toast('加入加工队列 · '+ITEMS[Object.keys(r.out)[0]].name+' ×'+n+'批');this.emit('craft');return true;}
+  craft(id){const r=RECIPES.find(r=>r.id===id);if(!r)return false;if(r.minutes)return this.craftBatch(id,1);const reason=this.recipeReason(r);if(reason){this.toast(reason,'warn');return false;}const cost=this.effectiveCost(r.cost);if(!this.canAdd(r.out))return false;this.spend(cost);this.add(r.out);this.xp('manufacturing',6);if(id==='pistol'){this.s.stats.gunsCrafted++;this.s.slot=4;this.milestone('gun');}this.toast('制作完成 · '+ITEMS[Object.keys(r.out)[0]].name,'gold');this.emit('craft');return true;}
+  collectProduction(id){const j=this.c.production.find(j=>j.id===id);if(!j||!j.ready||this.s.region!=='farm')return false;if(!this.add(j.out))return false;this.c.production=this.c.production.filter(x=>x!==j);this.xp('manufacturing',5);this.toast('加工成品已领取。','gold');this.emit('loot');return true;}
+  collectAllProduction(){let any=false;for(const job of [...this.c.production])if(job.ready)any=this.collectProduction(job.id)||any;return any;}
+  cancelProduction(id){const j=this.c.production.find(j=>j.id===id);if(!j||j.ready||this.s.region!=='farm')return false;const r=RECIPES.find(r=>r.id===j.recipe),back=j.cost||this.effectiveCost(r.cost);if(!this.add(back))return false;this.c.production=this.c.production.filter(x=>x!==j);this.toast('已取消加工，材料返还。');return true;}
+  processProduction(n){for(const station of new Set(this.c.production.map(j=>j.station))){const lanes=this.s.buildings.filter(b=>b.type===station&&b.hp>0).map(()=>n);if(!lanes.length)continue;for(const j of this.c.production.filter(j=>j.station===station&&!j.ready)){const lane=lanes.indexOf(Math.max(...lanes));if(lanes[lane]<=0)break;const used=Math.min(j.remaining,lanes[lane]);j.remaining=Math.max(0,j.remaining-used);lanes[lane]-=used;if(j.remaining<=.00001){j.ready=true;j.remaining=0;this.c.lastNotice='加工完成，可回营地领取';}}}}
+  startBuild(type){const b=BUILDINGS[type];if(b?.tech&&!this.c.technologies[b.tech]){this.toast('需要蓝图：'+TECH[b.tech].name,'warn');return false;}return super.startBuild(type);}
+  buildReason(type,x,y){const reason=super.buildReason(type,x,y);if(reason)return reason;if([{x:695,y:300},{x:820,y:300},{x:1190,y:550},{x:1390,y:480}].some(p=>Math.abs(p.x-x)<BUILDINGS[type].w/2+70&&Math.abs(p.y-y)<BUILDINGS[type].h/2+55))return'这里是公共重建预留地';return'';}
+  consume(id){const it=ITEMS[id];if(!it?.buff)return super.consume(id);if(!this.qty(id))return false;const old=this.c.buffs.find(b=>b.id===it.buff);if(!old&&this.c.buffs.length>=2){this.toast('最多同时保留两种料理效果，可在营地解除一种。');return false;}this.s.inventory[id]--;if(!this.s.inventory[id])delete this.s.inventory[id];this.s.player.hp=clamp(this.s.player.hp+(it.heal||0),0,100);this.s.player.hunger=clamp(this.s.player.hunger+(it.food||0),0,100);this.s.player.stamina=clamp(this.s.player.stamina+20,0,100);if(old)old.remaining=240;else this.c.buffs.push({id:it.buff,remaining:240});this.toast('料理效果生效 · '+it.name);this.emit('eat');return true;}
+  removeBuff(id){this.c.buffs=this.c.buffs.filter(b=>b.id!==id);}
+  damagePlayer(n){return super.damagePlayer(n*(this.buff('defense')?.8:1));}
+  reloadWeapon(){const ok=super.reloadWeapon();if(ok&&this.spec('combat','guns')){this.reload.t*=.75;this.reload.max=this.reload.t;}return ok;}
+  attack(target){const id=this.currentItem(),start=this.bullets.length,stamina=this.s.player.stamina;this.meleeAttack=id==='club';let ok;try{ok=super.attack(target);}finally{this.meleeAttack=false;}if(ok){if(WEAPONS[id]?.mag&&this.spec('combat','guns'))for(const b of this.bullets.slice(start))b.damage*=1.15;if(id==='club'&&this.spec('combat','melee'))this.s.player.stamina=Math.min(100,stamina-1);}return ok;}
+  hurtEnemy(e,n,a,meta={}){if(this.meleeAttack&&this.spec('combat','melee'))n*=1.35;if(this.trapHit&&this.spec('manufacturing','defense'))n*=1.35;return super.hurtEnemy(e,n,a,meta);}
+  claimQuest(id){const ok=super.claimQuest(id);if(ok){if(['harvest','parts'].includes(id))this.grantResearch(1);if(id==='defend')this.grantResearch(2);if(id==='gun'&&this.s.horde.phase==='warning')this.s.horde.direction=0;}return ok;}
+  claimSide(id){const ok=super.claimSide(id);if(ok)this.c.relationships[id==='order'?'food':'mechanic'].trust+=10;return ok;}
+
+  dialogue(trader){const pool=DIALOGUES[trader];return pool?.[(this.s.day-1)%pool.length];}
+  reply(trader,index){const rel=this.c.relationships[trader],o=this.dialogue(trader)?.options[index];if(!rel||!o||rel.talkDay===this.s.day)return false;if(o.cost&&!this.spend(o.cost)){this.toast('回应所需物资不足。','warn');return false;}rel.talkDay=this.s.day;rel.trust+=o.trust;rel.lastReply=o.result;this.boostDemand(o.demand,TRADERS[trader].name);this.toast(o.result+' · 信任+'+o.trust,'gold');return true;}
+  talk(trader){const options=this.dialogue(trader)?.options;if(!options)return false;return this.reply(trader,options.findIndex(o=>!o.cost));}
+  gift(trader){const r=this.c.relationships[trader],cost=trader==='food'?{stew:1}:{parts:1};if(!r||r.giftDay===this.s.day||!this.spend(cost))return false;r.giftDay=this.s.day;r.trust+=8;this.toast('礼物已送出 · 信任+8','gold');return true;}
+  claimStory(trader,index){const story=STORIES[trader]?.[index],rel=this.c.relationships[trader];if(!story||rel.trust<story.at||rel.claimed.includes(index))return false;if(story.reward&&!this.add(story.reward))return false;rel.claimed.push(index);this.toast('人物故事已记录 · '+story.title,'gold');return true;}
+  traderStock(id){const stock=super.traderStock(id),entry=this.s.opened['shop-'+id];if(id==='food'&&this.c.relationships.food.trust>=20&&!entry.special){stock.seedPumpkin=(stock.seedPumpkin||0)+3;stock.seedHerb=(stock.seedHerb||0)+3;entry.special=true;}entry.repTiers??=[];for(const tier of REP_TIERS)if(this.c.reputation>=tier.at&&!entry.repTiers.includes(tier.at)){for(const [item,n]of Object.entries(tier[id]))stock[item]=(stock[item]||0)+n;entry.repTiers.push(tier.at);}return stock;}
+  price(trader,id,direction){const value=super.price(trader,id,direction);return direction==='buy'&&this.projectDone('market')?Math.ceil(value*.9):value;}
+  trade(trader,id,n,direction){const ok=super.trade(trader,id,n,direction);if(ok&&this.c.relationships[trader])this.c.relationships[trader].trust+=Math.min(1,n*.1);return ok;}
+  listStall(item,n,band){if(this.s.region!=='farm'||!this.hasBuilding('stall')||!ITEMS[item]?.sell||ITEMS[item].protected||this.c.stall.length>=3||!Number.isInteger(n)||n<1||n>99||!['cheap','fair','premium'].includes(band))return false;if(!this.pay({[item]:n},true,false)){this.toast('商品数量不足。');return false;}this.c.stall.push({id:'stall-'+this.s.idCounter++,item,qty:n,band});this.toast('商品已上架，来客会在游戏时间内购买。');return true;}
+  withdrawStall(id){const slot=this.c.stall.find(x=>x.id===id);if(!slot||this.s.region!=='farm'||!this.add({[slot.item]:slot.qty}))return false;this.c.stall=this.c.stall.filter(x=>x!==slot);return true;}
+  stallPrice(slot){return Math.round(ITEMS[slot.item].sell*({cheap:1,fair:1.25,premium:1.65}[slot.band]||1));}
+  boostDemand(category,source){if(!category)return;this.c.marketBoosts=this.c.marketBoosts.filter(b=>b.source!==source&&b.untilDay>=this.s.day);this.c.marketBoosts.push({category,source,untilDay:this.s.day+1});this.c.marketBoosts=this.c.marketBoosts.slice(-4);}
+  marketDemand(){return {category:['crop','food','resource'][(this.s.day-1)%3],items:[...new Set(this.c.orders.filter(o=>o.accepted&&!o.done).flatMap(o=>Object.keys(o.cost)))],boosts:this.c.marketBoosts.filter(b=>b.untilDay>=this.s.day)};}
+  demanded(id){const d=this.marketDemand(),base=ITEMS[id]?.cropBase||id,category=CROPS[base]?'crop':ITEMS[id]?.type;return category===d.category||d.items.includes(base)||d.items.includes(id)||d.boosts.some(b=>b.category===category);}
+  setStallPrice(id,band){const slot=this.c.stall.find(x=>x.id===id);if(!slot||this.s.region!=='farm'||!['cheap','fair','premium'].includes(band))return false;slot.band=band;this.toast('已调整'+ITEMS[slot.item].name+'售价 · '+this.stallPrice(slot)+'金币');return true;}
+  processStall(n){if(!this.hasBuilding('stall'))return;this.c.stallClock+=n;while(this.c.stallClock>=90){this.c.stallClock-=90;const slots=this.c.stall.filter(x=>x.qty>0);if(!slots.length)break;const slot=slots[this.c.stallCursor++%slots.length],wanted=this.demanded(slot.item),buys=slot.band!=='premium'||wanted||this.c.stallCursor%4===0;const line=buys?'售出'+ITEMS[slot.item].name+' · +'+this.stallPrice(slot)+'金币 · '+(wanted?'需求旺盛':slot.band==='cheap'?'顾客觉得很划算':'价格可以接受'):'顾客觉得'+ITEMS[slot.item].name+'偏贵，调低价格或等待需求';this.c.stallLog.unshift(line);this.c.stallLog=this.c.stallLog.slice(0,6);if(buys){slot.qty--;this.s.money+=this.stallPrice(slot);this.s.stats.sold++;}this.c.stall=this.c.stall.filter(x=>x.qty>0);}}
+
+  recruit(id){if(!RESIDENTS[id]||this.c.residents.some(r=>r.id===id))return false;const role=RESIDENTS[id].defaultRole,x=755+this.c.residents.length*65,y=350;this.c.residents.push({id,role,fed:false,status:'等待床位与工作餐',priorities:Object.fromEntries(['farmer','mechanic','medic','guard'].map(job=>[job,job===role?1:0])),x,y,target:{x,y}});if(id==='medic')this.s.stats.rescued=1;this.toast(RESIDENTS[id].name+'已获救 · 在营地安排床位和工作','gold');this.xp('exploration',15);this.assignRegion();this.emit('rescue');return true;}
+  setRole(id,role){const r=this.c.residents.find(r=>r.id===id);if(!r||!['farmer','mechanic','medic','guard','rest'].includes(role))return false;r.role=role;r.workRole=role;r.priorities=Object.fromEntries(['farmer','mechanic','medic','guard'].map(job=>[job,job===role?1:0]));r.status=role==='rest'?'休整中':'等待工作';return true;}
+  setPriority(id,role,value){const r=this.c.residents.find(r=>r.id===id);if(!r||!['farmer','mechanic','medic','guard'].includes(role)||!Number.isInteger(value)||value<0||value>3)return false;r.priorities[role]=value;const first=Object.keys(r.priorities).filter(k=>r.priorities[k]>0).sort((a,b)=>r.priorities[a]-r.priorities[b])[0];r.role=first||'rest';r.status='工作优先级已更新';return true;}
+  toggleAutoMeals(){this.c.autoMeals=!this.c.autoMeals;this.toast(this.c.autoMeals?'每天早晨自动从背包或仓库供应工作餐。':'已改为手动供应工作餐。');return true;}
+  feedResidents(auto=false){if(this.s.region!=='farm'&&!auto)return false;let fed=0;for(const r of this.c.residents){if(r.fed||this.c.residents.indexOf(r)>=this.residentsCapacity())continue;const free=this.projectDone('clinic')&&this.c.freeMealDay!==this.s.day;if(free||this.takeFarm({bread:1})){if(free)this.c.freeMealDay=this.s.day;r.fed=true;r.status='准备工作';fed++;}}if(fed)this.toast('已提供'+fed+'份工作餐。');else if(!auto)this.toast('需要干粮和足够床位。');return fed>0;}
+  clinicHeal(){if(!this.projectDone('clinic')||this.c.clinicDay===this.s.day||this.s.region!=='farm')return false;this.c.clinicDay=this.s.day;this.s.player.hp=100;this.toast('诊所治疗完成。','gold');return true;}
+  droneServiceLimit(){return 10;}
+  workHour(){
+    const s=this.s;
+    if(this.c.autoMeals&&s.minute>=360&&s.minute<1320)this.feedResidents(true);
+    for(const b of s.buildings.filter(b=>b.hp>0)) {
+      if(this.automationBlocked?.(b))continue;
+      if(b.type==='solar'&&s.minute>=360&&s.minute<1110)this.c.energy=Math.min(100,this.c.energy+(s.weather==='高温'?5:s.weather==='暴雨'?1:3));
+      if(b.type==='irrigation'&&this.irrigationConnected(b))for(const p of s.plots)if(p.crop&&distance(p,b)<300&&!this.plotWatered(p))this.waterPlot(p);
+      if(b.type==='drone'&&this.c.energy>=2){if((b.wear||0)>=this.droneServiceLimit()&&!this.serviceAutomation(b,false))continue;const p=s.plots.find(p=>p.crop&&p.growth>=CROPS[p.crop].grow&&distance(p,b)<300);if(p){const crop=p.crop,trait=p.trait;this.harvest(p,true);this.c.energy-=2;b.wear=(b.wear||0)+1;const seed=trait?'seed_'+crop+'_'+trait:CROPS[crop].seed;if(this.takeFarm({[seed]:1})){p.crop=crop;p.trait=trait;p.growth=0;this.waterPlot(p);p.qualityRoll=s.stats.planted++%5;}}}
+    }
+    const guardAssignments=new Set();
+    for(const r of this.c.residents){
+      const workBefore=this.workSnapshot?.();const home={x:755+this.c.residents.indexOf(r)*65,y:350};
+      if(!this.residentActive(r)){r.status=this.c.residents.indexOf(r)>=this.residentsCapacity()?'缺少床位':!r.fed?'等待工作餐':s.minute<360||s.minute>=1320?'回屋睡觉':'休整中';r.target=home;r.workRole='rest';continue;}
+      const jobs=Object.keys(r.priorities).filter(k=>r.priorities[k]>0).sort((a,b)=>r.priorities[a]-r.priorities[b]);let worked=false;
+      for(const role of jobs){
+        if(role==='farmer'){const mature=s.plots.find(p=>p.crop&&p.growth>=CROPS[p.crop].grow),dry=s.plots.filter(p=>p.crop&&!this.plotWatered(p)).slice(0,r.id==='farmer'?5:3);if(mature){this.harvest(mature,true);r.target={x:mature.x+26,y:mature.y};r.status='收成与留种已存入仓库';worked=true;}else if(dry.length){for(const p of dry)this.waterPlot(p);r.target={x:dry[0].x+26,y:dry[0].y};r.status='浇水'+dry.length+'株';worked=true;}}
+        if(role==='mechanic'){const damaged=s.buildings.find(b=>b.hp<BUILDINGS[b.type].hp);if(damaged&&this.takeFarm({wood:1})){damaged.hp=Math.min(BUILDINGS[damaged.type].hp,damaged.hp+(r.id==='mechanic'?35:20)+(this.hasBuilding('repairpost')?15:0));this.navRevision++;r.target={x:damaged.x,y:damaged.y+55};r.status='维修'+BUILDINGS[damaged.type].name;worked=true;}}
+        if(role==='medic'&&s.region==='farm'&&s.player.hp<100){s.player.hp=Math.min(100,s.player.hp+(r.id==='medic'?12:8));r.target={x:695,y:355};r.status='诊所医务照料';worked=true;}
+        if(role==='guard'){const tower=s.buildings.find(b=>b.type==='tower'&&b.hp>0&&!guardAssignments.has(b.id));if(tower){guardAssignments.add(tower.id);r.target={x:tower.x,y:tower.y+40};r.status='驻守瞭望塔';worked=true;}}
+        if(worked){r.workRole=role;break;}
+      }
+      if(!worked){r.workRole='rest';r.status='优先任务完成，营地休整';r.target=home;}
+      this.recordResidentWork?.(r,workBefore,this.workSnapshot?.());
+    }
+  }
+  irrigationLinks(){const live=this.s.buildings.filter(b=>b.hp>0),sources=live.filter(b=>b.type==='rain');if(this.projectDone('water'))sources.push({id:'water-tower',type:'water',x:1190,y:550});const pending=live.filter(b=>b.type==='irrigation'),connected=[...sources],links=[];let changed=true;while(changed){changed=false;for(const b of [...pending]){const source=connected.find(x=>distance(x,b)<(x.type==='water'?600:250));if(source){connected.push(b);pending.splice(pending.indexOf(b),1);links.push({from:source,to:b});changed=true;}}}return links;}
+  irrigationConnected(b){return this.irrigationLinks().some(link=>link.to.id===b.id);}
+  serviceAutomation(building,manual=true){const b=typeof building==='string'?this.s.buildings.find(b=>b.id===building):building;if(!b||b.type!=='drone'||(manual&&this.s.region!=='farm')||!b.wear||!this.takeFarm({parts:1}))return false;b.wear=0;if(manual)this.toast('无人机已维护 · 零件-1');return true;}
+  automationStatus(b){if(b.hp<=0)return'损坏，需要维修';if(b.type==='solar')return this.isNight()?'夜间停机':this.s.weather==='暴雨'?'暴雨：每小时1电力':'白天发电中';if(b.type==='irrigation')return this.irrigationConnected(b)?'管网已接通':'缺少水源：连接雨桶或相邻灌溉站';if(b.type==='drone'){if((b.wear||0)>=this.droneServiceLimit()&&!this.quantityForCost('parts',true))return'需1零件维护';if(this.c.energy<2)return'电力不足';return'可作业 · 保养 '+(b.wear||0)+'/'+this.droneServiceLimit();}return'';}
+  updateResidents(dt){if(this.s.region!=='farm')return;this.residentPaths??=new Map();for(const r of this.c.residents){const target=r.target;if(!target)continue;const d=distance(r,target);if(d>8){let path=this.residentPaths.get(r.id);const goal=target.x+','+target.y;if(!path||path.goal!==goal||path.revision!==this.navRevision||path.until<this.s.playSeconds){path={goal,revision:this.navRevision,until:this.s.playSeconds+2,points:this.pathTo(r,target)};this.residentPaths.set(r.id,path);}if(path.points[0]&&distance(r,path.points[0])<18)path.points.shift();const next=this.lineClear(r,target)?target:path.points[0];if(next){const a=Math.atan2(next.y-r.y,next.x-r.x);r.facing=a;this.moveEntity(r,Math.cos(a)*45*dt,Math.sin(a)*45*dt);}}const o=this.objects.find(o=>o.type==='resident'&&o.resident===r.id);if(o){o.x=r.x;o.y=r.y;}}}
+  startFishing(bait=false){const pond=this.objects.find(o=>o.type==='pond');if(this.s.region!=='farm'||!pond||distance(pond,this.s.player)>95||this.c.fishing)return false;if(bait&&!this.spend({bean:1})){this.toast('鱼饵需要1份豆类。');return false;}this.c.fishing={elapsed:0,biteAt:2.2+(this.c.metrics.fish%3)*.6,phase:'wait',bait};this.toast('鱼线已抛出 · 出现“咬钩”时按 E！');this.emit('closeMenu');this.paused=false;return true;}
+  hookFish(){const f=this.c.fishing;if(!f)return false;if(f.phase!=='bite'){this.c.fishing=null;this.toast('提竿过早，鱼游走了。');return false;}const id=this.isNight()&&((this.c.metrics.fish+Number(f.bait))%2===0)?'nightFish':['小雨','暴雨'].includes(this.s.weather)||f.bait?'riverFish':'fish';if(!this.add({[id]:1}))return false;this.c.fishing=null;this.c.metrics.fish++;this.xp('exploration',3);this.toast('钓到'+ITEMS[id].name,'gold');this.emit('loot');return true;}
+  collectFishTrap(b){if((b.fishDay||0)>=this.s.day)return false;if(!this.add({fish:1}))return false;b.fishDay=this.s.day;this.toast('鱼篓收获 · 银鳞鱼+1','gold');return true;}
+  feedAnimals(){const a=this.c.animals;if(this.s.region!=='farm'||!this.hasBuilding('coop')||!a.chicken||a.feedDay===this.s.day)return false;const cost={corn:a.goat?3:1};if(!this.spend(cost)){this.toast('喂食需要玉米。');return false;}a.feedDay=this.s.day;a.remaining=240;this.toast('动物已喂食 · 4游戏小时后产出。');return true;}
+  collectAnimals(){const a=this.c.animals;if(this.s.region!=='farm'||!Object.keys(a.ready).length)return false;if(!this.add(a.ready))return false;a.ready={};a.claimedDay=this.s.day;this.toast('鸡蛋与羊奶已领取。','gold');this.emit('loot');return true;}
+  buyGoat(){const a=this.c.animals;if(a.goat||!this.hasBuilding('coop')||this.c.reputation<40||this.s.money<150)return false;this.s.money-=150;a.goat=true;this.toast('山羊已加入农场。','gold');return true;}
+  upgradeCrowbar(){if(this.s.region!=='farm'||!this.qty('crowbar')||this.c.toolLevel>=3)return false;const cost=this.c.toolLevel===1?{scrap:6,parts:2}:{scrap:10,parts:4},money=this.c.relationships.mechanic.trust>=20?40:60;if(this.s.money<money||!this.spend(cost))return false;this.s.money-=money;this.c.toolLevel++;this.toast('回收工具升至'+this.c.toolLevel+'级','gold');return true;}
+  salvageObject(o){if(!this.qty('crowbar')||this.c.toolLevel<o.level){this.toast('需要回收撬棍 Lv.'+o.level,'warn');return false;}if(this.c.salvaged[o.id]===this.s.day)return false;const loot={...o.loot};if(this.spec('exploration','salvage'))loot.parts=(loot.parts||0)+1;if(!this.add(loot,true))return false;this.c.salvaged[o.id]=this.s.day;this.c.metrics.salvage++;this.s.stats.partsFound+=loot.parts||0;this.noise.push({x:o.x,y:o.y,r:420,t:4});this.s.player.stamina=Math.max(0,this.s.player.stamina-8);this.xp('exploration',5);this.toast('拆解完成 · 声响可能引来感染者','gold');this.emit('hoe');return true;}
+  chooseEvent(index){const active=this.c.event,def=active&&EVENTS[active.type],option=def?.options[index];if(!option||active.done)return false;if(option.cost&&!this.afford(option.cost)||option.money&&this.s.money<option.money){this.toast('所需物资不足。');return false;}if(option.reward&&!this.canAdd(option.reward))return false;if(option.cost)this.spend(option.cost);if(option.money)this.s.money-=option.money;if(option.reward)this.add(option.reward);if(option.water)for(const p of this.s.plots)if(p.crop)this.waterPlot(p);if(option.token)this.grantResearch(option.token);if(option.demand)this.boostDemand(option.demand,def.title);this.addReputation(option.rep||0);active.done=true;this.c.eventLog.unshift({day:this.s.day,title:def.title,result:option.label});this.c.eventLog=this.c.eventLog.slice(0,8);this.toast(def.title+' · '+option.label,'gold');this.emit('quest');return true;}
+  encounter(){return this.objects.find(o=>o.type==='encounter'&&o.id===this.c.pendingEncounter);}
+  encounterReason(o,index){const option=o&&ENCOUNTERS[o.variant]?.options[index];if(!option)return'无效选择';if(this.c.encounters[o.id])return'已经处理';if(option.tool&&(!this.qty('crowbar')||this.c.toolLevel<option.tool))return'需要回收撬棍 Lv.'+option.tool;if(option.cost&&!this.afford(option.cost))return'物资不足';if(option.reward&&!this.canAdd(option.reward))return'背包空间不足';return'';}
+  chooseEncounter(index){const o=this.encounter(),option=o&&ENCOUNTERS[o.variant]?.options[index];if(!o||distance(o,this.s.player)>115)return false;const reason=this.encounterReason(o,index);if(reason){this.toast(reason,'warn');return false;}if(option.cost)this.spend(option.cost);if(option.reward)this.add(option.reward,true);if(option.noise)this.noise.push({x:o.x,y:o.y,r:460,t:5});for(let i=0;i<(option.enemies||0);i++){const point={x:o.x+40+i*25,y:o.y+50};if(!this.blocked(point.x,point.y,true,13))this.enemies.push(this.enemy(i?'runner':'slow',point.x,point.y));}this.addReputation(option.rep||0);this.c.encounters[o.id]={day:this.s.day,choice:index,opened:!option.skip};this.c.pendingEncounter=null;this.xp('exploration',option.skip?1:8);this.navRevision++;this.toast(option.label+' · 已记录探索选择','gold');this.emit('closeMenu');this.paused=false;return true;}
+  nightInfo(){const night=this.isNight(),minutes=night?(this.s.minute<360?360-this.s.minute:1800-this.s.minute):1110-this.s.minute;return {night,minutes:Math.ceil(Math.max(0,minutes)),torch:!!this.qty('flashlight'),scout:this.spec('exploration','scout'),risk:night?'视野缩小，感染者追击'+(this.spec('exploration','scout')?'保持正常速度':'加快15%'):'白天视野正常'};}
+  retreat(){return this.s.region==='farm'?false:this.travel('farm');}
+
+  assignRegion(){
+    super.assignRegion();const s=this.s,c=s.colony;
+    if(s.region==='farm'){
+      this.objects.push({type:'pond',name:'林边池塘 · 钓鱼',x:1040,y:820,icon:25,atlas:2});
+      for(const [i,r]of c.residents.entries())this.objects.push({type:'resident',resident:r.id,name:RESIDENTS[r.id]?.name||'居民',x:r.x??755+i*65,y:r.y??350,icon:RESIDENTS[r.id]?.icon||56});
+      if(this.projectStage('water'))this.objects.push({type:'project',project:'water',name:this.projectDone('water')?'修复的水塔':'水塔施工中',x:1190,y:550,icon:42,atlas:15});
+      if(this.projectStage('clinic'))this.objects.push({type:'project',project:'clinic',name:this.projectDone('clinic')?'营地诊所':'诊所施工中',x:695,y:300,icon:39});
+      if(this.projectStage('market'))this.objects.push({type:'project',project:'market',name:this.projectDone('market')?'营地公共集市':'集市施工中',x:820,y:300,icon:57});
+      if(this.projectStage('bridge'))this.objects.push({type:'project',project:'bridge',name:this.projectDone('bridge')?'修复的旧桥':'旧桥施工中',x:1390,y:480,icon:55});
+    }else if(s.region!=='market'){
+      const variant=(c.visits[s.region]||0)%3;
+      const point=variant===0?{x:730,y:450}:variant===1?{x:760,y:800}:{x:1400,y:440};
+      this.objects.push({type:'poi',id:s.region+'-optional-'+variant,name:['幸存者留下的包裹','后院物资交换点','路旁救援储备'][variant],x:point.x,y:point.y,icon:40,loot:[{wood:6,bread:2},{parts:2,scrap:6},{ammo:8,bandage:1}][variant]});
+      this.objects.push({type:'salvage',id:s.region+'-shelf',name:'废弃货架',x:690,y:790,icon:48,level:1,loot:{wood:8,scrap:4}},{type:'salvage',id:s.region+'-car',name:'报废车辆',x:835,y:410,icon:50,level:2,loot:{scrap:10,parts:3,circuit:1}},{type:'salvage',id:s.region+'-machine',name:'旧设备',x:1360,y:830,icon:51,level:3,loot:{parts:6,scrap:8,circuit:3}});
+      const roomPoint=[{x:770,y:520},{x:1400,y:815},{x:700,y:395}][variant];this.objects.push({type:'encounter',id:s.region+'-room-'+s.day,variant,name:ENCOUNTERS[variant].name,x:roomPoint.x,y:roomPoint.y,icon:40});
+      this.objects=this.objects.filter(o=>o.type!=='rescue');
+      const rescueId=s.region==='hospital'?'medic':s.region==='residential'?'farmer':'mechanic';
+      if(!c.residents.some(r=>r.id===rescueId))this.objects.push({type:'survivor',resident:rescueId,name:'救援 · '+RESIDENTS[rescueId].name,x:s.region==='residential'?720:1340,y:s.region==='residential'?720:550,icon:RESIDENTS[rescueId].icon});
+      if(s.region==='residential'&&!c.animals.chicken)this.objects.push({type:'animalRescue',name:'走失的鸡',x:845,y:770,icon:34,atlas:0});
+      if(this.isNight())this.objects.push({type:'nightCache',id:s.region+'-night-'+s.day,name:this.qty('flashlight')?'手电照出的夜间储备':'月光下的药草',x:800,y:840,icon:30,loot:this.qty('flashlight')?{nightHerb:2,parts:2,ammo:8}:{nightHerb:1}});
+    }
+  }
+  colliders(enemy=false){const list=super.colliders(enemy);if(this.s.colony&&['residential','hospital','warehouse'].includes(this.s.region)){const v=(this.c.visits[this.s.region]||0)%3;if(v===1)list.push({x:695,y:565,w:100,h:35,variant:true});if(v===2)list.push({x:660,y:860,w:155,h:30,variant:true});const room=this.objects?.find(o=>o.type==='encounter');if(room&&!this.c.encounters[room.id]?.opened&&v===0)list.push({x:room.x+50,y:room.y-25,w:16,h:50,variant:true,door:true});}return list;}
+  context(o){if(this.c.fishing)return this.c.fishing.phase==='bite'?'咬钩了！按 E 提竿':'等待咬钩 · E 提前提竿';if(o?.type==='plot'&&o.plot.crop&&o.plot.growth<CROPS[o.plot.crop].grow&&!this.plotWatered(o.plot))return'浇灌'+CROPS[o.plot.crop].name+' · 消耗'+(TRAITS[o.plot.trait]?.water||1)+'格水';if(o?.type==='well')return'水井补水 · 水量 '+this.c.water+'/'+this.c.waterCapacity;if(o?.type==='encounter')return this.c.encounters[o.id]?'侧室已处理：'+(this.c.encounters[o.id].opened?'已经打开':'保持关闭'):'调查'+o.name+' · 可以选择放弃';if(o?.type==='sign')return'打开营地经营';if(o?.type==='salvage')return this.c.salvaged[o.id]===this.s.day?'今天已拆解':o.name+' · 需要撬棍 Lv.'+o.level;if(o?.type==='survivor')return o.name;if(o?.type==='resident')return'安排'+o.name+'的工作';if(o?.type==='pond')return'池塘钓鱼';if(o?.type==='animalRescue')return'救回走失的鸡';if(o?.type==='project')return'查看'+o.name;if(['poi','nightCache'].includes(o?.type))return this.s.opened[o.id]?.day===this.s.day?'已搜索':o.name;return super.context(o);}
+  interact(){
+    if(this.paused)return;
+    if(this.c.fishing){this.hookFish();return;}
+    const o=this.nearestObject();if(!o)return super.interact();
+    if(o.type==='well'){this.refillWater();this.s.player.stamina=100;this.emit('water');return;}
+    if(o.type==='building'&&o.building.type==='rain'&&o.building.hp>0){this.c.water=this.c.waterCapacity;this.s.player.stamina=100;for(const p of this.s.plots)if(p.crop&&distance(p,o.building)<220)this.waterPlot(p);this.toast('水壶补满，雨桶附近的作物已浇灌。');this.emit('water');return;}
+    if(o.type==='encounter'){if(this.c.encounters[o.id]){this.toast('这里的选择已经记录。');return;}this.c.pendingEncounter=o.id;this.emit('menu',{menu:'camp',tab:'explore'});return;}
+    if(o.type==='plot'&&o.plot.crop&&o.plot.growth<CROPS[o.plot.crop].grow&&!this.plotWatered(o.plot)){this.toolPlot(o.plot,'water');return;}
+    if(o.type==='sign'){this.emit('menu',{menu:'camp'});return;}
+    if(['resident','project'].includes(o.type)){this.emit('menu',{menu:'camp',tab:o.type==='resident'?'residents':'projects'});return;}
+    if(o.type==='pond'){this.emit('menu',{menu:'camp',tab:'life'});return;}
+    if(o.type==='survivor'){this.recruit(o.resident);return;}
+    if(o.type==='animalRescue'){this.c.animals.chicken=true;this.toast('鸡已救回 · 建造鸡舍后可以喂养','gold');this.assignRegion();return;}
+    if(o.type==='salvage'){this.salvageObject(o);return;}
+    if(['poi','nightCache'].includes(o.type)){if(this.s.opened[o.id]?.day===this.s.day)return;if(o.type==='nightCache'&&!this.isNight()){this.toast('这些物资只在夜间出现。');return;}if(!this.add(o.loot,true))return;this.s.opened[o.id]={day:this.s.day};this.s.stats.partsFound+=o.loot.parts||0;this.xp('exploration',6);this.toast('发现额外物资 · '+o.name,'gold');this.emit('loot');return;}
+    if(o.type==='building'&&['stall','coop','solar','drone','irrigation','greenhouse','bed','tower','lure','repairpost','canner','fishTrap'].includes(o.building.type)){
+      if(o.building.hp<BUILDINGS[o.building.type].hp*.7){this.emit('menu',{menu:'building',buildingId:o.building.id});return;}
+      if(o.building.type==='fishTrap'){if(!this.collectFishTrap(o.building))this.toast('今天的鱼篓已经收过了。');return;}
+      this.emit('menu',{menu:'camp',tab:o.building.type==='stall'?'stall':o.building.type==='coop'?'life':o.building.type==='canner'?'production':['bed','tower','repairpost'].includes(o.building.type)?'residents':'research'});return;
+    }
+    super.interact();
+  }
+  buildingContext(b){if(['stall','coop','solar','drone','irrigation','greenhouse','bed','tower','lure','repairpost','canner','fishTrap'].includes(b.type))return BUILDINGS[b.type].name+' · 查看经营 / 维修';return super.buildingContext(b);}
+  travel(id){if(!REGIONS[id])return false;const from=this.s.region;if(id===from)return true;if(this.s.horde.phase==='active'&&id!=='farm')return super.travel(id);this.travelMinuteOverride=this.projectDone('bridge')||this.spec('exploration','scout');const ok=super.travel(id);this.travelMinuteOverride=false;if(ok){if(['residential','hospital','warehouse'].includes(id)){const prior=this.c.visits[id]??-1;this.c.visits[id]=prior+1;}this.c.fishing=null;this.c.pendingEncounter=null;this.assignRegion();}return ok;}
+
+  cropGrowthRate(p){return 1;}
+  grow(n){
+    for(const p of this.s.plots){if(!p.crop||!this.plotWatered(p))continue;const trait=TRAITS[p.trait],protectedCrop=this.s.buildings.some(b=>b.type==='greenhouse'&&b.hp>0&&distance(p,b)<220);const weatherRate=protectedCrop?1:this.s.weather==='暴雨'?(p.trait==='hardy'?.8:.65):p.trait==='hardy'?1:this.s.weather==='高温'?.5:this.s.weather==='酸雨'?.3:1;p.growth=Math.min(CROPS[p.crop].grow,p.growth+n*(trait?.growth||1)*weatherRate*(protectedCrop?1.1:1)*this.cropGrowthRate(p));}
+    this.processProduction(n);this.processStall(n);
+    for(const b of this.c.buffs)b.remaining=Math.max(0,b.remaining-n);this.c.buffs=this.c.buffs.filter(b=>b.remaining>0);
+    const a=this.c.animals;if(a.remaining>0){a.remaining=Math.max(0,a.remaining-n);if(!a.remaining){a.ready.egg=(a.ready.egg||0)+2;if(a.goat)a.ready.milk=(a.ready.milk||0)+1;}}
+    this.c.workClock+=n;while(this.c.workClock>=60){this.c.workClock-=60;this.workHour();}
+  }
+  advanceMinutes(n){
+    if(this.travelMinuteOverride){n=Math.min(10,n);this.travelMinuteOverride=false;}let remaining=n;while(remaining>0){const piece=Math.min(remaining,60-this.c.workClock,1440-this.s.minute);this.s.minute+=piece;this.grow(piece);remaining-=piece;if(this.s.minute>=1440){this.s.minute=0;this.s.day++;this.onNewDay();}}
+    if(this.s.stats.hordes>0&&this.c.nextHordeDay&&this.s.day>=this.c.nextHordeDay&&this.s.horde.phase==='won'){
+      this.s.horde={phase:'warning',timer:90,remaining:Math.min(24,8+this.s.stats.hordes*2),spawnTimer:0,direction:this.s.stats.hordes%4};this.c.hordeTheme=this.s.stats.hordes%3;this.toast('新一轮尸潮预警 · '+this.hordeIntel().direction.name+' · '+this.hordeName(),'warn');
+    }
+  }
+  onNewDay(){this.s.weather=weatherFor(this.s.day);for(const p of this.s.plots)if(p.crop&&(['小雨','暴雨'].includes(this.s.weather)||this.projectDone('water')||this.s.buildings.some(b=>b.type==='rain'&&b.hp>0&&distance(p,b)<220)))this.waterPlot(p);for(const r of this.c.residents){r.fed=false;r.workRole='rest';}this.c.marketBoosts=this.c.marketBoosts.filter(b=>b.untilDay>=this.s.day);for(const [id,entry]of Object.entries(this.c.encounters))if(entry.day<this.s.day-30)delete this.c.encounters[id];if(this.s.day%2===0)for(const id of ['residential','hospital','warehouse'])if(id!==this.s.region)this.s.enemies[id]=null;this.ensureOrders();const siegeDue=this.s.stats.hordes>0&&this.c.nextHordeDay&&this.s.day>=this.c.nextHordeDay;if(this.s.day>=this.c.nextEventDay&&this.s.day>=2&&this.s.day>this.c.recoveryUntil&&!siegeDue&&!['warning','active'].includes(this.s.horde.phase)){if(!this.c.event||this.c.event.done){const names=Object.keys(EVENTS).filter(id=>id!==this.c.event?.type&&(id!=='rain'||['小雨','暴雨'].includes(this.s.weather)));this.c.event={type:names[Math.floor(this.random()*names.length)],day:this.s.day,done:false};this.c.nextEventDay=this.s.day+2+Math.floor(this.random()*2);this.toast('营地有新消息，按 N 查看。','gold');}}this.assignRegion();}
+  sleep(){if(this.s.horde.phase==='warning'){this.toast('尸潮即将到来，先准备防御。','warn');return false;}return super.sleep();}
+  waitUntilNight(){if(this.s.region!=='farm'||['warning','active'].includes(this.s.horde.phase)||this.isNight())return false;this.advanceMinutes(Math.max(0,1140-this.s.minute));this.assignRegion();this.s.player.hunger=Math.max(20,this.s.player.hunger-8);this.toast('天色渐晚 · 准备手电、料理，再决定是否外出。');this.emit('sleep');return true;}
+  hordeName(){return ['奔跑者先锋','装甲突击群','尖叫者引导群'][this.c.hordeTheme%3];}
+  hordeIntel(){const current=['warning','active'].includes(this.s.horde.phase),round=this.s.stats.hordes,index=current?(this.s.horde.direction??round%4):round%4;return {direction:HORDE_DIRECTIONS[index],theme:current?this.hordeName():['奔跑者先锋','装甲突击群','尖叫者引导群'][round%3],count:Math.min(24,8+round*2),day:this.c.nextHordeDay||this.s.day,reward:round?'胜利获得'+(100+(round+1)*25)+'金币、1蓝图凭证、2零件与12发弹药':'完成防守主线后领取首战奖励'};}
+  beginHorde(){const count=Math.min(24,8+this.s.stats.hordes*2),direction=this.s.horde.direction??this.s.stats.hordes%4;const ok=super.beginHorde();if(ok){this.s.horde.remaining=count;this.s.horde.direction=direction;this.c.nextHordeDay=0;this.enemies=this.s.enemies.farm=this.enemies.filter(e=>!e.dead);for(const r of this.c.residents)if(r.priorities.guard)r.workRole='guard';}return ok;}
+  updateHorde(dt){const h=this.s.horde;if(h.phase==='warning'){h.timer=Math.max(0,h.timer-dt);if(!h.timer)this.beginHorde();}if(h.phase==='active'&&this.s.region==='farm'){h.spawnTimer-=dt;if(h.remaining>0&&h.spawnTimer<=0){const i=h.remaining,round=this.s.stats.hordes,type=round===0?(i%3===0?'runner':'slow'):this.c.hordeTheme===1&&i%4===0?'armor':this.c.hordeTheme===2&&i%5===0?'screamer':i%3===0?'runner':'slow',point=HORDE_DIRECTIONS[h.direction??round%4].spawns[i%2];this.enemies.push(this.enemy(type,...point,true));h.remaining--;h.spawnTimer=round===0?2.6:2.2;}if(!h.remaining&&!this.enemies.some(e=>e.horde&&!e.dead)){h.phase='won';this.s.stats.hordes++;this.c.nextHordeDay=this.s.day+3;this.c.recoveryUntil=this.s.day+1;this.c.nextEventDay=Math.max(this.c.nextEventDay,this.s.day+2);if(this.s.stats.hordes>1){this.s.money+=100+this.s.stats.hordes*25;this.grantResearch(1);this.putStorage({parts:2,ammo:12});}this.milestone('horde');this.toast('第'+this.s.stats.hordes+'轮防守胜利 · 明天休整，下一轮3天后','gold');this.emit('victory');}}}
+  towerLineClear(tower,e){const d=distance(tower,e),steps=Math.ceil(d/16),walls=this.colliders(true).filter(r=>r.building!==tower&&!['fence','gate','trap','lure'].includes(r.building?.type));for(let i=1;i<steps;i++){const x=tower.x+(e.x-tower.x)*i/steps,y=tower.y+(e.y-tower.y)*i/steps;if(walls.some(r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h))return false;}return true;}
+  updateDefense(dt){if(this.s.region!=='farm')return;const guards=this.c.residents.filter(r=>(r.workRole==='guard'||r.role==='guard'&&!r.workRole)&&this.residentActive(r));if(guards.length)for(const [i,tower]of this.s.buildings.filter(b=>b.type==='tower'&&b.hp>0).slice(0,guards.length).entries()){guards[i].target={x:tower.x,y:tower.y+40};tower.shotTimer=Math.max(0,(tower.shotTimer||0)-dt);if(tower.shotTimer>0)continue;const e=this.enemies.filter(e=>!e.dead&&distance(e,tower)<320&&this.towerLineClear(tower,e)).sort((a,b)=>distance(a,tower)-distance(b,tower))[0];if(e&&this.takeFarm({ammo:1})){this.hurtEnemy(e,26*(this.spec('manufacturing','defense')?1.35:1),Math.atan2(e.y-tower.y,e.x-tower.x));tower.shotTimer=1.8;this.particlesAt(tower.x,tower.y-30,'#f3d488',4);}}
+    this.repairClock=(this.repairClock||0)+dt;if(this.repairClock>=8){this.repairClock=0;for(const station of this.s.buildings.filter(b=>b.type==='repairpost'&&b.hp>0)){const b=this.s.buildings.find(b=>b!==station&&b.hp<BUILDINGS[b.type].hp&&distance(station,b)<200);if(b&&this.takeFarm({wood:1})){b.hp=Math.min(BUILDINGS[b.type].hp,b.hp+12);this.navRevision++;}}}}
+  updateEnemy(e,dt){
+    const lure=this.s.region==='farm'&&!e.dead&&distance(e,this.s.player)>130?this.s.buildings.find(b=>b.type==='lure'&&b.hp>0&&distance(e,b)<350):null;
+    if(lure){e.cooldown=Math.max(0,e.cooldown-dt);e.flash=Math.max(0,(e.flash||0)-dt);e.state='chase';const near=this.s.buildings.find(b=>b.hp>0&&['fence','gate','lure'].includes(b.type)&&!b.open&&distance(b,e)<65);if(near&&e.cooldown<=0){near.hp=Math.max(0,near.hp-ZOMBIES[e.type].damage*2);e.cooldown=1;this.navRevision++;}const trap=this.s.buildings.find(b=>b.type==='trap'&&b.hp>0&&distance(b,e)<36);if(trap&&(e.trapCooldown||0)<=0){this.hurtEnemy(e,45*(this.spec('manufacturing','defense')?1.35:1),e.facing);trap.hp=Math.max(0,trap.hp-10);e.trapCooldown=1.5;}e.trapCooldown=Math.max(0,(e.trapCooldown||0)-dt);if(distance(e,lure)>48){e.pathTimer-=dt;if(e.pathTimer<=0||!e.path?.length){e.path=this.pathTo(e,lure);e.pathTimer=.7;}if(e.path[0]&&distance(e,e.path[0])<18)e.path.shift();const t=this.lineClear(e,lure)?lure:e.path[0];if(t){const angle=Math.atan2(t.y-e.y,t.x-e.x);e.facing=angle;this.moveEntity(e,Math.cos(angle)*ZOMBIES[e.type].speed*dt,Math.sin(angle)*ZOMBIES[e.type].speed*dt,true);}}return;}
+    if(this.s.region==='farm'&&!e.dead){const extra=this.s.buildings.find(b=>b.hp>0&&!['fence','gate','trap'].includes(b.type)&&distance(b,e)<62);if(extra&&e.cooldown<=0){extra.hp=Math.max(0,extra.hp-ZOMBIES[e.type].damage);e.cooldown=1.2;if(!extra.hp)this.navRevision++;}}
+    this.trapHit=true;try{super.updateEnemy(e,dt);}finally{this.trapHit=false;}
+    if(!e.dead&&this.isNight()&&this.s.region!=='farm'&&!this.spec('exploration','scout')&&e.state==='chase'){const a=e.facing;this.moveEntity(e,Math.cos(a)*ZOMBIES[e.type].speed*dt*.15,Math.sin(a)*ZOMBIES[e.type].speed*dt*.15,true);}
+  }
+  update(dt,input={x:0,y:0,run:false}){if(this.paused)return;const step=Math.min(.05,Math.max(0,dt)),p=this.s.player,old={x:p.x,y:p.y,stamina:p.stamina},night=this.isNight();super.update(dt,input);if(this.paused)return;const rate=(this.buff('speed')?1.2:1)*(this.s.weather==='暴雨'&&this.s.region!=='farm'?.85:1);if(rate!==1&&(input.x||input.y))this.moveEntity(p,(p.x-old.x)*(rate-1),(p.y-old.y)*(rate-1));if(this.buff('stamina')&&input.run)p.stamina=Math.min(100,p.stamina+step*4);if(this.buff('regen'))p.hp=Math.min(100,p.hp+step*.3);if(night!==this.isNight())this.assignRegion();const f=this.c.fishing;if(f){f.elapsed+=step;if(f.elapsed>=f.biteAt)f.phase='bite';if(f.elapsed>f.biteAt+1.3){this.c.fishing=null;this.toast('鱼跑掉了，再试一次吧。');}}this.updateDefense(step);this.updateResidents(step);}
+
+  static parse(text){const raw=JSON.parse(text);const state=CoreEngine.parse(text);if(raw.colony){const c=raw.colony,finite=(v,max=1e7)=>Number.isFinite(v)&&v>=0&&v<=max,bag=b=>b&&typeof b==='object'&&!Array.isArray(b)&&Object.entries(b).every(([id,n])=>ITEMS[id]&&Number.isInteger(n)&&n>=0&&n<=999999);
+      if(!finite(c.reputation)||!finite(c.energy,100)||!finite(c.researchCredits,10000)||!Array.isArray(c.production)||c.production.length>12||!Array.isArray(c.residents)||c.residents.length>Object.keys(RESIDENTS).length||!Array.isArray(c.stall)||c.stall.length>3||!Array.isArray(c.orders)||c.orders.length>3||!Array.isArray(c.buffs)||c.buffs.length>2)throw Error('营地存档损坏。');
+      for(const j of c.production)if(!RECIPES.some(r=>r.id===j.recipe&&r.minutes)||!finite(j.remaining,1440)||!bag(j.out))throw Error('加工存档损坏。');
+      for(const key of ['ordersDay','stallClock','workClock','toolLevel','nextEventDay','nextHordeDay','clinicDay','freeMealDay'])if(c[key]!=null&&!finite(c[key]))throw Error('营地数值损坏。');
+      if(!Array.isArray(c.researchOffers)||c.researchOffers.some(id=>!own(TECH,id))||!Array.isArray(c.stallLog)||!Array.isArray(c.eventLog)||!c.relationships||!c.animals||!bag(c.animals.ready||{}))throw Error('营地结构损坏。');
+      for(const id of ['food','mechanic']){const r=c.relationships[id];if(!r||!finite(r.trust)||!finite(r.talkDay)||!finite(r.giftDay)||!Array.isArray(r.claimed)||r.claimed.some(i=>!Number.isInteger(i)||i<0||i>2))throw Error('人物关系存档损坏。');}
+      for(const j of c.production)if(j.cost&&!bag(j.cost))throw Error('加工材料存档损坏。');
+      for(const slot of c.stall)if(!ITEMS[slot.item]?.sell||ITEMS[slot.item].protected||!Number.isInteger(slot.qty)||slot.qty<1||slot.qty>99||!['cheap','fair','premium'].includes(slot.band))throw Error('摊位存档损坏。');
+      for(const r of c.residents)if(!RESIDENTS[r.id]||!['farmer','mechanic','medic','guard','rest'].includes(r.role))throw Error('居民存档损坏。');
+      if(new Set(c.residents.map(r=>r.id)).size!==c.residents.length)throw Error('居民数据重复。');
+      for(const b of c.buffs)if(!['speed','defense','regen','stamina'].includes(b.id)||!finite(b.remaining,240))throw Error('料理效果存档损坏。');
+      for(const o of c.orders)if(!bag(o.cost)||!finite(o.money,10000)||!finite(o.rep,100))throw Error('订单存档损坏。');
+      for(const [id,n]of Object.entries(c.projects||{}))if(!PROJECTS[id]||!Number.isInteger(n)||n<0||n>2)throw Error('重建存档损坏。');
+      for(const [id,v]of Object.entries(c.technologies||{}))if(!TECH[id]||typeof v!=='boolean')throw Error('科技存档损坏。');
+      for(const [skill,id]of Object.entries(c.specializations||{}))if(!SPECS[skill]?.some(s=>s.id===id))throw Error('专精存档损坏。');
+      if(c.event&&!EVENTS[c.event.type])throw Error('事件存档损坏。');
+      if(c.fishing&&(!finite(c.fishing.elapsed,30)||!finite(c.fishing.biteAt,10)||!['wait','bite'].includes(c.fishing.phase)))throw Error('钓鱼存档损坏。');
+      const waterCap=raw.echoes?.benefits?.drought==='reserve'?30:24;if(c.water!=null&&(!finite(c.water,waterCap)||c.waterCapacity!==waterCap)||c.rng!=null&&(!Number.isInteger(c.rng)||c.rng<1||c.rng>2147483646)||c.workClock>=60||!Number.isInteger(c.toolLevel)||c.toolLevel<1||c.toolLevel>3)throw Error('经营数值损坏。');
+      if(c.autoMeals!=null&&typeof c.autoMeals!=='boolean'||c.stallCursor!=null&&(!Number.isInteger(c.stallCursor)||!finite(c.stallCursor)))throw Error('经营设置损坏。');
+      for(const [crop,trait]of Object.entries(c.genes||{}))if(!CROPS[crop]||!TRAITS[trait])throw Error('育种存档损坏。');
+      for(const [crop,list]of Object.entries(c.geneLibrary||{}))if(!CROPS[crop]||!Array.isArray(list)||list.length>3||list.some(t=>!TRAITS[t]))throw Error('留种存档损坏。');
+      for(const p of state.plots)if(p.trait!=null&&!TRAITS[p.trait]||p.waterUnits!=null&&(!Number.isInteger(p.waterUnits)||p.waterUnits<0||p.waterUnits>2))throw Error('作物特性损坏。');
+      for(const r of c.residents){if(r.priorities&&(typeof r.priorities!=='object'||Object.entries(r.priorities).some(([job,n])=>!['farmer','mechanic','medic','guard'].includes(job)||!Number.isInteger(n)||n<0||n>3)))throw Error('居民优先级损坏。');if(r.x!=null&&(!finite(r.x,WORLD.w)||!finite(r.y,WORLD.h))||r.target&&(!finite(r.target.x,WORLD.w)||!finite(r.target.y,WORLD.h)))throw Error('居民位置损坏。');}
+      if(c.marketBoosts&&(!Array.isArray(c.marketBoosts)||c.marketBoosts.length>4||c.marketBoosts.some(b=>!['food','crop','resource'].includes(b.category)||!finite(b.untilDay,99999)||typeof b.source!=='string'||b.source.length>100)))throw Error('市场需求损坏。');
+      for(const [id,entry]of Object.entries(c.encounters||{}))if(!/^(residential|hospital|warehouse)-room-\d+$/.test(id)||!finite(entry.day,99999)||!Number.isInteger(entry.choice)||entry.choice<0||entry.choice>2||typeof entry.opened!=='boolean')throw Error('探索记录损坏。');
+      if(c.pendingEncounter!=null&&(typeof c.pendingEncounter!=='string'||!/^(residential|hospital|warehouse)-room-\d+$/.test(c.pendingEncounter)))throw Error('探索选择损坏。');
+      if(state.horde.direction!=null&&(!Number.isInteger(state.horde.direction)||state.horde.direction<0||state.horde.direction>3))throw Error('尸潮方向损坏。');
+      for(const b of state.buildings)if(b.wear!=null&&(!Number.isInteger(b.wear)||b.wear<0||b.wear>(raw.echoes?.benefits?.loadtest==='maintenance'?12:10)))throw Error('设备维护数据损坏。');
+      if(c.animals.remaining!=null&&!finite(c.animals.remaining,240)||c.recoveryUntil!=null&&!finite(c.recoveryUntil,99999))throw Error('营地日程损坏。');
+    }
+    return migrateState(state);
+  }
+}
