@@ -1,18 +1,18 @@
-# 余烬农场 v0.17.0「远方来客」
+# 余烬农场 v0.18.0「每日抉择」
 
 单人中文 HTML/Canvas 末日经营游戏。十五张地图，农业供给、生产工程、远征收复、居民生活、防御战斗、调查复兴六种玩法共同推进家园重建。沿用像素素材和统一高难度，浏览器本地保存。
 
-原在线地址（v0.12.0）：https://ember-farm.qq5756198.chatgpt.site 。本仓库没有该站点的部署权限，v0.13.0 至 v0.17.0 都没有覆盖原地址。
+原在线地址（v0.12.0）：https://ember-farm.qq5756198.chatgpt.site 。本仓库没有该站点的部署权限，v0.13.0 至 v0.18.0 都没有覆盖原地址。
 
 ## 本轮
 
-按扩展设计方案实施 v0.17 的内容，并处理上一轮的三条已知限制：
-- 玩法：夜里的抉择、今日险地、麦穗的本事；
-- 人物：彭姐（邻营同盟）、贺满仓（建设垫付，不收利息）；
-- 界面：金色路径与屏幕边缘箭头、窄屏快捷菜单、无障碍选项、键位自定义与手柄；
-- 已知限制：灰隼团会打居民与围栏、援建队员干活有动作、出货价每天浮动。
+按《每日抉择事件方案》实施：从第 2 天起，每天清晨 06:00 弹出一张三选一的事件卡，选完才开始新的一天。
+- 一百个事件：9 条连贯事件（36 个，结局可选长期加成）+ 64 个独立事件（农事、拾荒、营地、交易、危机、奇遇），第 2–5 天只出 13 个新手事件；
+- 每个选项写清花费、得到、成功率与后续，缺东西的选项写明原因；第 3 段起奖励 ×1.5，第 6 段起 ×2；读档不重抽；
+- 效果包括物资、增益、延后回礼与债、场景里的补给点和标记点、招来的感染者、援建队新人、尸潮与灰隼团的时间；
+- 任务手记的“今日抉择”条、抉择记录页、顶栏增益标签。
 
-详见 [docs/releases/v0.17.0.md](docs/releases/v0.17.0.md)。上一轮（节庆、食堂与六位人物）见 [docs/releases/v0.16.0.md](docs/releases/v0.16.0.md)。
+详见 [docs/releases/v0.18.0.md](docs/releases/v0.18.0.md)。上一轮（夜里的抉择、险地、彭姐与贺满仓）见 [docs/releases/v0.17.0.md](docs/releases/v0.17.0.md)。
 
 标题页提供继续游戏、开始新游戏、设置、制作人员。版本号显示在标题页角落与设置底部。
 
@@ -26,7 +26,7 @@
 
 ## 验证
 
-- `npm test`：514 项游戏、存档、迁移、故事、前哨、寒潮、四季与远方检查。
+- `npm test`：544 项游戏、存档、迁移、故事、前哨、寒潮、四季、远方与每日抉择检查。
 - `npm run test:ui`：实际 game.js 控制器 + DOM 替身 + 原生 Canvas（需先 `npm install --no-save @napi-rs/canvas@0.1.100`）。不等同浏览器 CSS 验收。
 - 本轮另用无头 Chromium 检查了桌面、触摸模拟与 200% 缩放等效视口；真机与其他浏览器仍待验证。完整清单见 [docs/ITERATION-LEDGER.md](docs/ITERATION-LEDGER.md)。
 
@@ -36,11 +36,11 @@ WASD/方向键移动，E 交互（几样东西挨在一起时先选，数字键�
 
 ## 保存
 
-正式键 `ember-farm-save-v1`，备用键 `ember-farm-backup-v1`，设置键 `ember-farm-preferences-v1`。新游戏和导入分别保留 `ember-farm-before-new-v1`、`ember-farm-before-import-v1` 检查点；旧档第一次升级到 v0.13.0 及以后版本前保留 `ember-farm-before-alliance-v1`；v0.14.0–v0.17.0 没有新增存档键，只在存档里新增 `outpost`、`winter`、`seasons`、`far` 字段，偏好键里多存无障碍选项与改过的键位。设置中可导出当前家园或历史与恢复文件，并通过导入选择恢复检查点。旧版独立试玩槽位保持原字节，不会覆盖正式家园。
+正式键 `ember-farm-save-v1`，备用键 `ember-farm-backup-v1`，设置键 `ember-farm-preferences-v1`。新游戏和导入分别保留 `ember-farm-before-new-v1`、`ember-farm-before-import-v1` 检查点；旧档第一次升级到 v0.13.0 及以后版本前保留 `ember-farm-before-alliance-v1`；v0.14.0–v0.18.0 没有新增存档键，只在存档里新增 `outpost`、`winter`、`seasons`、`far`、`daily` 字段，偏好键里多存无障碍选项与改过的键位。设置中可导出当前家园或历史与恢复文件，并通过导入选择恢复检查点。旧版独立试玩槽位保持原字节，不会覆盖正式家园。
 
 ## 文件
 
-- `dist/`：可直接编辑的 ES modules、样式、页面与像素素材。game.js 通过 `campaign.js`、`campaign-ui.js`、`campaign-renderer.js` 取当前主线的引擎、界面和画面。v0.16.0 新增 `seasons-data.js`（节庆、相邻加成、食堂、人物数值）、`seasons.js`（节庆、食堂、夜谈、学徒、借宿、六位人物与选择条的引擎层）、`seasons-ui.js`（广场、日历、人物关系、对话、物品链接、“新”标记）、`seasons-renderer.js`（广场、装饰、客人、壁画与新人物）、`seasons.css`。v0.15.0 新增 `winter-data.js`（法令、寒潮、展柜与人物数值）、`winter-story.js`（第七、八段步骤）、`winter.js`（寒潮、法令、生活水准、电台、档案馆与地区广播的引擎层）、`winter-ui.js`（法令簿、电台、档案馆、成就册、警报栏、地图活化）、`winter-renderer.js`（火炉、暖区、雪景、需求气泡与新人物）、`winter.css`。v0.14.0 新增 `outpost-data.js`（数值、人物与文案）、`outpost-story.js`（第三至第六段步骤）、`outpost.js`（生存消耗、玩法、人物与灰隼团的引擎层）、`outpost-ui.js`（对话、出货箱、商队、审查、总结、战报等菜单）、`outpost-renderer.js`（场景、枪手、气泡、防线视图）、`outpost.css`。v0.13.0 新增 `alliance-data.js`（来信、步骤与文案）、`alliance.js`（故事与援建队员引擎层）、`alliance-ui.js`（任务手记三行卡与故事按钮）、`alliance-renderer.js`（场景表现）、`alliance.css`。
+- `dist/`：可直接编辑的 ES modules、样式、页面与像素素材。game.js 通过 `campaign.js`、`campaign-ui.js`、`campaign-renderer.js` 取当前主线的引擎、界面和画面。v0.18.0 新增 `daily-data.js`（一百个事件、连贯事件、长期加成与增益）、`daily.js`（出卡、结算、延后送达与各处加成的引擎层）、`daily-ui.js`（事件卡、结果页、手记条、抉择记录、顶栏标签）、`daily-renderer.js`（补给点与标记点）、`daily.css`。v0.17.0 新增 `farlands-*` 一组文件（夜里的抉择、险地、麦穗、彭姐、贺满仓、无障碍与键位）。v0.16.0 新增 `seasons-data.js`（节庆、相邻加成、食堂、人物数值）、`seasons.js`（节庆、食堂、夜谈、学徒、借宿、六位人物与选择条的引擎层）、`seasons-ui.js`（广场、日历、人物关系、对话、物品链接、“新”标记）、`seasons-renderer.js`（广场、装饰、客人、壁画与新人物）、`seasons.css`。v0.15.0 新增 `winter-data.js`（法令、寒潮、展柜与人物数值）、`winter-story.js`（第七、八段步骤）、`winter.js`（寒潮、法令、生活水准、电台、档案馆与地区广播的引擎层）、`winter-ui.js`（法令簿、电台、档案馆、成就册、警报栏、地图活化）、`winter-renderer.js`（火炉、暖区、雪景、需求气泡与新人物）、`winter.css`。v0.14.0 新增 `outpost-data.js`（数值、人物与文案）、`outpost-story.js`（第三至第六段步骤）、`outpost.js`（生存消耗、玩法、人物与灰隼团的引擎层）、`outpost-ui.js`（对话、出货箱、商队、审查、总结、战报等菜单）、`outpost-renderer.js`（场景、枪手、气泡、防线视图）、`outpost.css`。v0.13.0 新增 `alliance-data.js`（来信、步骤与文案）、`alliance.js`（故事与援建队员引擎层）、`alliance-ui.js`（任务手记三行卡与故事按钮）、`alliance-renderer.js`（场景表现）、`alliance.css`。
 - `tests/`、`scripts/`：自动化测试与控制器检查。
 - `docs/`：发行记录、持续完善清单与历史资料；`handoff/`：已批准的改造方案。
 
