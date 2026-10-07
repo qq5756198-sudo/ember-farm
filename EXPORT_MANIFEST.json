@@ -1,10 +1,11 @@
 {
   "game": "余烬农场",
-  "version": "v0.16.0",
-  "edition": "前哨四季",
+  "version": "v0.17.0",
+  "edition": "远方来客",
   "exported_date": "2026-10-07",
-  "source_file_count": 134,
+  "source_file_count": 143,
   "source_files": [
+    ".gitignore",
     ".openai/hosting.json",
     "EXPORT_MANIFEST.json",
     "OPUS_PROMPT.txt",
@@ -49,6 +50,11 @@
     "dist/engine.js",
     "dist/expansion-data.js",
     "dist/expansion.js",
+    "dist/farlands-data.js",
+    "dist/farlands-renderer.js",
+    "dist/farlands-ui.js",
+    "dist/farlands.css",
+    "dist/farlands.js",
     "dist/frontier-actions.js",
     "dist/frontier-data.js",
     "dist/frontier-renderer.js",
@@ -106,6 +112,7 @@
     "docs/development/v0.13.0-ledger.md",
     "docs/development/v0.14.0-ledger.md",
     "docs/development/v0.15.0-ledger.md",
+    "docs/development/v0.16.0-ledger.md",
     "docs/releases/v0.10.0.md",
     "docs/releases/v0.11.0.md",
     "docs/releases/v0.12.0.md",
@@ -113,6 +120,7 @@
     "docs/releases/v0.14.0.md",
     "docs/releases/v0.15.0.md",
     "docs/releases/v0.16.0.md",
+    "docs/releases/v0.17.0.md",
     "docs/releases/v0.6.0.md",
     "docs/releases/v0.7.0.md",
     "docs/releases/v0.8.0.md",
@@ -130,6 +138,7 @@
     "tests/echoes-campaign.test.mjs",
     "tests/echoes.test.mjs",
     "tests/expansion.test.mjs",
+    "tests/farlands.test.mjs",
     "tests/frontier.test.mjs",
     "tests/game.test.mjs",
     "tests/guidance.test.mjs",
@@ -140,16 +149,16 @@
     "tests/supply.test.mjs",
     "tests/winter.test.mjs"
   ],
-  "source_bytes": 14239010,
-  "source_copy": "modified from the v0.12.0 handoff through v0.16.0; see docs/releases/v0.13.0.md to v0.16.0.md",
+  "source_bytes": 14400409,
+  "source_copy": "modified from the v0.12.0 handoff through v0.17.0; see docs/releases/v0.13.0.md to v0.17.0.md",
   "checks": {
     "automated_tests": {
-      "passed": 477,
+      "passed": 514,
       "failed": 0
     },
-    "ui_controller": "passed, DOM substitute + native Canvas, including alliance, outpost, winter and seasons sections",
+    "ui_controller": "passed, DOM substitute + native Canvas, including alliance, outpost, winter, seasons and farlands sections",
     "real_browser_layout": "headless Chromium: 1366x768, 1920x1080, 390x844 and 360x740 touch emulation, 683x384@2x (200% zoom equivalent); real devices, Firefox and Safari not verified",
-    "independent_review": "v0.15 and v0.16 each: code review + randomized play with save/parse after every step; findings fixed with regression tests; reruns 0 failures (v0.16 to day 600+)",
+    "independent_review": "v0.15, v0.16 and v0.17 each: code review + randomized play with save/parse after every step; findings fixed with regression tests; reruns 0 failures",
     "relative_js_imports_and_html_files": "resolved"
   },
   "personal_player_save_included": false,
@@ -158,8 +167,9 @@
     "edition": "路与目标",
     "source_commit": "619e3b932652648d382d22bfe7bace7898351633"
   },
-  "alliance_overhaul_status": "acts 1-8 complete (v0.13.0-v0.15.0); expansion plan v0.14-v0.16 items implemented; v0.17.0 pending",
+  "alliance_overhaul_status": "acts 1-8 complete (v0.13.0-v0.15.0); expansion plan v0.15-v0.17 items all implemented",
   "upkeep_change": "player hunger ~2.8x original rate, sleep costs extra hunger, starvation faints; residents/helpers eat two meals a day (18:00 dinner); food-days HUD",
   "winter_change": "three-day cold snap after a forecast: warm zones, stove fuel, +40% hunger outside warm zones, crop and crew slowdowns, camp chills; decree book, living standard, radio, museum",
-  "seasons_change": "festivals every 7 days, adjacency bonuses, canteen nights, campfire talks, apprentices, lodgers, six NPCs, calendar, people page, E chooser, item links, new-feature marks"
+  "seasons_change": "festivals every 7 days, adjacency bonuses, canteen nights, campfire talks, apprentices, lodgers, six NPCs, calendar, people page, E chooser, item links, new-feature marks",
+  "farlands_change": "night choices with amends, daily hazards (fog/migration/drift) with forecast, dog bond and skills, 彭姐 neighbour-camp arc, 贺满仓 interest-free building advances, raiders hit residents/crew/fences, crew task animations, daily shipping price drift, path guidance with edge arrows, narrow-screen quick menu, large text / colour-blind / calm options, letter-key remapping and gamepad"
 }
