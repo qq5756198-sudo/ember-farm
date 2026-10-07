@@ -411,7 +411,7 @@ export class Renderer extends AllianceRenderer {
       c.restore();
       this.text(b.hp <= 0 ? "缺口" : "薄弱", b.x, b.y - h / 2 - 12, "#ff9a8a", 11);
     }
-    const raid = ["scheduled", "warning", "active"].includes(e.o.raid.phase);
+    const raid = ["scheduled", "warning", "active"].includes(e.raidState().phase);
     const horde = ["warning", "active"].includes(e.s.horde.phase) || (e.s.stats.hordes > 0 && e.c.nextHordeDay);
     const arrow = (dir, color, label) => {
       const [sx, sy] = dir.spawns[0];

@@ -300,7 +300,7 @@ export class Engine extends AllianceEngine {
     }
   }
   sleep() {
-    const r = this.o.raid;
+    const r = this.raidState();
     if (["warning", "active"].includes(r.phase)) {
       this.toast("灰隼团就在围栏外，现在不能睡。", "warn");
       return false;
@@ -351,7 +351,8 @@ export class Engine extends AllianceEngine {
       out = [];
     const days = this.foodDays();
     out.push("口粮还能撑 " + days + " 天" + (days < 1.5 ? "——要断粮了" : days < 3 ? "，不算宽裕" : ""));
-    if (o.raid.phase === "scheduled") out.push("灰隼团：第" + o.raid.day + "天 19:00 从东侧来袭");
+    const rs = this.raidState();
+    if (rs.phase === "scheduled") out.push((rs === o.raid ? "灰隼团" : "灰隼团残部") + "：第" + rs.day + "天 19:00 从东侧来袭");
     if (this.c.nextHordeDay && this.s.stats.hordes > 0) out.push("尸潮：预计第" + this.c.nextHordeDay + "天");
     if (o.convoy && !o.convoy.done) out.push("车队：约 " + Math.max(0, Math.ceil(o.convoy.arrives - this.abs())) + " 分钟后到站");
     if (o.caravan.next && !this.caravanHere()) out.push("唐九的商队：第" + o.caravan.next + "天上午到");
@@ -1011,7 +1012,7 @@ export class Engine extends AllianceEngine {
     return [start, end];
   }
   raidLive() {
-    return ["warning", "active"].includes(this.o.raid.phase) || ["warning", "active"].includes(this.s.horde.phase);
+    return ["warning", "active"].includes(this.raidState().phase) || ["warning", "active"].includes(this.s.horde.phase);
   }
   slowed(key) {
     const o = this.o;
@@ -1161,13 +1162,16 @@ export class Engine extends AllianceEngine {
         continue;
       }
       this._guardNoAmmo = false;
-      const shots = free && this.o.raid.phase === "active" ? 2 : 1,
-        boost = this.o.prep === "towers" && this.o.raid.phase === "active" ? 1.4 : 1;
+      const shots = free && this.raidState().phase === "active" ? 2 : 1,
+        boost = this.o.prep === "towers" && this.firstRaid() && this.o.raid.phase === "active" ? 1.4 : 1;
       for (let i = 0; i < shots && !e.dead; i++)
         this.hurtEnemy(e, 16 * boost, Math.atan2(e.y - g.y, e.x - g.x), { guard: true });
-      this._guardClock.set(g.id, 1.6);
+      this._guardClock.set(g.id, this.guardCooldown());
       this.particlesAt(g.x + Math.cos(g.facing || 0) * 18, g.y - 30, "#f3d488", 3);
     }
+  }
+  guardCooldown() {
+    return 1.6;
   }
   talkHelper(id) {
     const c = this.o.crew.find((x) => x.id === id);
@@ -1579,16 +1583,23 @@ export class Engine extends AllianceEngine {
   }
 
   // ---------- 灰隼团袭击 ----------
+  // 当前生效的袭击记录：第六段的灰隼团；之后的层可以换成别的有组织袭击（共用同一套枪手规则）。
+  raidState() {
+    return this.o.raid;
+  }
+  firstRaid() {
+    return this.raidState() === this.o.raid;
+  }
   scheduleRaid(days) {
     const r = this.o.raid;
     Object.assign(r, { ...raidDefaults(), tries: r.tries, report: r.report, phase: "scheduled", day: this.s.day + days });
   }
   raidDue() {
-    const r = this.o.raid;
+    const r = this.raidState();
     return r.phase === "scheduled" && this.abs() >= r.day * 1440 + 1140;
   }
   raidCountdownText() {
-    const r = this.o.raid;
+    const r = this.raidState();
     if (r.phase !== "scheduled") return ["warning", "active"].includes(r.phase) ? "现在" : "未定";
     const m = r.day * 1440 + 1140 - this.abs();
     if (m <= 0) return "现在";
@@ -1603,7 +1614,7 @@ export class Engine extends AllianceEngine {
     return Math.max(3, n);
   }
   startRaidWarning() {
-    const r = this.o.raid;
+    const r = this.raidState();
     r.phase = "warning";
     r.timer = 45 + (this.o.gadgets.includes("alarm") ? 45 : 0) + (this.o.crew.some((c) => c.role === "scout") ? 20 : 0);
     this.toast("灰隼团的车灯出现在东边林子里！" + Math.ceil(r.timer) + " 秒后进攻——Z 键查看防线。", "warn");
@@ -1611,7 +1622,7 @@ export class Engine extends AllianceEngine {
     this.emit("alarm");
   }
   beginRaid() {
-    const r = this.o.raid;
+    const r = this.raidState();
     r.phase = "active";
     r.total = this.raidSize();
     r.spawned = 0;
@@ -1641,7 +1652,7 @@ export class Engine extends AllianceEngine {
     return null;
   }
   spawnRaider() {
-    const r = this.o.raid,
+    const r = this.raidState(),
       i = r.spawned,
       pt = HORDE_DIRECTIONS[0].spawns[i % 2],
       e = this.enemy("raider", pt[0], clamp(pt[1] + (this.roll() - 0.5) * 50, 80, WORLD.h - 80), false);
@@ -1652,7 +1663,7 @@ export class Engine extends AllianceEngine {
   }
   updateRaid(dt) {
     const o = this.o,
-      r = o.raid;
+      r = this.raidState();
     if (r.phase === "scheduled" && this.raidDue()) {
       if (["warning", "active"].includes(this.s.horde.phase)) return;
       if (this.s.region !== "farm") return this.autoResolveRaid("away");
@@ -1669,7 +1680,7 @@ export class Engine extends AllianceEngine {
     if (this.s.region !== "farm") return this.autoResolveRaid("left");
     r.clock += dt;
     r.spawnTimer = Math.max(-1, r.spawnTimer - dt);
-    const lureHold = o.prep === "lure" && r.spawned >= Math.ceil(r.total / 2) && r.clock < 60;
+    const lureHold = this.firstRaid() && o.prep === "lure" && r.spawned >= Math.ceil(r.total / 2) && r.clock < 60;
     if (r.spawned < r.total && r.spawnTimer <= 0 && !lureHold) {
       this.spawnRaider();
       r.spawnTimer = 3.2;
@@ -1690,12 +1701,12 @@ export class Engine extends AllianceEngine {
       ((this.s.storage.ammo || 0) >= 12 ? 1 : 0) +
       (this.hasBundle("defense") ? 2 : 0) +
       // 每输一次，联盟多派一队支援，避免越输越难。
-      o.raid.tries * 1.5;
-    if (o.prep === "towers") p *= 1.4;
+      this.raidState().tries * 1.5;
+    if (o.prep === "towers" && this.firstRaid()) p *= 1.4;
     return Math.round(p * 10) / 10;
   }
   autoResolveRaid(reason) {
-    const r = this.o.raid;
+    const r = this.raidState();
     if (!["scheduled", "warning", "active"].includes(r.phase)) return false;
     const remaining = r.phase === "active" ? Math.max(0, r.total - r.killed - r.retreated) : this.raidSize();
     if (r.phase !== "active") r.total = remaining;
@@ -1729,7 +1740,8 @@ export class Engine extends AllianceEngine {
   }
   finishRaid(won, auto = false, note = "") {
     const o = this.o,
-      r = o.raid;
+      r = this.raidState(),
+      first = r === o.raid;
     if (this.s.enemies.farm) this.s.enemies.farm = this.s.enemies.farm.filter((e) => e.type !== "raider");
     if (this.s.region === "farm") this.enemies = this.s.enemies.farm;
     this.raidShots = [];
@@ -1741,12 +1753,14 @@ export class Engine extends AllianceEngine {
       total: r.total,
       killed: r.killed,
       retreated: r.retreated,
-      prep: o.prep,
+      prep: first ? o.prep : null,
+      kind: first ? "first" : "later",
       power: this.raidPower(),
       lost: {},
       gain: {},
     };
-    if (won) {
+    if (!first) this.raidOutcome(r, won, report);
+    else if (won) {
       r.phase = "won";
       o.prisoner ??= "held";
       o.cai.raiders++;
@@ -1773,6 +1787,7 @@ export class Engine extends AllianceEngine {
       this.toast(text, "warn");
       this.olog(text, "warn");
     }
+    this.lastRaid = r;
     r.total = 0;
     r.spawned = 0;
     r.killed = 0;
@@ -1785,6 +1800,17 @@ export class Engine extends AllianceEngine {
     this.emit("menu", { menu: "outpost", view: "raid" });
     this.checkStory();
     return true;
+  }
+  raidOutcome(r, won, report) {
+    // 其它有组织袭击的胜负由后续的层处理。
+    r.phase = won ? "won" : "scheduled";
+  }
+  // 上次战报对应的那条袭击记录（后续的层可以换成更新的一条）。
+  lastRaidRecord() {
+    return this.lastRaid || this.o.raid;
+  }
+  lastRaidReport() {
+    return this.lastRaidRecord().report || this.o.raid.report;
   }
   updateRaider(e, dt) {
     if (e.dead) return;
@@ -1803,7 +1829,7 @@ export class Engine extends AllianceEngine {
       if (e.x >= 1416) {
         e.dead = true;
         e.fled = true;
-        this.o.raid.retreated++;
+        this.raidState().retreated++;
       }
       return;
     }
@@ -1907,7 +1933,8 @@ export class Engine extends AllianceEngine {
     const out = super.hurtEnemy(e, damage, angle, meta);
     if (alive && e.dead && !e.fled) {
       const o = this.o;
-      if (e.type === "raider" && o.raid.phase === "active") o.raid.killed++;
+      const rs = this.raidState();
+      if (e.type === "raider" && rs.phase === "active") rs.killed++;
       if (meta && WEAPONS[meta.id]?.mag) o.cai.gunKills++;
       if (this.f?.crouch) o.cai.crouchKills++;
     }
@@ -1916,7 +1943,7 @@ export class Engine extends AllianceEngine {
   updateDefense(dt) {
     const free = this.hasBundle("defense");
     this._freeAmmo = free;
-    this._towerBoost = this.o.prep === "towers" && this.o.raid.phase === "active";
+    this._towerBoost = this.o.prep === "towers" && this.firstRaid() && this.o.raid.phase === "active";
     try {
       super.updateDefense(dt);
     } finally {
@@ -1928,7 +1955,7 @@ export class Engine extends AllianceEngine {
   die() {
     this.lastDeath = this._starve ? "hunger" : "hurt";
     this._starve = false;
-    const r = this.o?.raid,
+    const r = this.o ? this.raidState() : null,
       lost = r?.phase === "active";
     super.die();
     // 先结算倒下，再出战报，让玩家醒来时看到被抢走了什么、下次什么时候来。
@@ -2064,7 +2091,7 @@ export class Engine extends AllianceEngine {
   }
   travel(id) {
     const ok = super.travel(id);
-    if (ok && this.o.raid.phase === "active" && this.s.region !== "farm") this.autoResolveRaid("left");
+    if (ok && this.raidState().phase === "active" && this.s.region !== "farm") this.autoResolveRaid("left");
     return ok;
   }
 

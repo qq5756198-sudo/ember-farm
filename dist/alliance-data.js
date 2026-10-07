@@ -14,7 +14,7 @@ export const ACT2_REWARD = { money: 40, reputation: 5 };
 export const NEIGHBOR_SPOT = { region: "residential", x: 900, y: 640 };
 export const NEIGHBOR_COST = { bread: 1 };
 export const NEIGHBOR_GIFT = { wood: 3, seedRadish: 2 };
-export const STORY_IDS = ["act1", "supply", "act2", "act3", "act4", "act5", "act6"];
+export const STORY_IDS = ["act1", "supply", "act2", "act3", "act4", "act5", "act6", "act7", "act8"];
 export const HELPER_TASKS = ["rest", "meal", "carry", "idle", "hungry"];
 
 export const HELPERS = {
@@ -89,6 +89,16 @@ export const LETTERS = {
     from: "楚光",
     title: "寒潮之前",
     text: "灰隼团的哨卡拆了，商路是你们自己守下来的。白霜站发来消息：今年冬天会来得很早。先把检修间和电台的事办完，然后开始准备过冬。",
+  },
+  act8: {
+    from: "楚光",
+    title: "余烬之地",
+    text: "冬天过去了，你们一个人都没丢。最后几件事：把污染的证据链补齐，让避难城重新通风、船坞开通档案岛航线，然后做一次全地区广播。广播一响，灰隼团的残部一定会来。守住它。",
+  },
+  act9: {
+    from: "楚光",
+    title: "这里是家",
+    text: "联盟确认：余烬前哨可以承担地区事务。不用再给我写报告了——以后是别人给你们写信。把这片地方建成你们想要的样子吧。",
   },
 };
 export const LETTER_IDS = Object.keys(LETTERS);

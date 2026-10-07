@@ -357,7 +357,7 @@ test("story save data round-trips and corrupted story fields are refused", () =>
     (s) => (s.storyCampaign.helpers[0].x = -50),
     (s) => (s.storyCampaign.helpers[0].id = "stranger"),
     (s) => (s.storyCampaign.flags.well = "yes"),
-    (s) => (s.storyCampaign.letters = ["act9"]),
+    (s) => (s.storyCampaign.letters = ["act10"]),
   ];
   for (const change of broken) {
     const s = JSON.parse(text);

@@ -1,17 +1,18 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>余烬农场 v0.14.0 · 商路与火光</title><meta name="description" content="在废墟中种下口粮，接回失散的人，修复农场与远方的灯火。"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23232c24'/%3E%3Cpath d='M16 25V12M16 16Q4 16 7 5Q17 5 16 16M16 20Q28 19 26 9Q16 9 16 20' fill='%239baa58' stroke='%239baa58' stroke-width='2'/%3E%3C/svg%3E"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="rebuild.css"><link rel="stylesheet" href="supply.css"><link rel="stylesheet" href="echoes.css"><link rel="stylesheet" href="clarity.css"><link rel="stylesheet" href="districts.css"><link rel="stylesheet" href="player.css"><link rel="stylesheet" href="beyond.css"><link rel="stylesheet" href="wayfinding.css">
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>余烬农场 v0.15.0 · 寒潮之后</title><meta name="description" content="在废墟中种下口粮，接回失散的人，修复农场与远方的灯火。"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23232c24'/%3E%3Cpath d='M16 25V12M16 16Q4 16 7 5Q17 5 16 16M16 20Q28 19 26 9Q16 9 16 20' fill='%239baa58' stroke='%239baa58' stroke-width='2'/%3E%3C/svg%3E"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="rebuild.css"><link rel="stylesheet" href="supply.css"><link rel="stylesheet" href="echoes.css"><link rel="stylesheet" href="clarity.css"><link rel="stylesheet" href="districts.css"><link rel="stylesheet" href="player.css"><link rel="stylesheet" href="beyond.css"><link rel="stylesheet" href="wayfinding.css">
 <link rel="stylesheet" href="alliance.css">
-<link rel="stylesheet" href="outpost.css"></head>
+<link rel="stylesheet" href="outpost.css">
+<link rel="stylesheet" href="winter.css"></head>
 <body class="title-screen">
 <main id="game" aria-label="余烬农场游戏">
 <header class="hud-top">
   <button class="hud-brand" data-menu="rebuild" title="查看任务手记 J / N / F"><span class="brand-mark">✦</span><span>余烬农场</span></button>
   <section id="stat-bars" class="hud-vitals" aria-label="生命、体力与饥饿"></section>
-  <div class="hud-time"><span id="date">第1天</span><b id="time">08:00</b><span id="weather">晴朗</span><span class="hud-coins">金 <b id="money">120</b></span><span id="food-days" class="hud-food" title="仓库与背包里的口粮还能撑几天">口粮 — 天</span></div>
+  <div class="hud-time"><span id="date">第1天</span><b id="time">08:00</b><span id="weather">晴朗</span><span class="hud-coins">金 <b id="money">120</b></span><span id="food-days" class="hud-food" title="仓库与背包里的口粮还能撑几天">口粮 — 天</span><span id="season-chip" class="hud-food" hidden></span></div>
   <button class="hud-location" data-menu="map" title="世界地图 M"><span id="region-label">林间农场</span><span>地图 M ↗</span></button>
   <button class="hud-settings" data-menu="pause" aria-label="设置与存档">设置</button>
 </header>
-<section id="world-viewport" aria-label="游戏场景"><canvas id="world" aria-label="农场与废墟，可使用WASD移动、E交互" tabindex="0"></canvas></section>
+<section id="world-viewport" aria-label="游戏场景"><canvas id="world" aria-label="农场与废墟，可使用WASD移动、E交互" tabindex="0"></canvas><div id="alert-bar" class="alert-bar" aria-label="需要处理的事" hidden></div></section>
 <footer class="hud-dock">
   <nav class="dock-menu" aria-label="常用操作"><button class="primary handbook-entry" data-menu="rebuild"><b>任务手记</b><small>下一步做什么</small></button><div><button data-menu="inventory" title="背包 Tab">背包</button><button data-menu="craft" title="制作 C">制作</button><button data-menu="build" title="建造 B">建造</button></div></nav>
   <section class="dock-tools" aria-label="工具与武器"><div id="selected-label"></div><div id="hotbar" class="hotbar"></div></section>
@@ -21,5 +22,5 @@
 </footer>
 <div class="hud-offstage" hidden><span id="skill-summary"></span><span id="camp-summary"></span><span id="day-progress"></span><span id="save-state">尚未保存</span></div>
 <div id="modal-backdrop" class="modal-backdrop" hidden><section id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"></section><div id="menu-toasts" aria-live="polite"></div></div>
-<div id="loading" class="loading"><div class="loading-mark">✦</div><h1>余烬农场</h1><p class="release-label" data-release>v0.14.0 · 商路与火光</p><p>正在整理种子与行囊…</p></div>
+<div id="loading" class="loading"><div class="loading-mark">✦</div><h1>余烬农场</h1><p class="release-label" data-release>v0.15.0 · 寒潮之后</p><p>正在整理种子与行囊…</p></div>
 </main><script type="module" src="game.js"></script></body></html>

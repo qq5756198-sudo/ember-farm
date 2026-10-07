@@ -74,7 +74,7 @@ export function outpostSteps(e) {
   return [];
 }
 
-function pick(e, steps) {
+export function pick(e, steps) {
   const pending = steps.filter((s) => !s.done);
   if (!pending.length) return null;
   const first = pending[0];
@@ -86,7 +86,7 @@ function pick(e, steps) {
   return first;
 }
 
-function mainDetail(e, id) {
+export function mainDetail(e, id) {
   const q = TASKS.find((t) => t.id === id),
     reqs = e.taskRequirements(id),
     miss = reqs.find((x) => !x.pass),

@@ -1,0 +1,306 @@
+/* v0.15.0「寒潮之后」：生活水准阶梯、法令簿、电台节目单、档案馆、成就册、警报栏与寒潮标签。 */
+
+/* 警报栏：场景左上角，最多三条，点了在场景里立路标。 */
+.alert-bar {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: min(46%, 320px);
+  pointer-events: none;
+}
+.alert-bar[hidden] {
+  display: none;
+}
+.alert-item {
+  pointer-events: auto;
+  min-height: 32px;
+  padding: 5px 12px 5px 10px;
+  border: 1px solid #6c7d5c;
+  border-left-width: 4px;
+  border-radius: 4px;
+  background: #172b25e6;
+  color: #e6ecd4;
+  font-size: 0.86em;
+  text-align: left;
+  line-height: 1.35;
+  cursor: pointer;
+  box-shadow: 0 2px 6px #0006;
+}
+.alert-item:hover,
+.alert-item:focus-visible {
+  background: #22392ee6;
+}
+.alert-item.danger {
+  border-color: #d06a58;
+  color: #ffe1d8;
+}
+.alert-item.warn {
+  border-color: #c9a55a;
+  color: #f6e3b4;
+}
+.alert-item.gold {
+  border-color: #f1d98a;
+  color: #fff3c8;
+}
+.alert-item::before {
+  content: "!";
+  display: inline-block;
+  width: 1.2em;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #6c7d5c;
+  color: #172b25;
+  font-weight: bold;
+  text-align: center;
+}
+.alert-item.danger::before {
+  background: #d06a58;
+}
+.alert-item.warn::before {
+  background: #c9a55a;
+}
+.alert-item.gold::before {
+  content: "★";
+  background: #f1d98a;
+}
+body.title-screen .alert-bar,
+body.modal-open .alert-bar {
+  display: none;
+}
+
+/* 顶栏寒潮标签（沿用口粮标签的样式） */
+#season-chip.ok {
+  color: #ffe2b8;
+  border-color: #b98a4a;
+  background: #3a2a1c;
+}
+
+/* 生活水准阶梯 */
+.ladder-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.ladder-row > b {
+  color: #f0e3b5;
+}
+.ladder {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+.ladder li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1px solid #4f6249;
+  border-radius: 999px;
+  background: #1b2c22;
+  color: #93a08a;
+  font-size: 0.86em;
+  cursor: help;
+}
+.ladder li span {
+  color: #6c7d5c;
+}
+.ladder li.partial {
+  color: #c7bd88;
+  border-style: dashed;
+}
+.ladder li.on {
+  color: #172b25;
+  background: #cfe0a8;
+  border-color: #e6efc8;
+  font-weight: bold;
+}
+.ladder li.on span {
+  color: #4f7a3a;
+}
+
+/* 任务手记里的冬季部分 */
+.winter-strip {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #5a6a7a;
+  border-radius: 6px;
+  background: #1c2a2d;
+}
+.frost-forecast {
+  margin: 0;
+  padding: 6px 10px;
+  border-left: 3px solid #89c6d0;
+  background: #1a2c30;
+  color: #d8eef2;
+  font-size: 0.92em;
+}
+.winter-card .ladder {
+  margin: 6px 0;
+}
+
+/* 法令簿 */
+.decree-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.decree-grid article.current,
+.story-choice article.current {
+  border-color: #f1d98a;
+  background: #2a3324;
+  box-shadow: inset 0 0 0 1px #f1d98a55;
+}
+.decree-grid article.current small:first-child {
+  color: #f1d98a;
+  font-weight: bold;
+}
+.decree-grid .consequence {
+  grid-template-columns: 1fr;
+}
+.decree-grid .consequence div {
+  border-left: 0;
+  border-top: 1px solid #3c4d38;
+}
+.decree-grid .consequence div:first-child {
+  border-top: 0;
+}
+
+/* 档案馆 */
+.exhibits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 26px;
+}
+.exhibit {
+  padding: 2px 8px;
+  border: 1px solid #a8936a;
+  border-radius: 3px;
+  background: #3a3224;
+  color: #f0e3b5;
+  font-size: 0.86em;
+}
+.story-choice article.done {
+  border-color: #9fd38a;
+}
+.story-choice article.done > small:first-child::after {
+  content: " · 已填满";
+  color: #9fd38a;
+}
+.story-choice .button-row button {
+  width: auto;
+  flex: 1 1 140px;
+}
+
+/* 成就册 */
+.collection {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.collection li {
+  display: grid;
+  grid-template-columns: 110px minmax(80px, 1fr) 54px minmax(0, 1.4fr);
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #3c4d38;
+  border-radius: 5px;
+  background: #1b2c22;
+}
+.collection li.done {
+  border-color: #7d8c62;
+  background: #22362a;
+}
+.collection b {
+  color: #f0e3b5;
+}
+.collection .bar {
+  height: 8px;
+  border-radius: 4px;
+  background: #2c3b2e;
+  overflow: hidden;
+}
+.collection .bar i {
+  display: block;
+  height: 100%;
+  background: #b9d58b;
+}
+.collection li.done .bar i {
+  background: #f1d98a;
+}
+.collection small {
+  color: #aeba9f;
+}
+.collection li.done small {
+  color: #cfe0a8;
+}
+
+/* 地图：亮灯的路 */
+.lit-route {
+  stroke-dasharray: 2 10;
+  animation: route-glow 3s linear infinite;
+}
+@keyframes route-glow {
+  to {
+    stroke-dashoffset: -48;
+  }
+}
+
+@media (max-width: 900px) {
+  .decree-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 760px) {
+  /* 手机顶栏：出现寒潮标签时把“余烬农场”字样收成图标，给标签让位 */
+  .hud-top:has(#season-chip:not([hidden])) .hud-brand {
+    min-width: 0;
+  }
+  .hud-top:has(#season-chip:not([hidden])) .hud-brand span:not(.brand-mark) {
+    display: none;
+  }
+  #season-chip {
+    white-space: nowrap;
+  }
+  .decree-grid {
+    grid-template-columns: 1fr;
+  }
+  .collection li {
+    grid-template-columns: minmax(0, 1fr) 54px;
+  }
+  .collection .bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .collection small {
+    grid-column: 1 / -1;
+  }
+  .alert-bar {
+    left: 8px;
+    top: 8px;
+    max-width: 62%;
+  }
+  .alert-item {
+    min-height: 30px;
+    padding: 4px 9px;
+    font-size: 0.8em;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lit-route {
+    animation: none;
+  }
+}

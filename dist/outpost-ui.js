@@ -61,12 +61,13 @@ export function outpostHud(e) {
   if (!e.o) return null;
   const days = e.foodDays(),
     tone = days < 1 ? "danger" : days < 2.5 ? "warn" : "ok",
-    r = e.o.raid;
+    r = e.raidState();
   let raid = null;
-  if (r.phase === "warning") raid = "⚠ 灰隼团 · 东侧林子 · " + Math.ceil(r.timer) + " 秒后进攻 · Z 看防线";
+  const who = r === e.o.raid ? "灰隼团" : "灰隼团残部";
+  if (r.phase === "warning") raid = "⚠ " + who + " · 东侧林子 · " + Math.ceil(r.timer) + " 秒后进攻 · Z 看防线";
   if (r.phase === "active")
     raid =
-      "⚠ 灰隼团进攻中 · 剩余 " +
+      "⚠ " + who + "进攻中 · 剩余 " +
       (Math.max(0, r.total - r.spawned) + e.enemies.filter((x) => x.type === "raider" && !x.dead).length) +
       " 名枪手 · 看到红线就挪位置";
   return {
@@ -94,7 +95,7 @@ function outpostStrip(e) {
     o.sick >= e.s.day
       ? `<p class="outpost-alert">营地有人生病：援建队干活慢一半。${button("oCure", "", "治疗（药包×1 或 绷带×2）")}</p>`
       : "";
-  return `<section class="outpost-strip" aria-label="前哨状况"><div class="outpost-food ${hud.food.tone}"><b>${esc(hud.food.text)}</b><span>${esc(hud.food.title)}</span></div>${sick}<div class="outpost-links">${act >= 3 ? button("oView", "bundles", "联盟援建清单 " + o.bundles.length + "/4") : ""}${button("oView", "ledger", "出货账本")}${o.raid.report ? button("oView", "raid", "上次战报") : ""}${button("oView", "log", "消息记录（L）")}${button("oDefense", "", "查看防线（Z）")}</div>${crew ? `<details class="journal-extra"><summary>援建队员 · ${o.crew.length + (e.sc?.helpers.length || 0)}人</summary><ul class="crew-list">${crew}</ul></details>` : ""}</section>`;
+  return `<section class="outpost-strip" aria-label="前哨状况"><div class="outpost-food ${hud.food.tone}"><b>${esc(hud.food.text)}</b><span>${esc(hud.food.title)}</span></div>${sick}<div class="outpost-links">${act >= 3 ? button("oView", "bundles", "联盟援建清单 " + o.bundles.length + "/4") : ""}${button("oView", "ledger", "出货账本")}${e.lastRaidReport() ? button("oView", "raid", "上次战报") : ""}${button("oView", "log", "消息记录（L）")}${button("oDefense", "", "查看防线（Z）")}</div>${crew ? `<details class="journal-extra"><summary>援建队员 · ${o.crew.length + (e.sc?.helpers.length || 0)}人</summary><ul class="crew-list">${crew}</ul></details>` : ""}</section>`;
 }
 export function renderOutpostJournal(e, ui = {}) {
   const html = renderStoryJournal(e, ui);
@@ -259,11 +260,11 @@ function viewDialog(e, id) {
   return "<p>没有可说的。</p>";
 }
 function viewRaid(e) {
-  const r = e.o.raid,
-    rep = r.report;
+  const r = e.lastRaidRecord(),
+    rep = e.lastRaidReport();
   if (!rep) return "<p>还没有战报。</p>";
   const prep = rep.prep ? RAID_PREP[rep.prep].name : "没有特别准备";
-  return `<div class="raid-report ${rep.won ? "won" : "lost"}"><h3>${rep.won ? "击退灰隼团" : "没守住"} · 第${rep.day}天</h3>${rep.note ? `<p class="muted">${esc(rep.note)}（防守力 ${rep.power}）</p>` : ""}<dl class="summary-grid"><div><dt>来袭</dt><dd>${rep.total} 名枪手</dd></div><div><dt>击倒</dt><dd>${rep.killed}</dd></div><div><dt>打跑</dt><dd>${rep.retreated}</dd></div><div><dt>备战</dt><dd>${esc(prep)}</dd></div></dl>${rep.won ? `<p>缴获：${esc(bundleText(rep.gain))}、80 金币。围栏边抓到了鹞子——去农舍西南边决定怎么处置他。</p>` : `<p>被抢走：${esc(bundleText(rep.lost) || "一些零碎")}。他们第${r.day}天 19:00 还会再来。</p><p class="muted">下次：让居民守瞭望塔（营地手册 · 居民）、补足弹药、修好东侧围栏；人留在农场更容易赢。</p>`}<div class="button-row">${button("oClose", "", "知道了", 'class="primary"')}${button("oJournal", "", "打开任务手记")}</div></div>`;
+  return `<div class="raid-report ${rep.won ? "won" : "lost"}"><h3>${rep.won ? (rep.kind === "later" ? "击退灰隼团残部" : "击退灰隼团") : "没守住"} · 第${rep.day}天</h3>${rep.note ? `<p class="muted">${esc(rep.note)}（防守力 ${rep.power}）</p>` : ""}<dl class="summary-grid"><div><dt>来袭</dt><dd>${rep.total} 名枪手</dd></div><div><dt>击倒</dt><dd>${rep.killed}</dd></div><div><dt>打跑</dt><dd>${rep.retreated}</dd></div><div><dt>备战</dt><dd>${esc(prep)}</dd></div></dl>${rep.won ? (rep.kind === "later" ? `<p>缴获：${esc(bundleText(rep.gain))}、${rep.money || 0} 金币。${esc(rep.wonText || "袭击者溃散了。")}</p>` : `<p>缴获：${esc(bundleText(rep.gain))}、80 金币。围栏边抓到了鹞子——去农舍西南边决定怎么处置他。</p>`) : `<p>被抢走：${esc(bundleText(rep.lost) || "一些零碎")}。他们第${r.day}天 19:00 还会再来。</p><p class="muted">下次：让居民守瞭望塔（营地手册 · 居民）、补足弹药、修好东侧围栏；人留在农场更容易赢。</p>`}<div class="button-row">${button("oClose", "", "知道了", 'class="primary"')}${button("oJournal", "", "打开任务手记")}</div></div>`;
 }
 function viewLog(e, ui) {
   const o = e.o;

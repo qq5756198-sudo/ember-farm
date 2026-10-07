@@ -22,7 +22,11 @@ import * as FrontierActions from '../dist/frontier-actions.js';
 import * as FrontierData from '../dist/frontier-data.js';
 import * as Version from '../dist/version.js';
 import * as Atlas from '../dist/atlas.js';
-import {Renderer} from '../dist/outpost-renderer.js';
+import {Renderer} from '../dist/campaign-renderer.js';
+import * as Campaign from '../dist/campaign.js';
+import * as CampaignUI from '../dist/campaign-ui.js';
+import * as Winter from '../dist/winter.js';
+import * as WinterUI from '../dist/winter-ui.js';
 import * as Outpost from '../dist/outpost.js';
 import * as OutpostUI from '../dist/outpost-ui.js';
 import * as Alliance from '../dist/alliance.js';
@@ -72,7 +76,7 @@ for(const key of Session.HISTORY_KEYS.slice(0,8))storage.set(key,'historic '+key
 class Image{set src(path){this.path=path;loadImage(dir+'/'+path).then(img=>{this.native=img;this.width=img.width;this.height=img.height;this.complete=true;this.onload?.();}).catch(e=>this.onerror?.(e));}get src(){return this.path;}}
 globalThis.document=document;
 let raf;
-const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
+const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
 script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo});globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
@@ -294,4 +298,87 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   click('save'); const saved = storage.get(Session.CAMPAIGN_SAVE);
   const back = Outpost.Engine.parse(saved); assert.equal(back.outpost.raid.phase, 'won'); assert.equal(back.storyCampaign.act, 7);
   console.log('Outpost controller passed: food HUD, act cards with cost/gain/impact previews, shipping box via E and overnight summary, station rush, gate review via E, message log (L), toll/prep through story buttons, raid warning banner, defence overlay (Z), raid at four Canvas sizes, victory report, prisoner choice to act seven, hunger faint menu and save/parse.');
+}
+
+// v0.15.0「寒潮之后」: act seven card, decree book, terminal forecast via E, stove warmth, season chip, alert bar, NPC dialog via E, cold Canvas, lit map and camp manual card.
+{
+  let clock = 1900000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  const WD = await import('../dist/winter-data.js');
+  const AD = await import('../dist/alliance-data.js');
+  context.fixture(Campaign.freshState());
+  const e = context.inspect().engine;
+  e.paused = false;
+  const sc = e.sc;
+  Object.assign(sc, { act: 7, claimed: ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6'], choice: 'ration', letters: ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7'], camp: { x: 560, y: 735 } });
+  Object.assign(sc.flags, { well: true, camp: true, farmerFed: true });
+  e.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((t) => t.id === 'radio') + 1).map((t) => t.id);
+  e.r.radio = true;
+  Object.assign(e.o, { hospital: 'water', youke: true, lathe: { mode: 'parts', day: 0 }, cargo: 'food', convoy: { departs: 0, arrives: 10, escorted: true, spawned: true, foes: [], done: true, lost: false }, toll: 'refuse' });
+  e.o.raid.phase = 'won';
+  e.assignRegion();
+  Object.assign(e.s.player, { x: 830, y: 460 }); run(4);
+  assert.equal(document.querySelector('#season-chip').hidden, true, 'no season chip before the forecast');
+  context.open('journey'); clean();
+  for (const line of ['第七段「让所有人过冬」', '用电台联系白霜站', '生活水准', '法令簿 0/4']) assert.ok(html().includes(line), line);
+  click('wView', 'decrees'); assert.equal(context.inspect().menu, 'outpost'); clean();
+  assert.match(html(), /data-action="wDecree" data-id="rotation"/); assert.match(html(), /轮休制/);
+  click('wDecree', 'rotation'); assert.equal(e.decree('rotation'), true);
+  click('wDecree', 'rotation'); assert.equal(e.decree('rotation'), true, 'the two-day cooldown blocks a double click');
+  clean(); assert.match(html(), /生效中/); click('close');
+  // 联盟终端 E：呼叫白霜站
+  Object.assign(e.s.player, { x: AD.TERMINAL_SPOT.x, y: AD.TERMINAL_SPOT.y + 20 }); run(2);
+  assert.match(document.querySelector('#context').innerHTML, /呼叫白霜站/);
+  press('e'); run(1); assert.equal(e.w.forecast, true); assert.equal(e.s.storage.seedRye, 6);
+  press('e'); run(1); assert.equal(e.s.storage.seedRye, 6, 'a second E gives nothing');
+  if (context.inspect().menu) { clean(); click('close'); }
+  // 火炉：正常建造流程
+  e.s.storage.wood = 60; e.s.storage.stone = 20; e.s.storage.scrap = 20; e.s.storage.bread = 30;
+  e.buildMode = 'stove'; let spot = null;
+  for (let r = 60; r < 400 && !spot; r += 16) for (let a = 0; a < 6.28 && !spot; a += 0.3) { const x = Math.round((430 + Math.cos(a) * r) / 8) * 8, y = Math.round((520 + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x: x + 30, y: y + 30 }); if (!e.buildReason('stove', x, y)) spot = { x, y }; }
+  run(2);
+  assert.ok(e.placeBuilding(spot.x, spot.y)); e.buildMode = null;
+  e.s.minute = 9 * 60 - 0.05; e.c.workClock = 59.95; run(3);
+  assert.equal(e.w.winter.phase, 'prep'); assert.equal(e.w.ge.phase, 'arrived');
+  run(4);
+  assert.equal(document.querySelector('#season-chip').hidden, false); assert.match(document.querySelector('#season-chip').textContent, /寒潮 \d+ 天后/);
+  // 先保哪样：任务手记里的选择按钮
+  context.open('journey'); clean(); assert.match(html(), /寒潮里先保哪一样/); assert.match(html(), /data-action="aStoryChoose" data-id="engineering"/);
+  click('aStoryChoose', 'engineering'); assert.equal(e.w.winter.priority, 'engineering'); click('close');
+  // 警报栏：熄火的火炉，点一下立路标
+  e.w.winter.fuelDay = e.s.day; e.w.winter.lit = false; run(4);
+  const bar = document.querySelector('#alert-bar');
+  assert.equal(bar.hidden, false); assert.match(bar.innerHTML, /火炉熄了/);
+  const index = WinterUI.alertItems(e).findIndex((a) => /火炉熄了/.test(a.text));
+  click('wAlert', String(index)); assert.match(e.guidance.target.label, /火炉/);
+  e.w.winter.lit = true;
+  // 葛队长：E 打开对话
+  Object.assign(e.s.player, { x: WD.WSPOTS.ge.x, y: WD.WSPOTS.ge.y + 20 }); run(2);
+  assert.match(document.querySelector('#context').innerHTML, /葛队长/);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /说服他们留下/); assert.match(html(), /护送回城/);
+  click('close');
+  // 阿兰
+  Object.assign(e.s.player, { x: WD.WSPOTS.alan.x, y: WD.WSPOTS.alan.y + 20 }); run(2);
+  press('e'); run(1); clean(); assert.match(html(), /分饲料给羊群/); click('wAlan', 'decline'); assert.equal(e.w.alan.phase, 'declined'); click('close');
+  // 寒潮：雪、暖区、需求气泡，四种尺寸
+  e.w.winter.phase = 'cold'; e.recruit('farmer'); e.addHelper('tieqiao');
+  Object.assign(e.s.player, { x: 1350, y: 900 }); run(2);
+  assert.match(document.querySelector('#season-chip').textContent, /寒潮 1\/3 · 冷/);
+  press('z');
+  for (const [w, h] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, h, 1); run(3); }
+  press('z');
+  context.inspect().renderer.resize(1366, 600, 1);
+  // 地图：亮灯的路
+  context.open('map'); clean(); assert.match(html(), /亮灯的路/); click('close');
+  // 营地手册 · 居民
+  context.open('rebuild', { tab: 'residents' }); clean(); assert.match(html(), /前哨法令簿与生活水准/); click('close');
+  // 其它新页面
+  for (const view of ['radio', 'collection', 'winter', 'museum']) { context.open('outpost', { view }); clean(); }
+  click('wProgram', 'songs'); assert.equal(e.w.radio.program, 'songs');
+  click('close');
+  click('save'); const saved = storage.get(Session.CAMPAIGN_SAVE);
+  const back = Campaign.Engine.parse(saved);
+  assert.equal(back.winter.forecast, true); assert.equal(back.winter.winter.priority, 'engineering'); assert.deepEqual(back.winter.decrees, ['rotation']);
+  console.log('Winter controller passed: act seven card, decree book with cooldown, terminal forecast via E (once), stove placed through the build flow, preparation and season chip, priority choice from the journal, alert bar with gold marker, 葛队长 and 阿兰 dialogs via E, cold Canvas with snow, warm zones and defence overlay at four sizes, lit map, camp manual decree card, radio/collection/winter/museum pages and save/parse.');
 }
