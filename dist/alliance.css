@@ -1,0 +1,153 @@
+/* 联盟前哨：任务卡三行说明、本段进度、援建物资选择与来信记录。 */
+.story-card h2 {
+  margin-bottom: 10px;
+}
+.story-progress {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  margin: 0 0 16px;
+}
+.story-progress li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: 1px solid #56694f;
+  border-radius: 999px;
+  font-size: 0.78em;
+  color: #aeba9f;
+  background: #1d3024;
+}
+.story-progress li.done {
+  color: #b0d196;
+  border-color: #6f8d5b;
+}
+.story-progress li.current {
+  color: #1e3225;
+  background: #cdbb7c;
+  border-color: #e4d39a;
+  font-weight: bold;
+}
+.story-lines {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  border: 1px solid #4f6249;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.story-line {
+  display: grid;
+  grid-template-columns: 8.5em 1fr;
+  gap: 14px;
+  padding: 13px 16px;
+  border-top: 1px solid #405339;
+  background: #22362a;
+}
+.story-line:first-child {
+  border-top: 0;
+}
+.story-line dt {
+  font-size: 0.8em;
+  letter-spacing: 1px;
+  color: #c8bf8d;
+  padding-top: 2px;
+}
+.story-line dd {
+  margin: 0;
+  line-height: 1.75;
+  color: #d9e2c9;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.story-line dd b {
+  color: #eadfb7;
+}
+.story-line.now {
+  background: #2b4231;
+  box-shadow: inset 3px 0 0 #e0c489;
+}
+.story-line.now dd {
+  color: #f3e7bf;
+  font-size: 1.04em;
+}
+.xiaoqi {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  image-rendering: pixelated;
+  border: 1px solid #7f9475;
+  border-radius: 3px;
+}
+.story-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+.story-choice article {
+  padding: 14px 16px;
+  border: 1px solid #7d8c62;
+  border-radius: 6px;
+  background: #1f3326;
+}
+.story-choice small {
+  color: #c7bd88;
+}
+.story-choice h3 {
+  margin: 4px 0 6px;
+  color: #f0e3b5;
+}
+.story-choice p {
+  margin: 4px 0;
+  font-size: 0.92em;
+}
+.story-choice .story-pack {
+  color: #b9d59b;
+}
+.story-choice button {
+  margin-top: 8px;
+  min-height: 44px;
+  width: 100%;
+  background: #99a16a;
+  color: #172a1c;
+  border: 1px solid #c2c991;
+  font-weight: bold;
+}
+.story-letters .story-letter {
+  margin: 10px 0;
+  padding: 10px 14px;
+  border-left: 3px solid #8fa7b8;
+  background: #1f3129;
+}
+.story-letters .story-letter p {
+  margin: 4px 0 0;
+  line-height: 1.7;
+}
+.story-letters .story-helper {
+  color: #bcd4e8;
+}
+.story-log {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #aeba9f;
+  font-size: 0.9em;
+}
+@media (max-width: 760px) {
+  .story-line {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 11px 13px;
+  }
+  .story-choice {
+    grid-template-columns: 1fr;
+  }
+  .xiaoqi {
+    width: 28px;
+    height: 28px;
+  }
+}

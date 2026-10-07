@@ -22,7 +22,9 @@ import * as FrontierActions from '../dist/frontier-actions.js';
 import * as FrontierData from '../dist/frontier-data.js';
 import * as Version from '../dist/version.js';
 import * as Atlas from '../dist/atlas.js';
-import {Renderer} from '../dist/beyond-renderer.js';
+import {Renderer} from '../dist/alliance-renderer.js';
+import * as Alliance from '../dist/alliance.js';
+import * as AllianceUI from '../dist/alliance-ui.js';
 import * as Beyond from '../dist/beyond.js';
 import * as BeyondUI from '../dist/beyond-ui.js';
 import * as BeyondArt from '../dist/beyond-art.js';
@@ -68,7 +70,7 @@ for(const key of Session.HISTORY_KEYS.slice(0,8))storage.set(key,'historic '+key
 class Image{set src(path){this.path=path;loadImage(dir+'/'+path).then(img=>{this.native=img;this.width=img.width;this.height=img.height;this.complete=true;this.onload?.();}).catch(e=>this.onerror?.(e));}get src(){return this.path;}}
 globalThis.document=document;
 let raf;
-const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
+const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
 script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo});globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
@@ -148,3 +150,69 @@ console.log('Guidance controller passed: all 92 task cards and next actions, all
 context.open('camp');assert.equal(context.inspect().menu,'journey');context.open('frontier');assert.equal(context.inspect().menu,'journey');
 
 click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert.ok(DistrictData.DISTRICTS[context.inspect().atlasUI.selected].goods.includes('herb'));
+
+// v0.13.0「联盟来信」: the real controller plays acts one and two through story buttons, the terminal E key and Canvas scenes.
+{
+  const checkpoint = storage.get('ember-farm-before-alliance-v1');
+  assert.ok(checkpoint, 'the old formal save is kept once before the story upgrade');
+  assert.equal(JSON.parse(JSON.parse(checkpoint).main).money, 777);
+  let clock = 60000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  click('restart'); click('newGame');
+  let e = context.inspect().engine;
+  assert.equal(e.sc.act, 1); assert.equal(e.sc.veteran, false);
+  context.open('journey'); clean();
+  for (const line of ['发生了什么', '现在做什么', '完成后获得什么', '楚光来信', '清理一块农田']) assert.ok(html().includes(line), line);
+  assert.equal(e.sc.unread, false, 'opening the journal reads the letter');
+  click('close'); e.paused = false;
+  for (const p of [e.s.plots[0], e.s.plots[2]]) { assert.ok(e.toolPlot(p, 'hoe')); assert.ok(e.toolPlot(p, 'seedRadish')); assert.ok(e.toolPlot(p, 'water')); }
+  context.open('journey'); assert.match(html(), /修好水井的辘轳和水槽/); clean();
+  click('aStoryMark'); assert.equal(context.inspect().menu, null); assert.equal(e.guidance.target.label, '旧水井');
+  Object.assign(e.s.player, { x: 880, y: 330 }); run(2);
+  assert.match(document.querySelector('#context').innerHTML, /修好水井辘轳/);
+  press('e'); assert.ok(e.sc.flags.well);
+  const site = e.campSite(); Object.assign(e.s.player, { x: site.x, y: site.y + 30 });
+  context.open('journey'); assert.match(html(), /就地搭起营地/); click('aStoryDo', 'camp'); assert.ok(e.sc.camp);
+  const woodAfterCamp = e.qty('wood', true); click('aStoryDo', 'camp'); assert.equal(e.qty('wood', true), woodAfterCamp, 'double click builds once');
+  click('close');
+  e.advanceMinutes(200); for (const p of [e.s.plots[0], e.s.plots[2]]) assert.ok(e.harvest(p));
+  Object.assign(e.s.player, { x: 830, y: 450 }); run(14);
+  assert.ok(e.r.claimed.includes('harvest'), 'harvest recorded on the farm without a reward-only click');
+  context.open('journey'); assert.match(html(), /用萝卜做出第一份干粮/); assert.match(html(), /准备物资/);
+  click('gCraft', 'trailBread'); click('gCraft', 'trailBread'); assert.equal(e.c.production.length, 1);
+  e.advanceMinutes(25); click('gCollect', e.c.production[0].id);
+  assert.ok(e.r.claimed.includes('meal')); assert.match(html(), /到联盟终端回信/); clean();
+  click('close'); Object.assign(e.s.player, { x: 754, y: 374 }); run(2);
+  assert.match(document.querySelector('#context').innerHTML, /回信报告/);
+  press('e'); run(2);
+  assert.equal(e.sc.act, 2); assert.equal(e.sc.helpers.length, 1); assert.equal(context.inspect().menu, 'journey');
+  assert.match(html(), /要这一包/); clean();
+  click('aStoryChoose', 'cotton'); click('aStoryChoose', 'ration'); assert.equal(e.sc.choice, 'cotton');
+  assert.match(html(), /在住宅区救回阿禾/);
+  assert.equal(document.querySelector('#quest-number').textContent, '第二段 · 2/4');
+  click('close');
+  // Canvas: terminal, pulley, trough, camp and the helper at work, at four viewport sizes.
+  e.s.minute = 11 * 60; e.c.workClock = 59.99; run(3);
+  assert.ok(e.sc.helpers[0].fedDay === e.s.day);
+  for (const [w, h] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) {
+    context.inspect().renderer.resize(w, h, 1);
+    for (const spot of [{ x: 760, y: 380 }, { x: site.x, y: site.y + 40 }, { x: 600, y: 470 }]) { Object.assign(e.s.player, spot); run(3); }
+  }
+  // Act two with the real rescue, reward and table systems.
+  e.s.region = 'residential'; e.assignRegion(); assert.ok(e.recruit('farmer')); e.r.finds.push('seedArchive');
+  e.s.region = 'farm'; e.assignRegion(); Object.assign(e.s.player, { x: 830, y: 450 }); run(12);
+  assert.ok(e.r.claimed.includes('farmer'));
+  e.c.projects.market = 1;
+  e.s.buildings.push({ id: 'ctl-bench', type: 'workbench', x: 1200, y: 760, hp: 130, rotation: 0 }, { id: 'ctl-bed', type: 'bed', x: 1280, y: 880, hp: 90, rotation: 0 });
+  e.s.storage.bread = (e.s.storage.bread || 0) + 3; e.s.minute = 11 * 60 + 50; e.c.workClock = 50;
+  run(20);
+  assert.equal(e.sc.act, 3, 'act two closes once Ahe has eaten and the table is lit');
+  e.s.minute = 12 * 60 + 5; e.c.workClock = 59.99; run(3); assert.equal(e.sc.helpers[0].task, 'meal'); run(40);
+  Object.assign(e.s.player, { x: 820, y: 420 }); run(6);
+  context.open('journey'); clean(); assert.match(html(), /许医生/); assert.match(html(), /联盟来信与前哨记录 · 3封/);
+  click('save'); const saved = storage.get(Session.CAMPAIGN_SAVE);
+  assert.equal(Alliance.Engine.parse(saved).storyCampaign.act, 3);
+  assert.equal(JSON.parse(storage.get('ember-farm-before-alliance-v1')).main, checkpoint && JSON.parse(checkpoint).main, 'checkpoint never overwritten');
+  console.log('Alliance controller passed: new save letter, three-line task cards, well/camp/terminal E actions, duplicate clicks, automatic progress records, helper arrival and work, supply choice, act two completion, Canvas at four sizes and save/parse. Real browser layout is checked separately.');
+}

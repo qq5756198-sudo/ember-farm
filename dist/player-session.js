@@ -2,7 +2,12 @@
 export const CAMPAIGN_SAVE='ember-farm-save-v1';
 export const CAMPAIGN_BACKUP='ember-farm-backup-v1';
 export const PREFERENCES='ember-farm-preferences-v1';
-export const HISTORY_KEYS=['ember-farm-demo-v4','ember-farm-demo-backup-v4','ember-farm-demo-v5','ember-farm-demo-backup-v5','ember-farm-demo-v7','ember-farm-demo-backup-v7','ember-farm-demo-v9','ember-farm-demo-backup-v9','ember-farm-before-new-v1','ember-farm-before-import-v1'];
+export const HISTORY_KEYS=['ember-farm-demo-v4','ember-farm-demo-backup-v4','ember-farm-demo-v5','ember-farm-demo-backup-v5','ember-farm-demo-v7','ember-farm-demo-backup-v7','ember-farm-demo-v9','ember-farm-demo-backup-v9','ember-farm-before-new-v1','ember-farm-before-import-v1','ember-farm-before-alliance-v1'];
+// v0.13.0 adds story progress. Before the first upgrade of an older formal save, keep its exact bytes once.
+export const UPGRADE_CHECKPOINT='ember-farm-before-alliance-v1';
+export function preserveBeforeUpgrade(storage,needsUpgrade){
+ try{const main=storage.getItem(CAMPAIGN_SAVE),backup=storage.getItem(CAMPAIGN_BACKUP);if(!main||storage.getItem(UPGRADE_CHECKPOINT)||!needsUpgrade(main))return false;storage.setItem(UPGRADE_CHECKPOINT,JSON.stringify({format:'ember-farm-checkpoint',main,backup}));return true;}catch{return false;}
+}
 export const isStandalone=s=>!!(s?.frontier?.demo||s?.frontier?.echoDemo||s?.districts?.demo);
 export function readCampaign(storage,parse){
  let raw=null,backup=null;try{raw=storage.getItem(CAMPAIGN_SAVE);backup=storage.getItem(CAMPAIGN_BACKUP);}catch{return {state:null,hasData:false,issue:'无法访问浏览器存档。请检查浏览器权限，或导入已导出的备份。'};}
