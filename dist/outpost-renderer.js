@@ -356,7 +356,7 @@ export class Renderer extends AllianceRenderer {
         y = b.y - 84 + Math.sin(this.time * 2.5) * 2;
       if (inc) {
         const left = Math.max(0, Math.ceil(inc.deadline - e.abs()));
-        rect(x - 34, y - 13, 68, 24, Math.floor(this.time * 4) % 2 ? "#b8433a" : "#8f2f28");
+        rect(x - 34, y - 13, 68, 24, !e.s.settings?.access?.calm && Math.floor(this.time * 4) % 2 ? "#b8433a" : "#8f2f28");
         this.text((inc.type === "fire" ? "起火 " : "卡料 ") + left + "分", x, y - 1, "#fff0d8", 12);
         if (inc.type === "fire") for (let k = 0; k < 4; k++) rect(x - 20 + k * 12, b.y - 50 - ((this.time * 40 + k * 9) % 18), 6, 8, k % 2 ? "#f3a24a" : "#f3d27a");
       } else if (ready) {

@@ -55,6 +55,8 @@ export function winterHud(e) {
   }
   return null;
 }
+// 后面的层可以往这里挂自己的“需要处理的事”。
+export const ALERT_HOOKS = [];
 export function alertItems(e) {
   if (!e.o) return [];
   const out = [],
@@ -92,6 +94,7 @@ export function alertItems(e) {
     add(4, ready.length + "批成品待领", "normal", b ? { region: "farm", x: b.x, y: b.y + 20, label: "领取成品" } : null);
   }
   if (e.c.residents.length > e.residentsCapacity()) add(3, "床位不够", "warn", null);
+  for (const hook of ALERT_HOOKS) hook(e, add);
   return out.sort((a, b) => a.pri - b.pri).slice(0, 3);
 }
 export function alertBar(e) {

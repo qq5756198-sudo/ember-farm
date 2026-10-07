@@ -465,3 +465,89 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(back.seasons.he.stage, 4); assert.ok(back.seasons.fest.held.includes(7)); assert.equal(back.seasons.apprentice.pupil, 'tieqiao');
   console.log('Seasons controller passed: date button to calendar with intro card, 新 dot on the handbook, plaza festival via E with double-click guard, 老琴 request, 何大勺 via E in the market and three dishes, canteen opening and serving, campfire talk, gifts and apprenticeship, E chooser with real action, item source/use links, plaza/canteen Canvas at four sizes, build preview and save/parse.');
 }
+// v0.17.0「远方来客」: phone menu, night choice via E with amends in the journal, today's hazard via E, 麦穗 page, 彭姐 via E, 贺满仓 audit and an advanced build, settings (accessibility, key remap through real key presses), fog Canvas at four sizes and save/parse.
+{
+  let clock = 3900000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  const FD = await import('../dist/farlands-data.js');
+  context.fixture(Campaign.freshState());
+  const e = context.inspect().engine;
+  e.paused = false;
+  const sc = e.sc;
+  Object.assign(sc, { act: 9, claimed: ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8'], choice: 'ration', letters: ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8'], camp: { x: 560, y: 735 } });
+  Object.assign(sc.flags, { well: true, camp: true, farmerFed: true });
+  e.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((t) => t.id === 'broadcast') + 1).map((t) => t.id);
+  Object.assign(e.o, { hospital: 'water', youke: true, lathe: { mode: 'parts', day: 0 }, toll: 'refuse' });
+  e.o.raid.phase = 'won'; e.r.radio = true;
+  e.f.dog.rescued = true;
+  e.s.storage.bread = 30;
+  const toHour = (h) => { e.s.minute = h * 60 - 0.5; e.c.workClock = 59.5; e.advanceMinutes(1); };
+  const goRegion = (id) => { e.s.region = id; e.enemies = e.s.enemies[id] ||= []; e.assignRegion(); };
+  e.s.day = 3; while (e.nightFor(e.s.day).kind !== 'ruin') e.s.day++; goRegion('farm');
+  Object.assign(e.s.player, { x: 830, y: 460 }); run(3);
+  // 手机式快捷菜单
+  assert.equal(document.querySelector('.hud-phone').dataset.action, 'xView');
+  click('xView', 'phone'); assert.equal(context.inspect().menu, 'outpost'); clean();
+  assert.match(html(), /data-menu="inventory"/); assert.match(html(), /麦穗/); click('close');
+  // 夜里的抉择：19:00 → 走到废墟 → E → 选择 → 任务手记里补救
+  toHour(19); const n = e.fr.night; assert.equal(n.kind, 'ruin');
+  goRegion(n.region); const spot = FD.NIGHT_SPOTS[n.region];
+  Object.assign(e.s.player, { x: spot.x, y: spot.y + 20 }); run(3);
+  assert.match(document.querySelector('#context').innerHTML, /做个决定/);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /就这么办/);
+  click('xNight', 'take'); assert.equal(context.inspect().menu, null); assert.ok(e.fr.night.done);
+  click('xNight', 'leave'); assert.equal(e.fr.nightLog.length, 1, 'a second click does not decide twice');
+  context.open('journey'); clean(); assert.match(html(), /补救/); assert.match(html(), /明天的险地|今日险地/);
+  e.s.storage.bread = 30; e.s.storage.cloth = 4;
+  click('xAmends', e.fr.amends[0].id); assert.equal(e.fr.amends.length, 0); click('close');
+  // 今日险地：E 打开补给
+  e.s.minute = 23 * 60; e.c.workClock = 0; e.s.minute = 1440 - 0.5; e.advanceMinutes(1);
+  const h = e.hazardToday(); assert.ok(h);
+  goRegion('farm'); e.travel(h.region) || goRegion(h.region);
+  for (const z of e.enemies) if (z.hazard) z.dead = true;
+  const hs = FD.HAZARD_SPOTS[h.region]; Object.assign(e.s.player, { x: hs.x, y: hs.y + 20 }); run(3);
+  if (h.kind === 'ashore') e.s.minute = 10 * 60;
+  press('e'); run(1); assert.ok(e.fr.hazard.opened, 'hazard supply opened by E');
+  for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); run(3); }
+  context.inspect().renderer.resize(1366, 600, 1);
+  goRegion('farm'); Object.assign(e.s.player, { x: 830, y: 460 });
+  // 麦穗
+  click('xView', 'dog'); clean(); assert.match(html(), /默契/); click('xDog', 'feed'); assert.equal(e.fr.dog.bond >= 1, true); click('xDog', 'feed'); assert.equal(e.fr.dog.fedDay, e.s.day); click('close');
+  // 彭姐：08:00 来借粮，E 打开对话
+  toHour(8); assert.equal(e.fr.peng.phase, 'asking'); goRegion('farm');
+  Object.assign(e.s.player, { x: FD.FSPOTS.peng.x, y: FD.FSPOTS.peng.y + 20 }); run(3);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /彭姐/);
+  click('xPeng', 'lend'); assert.equal(e.fr.peng.phase, 'waiting'); assert.equal(context.inspect().menu, null);
+  // 贺满仓：核账、垫付、建造
+  e.o.ledger = [1, 2, 3].map((d) => ({ day: d, income: 10, items: { radish: 1 } })); e.o.bundles = ['clinic', 'caravan'];
+  Object.assign(e.s.player, { x: FD.FSPOTS.hemc.x, y: FD.FSPOTS.hemc.y + 20 }); run(3);
+  press('e'); run(1); clean(); assert.match(html(), /贺满仓/); assert.equal(e.fr.hemc.phase, 'open'); click('close');
+  const [type, def] = Object.entries(Data.BUILDINGS).find(([id, b]) => !b.tech && id !== 'field' && Object.values(b.cost).some((v) => v >= 3));
+  for (const k of Object.keys(def.cost)) { delete e.s.storage[k]; delete e.s.inventory[k]; }
+  context.open('build'); clean(); assert.match(html(), /贺满仓垫付/);
+  click('xAdvance', type); assert.equal(e.buildMode, type); assert.equal(context.inspect().menu, null);
+  let placed = false;
+  for (let r = 60; r < 600 && !placed; r += 16) for (let a = 0; a < 6.28 && !placed; a += 0.3) { const x = Math.round((760 + Math.cos(a) * r) / 8) * 8, y = Math.round((620 + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x: x + 30, y: y + 30 }); if (!e.buildReason(type, x, y)) placed = e.placeBuilding(x, y); }
+  assert.ok(placed); assert.ok(e.fr.hemc.debt);
+  context.open('journey'); clean(); assert.match(html(), /还这一期/); click('close');
+  // 设置：无障碍、改键（真按键）
+  context.open('pause'); clean(); assert.match(html(), /无障碍/); assert.match(html(), /键位/); assert.match(html(), /手柄/);
+  click('xAccess', 'text'); assert.match(document.body.className, /a11y-text/); assert.equal(JSON.parse(storage.get(Session.PREFERENCES)).access.text, true);
+  click('xAccess', 'text'); assert.doesNotMatch(document.body.className, /a11y-text/);
+  click('xKey', 'interact'); assert.match(html(), /按下新键/);
+  press('x'); assert.equal(JSON.parse(storage.get(Session.PREFERENCES)).keymap.interact, 'x');
+  click('close'); e.paused = false;
+  Object.assign(e.s.player, { x: FD.FSPOTS.hemc.x, y: FD.FSPOTS.hemc.y + 20 }); run(3);
+  assert.match(document.querySelector('#context').innerHTML, /<kbd>X<\/kbd>/);
+  press('e'); run(1); assert.equal(context.inspect().menu, null, 'the old key no longer interacts');
+  press('x'); run(1); assert.equal(context.inspect().menu, 'outpost', 'the new key interacts'); click('close');
+  context.open('pause'); click('xKeyReset'); assert.deepEqual(JSON.parse(storage.get(Session.PREFERENCES)).keymap, {});
+  click('xKey', 'reload'); click('close'); press('w'); assert.deepEqual(e.s.settings.keymap, {}, 'closing the menu cancels a pending remap');
+  click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.ok(back.far.hemc.debt); assert.equal(back.far.peng.phase, 'waiting'); assert.equal(back.far.nightLog.length, 1);
+  // 标题画面的设置里，无障碍开关同样生效
+  context.open('confirmTitle'); click('backToTitle'); assert.equal(context.inspect().started, false);
+  context.open('pause'); click('xAccess', 'calm'); assert.match(document.body.className, /a11y-calm/); click('xAccess', 'calm'); assert.doesNotMatch(document.body.className, /a11y-calm/); click('close');
+  console.log('Farlands controller passed: phone menu, night choice via E with one decision and amends paid from the journal, hazard supply via E, 麦穗 feeding, 彭姐 via E, 贺满仓 audit and an advanced build placed and owed, accessibility toggles saved to preferences, key remap by real key presses (old key freed, prompt updated), reset, pending remap cancelled by closing, title-screen accessibility, Canvas at four sizes and save/parse.');
+}

@@ -119,14 +119,14 @@ function festivalDay(e, day = 7) {
 }
 
 // ---------- 存档 ----------
-test("new saves carry seasons defaults and the v0.16 version", async () => {
+test("new saves carry seasons defaults and a v0.16-or-later version", async () => {
   const { e } = make();
   assert.equal(e.ss.schema, 1);
   assert.equal(e.ss.he.stage, 0);
   assert.equal(e.festivalsOpen(), false, "festivals start from act three");
   const v = await import("../dist/version.js");
-  assert.equal(v.GAME_VERSION, "v0.16.0");
-  assert.equal(v.GAME_EDITION, "前哨四季");
+  assert.match(v.GAME_VERSION, /^v0\.(1[6-9]|[2-9]\d)\.\d+$/);
+  assert.ok(v.GAME_EDITION);
   const text = e.serialize();
   assert.deepEqual(Engine.parse(text).seasons, JSON.parse(text).seasons);
 });

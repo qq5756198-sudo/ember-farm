@@ -50,6 +50,7 @@ export function portrait(look, label = "") {
   if (extra === "glasses") body += r(5, 6, 2, 2, k.accent) + r(9, 6, 2, 2, k.accent) + r(7, 7, 2, 1, k.accent) + r(6, 7, 1, 1, "#1f1b18") + r(9, 7, 1, 1, "#1f1b18");
   if (extra === "scar") body += r(10, 5, 1, 4, k.accent);
   if (extra === "goggles") body += r(4, 3, 8, 2, "#5a4a3a") + r(5, 3, 2, 2, k.accent) + r(9, 3, 2, 2, k.accent);
+  if (extra === "dog") body = r(0, 0, 16, 16, "#1d2a22") + r(2, 3, 3, 6, k.hair) + r(11, 3, 3, 6, k.hair) + r(4, 4, 8, 9, k.skin) + r(5, 10, 6, 4, k.coat) + r(6, 7, 1, 1, "#1f1b18") + r(9, 7, 1, 1, "#1f1b18") + r(7, 10, 2, 1, "#1f1b18") + r(7, 12, 2, 2, "#c96a6a") + r(4, 13, 8, 2, k.accent);
   if (extra === "screen") body = r(0, 0, 16, 16, k.coat) + r(2, 2, 12, 9, k.hair) + r(3, 3, 10, 7, k.skin) + r(5, 5, 2, 2, "#22352b") + r(9, 5, 2, 2, "#22352b") + r(6, 8, 4, 1, "#22352b") + r(4, 12, 8, 2, k.accent);
   return `<svg class="portrait" viewBox="0 0 16 16" shape-rendering="crispEdges" role="img" aria-label="${esc(label || "人物立绘")}">${body}</svg>`;
 }
@@ -132,6 +133,12 @@ function viewSummary(e) {
   const sign = (n) => (n > 0 ? "+" + n : String(n));
   return `<div class="day-summary"><h3>第 ${r.day} 天结束</h3><dl class="summary-grid"><div><dt>金币</dt><dd>${sign(r.money)}</dd></div><div><dt>击败</dt><dd>${r.kills}</dd></div><div><dt>收获</dt><dd>${r.harvested} 株</dd></div><div><dt>口粮</dt><dd>${r.foodStart} → ${r.foodEnd} 份</dd></div></dl>${r.night.length ? `<h4>夜里发生的事</h4><ul>${r.night.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}<h4>今天要留意</h4><ul class="summary-threats">${r.threats.map((x) => `<li>${esc(x)}</li>`).join("")}</ul><div class="button-row">${button("oClose", "", "开始新的一天", 'class="primary"')}${button("oJournal", "", "打开任务手记")}</div></div>`;
 }
+// 出货行情：今天比平常高或低多少。
+function trendText(e, id) {
+  const t = e.shipTrend?.(id);
+  if (!Number.isFinite(t)) return "";
+  return Math.abs(t) < 3 ? " · 行情平稳" : ` · 今日行情 ${t > 0 ? "↑" : "↓"}${Math.abs(t)}%`;
+}
 function viewShipping(e) {
   const o = e.o,
     farm = e.s.region === "farm";
@@ -141,17 +148,17 @@ function viewShipping(e) {
   const rows = goods
     .map(
       ([id, n]) =>
-        `<div class="ship-row"><div><b>${esc(ITEMS[id].name)} ×${n}</b><small>每份 ${e.shipPrice(id)} 金币</small></div><div class="ship-actions">${button("oShip", id + ":1", "放 1 份", farm ? "" : "disabled")}${button("oShip", id + ":all", "全部放入", farm ? "" : "disabled")}</div></div>`,
+        `<div class="ship-row"><div><b>${esc(ITEMS[id].name)} ×${n}</b><small>每份 ${e.shipPrice(id)} 金币${trendText(e, id)}</small></div><div class="ship-actions">${button("oShip", id + ":1", "放 1 份", farm ? "" : "disabled")}${button("oShip", id + ":all", "全部放入", farm ? "" : "disabled")}</div></div>`,
     )
     .join("");
   const box = Object.entries(o.shipBox)
-    .map(([id, n]) => `<div class="ship-row in-box"><div><b>${esc(ITEMS[id].name)} ×${n}</b><small>${e.shipPrice(id) * n} 金币</small></div><div class="ship-actions">${button("oUnship", id, "取回")}</div></div>`)
+    .map(([id, n]) => `<div class="ship-row in-box"><div><b>${esc(ITEMS[id].name)} ×${n}</b><small>${e.shipPrice(id) * n} 金币${trendText(e, id)}</small></div><div class="ship-actions">${button("oUnship", id, "取回")}</div></div>`)
     .join("");
   const ledger = o.ledger
     .slice(0, 5)
     .map((l) => `<li>第${l.day}天 · ${esc(bundleText(l.items))} · +${l.income} 金币</li>`)
     .join("");
-  return `<p class="muted">放进箱子的东西会在明早 0 点按收购价自动卖掉，钱直接入账；早上之前随时可以取回。口粮也能卖——卖之前想想今晚的晚饭。</p>${consequence({ cost: "放入的物品", gain: "明早 +" + e.shipValue() + " 金币", effect: "口粮还能撑 " + e.foodDays() + " 天" })}<div class="ship-grid"><section><h3>背包里能卖的</h3>${rows || "<p class='muted'>背包里没有能出货的东西。</p>"}</section><section><h3>出货箱 · 明早结算 ${e.shipValue()} 金币</h3>${box || "<p class='muted'>箱子是空的。</p>"}${ledger ? `<h4>最近的出货</h4><ul class="ledger">${ledger}</ul>` : ""}</section></div>`;
+  return `<p class="muted">放进箱子的东西会在明早 0 点按收购价自动卖掉，钱直接入账；早上之前随时可以取回。口粮也能卖——卖之前想想今晚的晚饭。${e.shipTrend ? "收购价每天浮动，按放进箱子那天的行情结算。" : ""}</p>${consequence({ cost: "放入的物品", gain: "明早 +" + e.shipValue() + " 金币", effect: "口粮还能撑 " + e.foodDays() + " 天" })}<div class="ship-grid"><section><h3>背包里能卖的</h3>${rows || "<p class='muted'>背包里没有能出货的东西。</p>"}</section><section><h3>出货箱 · 明早结算 ${e.shipValue()} 金币</h3>${box || "<p class='muted'>箱子是空的。</p>"}${ledger ? `<h4>最近的出货</h4><ul class="ledger">${ledger}</ul>` : ""}</section></div>`;
 }
 function viewCaravan(e) {
   const c = e.o.caravan;
@@ -264,7 +271,7 @@ function viewRaid(e) {
     rep = e.lastRaidReport();
   if (!rep) return "<p>还没有战报。</p>";
   const prep = rep.prep ? RAID_PREP[rep.prep].name : "没有特别准备";
-  return `<div class="raid-report ${rep.won ? "won" : "lost"}"><h3>${rep.won ? (rep.kind === "later" ? "击退灰隼团残部" : "击退灰隼团") : "没守住"} · 第${rep.day}天</h3>${rep.note ? `<p class="muted">${esc(rep.note)}（防守力 ${rep.power}）</p>` : ""}<dl class="summary-grid"><div><dt>来袭</dt><dd>${rep.total} 名枪手</dd></div><div><dt>击倒</dt><dd>${rep.killed}</dd></div><div><dt>打跑</dt><dd>${rep.retreated}</dd></div><div><dt>备战</dt><dd>${esc(prep)}</dd></div></dl>${rep.won ? (rep.kind === "later" ? `<p>缴获：${esc(bundleText(rep.gain))}、${rep.money || 0} 金币。${esc(rep.wonText || "袭击者溃散了。")}</p>` : `<p>缴获：${esc(bundleText(rep.gain))}、80 金币。围栏边抓到了鹞子——去农舍西南边决定怎么处置他。</p>`) : `<p>被抢走：${esc(bundleText(rep.lost) || "一些零碎")}。他们第${r.day}天 19:00 还会再来。</p><p class="muted">下次：让居民守瞭望塔（营地手册 · 居民）、补足弹药、修好东侧围栏；人留在农场更容易赢。</p>`}<div class="button-row">${button("oClose", "", "知道了", 'class="primary"')}${button("oJournal", "", "打开任务手记")}</div></div>`;
+  return `<div class="raid-report ${rep.won ? "won" : "lost"}"><h3>${rep.won ? (rep.kind === "later" ? "击退灰隼团残部" : "击退灰隼团") : "没守住"} · 第${rep.day}天</h3>${rep.note ? `<p class="muted">${esc(rep.note)}（防守力 ${rep.power}）</p>` : ""}${rep.wounded ? `<p class="warn">交火中营地的人被流弹擦伤 ${rep.wounded} 次。</p>` : ""}<dl class="summary-grid"><div><dt>来袭</dt><dd>${rep.total} 名枪手</dd></div><div><dt>击倒</dt><dd>${rep.killed}</dd></div><div><dt>打跑</dt><dd>${rep.retreated}</dd></div><div><dt>备战</dt><dd>${esc(prep)}</dd></div></dl>${rep.won ? (rep.kind === "later" ? `<p>缴获：${esc(bundleText(rep.gain))}、${rep.money || 0} 金币。${esc(rep.wonText || "袭击者溃散了。")}</p>` : `<p>缴获：${esc(bundleText(rep.gain))}、80 金币。围栏边抓到了鹞子——去农舍西南边决定怎么处置他。</p>`) : `<p>被抢走：${esc(bundleText(rep.lost) || "一些零碎")}。他们第${r.day}天 19:00 还会再来。</p><p class="muted">下次：让居民守瞭望塔（营地手册 · 居民）、补足弹药、修好东侧围栏；人留在农场更容易赢。</p>`}<div class="button-row">${button("oClose", "", "知道了", 'class="primary"')}${button("oJournal", "", "打开任务手记")}</div></div>`;
 }
 function viewLog(e, ui) {
   const o = e.o;
