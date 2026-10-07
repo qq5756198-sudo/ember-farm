@@ -1,0 +1,217 @@
+/* v0.18.0「每日抉择」：清晨事件卡、结果页、手记里的今日抉择条、抉择记录、顶栏增益标签。 */
+
+/* 06:00 后事件卡开着（还没选）时：不能关，也不显示底栏 */
+.modal:has(.daily-card.locked) .close,
+.modal:has(.daily-card.locked) .modal-foot {
+  display: none;
+}
+
+.daily-card,
+.daily-result {
+  display: grid;
+  gap: 12px;
+}
+.daily-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.daily-art {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  border: 2px solid #46554c;
+  border-radius: 8px;
+  image-rendering: pixelated;
+}
+.daily-head small {
+  color: #b9c2ad;
+}
+.daily-head h3 {
+  margin: 2px 0 6px;
+  font-size: 1.35em;
+  color: #f6e3b4;
+}
+.daily-tag {
+  display: inline-block;
+  margin: 0 6px 4px 0;
+  padding: 1px 8px;
+  border: 1px solid var(--tone, #85956a);
+  border-radius: 999px;
+  color: var(--tone, #d6dcc6);
+  font-size: 12px;
+}
+.daily-tag.chain {
+  --tone: #c9a5e6;
+}
+.daily-text {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 4px solid #e9c05a;
+  border-radius: 6px;
+  background: #1d2a24;
+  color: #ecebdc;
+  line-height: 1.7;
+}
+.daily-prev,
+.daily-luck {
+  margin: 0;
+  color: #cfd8c2;
+}
+.daily-luck {
+  color: #f3d27a;
+}
+.daily-opts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.daily-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #5d6b55;
+  border-radius: 10px;
+  background: #22302a;
+}
+.daily-opt.locked {
+  opacity: 0.72;
+}
+.daily-opt h4 {
+  margin: 0;
+  font-size: 1.05em;
+  color: #f6e3b4;
+}
+.daily-opt h4 kbd {
+  margin-right: 8px;
+}
+.daily-opt dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  flex: 1;
+}
+.daily-opt dl div {
+  display: grid;
+  grid-template-columns: 4.5em 1fr;
+  gap: 6px;
+}
+.daily-opt dt {
+  color: #aab7af;
+  font-size: 12px;
+}
+.daily-opt dd {
+  margin: 0;
+  color: #ecebdc;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.daily-opt .risk dd {
+  color: #ffc9bd;
+}
+.daily-opt .follow dd {
+  color: #d9c2f0;
+}
+.daily-opt button {
+  min-height: 40px;
+}
+.chance {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.chance i {
+  width: 9px;
+  height: 8px;
+  border-radius: 2px;
+  background: #4a3a34;
+}
+.chance i.w {
+  background: #8fbf6a;
+}
+.chance i.on {
+  background: #e9806e;
+}
+.daily-stock {
+  margin: 0;
+  color: #aab7af;
+  font-size: 12px;
+}
+.daily-lines {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 14px 12px 32px;
+  border-radius: 8px;
+  background: #1d2a24;
+  line-height: 1.6;
+}
+.daily-result.won .daily-head h3 {
+  color: #b8e0a0;
+}
+.daily-result.lost .daily-head h3 {
+  color: #ffc9bd;
+}
+.daily-result .button-row button {
+  min-height: 44px;
+  padding: 6px 22px;
+}
+
+/* 任务手记里的今日抉择条 */
+.daily-strip {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid #5d6b55;
+  border-left: 4px solid #c9a5e6;
+  border-radius: 6px;
+  background: #1f2628;
+}
+.daily-strip p {
+  flex: 1 1 260px;
+  margin: 0;
+}
+.daily-strip p b {
+  display: inline-block;
+  min-width: 5.5em;
+  margin-right: 8px;
+  color: #d9c2f0;
+}
+
+/* 顶栏增益 */
+.daily-chip {
+  min-height: 0;
+  cursor: pointer;
+  border-color: #c9a5e6;
+  color: #e8d6f6;
+}
+
+@media (max-width: 900px) {
+  .daily-opts {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 850px) {
+  .daily-chip {
+    display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .daily-keys {
+    display: none;
+  }
+}
+
+/* 色弱配色 */
+.a11y-color .daily-opt .risk dd {
+  color: #bfe0ff;
+}
+.a11y-color .chance i.w {
+  background: #4aa3ff;
+}
+.a11y-color .chance i.on {
+  background: #f0a040;
+}

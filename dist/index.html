@@ -1,16 +1,17 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>余烬农场 v0.17.0 · 远方来客</title><meta name="description" content="在废墟中种下口粮，接回失散的人，修复农场与远方的灯火。"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23232c24'/%3E%3Cpath d='M16 25V12M16 16Q4 16 7 5Q17 5 16 16M16 20Q28 19 26 9Q16 9 16 20' fill='%239baa58' stroke='%239baa58' stroke-width='2'/%3E%3C/svg%3E"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="rebuild.css"><link rel="stylesheet" href="supply.css"><link rel="stylesheet" href="echoes.css"><link rel="stylesheet" href="clarity.css"><link rel="stylesheet" href="districts.css"><link rel="stylesheet" href="player.css"><link rel="stylesheet" href="beyond.css"><link rel="stylesheet" href="wayfinding.css">
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>余烬农场 v0.18.0 · 每日抉择</title><meta name="description" content="在废墟中种下口粮，接回失散的人，修复农场与远方的灯火。"><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23232c24'/%3E%3Cpath d='M16 25V12M16 16Q4 16 7 5Q17 5 16 16M16 20Q28 19 26 9Q16 9 16 20' fill='%239baa58' stroke='%239baa58' stroke-width='2'/%3E%3C/svg%3E"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="rebuild.css"><link rel="stylesheet" href="supply.css"><link rel="stylesheet" href="echoes.css"><link rel="stylesheet" href="clarity.css"><link rel="stylesheet" href="districts.css"><link rel="stylesheet" href="player.css"><link rel="stylesheet" href="beyond.css"><link rel="stylesheet" href="wayfinding.css">
 <link rel="stylesheet" href="alliance.css">
 <link rel="stylesheet" href="outpost.css">
 <link rel="stylesheet" href="winter.css">
 <link rel="stylesheet" href="seasons.css">
-<link rel="stylesheet" href="farlands.css"></head>
+<link rel="stylesheet" href="farlands.css">
+<link rel="stylesheet" href="daily.css"></head>
 <body class="title-screen">
 <main id="game" aria-label="余烬农场游戏">
 <header class="hud-top">
   <button class="hud-brand" data-menu="rebuild" title="查看任务手记 J / N / F"><span class="brand-mark">✦</span><span>余烬农场</span></button>
   <section id="stat-bars" class="hud-vitals" aria-label="生命、体力与饥饿"></section>
-  <div class="hud-time"><button id="date" class="hud-date" data-action="sView" data-id="calendar" title="节庆日历">第1天</button><b id="time">08:00</b><span id="weather">晴朗</span><span class="hud-coins">金 <b id="money">120</b></span><span id="food-days" class="hud-food" title="仓库与背包里的口粮还能撑几天">口粮 — 天</span><span id="season-chip" class="hud-food" hidden></span></div>
+  <div class="hud-time"><button id="date" class="hud-date" data-action="sView" data-id="calendar" title="节庆日历">第1天</button><b id="time">08:00</b><span id="weather">晴朗</span><span class="hud-coins">金 <b id="money">120</b></span><span id="food-days" class="hud-food" title="仓库与背包里的口粮还能撑几天">口粮 — 天</span><span id="season-chip" class="hud-food" hidden></span><button id="daily-chip" class="hud-food daily-chip" data-action="dView" data-id="dlog" hidden></button></div>
   <button class="hud-location" data-menu="map" title="世界地图 M"><span id="region-label">林间农场</span><span>地图 M ↗</span></button>
   <button class="hud-phone" data-action="xView" data-id="phone" aria-label="快捷菜单">☰ 菜单</button>
   <button class="hud-settings" data-menu="pause" aria-label="设置与存档">设置</button>
@@ -25,5 +26,5 @@
 </footer>
 <div class="hud-offstage" hidden><span id="skill-summary"></span><span id="camp-summary"></span><span id="day-progress"></span><span id="save-state">尚未保存</span></div>
 <div id="modal-backdrop" class="modal-backdrop" hidden><section id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"></section><div id="menu-toasts" aria-live="polite"></div></div>
-<div id="loading" class="loading"><div class="loading-mark">✦</div><h1>余烬农场</h1><p class="release-label" data-release>v0.17.0 · 远方来客</p><p>正在整理种子与行囊…</p></div>
+<div id="loading" class="loading"><div class="loading-mark">✦</div><h1>余烬农场</h1><p class="release-label" data-release>v0.18.0 · 每日抉择</p><p>正在整理种子与行囊…</p></div>
 </main><script type="module" src="game.js"></script></body></html>

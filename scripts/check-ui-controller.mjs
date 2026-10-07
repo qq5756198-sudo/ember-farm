@@ -40,11 +40,14 @@ import * as DistrictArt from '../dist/district-art.js';
 import * as DistrictUI from '../dist/district-ui.js';
 import * as DistrictData from '../dist/district-data.js';
 const {createCanvas,Image:NativeImage,loadImage}=createRequire(import.meta.url)('@napi-rs/canvas');
+// 前几段检查的是 v0.13–v0.17 的流程：只在“每日抉择”段打开清晨事件卡，其余段里不让它插进来。
+const realDailyShow=Campaign.Engine.prototype.dailyShouldShow;let dailyOn=false;
+Campaign.Engine.prototype.dailyShouldShow=function(){return dailyOn&&realDailyShow.call(this);};
 const dir=new URL('../dist',import.meta.url).pathname;
 let all=[];const listeners={};
 function decode(s){return s.replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');}
 function parse(html,parent){const out=[];for(const m of html.matchAll(/<([a-zA-Z][\w-]*)([^>]*)>/g)){const el=new El(m[1].toLowerCase(),parent);for(const a of m[2].matchAll(/([\w:-]+)(?:="([^"]*)")?/g)){const k=a[1],v=decode(a[2]||'');if(k==='id')el.id=v;else if(k==='class')el.className=v;else if(k.startsWith('data-'))el.dataset[k.slice(5).replace(/-([a-z])/g,(_,v)=>v.toUpperCase())]=v;else if(k==='disabled')el.disabled=true;else if(k==='hidden')el.hidden=true;else if(k==='value')el.value=v;}out.push(el);}return out;}
-function match(el,selector){return selector.split(',').some(part=>{part=part.trim();if(part.includes(':not([disabled])')&&el.disabled)return false;part=part.replace(':not([disabled])','');const attr=part.match(/\[([\w-]+)\]/)?.[1];if(attr){const key=attr.slice(5).replace(/-([a-z])/g,(_,v)=>v.toUpperCase());if(attr.startsWith('data-')&&!(key in el.dataset))return false;part=part.replace(/\[[\w-]+\]/,'');}if(part.startsWith('#'))return el.id===part.slice(1);if(part.startsWith('.'))return el.className.split(' ').includes(part.slice(1));return !part||el.tag===part;});}
+function match(el,selector){const hot=selector.match(/^#modal \[data-hotkey="(\d)"\]$/);if(hot){if(el.dataset.hotkey!==hot[1])return false;for(let p=el.parent;p;p=p.parent)if(p.id==='modal')return true;return false;}return selector.split(',').some(part=>{part=part.trim();if(part.includes(':not([disabled])')&&el.disabled)return false;part=part.replace(':not([disabled])','');const attr=part.match(/\[([\w-]+)\]/)?.[1];if(attr){const key=attr.slice(5).replace(/-([a-z])/g,(_,v)=>v.toUpperCase());if(attr.startsWith('data-')&&!(key in el.dataset))return false;part=part.replace(/\[[\w-]+\]/,'');}if(part.startsWith('#'))return el.id===part.slice(1);if(part.startsWith('.'))return el.className.split(' ').includes(part.slice(1));return !part||el.tag===part;});}
 class El{
  constructor(tag,parent=null){this.scrollTop=0;this.classList={add:(v)=>{this.className+=' '+v},remove:v=>{this.className=this.className.split(' ').filter(x=>x!==v).join(' ')},toggle:(v,force)=>{const on=force??!this.className.split(' ').includes(v);this.className=this.className.split(' ').filter(x=>x!==v).join(' ')+(on?' '+v:'');return on}};this.tag=tag;this.parent=parent;this.children=[];this.dataset={};this.className='';this.hidden=false;this.disabled=false;this.style={setProperty(k,v){this[k]=v}};this.textContent='';this.value='';this.events={};this._width=0;this._height=0;}
  set innerHTML(html){for(const el of this._parsed||[])all=all.filter(x=>x!==el);this._html=html;this._parsed=parse(html,this);all.push(...this._parsed);this.children=this._parsed;const selects=this._parsed.filter(x=>x.tag==='select');for(const el of selects){const snippet=html.match(new RegExp('<select[^>]*'+(el.id?'id="'+el.id+'"':'')+'[^>]*>([\\s\\S]*?)</select>'))?.[1];el.value=decode(snippet?.match(/<option value="([^"]*)"[^>]*selected/)?.[1]||snippet?.match(/<option value="([^"]*)"/)?.[1]||'');}}
@@ -550,4 +553,101 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   context.open('confirmTitle'); click('backToTitle'); assert.equal(context.inspect().started, false);
   context.open('pause'); click('xAccess', 'calm'); assert.match(document.body.className, /a11y-calm/); click('xAccess', 'calm'); assert.doesNotMatch(document.body.className, /a11y-calm/); click('close');
   console.log('Farlands controller passed: phone menu, night choice via E with one decision and amends paid from the journal, hazard supply via E, 麦穗 feeding, 彭姐 via E, 贺满仓 audit and an advanced build placed and owed, accessibility toggles saved to preferences, key remap by real key presses (old key freed, prompt updated), reset, pending remap cancelled by closing, title-screen accessibility, Canvas at four sizes and save/parse.');
+}
+// v0.18.0「每日抉择」: the morning card pops up by itself from day two, cannot be closed, number keys pick, the result starts the day, sleep → summary → card, journal strip and record page, today's supply point and a chain marker via E, HUD chip and save/parse.
+{
+  let clock = 4500000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  const DD = await import('../dist/daily-data.js');
+  const DJ = await import('../dist/daily.js');
+  dailyOn = true;
+  context.fixture(Campaign.freshState());
+  let e = context.inspect().engine;
+  e.paused = false;
+  const nextDay = () => { e.s.minute = 1440 - 0.5; e.c.workClock = 0; e.advanceMinutes(1); };
+  const goRegion = (id) => { e.s.region = id; e.enemies = e.s.enemies[id] ||= []; e.assignRegion(); };
+  // 第一天没有卡
+  e.s.minute = 9 * 60; run(3); assert.equal(context.inspect().menu, null); assert.equal(e.dailyCard(), null);
+  // 零点抽好第 2 天的卡，06:00 前不弹
+  nextDay(); assert.equal(e.s.day, 2);
+  const p = e.dailyCard(); assert.ok(p); assert.ok(DD.EVENTS[p.id].newbie, 'days 2–5 draw newbie events');
+  run(3); assert.equal(context.inspect().menu, null, 'no card before 06:00');
+  e.s.minute = 360; run(2);
+  assert.equal(context.inspect().menu, 'outpost', 'the card pops up by itself at 06:00'); clean();
+  assert.match(html(), /class="daily-card/); assert.match(html(), /data-hotkey="1"/); assert.match(html(), /data-hotkey="3"/);
+  assert.equal((html().match(/data-action="dPick"/g) || []).length, 3);
+  // 卡开着时关不掉：Esc、关闭按钮都不行
+  press('Escape'); assert.equal(context.inspect().menu, 'outpost', 'Esc does not close the card');
+  click('close'); assert.equal(context.inspect().menu, 'outpost', 'close does not close the card');
+  // 数字键选择
+  const free = [0, 1, 2].find((i) => !e.optionReason(i));
+  assert.notEqual(free, undefined, 'every card has an option you can take');
+  const money0 = e.s.money;
+  press(String(free + 1));
+  assert.equal(e.dy.pending.choice, free); assert.equal(e.dy.stats.cards, 1); clean();
+  assert.match(html(), /class="daily-result/); assert.match(html(), /开始第 2 天/);
+  press(String(free + 1)); press('1');
+  assert.equal(context.inspect().menu, null, 'the result button starts the day'); assert.equal(e.dy.stats.cards, 1, 'one choice a day');
+  run(5); assert.equal(context.inspect().menu, null, 'the card does not come back the same day');
+  // 任务手记的今日抉择条 → 抉择记录
+  context.open('journey'); clean(); assert.match(html(), /class="daily-strip"/); assert.match(html(), /今日抉择/);
+  click('dView', 'dlog'); clean(); assert.match(html(), /已经做过 1 次抉择/); assert.match(html(), /种子换口粮|连贯事件/); click('close');
+  assert.equal(context.inspect().menu, null);
+  // 睡一觉：先出日终总结，关掉后卡片弹出
+  goRegion('farm'); e.s.player.hunger = 80; e.s.storage.bread = 20;
+  context.open('home'); click('sleep'); run(2);
+  assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /日终总结|第 \d+ 天结束/);
+  assert.equal(e.s.day, 3); assert.ok(e.dailyCard(), 'a fresh card for day three');
+  click('oClose'); run(2);
+  assert.equal(context.inspect().menu, 'outpost', 'after the summary the card shows'); clean(); assert.match(html(), /class="daily-card/);
+  // 买不起的选项点了没反应，只提示原因
+  const blocked = [0, 1, 2].find((i) => e.optionReason(i));
+  if (blocked !== undefined) { const before = JSON.stringify(e.s.storage) + e.s.money; click('dPick', String(blocked)); assert.equal(e.dy.pending.choice, null); assert.equal(JSON.stringify(e.s.storage) + e.s.money, before); }
+  click('dPick', String([0, 1, 2].find((i) => !e.optionReason(i)))); click('dStart'); assert.equal(context.inspect().menu, null);
+  // 第 6 天以后：补给点（S02）与连贯事件标记（C4-2），都用 E 互动
+  const sc = e.sc;
+  Object.assign(sc, { act: 9, claimed: ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8'], choice: 'ration', letters: ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8'], camp: { x: 560, y: 735 } });
+  Object.assign(sc.flags, { well: true, camp: true, farmerFed: true });
+  e.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((t) => t.id === 'broadcast') + 1).map((t) => t.id);
+  Object.assign(e.o, { hospital: 'water', youke: true, lathe: { mode: 'parts', day: 0 }, toll: 'refuse' });
+  e.o.raid.phase = 'won'; e.r.radio = true;
+  e.s.day = 20; e.s.minute = 7 * 60; e.assignRegion();
+  e.dy.pending = { day: 20, id: 'S02', rolls: [0.5, 0.5, 0.5], tier: e.tier(), luck: false, choice: null, win: null, lines: [] };
+  run(2); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /奖励 ×2/);
+  click('dPick', '0'); clean(); assert.match(html(), /补给/); click('dStart');
+  const cache = e.dy.caches[0]; assert.ok(cache);
+  e.travel(cache.region) || goRegion(cache.region);
+  for (const z of e.enemies) z.dead = true;
+  const ob = e.objects.find((o) => o.type === 'dailyCache'); assert.ok(ob);
+  Object.assign(e.s.player, { x: ob.x, y: ob.y + 20 }); run(3);
+  assert.match(document.querySelector('#context').innerHTML, /今日补给|补给/);
+  const ammo = e.qty('ammo', true);
+  press('e'); run(1); assert.equal(e.qty('ammo', true), ammo + e.scaleN(6, 2), 'the supply point opens once by E');
+  press('e'); run(1); assert.equal(e.qty('ammo', true), ammo + e.scaleN(6, 2));
+  assert.ok(!e.objects.some((o) => o.type === 'dailyCache'));
+  // 连贯事件：标记点
+  goRegion('farm'); e.s.day = 21; e.s.minute = 7 * 60;
+  e.dy.chains.C4 = { step: 'C4-2', due: 21, flags: [], mark: null, start: 20 }; delete e.dy.done.C4;
+  e.dy.pending = { day: 21, id: 'C4-2', rolls: [0.5, 0.5, 0.5], tier: e.tier(), luck: false, choice: null, win: null, lines: [] };
+  run(2); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /第 2\/\d 步/);
+  click('dPick', '1'); clean(); assert.match(html(), /标记点/); click('dStart');
+  assert.ok(e.dy.chains.C4.mark);
+  context.open('journey'); clean(); assert.match(html(), /data-action="dMark"/);
+  click('dMark', 'C4'); assert.equal(context.inspect().menu, 'map', 'the marker opens the map when it is elsewhere'); click('close');
+  e.travel('warehouse') || goRegion('warehouse');
+  for (const z of e.enemies) z.dead = true;
+  const mk = e.objects.find((o) => o.type === 'dailyMark'); assert.ok(mk);
+  Object.assign(e.s.player, { x: mk.x, y: mk.y + 20 }); run(3);
+  press('e'); run(1); assert.equal(e.dy.chains.C4.due, 22); assert.ok(!e.objects.some((o) => o.type === 'dailyMark'));
+  // 顶栏的增益标签
+  e.dy.buffs.push({ kind: 'growth', value: 0.3, from: 21, until: 22, src: 'test' }); run(4);
+  assert.equal(document.querySelector('#daily-chip').hidden, false); assert.match(document.querySelector('#daily-chip').textContent, /✦ 1/);
+  for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); run(3); }
+  context.inspect().renderer.resize(1366, 600, 1);
+  click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.ok(back.daily.chains.C4); assert.equal(back.daily.chains.C4.due, 22); assert.equal(back.daily.stats.cards, 4);
+  assert.ok(back.daily.history.length >= 4);
+  dailyOn = false;
+  console.log('Daily controller passed: no card on day one, the day-two card pops up by itself at 06:00, Esc and close cannot dismiss it, number keys pick and the result starts the day once, journal strip and record page, sleep → summary → card, refused options change nothing, ×2 rewards in late acts, today\'s supply point and a chain marker via E (once each), marker routing on the map, HUD buff chip, Canvas at four sizes and save/parse.');
 }
