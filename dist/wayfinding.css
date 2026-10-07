@@ -14,3 +14,6 @@
 @media(max-width:850px){.atlas-main{grid-template-rows:minmax(0,1fr) minmax(0,.85fr)}}
 @media(max-height:550px) and (min-width:600px){.atlas-main{grid-template-rows:minmax(0,1fr)}}
 @media(max-height:550px) and (max-width:599px){.atlas-main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,.85fr)}}
+
+/* v0.13.0: pressing a map place must not drop its centring transform, otherwise the click lands beside it. */
+.atlas-node:active{transform:translate(-50%,-50%)}

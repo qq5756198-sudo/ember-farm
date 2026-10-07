@@ -120,6 +120,7 @@ export class Renderer extends BeyondRenderer {
     if (o.type === "allianceHelper") return this.drawHelper(o, e);
     if (o.type === "allianceCamp") return this.drawCamp(o, e);
     if (o.type === "allianceSite") return this.drawCampSite(o, e);
+    if (o.type === "allianceNeighbors") return this.drawNeighbors(o, e);
     super.drawObject(o, e);
     if (o.type === "sign" && e.sc) this.drawTerminal(o, e);
     if (o.type === "well" && e.sc?.flags.well) this.drawPulley(o);
@@ -152,6 +153,23 @@ export class Renderer extends BeyondRenderer {
     rect(x - 6, y - 64, 12, 8, "#c3a46d");
     line(x, y - 58, x, y - 34 + Math.sin(this.time * 2) * 2, "#d8c9a0", 1);
     rect(x - 4, y - 36 + Math.sin(this.time * 2) * 2, 8, 6, "#7e9a94");
+  }
+  drawNeighbors(o, e) {
+    const { rect } = pixelPainter(this.ctx),
+      x = o.x,
+      y = o.y,
+      done = e.sc?.neighborDay === e.s.day;
+    this.shadow(x, y + 4, 46);
+    rect(x - 40, y - 22, 80, 10, "#a8875a");
+    rect(x - 40, y - 22, 80, 2, "#d0b17c");
+    for (const dx of [-36, 30]) rect(x + dx, y - 12, 5, 14, "#5c4630");
+    rect(x - 30, y - 30, 14, 8, "#c99a5a");
+    rect(x + 10, y - 32, 18, 10, "#8d754e");
+    rect(x + 12, y - 30, 14, 2, "#c3a574");
+    this.sprite(57, x - 30, y - 18, 40, 52);
+    this.sprite(56, x + 32, y - 16, 40, 52, true, 1, true);
+    if (!done) rect(x - 4, y - 46 + Math.sin(this.time * 3) * 2, 8, 8, "#f2c35e");
+    if (NEAR(o, e.s.player, 170)) this.badge(done ? "邻里互助点 · 明天再来" : "邻里互助点", x, y - 84, "#e6d6a3");
   }
   drawCampSite(o, e) {
     const { rect, line } = pixelPainter(this.ctx),

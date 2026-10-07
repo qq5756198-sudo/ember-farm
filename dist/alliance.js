@@ -18,6 +18,9 @@ import {
   CAMP_COST,
   TROUGH_PLOTS,
   ACT2_REWARD,
+  NEIGHBOR_SPOT,
+  NEIGHBOR_COST,
+  NEIGHBOR_GIFT,
   SUPPLY,
   CAMP_CANDIDATES,
   TABLE_SEATS,
@@ -41,6 +44,8 @@ const defaults = () => ({
   log: [],
   veteran: false,
   wellDay: 0,
+  neighborDay: 0,
+  neighborHelps: 0,
 });
 const HELPER_KEYS = [
   "id",
@@ -99,14 +104,15 @@ export class Engine extends GuidanceEngine {
   }
 
   // ---------- 场景对象 ----------
-  campSpotFree(p) {
+  campSpotFree(p, strict = true) {
     if (p.x < 120 || p.y < 120 || p.x > WORLD.w - 120 || p.y > WORLD.h - 90) return false;
     if (dist(p, this.region?.exit || { x: 1440, y: 392 }) < 160) return false;
     if (this.blocked(p.x, p.y, false, 34)) return false;
     if (this.s.plots.some((q) => Math.abs(q.x - p.x) < 62 && Math.abs(q.y - p.y) < 58)) return false;
+    const pad = strict ? 1 : 0.6;
     for (const b of this.s.buildings) {
       const d = BUILDINGS[b.type];
-      if (d && Math.abs(b.x - p.x) < d.w / 2 + 60 && Math.abs(b.y - p.y) < d.h / 2 + 50) return false;
+      if (d && Math.abs(b.x - p.x) < d.w / 2 + 60 * pad && Math.abs(b.y - p.y) < d.h / 2 + 50 * pad) return false;
     }
     const fixed = [
       { x: 328, y: 315 },
@@ -122,11 +128,11 @@ export class Engine extends GuidanceEngine {
       { x: 1220, y: 390 },
       { x: 875, y: 570 },
     ];
-    if (fixed.some((o) => dist(o, p) < 95)) return false;
+    if (fixed.some((o) => dist(o, p) < 95 * pad)) return false;
     return !(this.objects || []).some(
       (o) =>
         !["resident", "allianceHelper", "allianceSite", "partnerDog", "plot"].includes(o.type) &&
-        dist(o, p) < 85,
+        dist(o, p) < 85 * pad,
     );
   }
   campSite() {
@@ -135,16 +141,21 @@ export class Engine extends GuidanceEngine {
     if (sc.camp) return sc.camp;
     // 只在农场按农场地形挑选；外出时沿用上次选好的空地。
     if (this.s.region !== "farm") return sc.site;
-    if (sc.site && this.campSpotFree(sc.site)) return sc.site;
+    if (sc.site && this.campSpotFree(sc.site, false)) return sc.site;
     let site = CAMP_CANDIDATES.find((p) => this.campSpotFree(p));
     for (let y = 420; !site && y <= 900; y += 40)
       for (let x = 200; !site && x <= 1340; x += 40) if (this.campSpotFree({ x, y })) site = { x, y };
+    // 农场很拥挤时放宽间距，仍不压住建筑、田地和地形。
+    for (let y = 400; !site && y <= 920; y += 20)
+      for (let x = 160; !site && x <= 1360; x += 20) if (this.campSpotFree({ x, y }, false)) site = { x, y };
     sc.site = site ? { x: site.x, y: site.y } : null;
     return sc.site;
   }
   assignRegion() {
     super.assignRegion();
     const sc = this.s.storyCampaign;
+    if (sc && this.s.region === NEIGHBOR_SPOT.region && sc.claimed.includes("act2"))
+      this.objects.push({ type: "allianceNeighbors", name: "邻里互助点", x: NEIGHBOR_SPOT.x, y: NEIGHBOR_SPOT.y, icon: 57 });
     if (!sc || this.s.region !== "farm") return;
     const sign = this.objects.find((o) => o.type === "sign");
     if (sign) sign.name = "联盟终端 · 家园留言板";
@@ -210,6 +221,10 @@ export class Engine extends GuidanceEngine {
         const h = sc.helpers[0];
         return h ? "援建营地 · " + this.helperName(h.id) + "：" + h.status : "援建营地 · 等援建队员抵达";
       }
+      if (o.type === "allianceNeighbors")
+        return sc.neighborDay === this.s.day
+          ? "邻里互助点 · 今天已经互助过"
+          : "邻里互助 · " + bundleText(NEIGHBOR_COST) + " 换 " + bundleText(NEIGHBOR_GIFT);
       if (o.type === "allianceHelper") {
         const h = sc.helpers.find((x) => x.id === o.helper);
         return "和" + this.helperName(o.helper) + "说话 · " + (h?.status || "待命");
@@ -251,10 +266,21 @@ export class Engine extends GuidanceEngine {
         this.talkHelper(o.helper);
         return;
       }
+      if (o.type === "allianceNeighbors") {
+        this.neighborAid();
+        return;
+      }
     }
     const result = super.interact();
     this.checkStory();
     return result;
+  }
+
+  clearMark(spot = null) {
+    // 目标完成后撤下金色路标；指向别处的新路标保留。
+    const t = this.guidance.target;
+    if (!spot || (t && t.region === (spot.region || "farm") && dist(t, spot) < 45)) this.guidance.target = null;
+    this.emit("clearTarget");
   }
 
   // ---------- 第一段：收到回信 ----------
@@ -281,6 +307,7 @@ export class Engine extends GuidanceEngine {
       return false;
     }
     sc.flags.well = true;
+    this.clearMark(WELL_SPOT);
     const n = this.troughWater();
     this.storyLog("修好水井辘轳和水槽：每天清晨自动浇灌第一排田。");
     this.toast(
@@ -312,6 +339,7 @@ export class Engine extends GuidanceEngine {
     }
     sc.camp = { x: site.x, y: site.y };
     sc.flags.camp = true;
+    this.clearMark(site);
     this.navRevision++;
     this.assignRegion();
     this.storyLog("搭起援建营地：帐篷、火盆和一圈能坐人的木墩。");
@@ -353,6 +381,7 @@ export class Engine extends GuidanceEngine {
     }
     sc.claimed.push("act1");
     sc.act = 2;
+    this.clearMark();
     this.putStorage({ bread: 2 });
     this.addHelper("tieqiao");
     if (!sc.letters.includes("act2")) sc.letters.push("act2");
@@ -458,6 +487,37 @@ export class Engine extends GuidanceEngine {
     this.checkStory();
     return ok;
   }
+  neighborAid() {
+    const sc = this.sc;
+    if (!sc?.claimed.includes("act2")) return false;
+    if (this.s.region !== NEIGHBOR_SPOT.region || dist(this.s.player, NEIGHBOR_SPOT) > 120) {
+      this.toast("邻里互助点在废弃居民区，走近后按 E。", "warn");
+      return false;
+    }
+    if (sc.neighborDay === this.s.day) {
+      this.toast("今天已经和邻居互助过了，明天再来。");
+      return false;
+    }
+    if (this.qty("bread") < NEIGHBOR_COST.bread) {
+      this.toast("邻居们缺口粮：背包里带 1 份干粮再来。", "warn");
+      return false;
+    }
+    if (!this.canAdd(NEIGHBOR_GIFT)) {
+      this.toast("背包满了，腾出空间再接邻居的回礼。", "warn");
+      return false;
+    }
+    this.s.inventory.bread -= NEIGHBOR_COST.bread;
+    if (!this.s.inventory.bread) delete this.s.inventory.bread;
+    if (!this.add(NEIGHBOR_GIFT, true)) {
+      this.s.inventory.bread = (this.s.inventory.bread || 0) + NEIGHBOR_COST.bread;
+      return false;
+    }
+    sc.neighborDay = this.s.day;
+    sc.neighborHelps++;
+    this.toast("邻居们收下干粮，拆下两扇旧门板给你，还塞来一把萝卜种子：" + bundleText(NEIGHBOR_GIFT) + "。", "gold");
+    this.emit("loot");
+    return true;
+  }
   finishAct2() {
     const sc = this.sc;
     if (sc.claimed.includes("act2")) return false;
@@ -467,7 +527,7 @@ export class Engine extends GuidanceEngine {
     this.addReputation(ACT2_REWARD.reputation);
     if (!sc.letters.includes("act3")) sc.letters.push("act3");
     sc.unread = true;
-    this.storyLog("公共餐桌坐满了人。联盟记下：前哨供粮合格。");
+    this.storyLog("公共餐桌坐满了人。联盟记下：前哨供粮合格。住宅区开放邻里互助点。");
     this.toast(
       "今天的饭桌坐满了人。联盟记下前哨供粮合格：" +
         ACT2_REWARD.money +
@@ -476,7 +536,7 @@ export class Engine extends GuidanceEngine {
         "。",
       "gold",
     );
-    this.toast("小柒：医院方向收到新的求援，详情在任务手记。", "gold");
+    this.toast("小柒：医院方向收到新的求援，详情在任务手记。住宅区的邻居也开了互助点。", "gold");
     this.emit("quest");
     return true;
   }
@@ -485,7 +545,9 @@ export class Engine extends GuidanceEngine {
     if (this.s.region !== "farm" || ["warning", "active"].includes(this.s.horde?.phase)) return false;
     const q = this.currentRebuildTask();
     if (!q || Object.keys(q.cost).length || !this.taskReady(q.id)) return false;
-    return this.claimRebuildTask(q.id);
+    const ok = this.claimRebuildTask(q.id);
+    if (ok) this.clearMark();
+    return ok;
   }
   checkStory() {
     const sc = this.sc;
@@ -747,7 +809,7 @@ function validateStory(sc) {
   )
     bad();
   for (const k of ["unread", "veteran"]) if (sc[k] !== undefined && typeof sc[k] !== "boolean") bad();
-  if (sc.wellDay !== undefined && !int(sc.wellDay)) bad();
+  for (const k of ["wellDay", "neighborDay", "neighborHelps"]) if (sc[k] !== undefined && !int(sc[k])) bad();
   if (
     sc.log !== undefined &&
     (!Array.isArray(sc.log) ||

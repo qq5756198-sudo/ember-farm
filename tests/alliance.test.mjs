@@ -409,6 +409,8 @@ test("journal buttons mark real places and perform story actions through the eng
   assert.match(renderStoryJournal(e, {}), /就地修好水井/);
   handleAllianceAction("aStoryDo", { dataset: { id: "well" } }, c);
   assert.ok(e.sc.flags.well);
+  assert.equal(e.guidance.target, null, "the finished well's marker is taken down");
+  assert.ok(e.events.some((x) => x.type === "clearTarget"));
   assert.equal(storyGoal(e).step.id, "camp");
   e.s.region = "market";
   e.assignRegion();
@@ -462,4 +464,63 @@ test("camp site avoids player buildings and is only chosen on the farm map", () 
   away.s.region = "farm";
   away.assignRegion();
   assert.ok(away.campSite());
+});
+
+test("after act two the residential neighbours trade one meal a day, never charging on a full bag", () => {
+  const { e } = make();
+  e.s.region = "residential";
+  e.assignRegion();
+  assert.ok(!e.objects.some((o) => o.type === "allianceNeighbors"), "closed before act two");
+  e.s.region = "farm";
+  e.assignRegion();
+  playAct1(e);
+  e.chooseSupply("ration");
+  e.recruit("farmer");
+  e.r.finds.push("seedArchive");
+  e.checkStory();
+  e.c.projects.market = 1;
+  e.s.buildings.push({ id: "n-bench", type: "workbench", x: 1200, y: 760, rotation: 0, hp: 130 });
+  e.s.buildings.push({ id: "n-bed", type: "bed", x: 1280, y: 880, rotation: 0, hp: 90 });
+  e.resident("farmer").fed = true;
+  e.checkStory();
+  assert.equal(e.sc.act, 3);
+  e.s.region = "residential";
+  e.s.enemies.residential = [];
+  e.assignRegion();
+  const spot = e.objects.find((o) => o.type === "allianceNeighbors");
+  assert.ok(spot);
+  Object.assign(e.s.player, { x: spot.x, y: spot.y + 30 });
+  e.s.inventory.bread = 0;
+  delete e.s.inventory.bread;
+  assert.equal(e.neighborAid(), false);
+  e.s.inventory.bread = 2;
+  const wood = e.qty("wood"),
+    seeds = e.qty("seedRadish");
+  const realAdd = e.canAdd;
+  e.canAdd = () => false;
+  assert.equal(e.neighborAid(), false);
+  assert.equal(e.s.inventory.bread, 2, "full bag: nothing taken");
+  e.canAdd = realAdd;
+  e.interact();
+  assert.equal(e.s.inventory.bread, 1);
+  assert.equal(e.qty("wood"), wood + 3);
+  assert.equal(e.qty("seedRadish"), seeds + 2);
+  assert.equal(e.neighborAid(), false, "once per day");
+  assert.equal(e.s.inventory.bread, 1);
+  e.advanceMinutes(1440);
+  e.s.inventory.bread = 1;
+  Object.assign(e.s.player, { x: spot.x, y: spot.y + 30 });
+  assert.ok(e.neighborAid());
+  assert.equal(e.sc.neighborHelps, 2);
+  assert.equal(Engine.parse(e.serialize()).storyCampaign.neighborHelps, 2);
+});
+
+test("pressing a world-map place keeps it under the pointer (global :active reset would move it)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const css = (n) => readFileSync(new URL("../dist/" + n, import.meta.url), "utf8");
+  const html = css("index.html");
+  assert.ok(html.indexOf("clarity.css") < html.indexOf("wayfinding.css"), "map rules load after the global button reset");
+  assert.match(css("clarity.css"), /button:active\{transform:none\}/);
+  assert.match(css("wayfinding.css"), /\.atlas-node:active\{transform:translate\(-50%,-50%\)\}/);
+  assert.ok(html.includes('href="alliance.css"'));
 });

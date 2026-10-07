@@ -11,6 +11,9 @@ export const WELL_COST = { stone: 3, scrap: 2 };
 export const CAMP_COST = { wood: 4, stone: 2 };
 export const TROUGH_PLOTS = 9;
 export const ACT2_REWARD = { money: 40, reputation: 5 };
+export const NEIGHBOR_SPOT = { region: "residential", x: 900, y: 640 };
+export const NEIGHBOR_COST = { bread: 1 };
+export const NEIGHBOR_GIFT = { wood: 3, seedRadish: 2 };
 export const STORY_IDS = ["act1", "supply", "act2"];
 export const HELPER_TASKS = ["rest", "meal", "carry", "idle", "hungry"];
 
@@ -365,7 +368,7 @@ function stepDetail(e, step) {
       text: req
         ? "公共餐桌要三样：集市第一阶段（木材×12、萝卜×9）、一张制作台、再添一张床。"
         : "餐桌、制作台和床位都有了，回到农场会自动记入报告。",
-      gain: "今天的饭桌坐满人；联盟记下前哨供粮合格（40 金币、营地声望 +5）。" + taskGain(task),
+      gain: "今天的饭桌坐满人；联盟记下前哨供粮合格（40 金币、营地声望 +5），住宅区开放邻里互助点。" + taskGain(task),
       target: null,
       kind: "main",
     };
