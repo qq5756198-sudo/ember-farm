@@ -1,9 +1,9 @@
 {
   "game": "余烬农场",
-  "version": "v0.13.0",
-  "edition": "联盟来信",
+  "version": "v0.14.0",
+  "edition": "商路与火光",
   "exported_date": "2026-10-06",
-  "source_file_count": 105,
+  "source_file_count": 114,
   "source_files": [
     ".openai/hosting.json",
     "EXPORT_MANIFEST.json",
@@ -56,6 +56,12 @@
     "dist/guidance-engine.js",
     "dist/guidance-ui.js",
     "dist/index.html",
+    "dist/outpost-data.js",
+    "dist/outpost-renderer.js",
+    "dist/outpost-story.js",
+    "dist/outpost-ui.js",
+    "dist/outpost.css",
+    "dist/outpost.js",
     "dist/player-journey.js",
     "dist/player-session.js",
     "dist/player.css",
@@ -83,10 +89,12 @@
     "docs/development/v0.11.0-ledger.md",
     "docs/development/v0.11.0-visual-audit.md",
     "docs/development/v0.12.0-ledger.md",
+    "docs/development/v0.13.0-ledger.md",
     "docs/releases/v0.10.0.md",
     "docs/releases/v0.11.0.md",
     "docs/releases/v0.12.0.md",
     "docs/releases/v0.13.0.md",
+    "docs/releases/v0.14.0.md",
     "docs/releases/v0.6.0.md",
     "docs/releases/v0.7.0.md",
     "docs/releases/v0.8.0.md",
@@ -107,20 +115,21 @@
     "tests/frontier.test.mjs",
     "tests/game.test.mjs",
     "tests/guidance.test.mjs",
+    "tests/outpost.test.mjs",
     "tests/player.test.mjs",
     "tests/rebuild.test.mjs",
     "tests/supply.test.mjs"
   ],
-  "source_bytes": 13625141,
-  "source_copy": "modified from the v0.12.0 handoff; see docs/releases/v0.13.0.md",
-  "alliance_overhaul_status": "round 1 implemented as v0.13.0 (acts 1-2, first helper, unified task card, old-save migration); v0.14.0 and v0.15.0 pending",
+  "source_bytes": 13873249,
+  "source_copy": "modified from the v0.12.0 handoff through v0.13.0; see docs/releases/v0.13.0.md and docs/releases/v0.14.0.md",
   "checks": {
     "automated_tests": {
-      "passed": 367,
+      "passed": 409,
       "failed": 0
     },
-    "ui_controller": "passed, DOM substitute + native Canvas, including alliance section",
-    "real_browser_layout": "headless Chromium: 1366x768, 1920x1080, 390x844 touch emulation, 683x384@2x (200% zoom equivalent); real devices, Firefox and Safari not verified",
+    "ui_controller": "passed, DOM substitute + native Canvas, including alliance and outpost sections",
+    "real_browser_layout": "headless Chromium: 1366x768, 1920x1080, 390x844 touch emulation, 360-wide HUD, 683x384@2x (200% zoom equivalent), v0.12.0 save load; real devices, Firefox and Safari not verified",
+    "independent_review": "code review + ~9000 random actions; findings fixed with regression tests",
     "relative_js_imports_and_html_files": "resolved"
   },
   "personal_player_save_included": false,
@@ -128,5 +137,7 @@
     "version": "v0.12.0",
     "edition": "路与目标",
     "source_commit": "619e3b932652648d382d22bfe7bace7898351633"
-  }
+  },
+  "alliance_overhaul_status": "acts 1-2 (v0.13.0) and acts 3-6 with the v0.14 expansion items (v0.14.0) implemented; v0.15.0-v0.17.0 pending",
+  "upkeep_change": "player hunger ~2.8x original rate, sleep costs extra hunger, starvation faints; residents/helpers eat two meals a day (18:00 dinner); food-days HUD"
 }
