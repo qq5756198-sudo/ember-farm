@@ -1,9 +1,9 @@
 {
   "game": "余烬农场",
-  "version": "v0.15.0",
-  "edition": "寒潮之后",
-  "exported_date": "2026-10-06",
-  "source_file_count": 126,
+  "version": "v0.16.0",
+  "edition": "前哨四季",
+  "exported_date": "2026-10-07",
+  "source_file_count": 134,
   "source_files": [
     ".openai/hosting.json",
     "EXPORT_MANIFEST.json",
@@ -74,6 +74,11 @@
     "dist/rebuild.css",
     "dist/rebuild.js",
     "dist/renderer.js",
+    "dist/seasons-data.js",
+    "dist/seasons-renderer.js",
+    "dist/seasons-ui.js",
+    "dist/seasons.css",
+    "dist/seasons.js",
     "dist/style.css",
     "dist/supply-data.js",
     "dist/supply-ui.js",
@@ -100,12 +105,14 @@
     "docs/development/v0.12.0-ledger.md",
     "docs/development/v0.13.0-ledger.md",
     "docs/development/v0.14.0-ledger.md",
+    "docs/development/v0.15.0-ledger.md",
     "docs/releases/v0.10.0.md",
     "docs/releases/v0.11.0.md",
     "docs/releases/v0.12.0.md",
     "docs/releases/v0.13.0.md",
     "docs/releases/v0.14.0.md",
     "docs/releases/v0.15.0.md",
+    "docs/releases/v0.16.0.md",
     "docs/releases/v0.6.0.md",
     "docs/releases/v0.7.0.md",
     "docs/releases/v0.8.0.md",
@@ -129,19 +136,20 @@
     "tests/outpost.test.mjs",
     "tests/player.test.mjs",
     "tests/rebuild.test.mjs",
+    "tests/seasons.test.mjs",
     "tests/supply.test.mjs",
     "tests/winter.test.mjs"
   ],
-  "source_bytes": 14055962,
-  "source_copy": "modified from the v0.12.0 handoff through v0.15.0; see docs/releases/v0.13.0.md, v0.14.0.md and v0.15.0.md",
+  "source_bytes": 14239010,
+  "source_copy": "modified from the v0.12.0 handoff through v0.16.0; see docs/releases/v0.13.0.md to v0.16.0.md",
   "checks": {
     "automated_tests": {
-      "passed": 444,
+      "passed": 477,
       "failed": 0
     },
-    "ui_controller": "passed, DOM substitute + native Canvas, including alliance, outpost and winter sections",
-    "real_browser_layout": "headless Chromium: 1366x768, 1920x1080, 390x844 and 360x740 touch emulation, 683x384@2x (200% zoom equivalent), v0.12.0 save load; real devices, Firefox and Safari not verified",
-    "independent_review": "code review + randomized play (20+ seeds x 2500-3000 steps, save/parse after every step); 3 bugs and 5 minor issues fixed with regression tests; rerun 0 failures",
+    "ui_controller": "passed, DOM substitute + native Canvas, including alliance, outpost, winter and seasons sections",
+    "real_browser_layout": "headless Chromium: 1366x768, 1920x1080, 390x844 and 360x740 touch emulation, 683x384@2x (200% zoom equivalent); real devices, Firefox and Safari not verified",
+    "independent_review": "v0.15 and v0.16 each: code review + randomized play with save/parse after every step; findings fixed with regression tests; reruns 0 failures (v0.16 to day 600+)",
     "relative_js_imports_and_html_files": "resolved"
   },
   "personal_player_save_included": false,
@@ -150,7 +158,8 @@
     "edition": "路与目标",
     "source_commit": "619e3b932652648d382d22bfe7bace7898351633"
   },
-  "alliance_overhaul_status": "acts 1-2 (v0.13.0), acts 3-6 (v0.14.0) and acts 7-8 with the v0.15 expansion items (v0.15.0) implemented; main story complete; v0.16.0-v0.17.0 pending",
+  "alliance_overhaul_status": "acts 1-8 complete (v0.13.0-v0.15.0); expansion plan v0.14-v0.16 items implemented; v0.17.0 pending",
   "upkeep_change": "player hunger ~2.8x original rate, sleep costs extra hunger, starvation faints; residents/helpers eat two meals a day (18:00 dinner); food-days HUD",
-  "winter_change": "three-day cold snap after a forecast: warm zones, stove fuel, +40% hunger outside warm zones, crop and crew slowdowns, camp chills; decree book, living standard, radio, museum"
+  "winter_change": "three-day cold snap after a forecast: warm zones, stove fuel, +40% hunger outside warm zones, crop and crew slowdowns, camp chills; decree book, living standard, radio, museum",
+  "seasons_change": "festivals every 7 days, adjacency bonuses, canteen nights, campfire talks, apprentices, lodgers, six NPCs, calendar, people page, E chooser, item links, new-feature marks"
 }
