@@ -14,7 +14,7 @@ export const ACT2_REWARD = { money: 40, reputation: 5 };
 export const NEIGHBOR_SPOT = { region: "residential", x: 900, y: 640 };
 export const NEIGHBOR_COST = { bread: 1 };
 export const NEIGHBOR_GIFT = { wood: 3, seedRadish: 2 };
-export const STORY_IDS = ["act1", "supply", "act2"];
+export const STORY_IDS = ["act1", "supply", "act2", "act3", "act4", "act5", "act6"];
 export const HELPER_TASKS = ["rest", "meal", "carry", "idle", "hungry"];
 
 export const HELPERS = {
@@ -69,6 +69,26 @@ export const LETTERS = {
     title: "医院的信号",
     text: "饭桌有人了，前哨才算真的开张。医院方向的信号又响了，许医生和伤员困在里面，缺棉花、缺药草。准备好就出发。",
     cotton: "你先留的那块棉花地，这回正好派上用场。",
+  },
+  act4: {
+    from: "陈工",
+    title: "仓库里有机器在响",
+    text: "医院站住了，下一步是让东西自己转起来。我被困在仓库设备区，外面还有个叫尤可的姑娘，她说那台旧机床还能修。先把水塔、动力和仓库前哨弄好，再来接我们。",
+  },
+  act5: {
+    from: "楚光",
+    title: "把东西运出去",
+    text: "前哨能种、能修、能做了，可东西堆在仓库里不算本事。整理一车补给，让第一支车队上路。路上会有麻烦，提前告诉你：集市旧街口那片聚着感染者。",
+  },
+  act6: {
+    from: "灰隼团",
+    title: "过路费",
+    text: "商路是我们的。交八份干粮、十二发子弹，车队就能平安过桥。不交？那就等着看你的围栏有多结实。——灰隼团",
+  },
+  act7: {
+    from: "楚光",
+    title: "寒潮之前",
+    text: "灰隼团的哨卡拆了，商路是你们自己守下来的。白霜站发来消息：今年冬天会来得很早。先把检修间和电台的事办完，然后开始准备过冬。",
   },
 };
 export const LETTER_IDS = Object.keys(LETTERS);

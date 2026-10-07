@@ -14,6 +14,11 @@ const esc = (v) =>
 const button = (a, id, label, extra = "") =>
   `<button data-action="${a}" data-id="${esc(id)}"${extra ? " " + extra : ""}>${esc(label)}</button>`;
 const STORY_TASKS = ["harvest", "meal", "farmer", "table"];
+// 后果预览：花费 / 得到 / 影响，所有新动作统一使用。
+export const consequence = (p) =>
+  p
+    ? `<dl class="consequence"><div><dt>花费</dt><dd>${esc(p.cost || "—")}</dd></div><div><dt>得到</dt><dd>${esc(p.gain || "—")}</dd></div><div><dt>影响</dt><dd>${esc(p.effect || "—")}</dd></div></dl>`
+    : "";
 // 小柒的终端头像：12×12 像素，随联络信出现，不占用场景。
 const XIAOQI = `<svg class="xiaoqi" viewBox="0 0 12 12" aria-hidden="true" shape-rendering="crispEdges"><rect width="12" height="12" fill="#22352b"/><rect x="1" y="1" width="10" height="8" fill="#5f7f6e"/><rect x="2" y="2" width="8" height="6" fill="#9fd3b0"/><rect x="3" y="4" width="2" height="2" fill="#22352b"/><rect x="7" y="4" width="2" height="2" fill="#22352b"/><rect x="4" y="7" width="4" height="1" fill="#22352b"/><rect x="5" y="9" width="2" height="2" fill="#5f7f6e"/><rect x="2" y="10" width="8" height="1" fill="#a99a62"/><rect x="10" y="0" width="2" height="2" fill="#e9c05a"/></svg>`;
 
@@ -37,7 +42,7 @@ function storyButtons(e, g, action) {
   if (st.kind === "do") return button("aStoryDo", st.id, st.doLabel) + button("aStoryMark", "", "标记地点");
   if (st.kind === "reply") return button("aStoryReply", "", "现在回信") + map;
   if (st.kind === "feed") return button("aStoryFeed", "", "现在供餐") + map;
-  if (st.kind === "choose") return map;
+  if (st.kind === "choose" || st.kind === "wait") return map;
   return button("aStoryMark", "", "标记地点") + map;
 }
 function storyCard(e, g, action) {
@@ -49,7 +54,14 @@ function storyCard(e, g, action) {
     )
     .join("");
   const choice =
-    st.kind === "choose"
+    st.kind === "choose" && st.choices
+      ? `<div class="story-choice">${st.choices
+          .map(
+            (c) =>
+              `<article><small>${esc(c.pick)}</small><h3>${esc(c.name)}</h3><p>${esc(c.desc)}</p>${consequence(c.preview)}${c.lack?.length ? `<p class="story-lack">${esc(c.lack.join("、"))}</p>` : ""}${button("aStoryChoose", c.id, "就这么办", c.lack?.length ? "disabled" : "")}</article>`,
+          )
+          .join("")}</div>`
+      : st.kind === "choose"
       ? `<div class="story-choice">${Object.entries(SUPPLY)
           .map(
             ([id, p]) =>
@@ -104,7 +116,7 @@ function taskCard(e, action) {
 function optionCards(e, story, ui) {
   const out = [],
     q = e.currentRebuildTask();
-  if (story && q && !STORY_TASKS.includes(q.id) && ui.view !== "task")
+  if (story && q && !(story.act <= 2 ? STORY_TASKS.includes(q.id) : story.steps.some((s) => s.id === q.id)) && ui.view !== "task")
     out.push(
       `<article><small>家园主线仍在进行</small><h3>${esc(q.title)}</h3><p>${esc(TASK_CONTEXT[q.id] || q.desc)}</p>${button("aShowTask", "", "查看主线任务")}</article>`,
     );
@@ -209,7 +221,7 @@ export function handleAllianceAction(action, el, ctx) {
     route(q ? e.taskDestination(q.id) : null);
     save();
   } else if (action === "aStoryDo") {
-    const ok = id === "well" ? e.repairWell() : id === "camp" ? e.buildCamp() : false;
+    const ok = id === "well" ? e.repairWell() : id === "camp" ? e.buildCamp() : e.doStory ? e.doStory(id) : false;
     if (ok) e.checkStory();
     journal();
     save();
@@ -218,7 +230,8 @@ export function handleAllianceAction(action, el, ctx) {
     journal();
     save();
   } else if (action === "aStoryChoose") {
-    e.chooseSupply(id);
+    if (g?.step.choices && e.chooseStory) e.chooseStory(g.step.id, id);
+    else e.chooseSupply(id);
     journal();
     save();
   } else if (action === "aStoryFeed") {

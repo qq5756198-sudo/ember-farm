@@ -22,7 +22,9 @@ import * as FrontierActions from '../dist/frontier-actions.js';
 import * as FrontierData from '../dist/frontier-data.js';
 import * as Version from '../dist/version.js';
 import * as Atlas from '../dist/atlas.js';
-import {Renderer} from '../dist/alliance-renderer.js';
+import {Renderer} from '../dist/outpost-renderer.js';
+import * as Outpost from '../dist/outpost.js';
+import * as OutpostUI from '../dist/outpost-ui.js';
 import * as Alliance from '../dist/alliance.js';
 import * as AllianceUI from '../dist/alliance-ui.js';
 import * as Beyond from '../dist/beyond.js';
@@ -70,7 +72,7 @@ for(const key of Session.HISTORY_KEYS.slice(0,8))storage.set(key,'historic '+key
 class Image{set src(path){this.path=path;loadImage(dir+'/'+path).then(img=>{this.native=img;this.width=img.width;this.height=img.height;this.complete=true;this.onload?.();}).catch(e=>this.onerror?.(e));}get src(){return this.path;}}
 globalThis.document=document;
 let raf;
-const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
+const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
 script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo});globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
@@ -215,4 +217,81 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(Alliance.Engine.parse(saved).storyCampaign.act, 3);
   assert.equal(JSON.parse(storage.get('ember-farm-before-alliance-v1')).main, checkpoint && JSON.parse(checkpoint).main, 'checkpoint never overwritten');
   console.log('Alliance controller passed: new save letter, three-line task cards, well/camp/terminal E actions, duplicate clicks, automatic progress records, helper arrival and work, supply choice, act two completion, Canvas at four sizes and save/parse. Real browser layout is checked separately.');
+}
+
+// v0.14.0「商路与火光」: upkeep HUD, shipping box, station rush, gate review, caravan, raid with defence overlay, message log and day summary through the real controller.
+{
+  let clock = 900000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  const OD = await import('../dist/outpost-data.js');
+  context.fixture(Outpost.freshState());
+  let e = context.inspect().engine;
+  e.paused = false;
+  const sc = e.sc;
+  Object.assign(sc, { act: 3, claimed: ['act1', 'supply', 'act2'], choice: 'ration', letters: ['act1', 'act2', 'act3'], camp: { x: 560, y: 735 } });
+  Object.assign(sc.flags, { well: true, camp: true, farmerFed: true });
+  e.r.claimed = ['harvest', 'meal', 'farmer', 'table'];
+  e.assignRegion();
+  run(4);
+  assert.match(document.querySelector('#food-days').textContent, /^口粮 [\d.]+ 天$/);
+  assert.match(document.querySelector('#food-days').className, /hud-food (ok|warn|danger)/);
+  // 任务手记：第三段卡片与前哨状况
+  context.open('journey'); clean();
+  for (const line of ['第三段「药柜空了」', '在医院救回许医生', '口粮', '联盟援建清单']) assert.ok(html().includes(line), line);
+  click('oView', 'bundles'); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /医院急救包/);
+  click('close');
+  // 出货箱：E 打开，放入，睡一觉结算并弹出日终总结
+  Object.assign(e.s.player, { x: OD.SPOTS.shipping.x, y: OD.SPOTS.shipping.y + 20 }); run(2);
+  assert.match(document.querySelector('#context').innerHTML, /出货箱/);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /出货箱/); clean();
+  e.s.inventory.radish = 4;
+  context.open('outpost', { view: 'shipping' });
+  click('oShip', 'radish:all'); assert.equal(e.o.shipBox.radish, 4); click('oShip', 'radish:all'); assert.equal(e.o.shipBox.radish, 4, 'double click ships once');
+  const money = e.s.money;
+  context.open('home'); click('sleep'); run(2);
+  assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /日终总结|第 \d+ 天结束/); clean();
+  assert.ok(e.s.money >= money + 4 * Data.ITEMS.radish.sell);
+  click('oClose');
+  // 加工站抢工
+  e.s.inventory.radish = 3; assert.ok(e.craft('trailBread'));
+  const cook = e.s.buildings.find((b) => b.type === 'cook');
+  context.open('station', { buildingId: cook.id }); clean(); assert.match(html(), /抢工/);
+  e.roll = () => 0.99; click('oRush', e.c.production[0].id); delete e.roll;
+  assert.ok(e.o.rushed.includes(e.c.production[0].id)); click('close');
+  // 营门审查
+  e.o.visitors.current = null; e.o.visitors.next = e.s.day; e.s.minute = 9 * 60 - 0.05; e.c.workClock = 59.95; run(3);
+  assert.ok(e.o.visitors.current, 'a visitor arrives at 9:00');
+  Object.assign(e.s.player, { x: OD.SPOTS.gate.x, y: OD.SPOTS.gate.y + 20 }); run(2);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /入营审查|证件/); clean();
+  click('oCheck', 'body'); assert.ok(e.o.visitors.current.checked.includes('body'));
+  click('oVisitor', 'reject'); assert.equal(e.o.visitors.current, null); assert.equal(context.inspect().menu, null);
+  // 消息记录
+  press('l'); assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /前哨记录/); clean(); click('close');
+  // 第六段：过路费 → 备战 → 袭击，Z 键防线视图，四种尺寸画面
+  Object.assign(sc, { act: 6, claimed: ['act1', 'supply', 'act2', 'act3', 'act4', 'act5'], letters: ['act1', 'act2', 'act3', 'act4', 'act5', 'act6'] });
+  e.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((t) => t.id === 'network') + 1).map((t) => t.id);
+  Object.assign(e.o, { hospital: 'water', youke: true, lathe: { mode: 'parts', day: 0 }, cargo: 'food', convoy: { departs: 0, arrives: 10, escorted: true, spawned: true, foes: [], done: true, lost: false } });
+  e.assignRegion();
+  context.open('journey'); clean(); assert.match(html(), /灰隼团要过路费/); assert.match(html(), /class="consequence"/);
+  click('aStoryChoose', 'refuse'); assert.equal(e.o.toll, 'refuse');
+  click('aStoryChoose', 'towers'); click('close');
+  e.s.day = e.o.raid.day; e.s.minute = 1139.98; Object.assign(e.s.player, { x: 1150, y: 620 }); run(3);
+  assert.equal(e.o.raid.phase, 'warning');
+  assert.match(document.querySelector('#horde-warning').textContent, /灰隼团/);
+  press('z'); assert.equal(context.inspect().renderer.defense, true);
+  e.o.raid.timer = 0.01; e.invulnerable = 1e6; run(80);
+  assert.equal(e.o.raid.phase, 'active'); assert.ok(e.enemies.some((z) => z.type === 'raider'));
+  for (const [w, h] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, h, 1); run(4); }
+  press('z'); assert.equal(context.inspect().renderer.defense, false);
+  for (let t = 0; t < 400 && e.o.raid.phase === 'active'; t++) { for (const z of e.enemies.filter((x) => x.type === 'raider' && !x.dead)) e.hurtEnemy(z, 999, 0, { id: 'pistol' }); run(1); e.s.player.hp = 100; }
+  assert.equal(e.o.raid.phase, 'won'); assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /击退灰隼团/); clean();
+  click('oClose'); context.open('outpost', { view: 'dialog', id: 'yaozi' }); clean(); click('oPrisoner', 'release');
+  assert.equal(e.sc.act, 7); assert.equal(e.o.prisoner, 'released');
+  // 饿晕：死亡菜单换成饥饿说明
+  e.invulnerable = 0; Object.assign(e.s.player, { hunger: 0, hp: 1.2 }); run(30);
+  assert.equal(context.inspect().menu, 'death'); assert.match(html(), /你饿晕了/); click('close');
+  click('save'); const saved = storage.get(Session.CAMPAIGN_SAVE);
+  const back = Outpost.Engine.parse(saved); assert.equal(back.outpost.raid.phase, 'won'); assert.equal(back.storyCampaign.act, 7);
+  console.log('Outpost controller passed: food HUD, act cards with cost/gain/impact previews, shipping box via E and overnight summary, station rush, gate review via E, message log (L), toll/prep through story buttons, raid warning banner, defence overlay (Z), raid at four Canvas sizes, victory report, prisoner choice to act seven, hunger faint menu and save/parse.');
 }

@@ -789,7 +789,7 @@ function validateStory(sc) {
     },
     d = defaults();
   if (!object(sc) || sc.schema !== STORY_SCHEMA || Object.keys(sc).some((k) => !Object.hasOwn(d, k))) bad();
-  if (sc.act !== undefined && (!Number.isInteger(sc.act) || sc.act < 1 || sc.act > 3)) bad();
+  if (sc.act !== undefined && (!Number.isInteger(sc.act) || sc.act < 1 || sc.act > 7)) bad();
   if (
     sc.flags !== undefined &&
     (!object(sc.flags) ||
@@ -839,8 +839,8 @@ function validateStory(sc) {
   }
   // 进度彼此一致：回信后才有第二段与援建队员，第二段完成后才有第三封信。
   const claimed = sc.claimed || [];
-  if ((sc.act || 1) >= 2 !== claimed.includes("act1")) bad();
-  if ((sc.act || 1) >= 3 !== claimed.includes("act2")) bad();
+  // 第 n 段完成（claimed 里有 actN）当且仅当进度已到第 n+1 段。
+  for (let n = 1; n <= 6; n++) if ((sc.act || 1) >= n + 1 !== claimed.includes("act" + n)) bad();
   if (!!sc.choice !== claimed.includes("supply")) bad();
   if (sc.flags?.camp && !sc.camp) bad();
 }

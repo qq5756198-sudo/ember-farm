@@ -1,0 +1,451 @@
+/* v0.14.0「商路与火光」：口粮状态、后果预览、人物对话、出货箱、商队、入营审查、战报、日终总结与消息记录。 */
+.hud-food {
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid #5f7351;
+  color: #cfe0a8;
+  background: #1d3024;
+  font-size: 0.86em;
+}
+.hud-food.warn {
+  color: #f2d48a;
+  border-color: #a99251;
+  background: #3a3520;
+}
+.hud-food.danger {
+  color: #ffd9cf;
+  border-color: #d06a58;
+  background: #5a2620;
+  animation: food-pulse 1.4s ease-in-out infinite;
+}
+@keyframes food-pulse {
+  50% {
+    background: #7a2f26;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-food.danger {
+    animation: none;
+  }
+}
+#horde-warning.raid {
+  background: #5a2620;
+  border-color: #d06a58;
+  cursor: pointer;
+}
+
+.outpost-page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 18px 22px 24px;
+}
+.outpost-page > p:first-child {
+  margin-top: 0;
+}
+
+/* 后果预览：花费 / 得到 / 影响 */
+.consequence {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 8px 0 4px;
+  border: 1px solid #4f6249;
+  border-radius: 5px;
+  overflow: hidden;
+  font-size: 0.84em;
+}
+.consequence div {
+  padding: 6px 8px;
+  background: #1b2c22;
+  border-left: 1px solid #3c4d38;
+  min-width: 0;
+}
+.consequence div:first-child {
+  border-left: 0;
+}
+.consequence dt {
+  color: #c8bf8d;
+  font-size: 0.86em;
+  letter-spacing: 1px;
+}
+.consequence dd {
+  margin: 2px 0 0;
+  color: #dfe6cf;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.story-lack {
+  color: #f1b4a2;
+  font-size: 0.86em;
+}
+.story-choice button[disabled] {
+  background: #3b4836;
+  color: #9aa38a;
+  border-color: #56634e;
+}
+
+/* 人物立绘与对话 */
+.portrait {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  image-rendering: pixelated;
+  border: 2px solid #5f7351;
+  border-radius: 4px;
+  background: #1d2a22;
+}
+.npc-head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid #5f7351;
+  border-radius: 6px;
+  background: #22362a;
+}
+.npc-head b {
+  color: #f0e3b5;
+  font-size: 1.08em;
+}
+.npc-head small {
+  display: block;
+  color: #aeba9f;
+}
+.npc-line {
+  margin: 6px 0 0;
+  line-height: 1.7;
+  color: #e9e1c0;
+}
+
+/* 任务手记里的前哨状况 */
+.outpost-strip {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid #4f6249;
+  border-radius: 6px;
+  background: #1c2d23;
+}
+.outpost-food {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+.outpost-food b {
+  color: #cfe0a8;
+}
+.outpost-food.warn b {
+  color: #f2d48a;
+}
+.outpost-food.danger b {
+  color: #ff9a8a;
+}
+.outpost-food span {
+  color: #aeba9f;
+  font-size: 0.88em;
+}
+.outpost-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.outpost-links button {
+  min-height: 40px;
+}
+.outpost-alert {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border-left: 3px solid #d06a58;
+  background: #3a2622;
+  color: #f6d8cf;
+}
+.crew-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 6px;
+}
+.crew-list li {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+.crew-list .portrait {
+  width: 40px;
+  height: 40px;
+}
+.crew-list small {
+  display: block;
+  color: #aeba9f;
+}
+
+/* 加工站抢工 */
+.station-rush {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid #7d6a4e;
+  border-radius: 6px;
+  background: #2a2a20;
+}
+.station-rush h3 {
+  margin: 0 0 6px;
+  color: #f0e3b5;
+}
+.rush-row {
+  display: grid;
+  gap: 4px;
+  padding: 8px 0;
+  border-top: 1px solid #44423a;
+}
+.rush-row span {
+  color: #c7c1a6;
+  font-size: 0.9em;
+}
+.rush-row.incident b {
+  color: #ff9a8a;
+}
+
+/* 日终总结、战报 */
+.day-summary h3,
+.raid-report h3 {
+  margin: 0 0 10px;
+  color: #f0e3b5;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.summary-grid div {
+  padding: 8px 10px;
+  border: 1px solid #4f6249;
+  border-radius: 5px;
+  background: #1f3326;
+}
+.summary-grid dt {
+  color: #c8bf8d;
+  font-size: 0.82em;
+}
+.summary-grid dd {
+  margin: 2px 0 0;
+  font-size: 1.1em;
+  color: #eef0dc;
+}
+.summary-threats li {
+  margin: 4px 0;
+  color: #f2d48a;
+}
+.raid-report.won h3 {
+  color: #cfe8b0;
+}
+.raid-report.lost h3 {
+  color: #ff9a8a;
+}
+
+/* 出货箱、账本 */
+.ship-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.ship-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-top: 1px solid #3c4d38;
+}
+.ship-row small {
+  display: block;
+  color: #b9c6a5;
+}
+.ship-actions {
+  display: flex;
+  gap: 6px;
+}
+.ship-actions button {
+  min-height: 40px;
+  min-width: 84px;
+}
+.ledger {
+  padding-left: 18px;
+  color: #c7d1b6;
+  font-size: 0.9em;
+}
+
+/* 商队 */
+.offer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.offer {
+  padding: 12px 14px;
+  border: 1px solid #7d8c62;
+  border-radius: 6px;
+  background: #1f3326;
+}
+.offer.sold {
+  opacity: 0.6;
+}
+.offer h3 {
+  margin: 0 0 4px;
+  color: #f0e3b5;
+  font-size: 1em;
+}
+.tag {
+  font-style: normal;
+  font-size: 0.78em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid #7d8c62;
+  color: #c7bd88;
+}
+.tag.bad {
+  color: #ffb3a6;
+  border-color: #d06a58;
+}
+.tag.good {
+  color: #cfe8b0;
+  border-color: #8fb06f;
+}
+
+/* 入营审查 */
+.clues {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+.clue {
+  display: grid;
+  grid-template-columns: 4em 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #4f6249;
+  border-radius: 5px;
+  background: #1f3326;
+}
+.clue dt {
+  color: #c8bf8d;
+}
+.clue dd {
+  margin: 0;
+  color: #e9e1c0;
+}
+.review-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.review-choices article {
+  display: grid;
+  align-content: space-between;
+  gap: 6px;
+}
+.review-choices .consequence {
+  grid-template-columns: 1fr;
+}
+.review-choices .consequence div {
+  border-left: 0;
+  border-top: 1px solid #3c4d38;
+}
+.review-choices .consequence div:first-child {
+  border-top: 0;
+}
+.review-choices button {
+  min-height: 44px;
+}
+
+/* 消息记录 */
+.log-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.msg-log {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.9em;
+}
+.msg-log li {
+  padding: 5px 8px;
+  border-left: 3px solid #56694f;
+  background: #1f3129;
+  line-height: 1.55;
+}
+.msg-log li.warn {
+  border-color: #d06a58;
+}
+.msg-log li.gold {
+  border-color: #e0c489;
+}
+.msg-log small {
+  color: #9fae90;
+}
+
+@media (max-width: 760px) {
+  .consequence,
+  .summary-grid,
+  .ship-grid,
+  .offer-grid,
+  .review-choices,
+  .log-columns {
+    grid-template-columns: 1fr;
+  }
+  .consequence div {
+    border-left: 0;
+    border-top: 1px solid #3c4d38;
+  }
+  .consequence div:first-child {
+    border-top: 0;
+  }
+  .summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .portrait {
+    width: 52px;
+    height: 52px;
+  }
+}
+
+/* 菜单内提示条不再盖住内容：矮屏只留一条，超出部分在消息记录（L）里看。 */
+@media (max-height: 520px) {
+  #menu-toasts {
+    max-height: 32px;
+    height: 32px;
+    overflow: hidden;
+    padding: 4px 12px;
+  }
+  #menu-toasts .toast {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.5;
+  }
+  #menu-toasts .toast:not(:last-child) {
+    display: none;
+  }
+}
+
+/* 窄屏：口粮标签挤占顶栏时先收起天气文字，保证“设置”和三条状态都在屏内。 */
+@media (max-width: 760px) {
+  .hud-time #weather {
+    display: none;
+  }
+  .hud-food {
+    font-size: 11px;
+    padding: 0 6px;
+  }
+}
