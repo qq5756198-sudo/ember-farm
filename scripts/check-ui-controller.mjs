@@ -382,3 +382,86 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(back.winter.forecast, true); assert.equal(back.winter.winter.priority, 'engineering'); assert.deepEqual(back.winter.decrees, ['rotation']);
   console.log('Winter controller passed: act seven card, decree book with cooldown, terminal forecast via E (once), stove placed through the build flow, preparation and season chip, priority choice from the journal, alert bar with gold marker, 葛队长 and 阿兰 dialogs via E, cold Canvas with snow, warm zones and defence overlay at four sizes, lit map, camp manual decree card, radio/collection/winter/museum pages and save/parse.');
 }
+
+// v0.16.0「前哨四季」: date button → calendar with intro card, 新 dot on the handbook, plaza festival via E, 何大勺 via E in the market, canteen serving, campfire talk, people/gifts/apprentice, E chooser, item links, Canvas at four sizes and save/parse.
+{
+  let clock = 2900000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  const SD = await import('../dist/seasons-data.js');
+  context.fixture(Campaign.freshState());
+  const e = context.inspect().engine;
+  e.paused = false;
+  const sc = e.sc;
+  Object.assign(sc, { act: 5, claimed: ['act1', 'supply', 'act2', 'act3', 'act4'], choice: 'ration', letters: ['act1', 'act2', 'act3', 'act4', 'act5'], camp: { x: 560, y: 735 } });
+  Object.assign(sc.flags, { well: true, camp: true, farmerFed: true });
+  e.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((t) => t.id === 'warehouse') + 1).map((t) => t.id);
+  Object.assign(e.o, { hospital: 'water', youke: true, lathe: { mode: 'parts', day: 0 } });
+  e.recruit('farmer'); e.recruit('medic'); e.addHelper('tieqiao');
+  e.s.storage.bread = 30;
+  e.assignRegion();
+  Object.assign(e.s.player, { x: 830, y: 460 }); run(4);
+  assert.match(document.querySelector('.handbook-entry').className, /has-new/, 'new features mark the handbook');
+  assert.equal(document.querySelector('#date').dataset.action, 'sView');
+  click('sView', 'calendar'); assert.equal(context.inspect().menu, 'outpost'); clean();
+  assert.match(html(), /intro-card/); assert.match(html(), /第7天/); assert.match(html(), /换种集/);
+  click('close');
+  // 节庆：E 打开广场，主持换种集
+  e.s.day = 7; e.s.minute = 16 * 60 + 5; e.c.workClock = 5;
+  e.s.storage.seedRadish = 6; e.s.storage.seedPotato = 4; e.s.storage.seedBean = 4;
+  Object.assign(e.s.player, { x: SD.SSPOTS.plaza.x, y: SD.SSPOTS.plaza.y + 20 }); run(2);
+  assert.match(document.querySelector('#context').innerHTML, /主持「换种集」/);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean();
+  assert.match(html(), /data-action="sHost"/); assert.match(html(), /老琴/);
+  click('sHost'); assert.ok(e.festivalHosted(7)); assert.ok(e.ss.decor.includes('banner'));
+  click('sHost'); assert.equal(e.ss.fest.held.length, 1, 'a double click hosts once');
+  click('sSong'); assert.equal(e.ss.laoqin.quest, true);
+  clean(); click('close');
+  // 集市里的何大勺：E 对话、复原三道菜
+  e.s.region = 'market'; e.enemies = e.s.enemies.market ||= []; e.assignRegion();
+  Object.assign(e.s.player, { x: SD.SSPOTS.he.x, y: SD.SSPOTS.he.y + 20 }); run(2);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /何大勺/); assert.equal(e.ss.he.stage, 1);
+  for (const d of SD.HE_DISHES) { e.s.storage[d] = 1; context.open('outpost', { view: 'dialog', id: 'he' }); click('sHe', 'deliver'); }
+  assert.equal(e.ss.he.stage, 4); clean(); click('close');
+  e.s.region = 'farm'; e.enemies = e.s.enemies.farm ||= []; e.assignRegion();
+  // 食堂营业夜
+  e.s.day = 9; e.s.minute = 19 * 60 + 2; e.s.storage.stew = 4; e.s.storage.jam = 2; e.s.storage.fishStew = 2; e.s.storage.chefMeal = 2;
+  Object.assign(e.s.player, { x: SD.SSPOTS.plaza.x, y: SD.SSPOTS.plaza.y + 20 }); run(2);
+  press('e'); run(1); clean(); click('sCanteen'); assert.ok(e.ss.canteen.night);
+  clean(); assert.match(html(), /想吃/);
+  const g = e.ss.canteen.night.customers[0], dish = SD.TASTES[g.taste].dishes.find((d) => e.quantityForCost(d, true));
+  const money = e.s.money; click('sServe', g.id + ':' + dish); assert.ok(e.s.money > money); assert.equal(g.state, 'served');
+  click('close');
+  for (const [w, h] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, h, 1); run(3); }
+  context.inspect().renderer.resize(1366, 600, 1);
+  // 营火夜谈
+  e.s.minute = 19 * 60 + 40; const fire = e.fireSpot();
+  Object.assign(e.s.player, { x: fire.x, y: fire.y + 20 }); run(2);
+  context.open('outpost', { view: 'talk' }); clean(); assert.match(html(), /说说以前/);
+  click('sTalk', 'past'); assert.ok((e.ss.trust.farmer || 0) >= 1); assert.equal(context.inspect().menu, null);
+  // 人物关系：送礼、带徒
+  e.s.storage.jam = 2; click('sView', 'people'); clean(); assert.match(html(), /人物关系|喜欢/);
+  click('sGift', 'farmer:jam'); assert.ok(e.ss.trust.farmer >= 2);
+  click('sApprentice', 'farmer:tieqiao'); assert.equal(e.ss.apprentice?.pupil, 'tieqiao'); clean(); click('close');
+  // 同处多对象选择
+  e.ss.lodger = { name: '赶路的木匠老韩', look: 1, gift: 'item', stay: false, phase: 'staying', day: e.s.day, qin: false }; e.ss.qin.phase = 'left';
+  e.assignRegion();
+  for (const h of e.sc.helpers) Object.assign(h, { x: 300, y: 900, target: { x: 300, y: 900 } });
+  for (const r of e.c.residents) Object.assign(r, { x: 330, y: 380, target: { x: 330, y: 380 } });
+  e.assignRegion();
+  const lod = e.objects.find((o) => o.type === 'seasonLodger'); Object.assign(lod, { x: SD.SSPOTS.jiang.x + 40, y: SD.SSPOTS.jiang.y });
+  Object.assign(e.s.player, { x: SD.SSPOTS.jiang.x + 20, y: SD.SSPOTS.jiang.y + 10 }); run(6);
+  assert.match(document.querySelector('#context').innerHTML, /选择：/);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /data-hotkey="1"/);
+  const pickIndex = e._pickList.findIndex((o) => o.type === 'seasonJiang');
+  click('sPick', String(pickIndex)); assert.equal(e.ss.jiang.phase, 'c1');
+  if (context.inspect().menu) { clean(); click('close'); }
+  // 物品来源与用途
+  e.s.inventory.potato = 2; context.open('inventory'); click('item', 'potato'); clean(); assert.match(html(), /能做：/); assert.match(html(), /种土豆种子/); click('close');
+  // 建造预览：相邻加成连线与提示
+  e.buildMode = 'canner'; Object.assign(e.s.player, { x: 1010, y: 560 }); run(3); e.buildMode = null;
+  click('save'); const saved = storage.get(Session.CAMPAIGN_SAVE);
+  const back = Campaign.Engine.parse(saved);
+  assert.equal(back.seasons.he.stage, 4); assert.ok(back.seasons.fest.held.includes(7)); assert.equal(back.seasons.apprentice.pupil, 'tieqiao');
+  console.log('Seasons controller passed: date button to calendar with intro card, 新 dot on the handbook, plaza festival via E with double-click guard, 老琴 request, 何大勺 via E in the market and three dishes, canteen opening and serving, campfire talk, gifts and apprenticeship, E chooser with real action, item source/use links, plaza/canteen Canvas at four sizes, build preview and save/parse.');
+}

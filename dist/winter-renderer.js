@@ -202,11 +202,14 @@ export class Renderer extends OutpostRenderer {
   }
   drawBuildRange(e, mouse) {
     const r = BUILD_RANGES[e.buildMode];
-    if (!r || !mouse) return;
+    if (!mouse) return;
     const c = this.ctx,
       pt = this.worldPoint(mouse.x, mouse.y),
       x = Math.round(pt.x / 8) * 8,
       y = Math.round(pt.y / 8) * 8;
+    const bonus = e.adjacencyPreview?.(e.buildMode, x, y);
+    if (bonus?.length) bonus.forEach((b, i) => this.badge(b, x, y + 52 + i * 24, b.startsWith("＋") ? "#f3d27a" : "#c8c2a6"));
+    if (!r) return;
     c.save();
     c.strokeStyle = r.color;
     c.fillStyle = r.color + "18";
@@ -218,8 +221,6 @@ export class Renderer extends OutpostRenderer {
     c.stroke();
     c.restore();
     this.badge(r.label, x, y - 74, r.color);
-    const bonus = e.adjacencyPreview?.(e.buildMode, x, y);
-    if (bonus?.length) bonus.forEach((b, i) => this.badge(b, x, y + 48 + i * 24, "#f1d98a"));
   }
   drawNeeds(e) {
     const people = [];
