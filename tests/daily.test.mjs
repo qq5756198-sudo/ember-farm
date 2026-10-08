@@ -11,7 +11,8 @@ import { optionModel } from "../dist/daily-ui.js";
 import { alertItems } from "../dist/winter-ui.js";
 
 const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
-const OPS = new Set("give money rep mood fatigue hp stamina research xp trust cheer buff later debt night drain spawn ambush cache crew perk peng dog lose water fertility growthBack harvestRipe sick heal visitor clearRuin repair rush killJob stationHit visitBlock hordeShift hordeTomorrow raidDelay raidLess raidWarn seeds seedsAll seedsOwned rareSeeds mod random time caravanDisc caravanOrder festNext talkUsed sellTop payGoods tell flag next mark".split(" "));
+// v0.19 的妙手卡另加了 6 个动作（rumor thiefXp confess clearCase blame giveTreasure）
+const OPS = new Set("give money rep mood fatigue hp stamina research xp trust cheer buff later debt night drain spawn ambush cache crew perk peng dog lose water fertility growthBack harvestRipe sick heal visitor clearRuin repair rush killJob stationHit visitBlock hordeShift hordeTomorrow raidDelay raidLess raidWarn seeds seedsAll seedsOwned rareSeeds mod random time caravanDisc caravanOrder festNext talkUsed sellTop payGoods tell flag next mark rumor thiefXp confess clearCase blame giveTreasure".split(" "));
 const make = (state = freshState()) => {
   const toasts = [];
   const e = new Engine(state, (text, tone) => toasts.push({ text, tone }));
@@ -83,10 +84,13 @@ const finite = (v, path = "s") => {
 
 // ---------- 数据 ----------
 test("the event library holds 100 events: 9 chains with 36 steps and 64 standalone events, three options each", () => {
-  assert.equal(EVENT_IDS.length, 100);
+  // v0.19 在后面加了 7 张“妙手”卡；这里数的是 v0.18 的一百张
+  const BASE = EVENT_IDS.filter((id) => EVENTS[id].cat !== "thief");
+  assert.equal(BASE.length, 100);
+  assert.equal(EVENT_IDS.length - BASE.length, 7);
   const chain = EVENT_IDS.filter((id) => EVENTS[id].chain);
   assert.equal(chain.length, 36);
-  assert.equal(EVENT_IDS.length - chain.length, 64);
+  assert.equal(BASE.length - chain.length, 64);
   assert.equal(Object.keys(CHAINS).length, 9);
   for (const [c, def] of Object.entries(CHAINS)) {
     const steps = chain.filter((id) => EVENTS[id].chain === c);
@@ -97,7 +101,7 @@ test("the event library holds 100 events: 9 chains with 36 steps and 64 standalo
   assert.equal(EVENT_IDS.filter((id) => EVENTS[id].newbie).length, 13);
   const cats = {};
   for (const id of EVENT_IDS) cats[EVENTS[id].cat] = (cats[EVENTS[id].cat] || 0) + 1;
-  assert.deepEqual(cats, { chain: 36, farm: 12, scav: 10, camp: 12, trade: 10, crisis: 10, luck: 10 });
+  assert.deepEqual(cats, { chain: 36, farm: 12, scav: 10, camp: 12, trade: 10, crisis: 10, luck: 10, thief: 7 });
   for (const id of EVENT_IDS) {
     const ev = EVENTS[id];
     assert.ok(CATS[ev.cat], id);
@@ -170,6 +174,7 @@ test("every option of all 100 events runs, keeps the save loadable and writes cl
   e.fr.dog.bond = 10;
   e.r.radio = true;
   e.d.unlocked.railDepot = true;
+  e.ss.adou.phase = "sister";
   e.s.buildings.push({ id: "coopT", type: "coop", x: 300, y: 300, rotation: 0, hp: 100, open: false });
   const basics = {};
   for (const [id, it] of Object.entries(ITEMS)) if (!it.protected) basics[id] = 120;

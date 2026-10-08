@@ -1,0 +1,460 @@
+/* v0.19.0「妙手」：技能页、下手预览、下手小游戏、被抓后的三选一、妙手手记、任务手记里的“妙手”条。 */
+
+/* ---------- 技能页 ---------- */
+.skill-page {
+  display: grid;
+  gap: 12px;
+}
+.skill-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.skill-head p {
+  flex: 1 1 360px;
+  margin: 0;
+  color: #cfd8c2;
+}
+.skill-points {
+  display: inline-block;
+  margin-right: 10px;
+  padding: 2px 10px;
+  border: 1px solid #e9c05a;
+  border-radius: 999px;
+  color: #f3d27a;
+}
+.tree-grid {
+  display: grid;
+  gap: 10px;
+}
+.skill-col {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #5d6b55;
+  border-radius: 10px;
+  background: #22302a;
+}
+.skill-col header {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+.skill-thief {
+  border-color: #8fc9b8;
+}
+.skill-col h3 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  color: #f6e3b4;
+}
+.skill-col h3 span {
+  color: #b9c2ad;
+  font-size: 0.85em;
+}
+.skill-xp {
+  height: 6px;
+  border-radius: 3px;
+  background: #3a463c;
+}
+.skill-xp i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: #9fd38a;
+}
+.skill-thief .skill-xp i {
+  background: #8fc9b8;
+}
+.skill-col small,
+.skill-desc {
+  margin: 0;
+  color: #aab7af;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.skill-body {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.skill-spec {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 6px 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #1d2a24;
+  font-size: 12px;
+}
+.skill-spec > b,
+.skill-spec > button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.skill-spec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.skill-spec-row span {
+  display: grid;
+  gap: 2px;
+}
+.skill-spec-row small {
+  color: #aab7af;
+}
+.talents {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.talent {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid #46554c;
+  border-radius: 8px;
+}
+.talent-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.talent-top b {
+  color: #ecebdc;
+}
+.talent-top button,
+.talent-done {
+  margin-left: auto;
+  flex: none;
+}
+.talent p {
+  margin: 0;
+  color: #cfd8c2;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.talent small {
+  color: #e9c05a;
+  font-size: 12px;
+}
+.talent-meta {
+  color: #aab7af;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.talent.owned {
+  border-color: #8fd07a;
+  background: #24352a;
+}
+.talent.locked {
+  opacity: 0.78;
+}
+.talent-done {
+  color: #b8e0a0;
+  font-size: 12px;
+}
+
+/* ---------- 下手预览 ---------- */
+.steal-prep,
+.steal-game,
+.steal-result {
+  display: grid;
+  gap: 12px;
+}
+.steal-head h3 {
+  margin: 2px 0 4px;
+  color: #f6e3b4;
+}
+.steal-head p,
+.steal-head small {
+  margin: 0;
+  color: #cfd8c2;
+}
+.sus-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.sus-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: #e9806e;
+}
+.steal-odds p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+.odds-chip {
+  display: inline-flex;
+  gap: 6px;
+  padding: 2px 10px;
+  border: 1px solid #5d6b55;
+  border-radius: 999px;
+}
+.odds-parts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #1d2a24;
+  list-style: none;
+  font-size: 13px;
+}
+.odds-parts li {
+  display: flex;
+  justify-content: space-between;
+}
+.odds-parts .plus {
+  color: #b8e0a0;
+}
+.odds-parts .minus {
+  color: #ffc9bd;
+}
+.pockets {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pocket {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #46554c;
+  border-radius: 8px;
+}
+.pocket small {
+  flex-basis: 100%;
+  color: #ffc9bd;
+}
+.pocket.locked {
+  opacity: 0.7;
+}
+.pocket.unknown {
+  color: #aab7af;
+}
+.pocket-no {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: #3a463c;
+  font-size: 12px;
+}
+.tier-tag {
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.tier-tag.tier-junk {
+  background: #3e4540;
+  color: #c9cfc4;
+}
+.tier-tag.tier-normal {
+  background: #2f4a3a;
+  color: #cfe8c0;
+}
+.tier-tag.tier-important {
+  background: #4a3f22;
+  color: #f3d27a;
+}
+.tier-tag.tier-treasure {
+  background: #5a4318;
+  color: #ffe29a;
+}
+.pocket.tier-treasure,
+.pocket-btn.tier-treasure {
+  border-color: #e9c05a;
+}
+.prep-extra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- 小游戏 ---------- */
+.attention {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.attn-bar {
+  height: 14px;
+  border: 1px solid #5d6b55;
+  border-radius: 7px;
+  background: #1d2a24;
+  overflow: hidden;
+}
+.attn-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #e9c05a, #e9806e);
+}
+.pocket-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+.pocket-btn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 52px;
+  text-align: left;
+}
+.pocket-btn.current {
+  border-color: #8fc9b8;
+  box-shadow: 0 0 0 2px #8fc9b833;
+}
+.swing {
+  display: grid;
+  gap: 6px;
+}
+.swing small {
+  color: #aab7af;
+}
+.swing-bar {
+  position: relative;
+  height: 26px;
+  border: 1px solid #5d6b55;
+  border-radius: 6px;
+  background: #1d2a24;
+}
+.swing.idle .swing-bar {
+  opacity: 0.45;
+}
+.swing-bar .zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: #8fd07a55;
+  border-left: 2px solid #8fd07a;
+  border-right: 2px solid #8fd07a;
+}
+.swing-bar .marker {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 4px;
+  margin-left: -2px;
+  background: #f6e3b4;
+  box-shadow: 0 0 0 1px #1d2a24;
+}
+.steal-buttons button {
+  min-height: 48px;
+  min-width: 140px;
+}
+.steal-log {
+  margin: 0;
+  padding-left: 18px;
+  color: #cfd8c2;
+  font-size: 13px;
+}
+.steal-result h3 {
+  margin: 0;
+  color: #f6e3b4;
+}
+.steal-result.won h3 {
+  color: #b8e0a0;
+}
+.steal-result.lost h3 {
+  color: #ffc9bd;
+}
+
+/* 被抓的三选一：和清晨的卡一样，选完前关不掉；下手时底栏的跳转也藏起来 */
+.modal:has(.caught-card.locked) .close,
+.modal:has(.caught-card.locked) .modal-foot,
+.modal:has(.steal-game) .modal-foot,
+.modal:has(.steal-result) .modal-foot {
+  display: none;
+}
+.respec {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+.respec small {
+  color: #e9c05a;
+  font-size: 12px;
+}
+
+/* ---------- 任务手记里的“妙手”条 ---------- */
+.thief-strip {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid #5d6b55;
+  border-left: 4px solid #8fc9b8;
+  border-radius: 6px;
+  background: #1f2628;
+}
+.thief-strip p {
+  flex: 1 1 260px;
+  margin: 0;
+}
+.thief-strip p b {
+  display: inline-block;
+  min-width: 5.5em;
+  margin-right: 8px;
+  color: #bfe6da;
+}
+
+@media (max-width: 760px) {
+  .skill-col {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .attention {
+    grid-template-columns: 1fr auto;
+  }
+  .attention span {
+    grid-column: 1 / -1;
+  }
+  .steal-buttons button {
+    flex: 1 1 40%;
+    min-width: 0;
+  }
+}
+
+/* 色弱配色 */
+.a11y-color .swing-bar .zone {
+  background: #4aa3ff55;
+  border-color: #4aa3ff;
+}
+.a11y-color .odds-parts .minus,
+.a11y-color .pocket small {
+  color: #f0a040;
+}
+.a11y-color .odds-parts .plus {
+  color: #4aa3ff;
+}
+.a11y-calm .attn-bar i {
+  transition: none;
+}

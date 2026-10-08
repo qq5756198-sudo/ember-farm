@@ -998,9 +998,14 @@ export class Engine extends FarEngine {
           if (this.hasPerk("road")) n = Math.max(Math.min(n, 5), n - 10);
           n = Math.max(1, n + this.buffValue("detour"));
         }
+        n = this.travelBonus(n, to);
       }
     }
     return super.advanceMinutes(n);
+  }
+  // 后面的层（v0.19 妙手）在这里再减路上的时间
+  travelBonus(n) {
+    return n;
   }
 
   // ---------- 场景 ----------

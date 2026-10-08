@@ -651,3 +651,101 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   dailyOn = false;
   console.log('Daily controller passed: no card on day one, the day-two card pops up by itself at 06:00, Esc and close cannot dismiss it, number keys pick and the result starts the day once, journal strip and record page, sleep → summary → card, refused options change nothing, ×2 rewards in late acts, today\'s supply point and a chain marker via E (once each), marker routing on the map, HUD buff chip, Canvas at four sizes and save/parse.');
 }
+// v0.19.0「妙手」: skills page (K) learns a talent, crouch (V) behind a person shows 下手 in the context bar, E opens the preview, 1 starts, number keys pick, space takes, Esc stops, a failed first gate locks the caught card until a choice, journal strip → thief book, the dummy via E, Canvas marks at four sizes and save/parse.
+{
+  let clock = 9000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  dailyOn = false;
+  context.fixture(Campaign.freshState());
+  const e = context.inspect().engine;
+  e.paused = false;
+  const goRegion = (id) => { e.s.region = id; e.enemies = e.s.enemies[id] ||= []; e.assignRegion(); };
+  const sc = e.sc;
+  Object.assign(sc, { act: 9, claimed: ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8'], choice: 'ration', letters: ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8'], camp: { x: 560, y: 735 } });
+  Object.assign(sc.flags, { well: true, camp: true, farmerFed: true });
+  e.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((t) => t.id === 'broadcast') + 1).map((t) => t.id);
+  Object.assign(e.o, { hospital: 'water', youke: true, lathe: { mode: 'parts', day: 0 }, toll: 'refuse' });
+  e.o.raid.phase = 'won'; e.r.radio = true;
+  for (const id of ['farmer', 'medic', 'mechanic']) if (!e.resident(id)) e.recruit(id);
+  e.s.day = 12; e.s.minute = 10 * 60; e.dy.pending = null;
+  e.s.xp.agriculture = 160; e.s.xp.combat = 160;
+  goRegion('farm'); run(2);
+  // K → 技能页，点“学会”
+  press('k'); assert.equal(context.inspect().menu, 'skills'); clean();
+  assert.match(html(), /class="tree-grid"/); assert.match(html(), /可用技能点 \d+/);
+  click('kLearn', 'pickpocket'); assert.ok(e.hasTalent('pickpocket')); clean(); assert.match(html(), /顺手牵羊/);
+  click('kLearn', 'nightOwl'); assert.ok(!e.hasTalent('nightOwl'), 'a locked talent stays locked');
+  click('close'); assert.equal(context.inspect().menu, null);
+  // V 蹲下，站到阿禾背后：提示栏写着“下手”
+  const who = (id) => e.objects.find((o) => o.type === 'resident' && o.resident === id);
+  const behind = (ob) => Object.assign(e.s.player, { x: ob.x + 4, y: ob.y - 46 });
+  press('v'); assert.equal(e.f.crouch, true);
+  let ob = who('farmer'); assert.ok(ob); behind(ob); run(2); ob = who('farmer'); behind(ob); run(1);
+  assert.match(document.querySelector('#context').innerHTML, /下手 · /);
+  // E → 下手之前
+  behind(who('farmer')); press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); clean();
+  assert.match(html(), /没被察觉的机会/); assert.match(html(), /data-action="kGo"/);
+  const tid = e.targetNear().id;
+  for (let s = 1; s < 20000; s++) { e.th.seed = s; if (e.stealRoll(tid) < 0.05) break; }
+  // 1 = 下手
+  press('1'); run(1); clean();
+  assert.ok(e.steal && e.steal.phase === 'pick'); assert.match(html(), /id="st-attn"/);
+  const tries = e.th.stats.tries;
+  // 数字键选口袋，空格在安全区里抽
+  press('1'); assert.equal(e.steal.phase, 'swing');
+  for (let i = 0; i < 200 && e.steal.phase === 'swing'; i++) {
+    const st = e.steal;
+    if (st.marker > st.zone.a + 0.02 && st.marker < st.zone.a + st.zone.w - 0.02) { press(' '); break; }
+    run(1);
+  }
+  assert.ok(['pick', 'done', 'caught'].includes(e.steal.phase));
+  const gotFirst = e.steal.slots[0].done; assert.ok(gotFirst, 'space inside the zone takes the item');
+  // Esc = 收手，结果页；再按 Esc 关掉
+  if (['pick', 'swing'].includes(e.steal.phase)) { press('Escape'); assert.equal(e.steal.phase, 'done'); clean(); assert.match(html(), /得手了|收手/); }
+  if (e.steal.phase === 'done') { press('Escape'); assert.equal(context.inspect().menu, null); assert.equal(e.steal, null); }
+  else { click('kFace'); click('kCaught', '0'); click('kOk'); }
+  assert.equal(e.th.stats.tries, tries); if (gotFirst) { assert.equal(e.th.stats.wins, 1); assert.ok(e.th.taken[tid].ids.length >= 1, 'the pocket is empty for the rest of the week'); }
+  // 第二次：对许医生，第一道运气没过 → 当场被抓，卡片锁住
+  const med = who('medic'); assert.ok(med); behind(med); run(1); behind(who('medic'));
+  for (let s = 1; s < 20000; s++) { e.th.seed = s; if (e.stealRoll('medic') > 0.97) break; }
+  e.f.crouch = true; behind(who('medic')); press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); assert.equal(e.targetNear()?.id, 'medic');
+  const money = e.s.money;
+  click('kGo', 'medic'); clean();
+  assert.ok(e.th.pending, 'caught on the first gate'); assert.match(html(), /被发现了/);
+  // 底栏“返回营地手册”也绕不过去：被抓后点它，回到要了结的卡
+  const footer = () => listeners.click({ target: { closest: () => ({ dataset: { menu: 'rebuild' } }) } });
+  footer(); assert.equal(context.inspect().menu, 'outpost', 'the footer cannot skip the caught card'); assert.ok(e.th.pending);
+  if (!/caught-card/.test(html())) press('1');
+  clean(); assert.match(html(), /caught-card locked/);
+  footer(); assert.equal(context.inspect().menu, 'outpost');
+  press('Escape'); assert.equal(context.inspect().menu, 'outpost', 'Esc cannot dismiss the caught card');
+  click('close'); assert.equal(context.inspect().menu, 'outpost', 'close cannot dismiss it either');
+  e.s.money = Math.max(e.s.money, 40);
+  const m1 = e.s.money;
+  press('1'); assert.equal(e.th.pending, null); assert.equal(e.s.money, m1 - 20, 'apologising costs 20 gold'); clean();
+  press('1'); assert.equal(context.inspect().menu, null);
+  assert.ok(money >= 0);
+  // 任务手记的“妙手”条 → 妙手手记
+  context.open('journey'); clean(); assert.match(html(), /class="thief-strip"/);
+  click('kView', 'thief'); clean(); assert.match(html(), /妙手手记|宝贝/); click('close');
+  // 稻草人：站着按 E 练手
+  e.f.crouch = false;
+  const dummy = e.objects.find((o) => o.type === 'thiefDummy'); assert.ok(dummy);
+  Object.assign(e.s.player, { x: dummy.x, y: dummy.y + 24 }); run(2);
+  assert.match(document.querySelector('#context').innerHTML, /稻草人/);
+  Object.assign(e.s.player, { x: dummy.x, y: dummy.y + 24 }); press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); assert.ok(e.steal?.practice); clean();
+  press('Escape'); press('Escape'); assert.equal(context.inspect().menu, null);
+  // 蹲着时 Canvas 画出眼睛
+  e.f.crouch = true; behind(who('farmer'));
+  for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); run(3); }
+  context.inspect().renderer.resize(1366, 600, 1);
+  e.f.crouch = false;
+  click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.ok(back.skills.talents.includes('pickpocket')); assert.equal(back.theft.sus.medic >= 1, true);
+  assert.equal(back.theft.pending, null); assert.equal(back.theft.stats.tries, 2); assert.equal(back.theft.stats.caught, 1);
+  console.log('Thief controller passed: skills page via K learns a talent (locked ones refuse), V crouch behind a person shows 下手 in the context bar, E opens the preview, 1 starts, number keys pick a pocket, space takes inside the zone, Esc stops then closes, a failed first gate locks the caught card (Esc and close refused) until 1 apologises for 20 gold, journal strip → thief book, the dummy via E, Canvas marks at four sizes and save/parse.');
+}

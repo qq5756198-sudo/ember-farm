@@ -27,6 +27,7 @@ const ART = {
   trade: "<rect x='4' y='4' width='8' height='8' fill='#e9c05a'/><rect x='5' y='5' width='6' height='6' fill='#c99a2a'/><rect x='7' y='6' width='2' height='4' fill='#f3e2a8'/>",
   crisis: "<rect x='7' y='2' width='2' height='2' fill='#e9806e'/><rect x='5' y='5' width='6' height='3' fill='#e9806e'/><rect x='3' y='9' width='10' height='4' fill='#e9806e'/><rect x='7' y='6' width='2' height='4' fill='#2a1a14'/><rect x='7' y='11' width='2' height='1' fill='#2a1a14'/>",
   luck: "<rect x='7' y='2' width='2' height='12' fill='#9fd3e0'/><rect x='2' y='7' width='12' height='2' fill='#9fd3e0'/><rect x='5' y='5' width='6' height='6' fill='#e8f6fa'/>",
+  thief: "<rect x='4' y='3' width='8' height='3' fill='#8fc9b8'/><rect x='3' y='6' width='10' height='8' fill='#5a7d70'/><rect x='6' y='8' width='4' height='3' fill='#e9c05a'/><rect x='12' y='9' width='3' height='2' fill='#e8d6b0'/>",
   chain: "<rect x='2' y='6' width='5' height='4' fill='none' stroke='#c9a5e6' stroke-width='1.5'/><rect x='9' y='6' width='5' height='4' fill='none' stroke='#c9a5e6' stroke-width='1.5'/><rect x='6' y='7' width='4' height='2' fill='#c9a5e6'/>",
 };
 const art = (cat) => `<svg class="daily-art" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect width="16" height="16" fill="#1d2a22"/>${ART[cat] || ART.luck}</svg>`;
@@ -163,8 +164,14 @@ function preview(e, op, tier) {
     case "mark":
       return "";
   }
+  for (const hook of PREVIEW_HOOKS) {
+    const text = hook(e, op, tier);
+    if (text) return text;
+  }
   return "";
 }
+// 后面的层（v0.19 妙手）在这里补上新动作的说明
+export const PREVIEW_HOOKS = [];
 const joinFx = (e, fx, tier) =>
   (fx || [])
     .map((op) => preview(e, op, tier))
