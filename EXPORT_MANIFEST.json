@@ -1,9 +1,9 @@
 {
   "game": "余烬农场",
-  "version": "v0.19.0",
-  "edition": "妙手",
-  "exported_date": "2026-10-08",
-  "source_file_count": 159,
+  "version": "v0.20.0",
+  "edition": "一亩田",
+  "exported_date": "2026-10-09",
+  "source_file_count": 167,
   "source_files": [
     ".gitignore",
     ".openai/hosting.json",
@@ -66,6 +66,11 @@
     "dist/frontier-ui.js",
     "dist/frontier.js",
     "dist/game.js",
+    "dist/garden-data.js",
+    "dist/garden-renderer.js",
+    "dist/garden-ui.js",
+    "dist/garden.css",
+    "dist/garden.js",
     "dist/guidance-data.js",
     "dist/guidance-engine.js",
     "dist/guidance-ui.js",
@@ -125,6 +130,7 @@
     "docs/development/v0.16.0-ledger.md",
     "docs/development/v0.17.0-ledger.md",
     "docs/development/v0.18.0-ledger.md",
+    "docs/development/v0.19.0-ledger.md",
     "docs/releases/v0.10.0.md",
     "docs/releases/v0.11.0.md",
     "docs/releases/v0.12.0.md",
@@ -135,6 +141,7 @@
     "docs/releases/v0.17.0.md",
     "docs/releases/v0.18.0.md",
     "docs/releases/v0.19.0.md",
+    "docs/releases/v0.20.0.md",
     "docs/releases/v0.6.0.md",
     "docs/releases/v0.7.0.md",
     "docs/releases/v0.8.0.md",
@@ -156,6 +163,7 @@
     "tests/farlands.test.mjs",
     "tests/frontier.test.mjs",
     "tests/game.test.mjs",
+    "tests/garden.test.mjs",
     "tests/guidance.test.mjs",
     "tests/outpost.test.mjs",
     "tests/player.test.mjs",
@@ -165,16 +173,16 @@
     "tests/thief.test.mjs",
     "tests/winter.test.mjs"
   ],
-  "source_bytes": 14788607,
-  "source_copy": "modified from the v0.12.0 handoff through v0.19.0; see docs/releases/v0.13.0.md to v0.19.0.md",
+  "source_bytes": 14908790,
+  "source_copy": "modified from the v0.12.0 handoff through v0.20.0; see docs/releases/v0.13.0.md to v0.20.0.md",
   "checks": {
     "automated_tests": {
-      "passed": 569,
+      "passed": 585,
       "failed": 0
     },
-    "ui_controller": "passed, DOM substitute + native Canvas, including alliance, outpost, winter, seasons, farlands, daily and thief sections",
+    "ui_controller": "passed, DOM substitute + native Canvas, including alliance, outpost, winter, seasons, farlands, daily, thief and garden sections; 20 consecutive reruns 0 failures",
     "real_browser_layout": "headless Chromium: 1366x768, 1920x1080, 390x844 and 360x740 touch emulation, 683x384@2x (200% zoom equivalent); real devices, Firefox and Safari not verified",
-    "independent_review": "v0.15 to v0.19 each: code review + randomized play with save/parse after every step or day; findings fixed with regression tests; reruns 0 failures",
+    "independent_review": "v0.15 to v0.20 each: code review + randomized play with save/parse after every step or day; findings fixed with regression tests; reruns 0 failures",
     "relative_js_imports_and_html_files": "resolved"
   },
   "personal_player_save_included": false,
@@ -189,5 +197,6 @@
   "seasons_change": "festivals every 7 days, adjacency bonuses, canteen nights, campfire talks, apprentices, lodgers, six NPCs, calendar, people page, E chooser, item links, new-feature marks",
   "farlands_change": "night choices with amends, daily hazards (fog/migration/drift) with forecast, dog bond and skills, 彭姐 neighbour-camp arc, 贺满仓 interest-free building advances, raiders hit residents/crew/fences, crew task animations, daily shipping price drift, path guidance with edge arrows, narrow-screen quick menu, large text / colour-blind / calm options, letter-key remapping and gamepad",
   "daily_change": "a three-option event card pops up at 06:00 every day from day 2 and cannot be dismissed until chosen; 100 events (9 chains of 36 steps with perks at their endings, 64 standalone events in six categories, 13 newbie events for days 2-5); costs, gains, success chances and follow-ups shown per option; x1.5 rewards from act 3 and x2 from act 6, locked per chain; fixed rolls per card; buffs, delayed gifts/debts/night losses, supply caches and chain markers in the world, bounties, ambushes, crew joins; journal strip, choice record page and HUD buff chip",
-  "thief_change": "skills and talents (a new thief skill levelled only by stealing; 26 talents across five skills; points from skill levels and story acts, max 28 of 48; respec 100 gold every 7 days); pickpocketing by crouching next to a person: a preview with odds per tier (words until the see-through talent), a fixed per-day dice gate and a timing mini game with an attention bar; junk/normal/important/treasure tiers with level and value caps; 20 unique treasures (tech unlocks, permanent discounts, stashes, tunnels, grants, job manuals), lost for good on a failed attempt; caught choice card (apologise/bluff/run), suspicion, strikes, crew leaving, market price rise and ban, amends; hot goods and fences; practice dummy, lockboxes, planting; 7 thief daily cards; journal strip and thief book"
+  "thief_change": "skills and talents (a new thief skill levelled only by stealing; 26 talents across five skills; points from skill levels and story acts, max 28 of 48; respec 100 gold every 7 days); pickpocketing by crouching next to a person: a preview with odds per tier (words until the see-through talent), a fixed per-day dice gate and a timing mini game with an attention bar; junk/normal/important/treasure tiers with level and value caps; 20 unique treasures (tech unlocks, permanent discounts, stashes, tunnels, grants, job manuals), lost for good on a failed attempt; caught choice card (apologise/bluff/run), suspicion, strikes, crew leaving, market price rise and ban, amends; hot goods and fences; practice dummy, lockboxes, planting; 7 thief daily cards; journal strip and thief book",
+  "garden_change": "the camp manual hub is gone: E at a place opens only that place's page, titled with the place name; former manual-only pages moved to the cook fire, workbench, weapon bench, shipping box, farmhouse and the farm board; farming: seed picker at the plot (bag and storage seeds), readable plots (fertility strip, weeds, caterpillars, crow footprints, cover cloth, swaying ripe crops, growth ring and care score over the head), companion buffs (water/yield/quality/weed) for different neighbouring crops, rotation and feeding/heavy soils, liked and hated weather with cover cloth, tending (helper 阿禾 from day 5), weeds to fodder, caterpillars to bait, crows and a scarecrow, a care score deciding fine quality (daily cap 65, 80+ always fine), hand-harvest combo, first three days grow 1.5x; farm board with stats, 3-day forecast and crop table; new garden save field, 2 items and the scarecrow; old saves load as is"
 }
