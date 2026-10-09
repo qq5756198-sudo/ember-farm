@@ -1,7 +1,7 @@
 // 新画面（样张）：农场换成真像素底图、新的人物和作物、建筑和物件，一天四段的光影，看得见的天气。
 // 其他地图暂时还是原来的画法；设置里可以切回原来的画面。
 import { Renderer as GardenRenderer } from "./garden-renderer.js";
-import { CROPS, BUILDINGS, ITEMS } from "./data.js";
+import { CROPS, BUILDINGS, ITEMS, WORLD } from "./data.js";
 import { PAL, makeCanvas } from "./pixel-kit.js";
 import { bakeFarm, puddleSpots } from "./pixel-farm.js";
 import { personSprite, lookFor, PLAYER_LOOK, dirFromAngle, cropSprite, soilSprite, iconSprite, debrisSprite, shadowSprite, gardenSprite } from "./pixel-sprites.js";
@@ -25,6 +25,13 @@ export function setVisual(on) {
   globalThis.document?.body?.classList?.toggle("vis-on", VIS.on);
 }
 const FONT = '"Fusion Pixel", "Microsoft YaHei", sans-serif';
+// 颜色的明暗，0 黑 1 白；认不出的颜色当亮色
+function lightness(color) {
+  const m = /^#([0-9a-f]{6})/i.exec(String(color));
+  if (!m) return 1;
+  const n = parseInt(m[1], 16);
+  return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+}
 try {
   globalThis.document?.body?.classList?.toggle("vis-on", VIS.on);
 } catch {
@@ -72,8 +79,16 @@ export class Renderer extends GardenRenderer {
       this.assets.farm = this.v ? this.farmCanvas(s) : this.farmOrig;
     }
     this.late = [];
+    this._textQueue = [];
+    this._ghost = null;
+    // 场景里的字（名字、提示、飘字）等光照画完再写，夜里也看得清
+    this._deferText = this.v;
     if (this.v) this.stepFx(engine, Math.min(0.1, dt));
-    super.draw(engine, mouse, dt);
+    try {
+      super.draw(engine, mouse, dt);
+    } finally {
+      this._deferText = false;
+    }
   }
   farmCanvas(s) {
     const base = this.farmArt.canvas;
@@ -96,12 +111,15 @@ export class Renderer extends GardenRenderer {
     }
     return this.heat;
   }
+  // 像素按整数倍放大才不会一格大一格小；差得太多（或者会露出地图外面）时就用原来的缩放，保证“场景缩放”设置有效
   cameraScale(s) {
     const base = super.cameraScale(s);
     if (!this.v) return base;
     const dpr = this.dpr || 1,
-      px = Math.max(1, Math.round(base * 2 * dpr));
-    return px / (2 * dpr);
+      snapped = Math.max(1, Math.round(base * 2 * dpr)) / (2 * dpr);
+    if (Math.abs(snapped - base) / base > 0.08) return base;
+    if (this.w / snapped > WORLD.w + 1 || this.h / snapped > WORLD.h + 1) return base;
+    return snapped;
   }
   snapCamera() {
     if (!this.v) return;
@@ -117,25 +135,55 @@ export class Renderer extends GardenRenderer {
     return VIS.on ? this._pixelBadge : null;
   }
   _pixelText(label, x, y, color = "#e6e5c7", size = 12, center = true) {
-    const c = this.ctx,
-      px = size > 15 ? 24 : 12;
+    const c = this.ctx;
+    if (this._deferText) {
+      const m = c.getTransform(),
+        a = c.globalAlpha;
+      this._textQueue.push(() => {
+        c.save();
+        c.setTransform(m);
+        c.globalAlpha = a;
+        this._pixelText(label, x, y, color, size, center);
+        c.restore();
+      });
+      return;
+    }
+    const px = size > 15 ? 24 : 12;
     c.font = `${px}px ${FONT}`;
     c.textAlign = center ? "center" : "left";
     c.textBaseline = "middle";
     c.shadowBlur = 0;
     const X = Math.round(x),
       Y = Math.round(y);
-    c.fillStyle = "#140f0b";
-    c.fillText(label, X + 1, Y);
-    c.fillText(label, X - 1, Y);
-    c.fillText(label, X, Y + 1);
-    c.fillText(label, X, Y - 1);
-    c.fillText(label, X + 1, Y + 1);
+    // 深色字（写在浅色气泡上的）不描黑边，不然糊成一团
+    if (lightness(color) > 0.42) {
+      c.fillStyle = "#140f0b";
+      c.fillText(label, X + 1, Y);
+      c.fillText(label, X - 1, Y);
+      c.fillText(label, X, Y + 1);
+      c.fillText(label, X, Y - 1);
+      c.fillText(label, X + 1, Y + 1);
+    }
     c.fillStyle = color;
     c.fillText(label, X, Y);
   }
   _pixelBadge(label, x, y, color = "#d8cb92") {
     const c = this.ctx;
+    if (this._deferText) {
+      const m = c.getTransform(),
+        a = c.globalAlpha;
+      this._textQueue.push(() => {
+        c.save();
+        c.setTransform(m);
+        c.globalAlpha = a;
+        const was = this._deferText;
+        this._deferText = false;
+        this._pixelBadge(label, x, y, color);
+        this._deferText = was;
+        c.restore();
+      });
+      return;
+    }
     c.font = `12px ${FONT}`;
     const w = Math.round(c.measureText(label).width + 16),
       X = Math.round(x - w / 2),
@@ -257,8 +305,10 @@ export class Renderer extends GardenRenderer {
       pose = e.actionAnim > 0 ? "work" : "walk",
       alpha = e.invulnerable > 0 && Math.floor(e.invulnerable * 12) % 2 === 0 ? 0.45 : 1;
     this.pxShadow(p.x, p.y, 20);
+    // 背对镜头时手里的工具在身后，先画工具再画人
+    if (dir === "up") this.muted(() => super.drawPlayer(e));
     this.px(personSprite(PLAYER_LOOK, "player", dir, frame, pose), p.x, p.y, { flip, alpha, foot: 1 });
-    this.muted(() => super.drawPlayer(e));
+    if (dir !== "up") this.muted(() => super.drawPlayer(e));
   }
   drawObject(o, e) {
     if (!this.v) return super.drawObject(o, e);
@@ -285,14 +335,14 @@ export class Renderer extends GardenRenderer {
   drawBuilding(b, e) {
     if (!this.v) return super.drawBuilding(b, e);
     const d = BUILDINGS[b.type],
-      art = d ? buildingArt(b.type, b.rotation % 2 === 1) : null;
+      art = d ? buildingArt(b.type, b.rotation % 2 === 1, !!b.open) : null;
     if (!art) return super.drawBuilding(b, e);
     const broken = b.hp <= 0,
       p = e.s.player,
       near = Math.hypot(p.x - b.x, p.y - b.y) < 110;
     if (b.type !== "floor") {
       this.pxShadow(b.x, b.y, Math.min(60, art.w * 1.5));
-      this.px(art.canvas, b.x, b.y + 4, { alpha: broken ? 0.45 : b.open ? 0.6 : 1 });
+      this.px(art.canvas, b.x, b.y + 4, { alpha: broken ? 0.45 : 1 });
     }
     // 会发光的部件留到光照之后再画，夜里才显得亮
     if (!broken) this.late.push({ kind: "build", b, art });
@@ -315,6 +365,99 @@ export class Renderer extends GardenRenderer {
       c.fillRect(X, Y, w, 4);
       c.fillStyle = b.hp / d.hp < 0.35 ? "#d2654c" : "#aab258";
       c.fillRect(X, Y, Math.round((w * b.hp) / d.hp / 2) * 2, 4);
+    }
+  }
+  // 建造时跟着鼠标的虚影：用新画法、跟着旋转，等光照画完再画，夜里也看得清
+  drawBuildGhost(engine, mouse) {
+    if (!this.v) return super.drawBuildGhost(engine, mouse);
+    this._ghost = { engine, mouse };
+  }
+  drawGhostNow() {
+    const g = this._ghost;
+    if (!g) return;
+    const { engine, mouse } = g,
+      c = this.ctx,
+      type = engine.buildMode,
+      target = this.worldPoint(mouse.x, mouse.y),
+      x = Math.round(target.x / 8) * 8,
+      y = Math.round(target.y / 8) * 8,
+      rect = engine.buildingRect(type, x, y),
+      reason = engine.buildReason(type, x, y),
+      art = buildingArt(type, (engine.rotation || 0) % 2 === 1);
+    c.fillStyle = reason ? "rgba(210,101,76,.28)" : "rgba(170,178,88,.28)";
+    c.fillRect(Math.round(rect.x / 2) * 2, Math.round(rect.y / 2) * 2, Math.round(rect.w / 2) * 2, Math.round(rect.h / 2) * 2);
+    c.strokeStyle = reason ? "#d2654c" : "#aab258";
+    c.lineWidth = 2;
+    c.strokeRect(Math.round(rect.x / 2) * 2, Math.round(rect.y / 2) * 2, Math.round(rect.w / 2) * 2, Math.round(rect.h / 2) * 2);
+    if (art) this.px(art.canvas, x, y + 4, { alpha: 0.72 });
+    else super.sprite(BUILDINGS[type].icon, x, y, 60, 60, true, 0.6);
+    this._pixelBadge(reason || "左键放置 · Q 旋转 · 右键取消", x, y + 25, reason ? "#f1b4a2" : "#e2e8b8");
+  }
+  // 交互圈：光照之后再描一遍
+  drawNearRing(e) {
+    const near = e.nearestObject?.();
+    if (!near || e.paused) return;
+    const c = this.ctx,
+      rx = near.type === "plot" ? 22 : 28;
+    c.save();
+    c.globalAlpha = 0.75 + 0.25 * Math.sin(this.time * 4);
+    c.fillStyle = "#f6b05a";
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 14) c.fillRect(Math.round((near.x + Math.cos(a) * rx) / 2) * 2, Math.round((near.y + 3 + Math.sin(a) * 10) / 2) * 2, 2, 2);
+    c.restore();
+  }
+  // 水渠与生态区的格子：画成真的沟渠、水、草地、树苗、湿地
+  drawCanalCell(x, y, state, i = 0) {
+    if (!this.v) return super.drawCanalCell(x, y, state, i);
+    const c = this.ctx,
+      X = Math.round(x / 2) * 2,
+      Y = Math.round(y / 2) * 2;
+    if (state === "none") {
+      c.fillStyle = "rgba(42,28,18,.35)";
+      c.fillRect(X, Y, 4, 2);
+      c.fillRect(X + 22, Y + 24, 4, 2);
+      return;
+    }
+    c.fillStyle = "#3a2519";
+    c.fillRect(X - 2, Y - 2, 30, 30);
+    c.fillStyle = state === "flow" ? "#2e5e5e" : "#553522";
+    c.fillRect(X, Y, 26, 26);
+    c.fillStyle = state === "flow" ? "#46807a" : "#704a2f";
+    c.fillRect(X, Y, 26, 4);
+    if (state === "flow") {
+      c.fillStyle = "#a9cfbd";
+      const k = this.calm ? 0 : Math.floor(this.time * 4 + i) % 3;
+      c.fillRect(X + 4 + k * 6, Y + 10, 6, 2);
+      c.fillRect(X + 12 - k * 2, Y + 18, 8, 2);
+    }
+  }
+  drawEcoCell(x, y, t, i = 0) {
+    if (!this.v) return super.drawEcoCell(x, y, t, i);
+    const c = this.ctx,
+      X = Math.round(x / 2) * 2,
+      Y = Math.round(y / 2) * 2,
+      fill = !t.clean ? ["#4a3c30", "#625244"] : { grass: ["#4c632d", "#667d36"], forest: ["#364a24", "#4c632d"], wetland: ["#2e5e5e", "#46807a"], field: ["#704a2f", "#8d6340"], empty: ["#7d6a3a", "#a28a4e"] }[t.type] || ["#4c632d", "#667d36"];
+    c.fillStyle = fill[0];
+    c.fillRect(X, Y, 26, 26);
+    c.fillStyle = fill[1];
+    for (let k = 0; k < 5; k++) c.fillRect(X + ((k * 11 + i * 5) % 22), Y + ((k * 7 + i * 3) % 22), 4, 2);
+    if (!t.clean) {
+      c.fillStyle = "#8e3a20";
+      c.fillRect(X + 8, Y + 10, 4, 2);
+      c.fillRect(X + 16, Y + 16, 2, 2);
+    }
+    if (t.type === "forest") {
+      c.fillStyle = "#26331d";
+      c.fillRect(X + 11, Y + 14, 4, 10);
+      c.fillStyle = "#667d36";
+      c.fillRect(X + 5, Y + 2, 16, 12);
+      c.fillStyle = "#869843";
+      c.fillRect(X + 7, Y + 2, 8, 4);
+    }
+    if (t.type === "wetland") {
+      c.fillStyle = "#869843";
+      for (const dx of [4, 10, 18]) c.fillRect(X + dx, Y + 8, 2, 10);
+      c.fillStyle = "#553522";
+      c.fillRect(X + 10, Y + 6, 2, 4);
     }
   }
   // ---------- 田 ----------
@@ -437,7 +580,7 @@ export class Renderer extends GardenRenderer {
     this.wx.drawMist(c, view, weather, this.time, this.calm);
     // 环境色 + 灯光，用“正片叠底”压到整个画面上
     let amb = ambientFor(this.vMinute, weather);
-    if (this.wx.flash > 0) amb = amb.map((v) => Math.round(v + (255 - v) * this.wx.flash * 0.85));
+    if (this.wx.flash > 0) amb = amb.map((v) => Math.round(v + (255 - v) * this.wx.flash * 0.45));
     const lit = this.lightMap.render(view, amb, this.collectLights(e, night));
     if (lit) {
       c.save();
@@ -456,8 +599,8 @@ export class Renderer extends GardenRenderer {
     // 自己发光的东西：窗户、火苗、灯泡、终端屏幕、余烬、火星和萤火虫
     this.drawEmissive(e, night);
     this.fx.draw(c, "glow", this.time);
-    if (this.wx.flash > 0.4) {
-      c.fillStyle = `rgba(235,240,255,${(this.wx.flash - 0.4) * 0.5})`;
+    if (this.wx.flash > 0.6) {
+      c.fillStyle = `rgba(235,240,255,${(this.wx.flash - 0.6) * 0.3})`;
       c.fillRect(view.x, view.y, view.w, view.h);
     }
     // 作物的状态小图标：放在最上面，夜里也看得清
@@ -471,6 +614,12 @@ export class Renderer extends GardenRenderer {
       }
     }
     if (raining) this.duskShadow = 0;
+    // 场景里的字、交互圈、建造虚影放在最后
+    this._deferText = false;
+    for (const fn of this._textQueue) fn();
+    this._textQueue = [];
+    this.drawNearRing(e);
+    this.drawGhostNow();
   }
   drawEmissive(e, night) {
     const c = this.ctx,

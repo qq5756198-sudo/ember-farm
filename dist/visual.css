@@ -98,7 +98,7 @@ body.vis-on .bar i {
 }
 
 /* ---------- 按钮 ---------- */
-body.vis-on .modal button,
+body.vis-on .modal button:not(.atlas-node),
 body.vis-on .hud-dock button,
 body.vis-on .hud-top .hud-settings,
 body.vis-on .hud-top .hud-location {
@@ -108,17 +108,17 @@ body.vis-on .hud-top .hud-location {
   box-shadow: var(--btn);
   color: var(--ink);
 }
-body.vis-on .modal button:hover,
+body.vis-on .modal button:not(.atlas-node):hover,
 body.vis-on .hud-dock button:hover {
   background-color: #4a3627;
 }
-body.vis-on .modal button:active,
+body.vis-on .modal button:not(.atlas-node):active,
 body.vis-on .hud-dock button:active {
   box-shadow: inset -2px -2px 0 #5a4030, inset 2px 2px 0 #1c130d;
 }
-body.vis-on .modal button:disabled {
+body.vis-on .modal button:not(.atlas-node):disabled {
   background-color: #2a1f17;
-  color: #7d6a3a;
+  color: #a28a4e;
   box-shadow: none;
 }
 body.vis-on .modal button.primary,
@@ -226,10 +226,10 @@ body.vis-on .tabs button.active {
 /* 常见的卡片：从绿色换成木头和锈铁 */
 body.vis-on .item-detail,
 body.vis-on .g-facts,
-body.vis-on .g-stat,
-body.vis-on .g-today li,
+body.vis-on .g-stat:not(.warn),
+body.vis-on .g-today li:not(.ok):not(.bad),
 body.vis-on .g-days li,
-body.vis-on .care-dial,
+body.vis-on .care-dial:not(.top):not(.low),
 body.vis-on .seed-opt,
 body.vis-on .section-row,
 body.vis-on .recipe,
@@ -243,6 +243,15 @@ body.vis-on .settings-row {
   background-color: #2a1f17;
   border-radius: 0;
   border-color: #4a3c30;
+}
+/* 有状态的格子只换底色，红、绿、金的边框照旧 */
+body.vis-on .g-stat.warn,
+body.vis-on .g-today li.ok,
+body.vis-on .g-today li.bad,
+body.vis-on .care-dial.top,
+body.vis-on .care-dial.low {
+  background-color: #2a1f17;
+  border-radius: 0;
 }
 body.vis-on .care-dial b,
 body.vis-on .g-stat b {
@@ -278,7 +287,8 @@ body.vis-on .dock-hints {
 
 /* 载入页与开始页 */
 body.vis-on .loading h1,
-body.vis-on .welcome h1 {
+body.vis-on .welcome h1,
+body.vis-on .title-story #modal-title {
   font-family: var(--px);
   font-size: 48px;
   font-weight: normal;
@@ -299,7 +309,7 @@ body.vis-on .modal button:disabled.primary {
   top: 68px;
   left: 16px;
   width: 360px;
-  z-index: 40;
+  z-index: 8;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -366,4 +376,12 @@ body.vis-on .echo-storage-summary b {
 
 body.title-screen .vis-preview {
   display: none;
+}
+body.modal-open .vis-preview {
+  display: none;
+}
+.vis-preview.old button[data-vp="t"],
+.vis-preview.old button[data-vp="w"] {
+  opacity: 0.45;
+  pointer-events: none;
 }

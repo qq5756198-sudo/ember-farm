@@ -182,6 +182,41 @@ const BUILD = {
     P.hline(5, 32, 4, PAL.straw[1]);
     return done(P.outline());
   },
+  gateOpen() {
+    // 打开的门：两根门柱，门板斜着推到一边
+    const P = new Pix(38, 18);
+    for (const x of [1, 34]) {
+      P.rect(x, 0, 3, 17, PAL.soil[1]);
+      P.vline(x, 0, 16, PAL.soil[2]);
+    }
+    P.poly([[5, 4], [12, 1], [12, 12], [5, 15]], PAL.soil[2]);
+    P.line(5, 4, 12, 1, PAL.straw[1]);
+    P.line(6, 14, 11, 3, PAL.soil[1]);
+    P.hline(14, 32, 15, PAL.soil[0], 0.5);
+    return done(P.outline());
+  },
+  gateV() {
+    // 竖着放的门：比栅栏多一对粗门柱和一块门板
+    const P = new Pix(12, 42);
+    for (const y of [0, 36]) {
+      P.rect(2, y, 8, 5, PAL.soil[1]);
+      P.hline(2, 9, y, PAL.soil[3]);
+    }
+    planks(P, 3, 6, 6, 29, [PAL.soil[1], PAL.soil[2], PAL.soil[3]], false, 10);
+    P.line(3, 34, 8, 7, PAL.soil[1]);
+    P.rect(8, 19, 2, 3, PAL.stone[3]);
+    return done(P.outline());
+  },
+  gateVOpen() {
+    const P = new Pix(12, 42);
+    for (const y of [0, 36]) {
+      P.rect(2, y, 8, 5, PAL.soil[1]);
+      P.hline(2, 9, y, PAL.soil[3]);
+    }
+    P.poly([[3, 6], [10, 9], [10, 16], [3, 13]], PAL.soil[2]);
+    P.line(3, 6, 10, 9, PAL.straw[1]);
+    return done(P.outline());
+  },
   trap() {
     // 拒马：交叉的尖木桩
     const P = new Pix(28, 20);
@@ -608,8 +643,11 @@ const OBJ = {
   },
 };
 
-export function buildingArt(type, rotated = false) {
-  const key = rotated && (type === "fence" || type === "gate") ? "fenceV" : type;
+export function buildingArt(type, rotated = false, open = false) {
+  let key = type;
+  if (type === "fence" && rotated) key = "fenceV";
+  // 门：横着、竖着，开着、关着各有一张
+  if (type === "gate") key = (rotated ? "gateV" : "gate") + (open ? "Open" : "");
   if (!BUILD[key]) return null;
   return cached("build:" + key, () => BUILD[key]());
 }

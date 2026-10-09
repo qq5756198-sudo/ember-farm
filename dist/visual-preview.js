@@ -20,24 +20,26 @@ const WEATHERS = [
 ];
 
 // 一座成型的农场：几种作物各个阶段、常用的建筑。只在样张里有。
+// 都放在路边和空地上，不压路、不进池塘
 const SHOW = [
-  ["greenhouse", 1180, 300],
-  ["workbench", 1080, 300],
-  ["weaponbench", 1170, 372],
-  ["breeder", 1030, 384],
-  ["canner", 1110, 444],
-  ["solar", 1290, 440],
-  ["drone", 1300, 530],
+  ["breeder", 1070, 418],
+  ["canner", 1140, 418],
+  ["weaponbench", 1220, 418],
+  ["workbench", 1300, 418],
+  ["greenhouse", 1110, 530],
+  ["solar", 1220, 520],
+  ["drone", 1310, 520],
+  ["stall", 1050, 616],
+  ["coop", 1350, 610],
   ["tower", 1420, 262],
-  ["rain", 820, 384],
+  ["rain", 820, 390],
   ["irrigation", 700, 420],
   ["lamp", 862, 470],
-  ["lamp", 330, 650],
-  ["coop", 1200, 622],
-  ["stall", 1250, 772],
-  ["bed", 1372, 772],
+  ["lamp", 300, 660],
+  ["bed", 1010, 720],
   ["fence", 260, 762],
   ["fence", 334, 762],
+  ["gate", 408, 762],
   ["scarecrow", 520, 562],
 ];
 const CROPS = ["radish", "potato", "tomato", "corn", "bean", "herb", "pumpkin", "cotton", "rye"];
@@ -51,6 +53,8 @@ export function mountPreview(ctx) {
   const group = (key, list) => list.map(([v, label]) => `<button type="button" data-vp="${key}" data-v="${v}">${label}</button>`).join("");
   bar.innerHTML = `<b>画面样张</b><span class="vp-group">${group("t", TIMES)}</span><span class="vp-group">${group("w", WEATHERS)}</span><span class="vp-group"><button type="button" data-vp="style">切到原画面</button><button type="button" data-vp="demo">摆一座成型的农场</button><button type="button" data-vp="hide">收起</button></span>`;
   doc.body.append(bar);
+  // 窗口窄的时候先收起来，免得挡住画面
+  if ((globalThis.innerWidth || 1366) < 900) bar.classList.add("mini");
   const sync = () => {
     for (const b of bar.querySelectorAll("button[data-vp]")) {
       const k = b.dataset.vp,
