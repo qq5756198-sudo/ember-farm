@@ -402,6 +402,7 @@ export class Renderer extends GardenRenderer {
       for (const b of s.buildings || []) {
         if (b.hp <= 0) continue;
         if (b.type === "cook") lights.push({ x: b.x - 10, y: b.y - 8, r: 170 * flick(b.x), color: FIRE, power: 0.9 });
+        else if (b.type === "stove") lights.push({ x: b.x, y: b.y - 12, r: 120 * flick(b.y), color: FIRE, power: 0.75 });
         else if (b.type === "lamp" && (e.c?.energy || 0) > 0) lights.push({ x: b.x + 8, y: b.y - 20, r: 130, color: LAMP, power: 0.95 });
         else if (b.type === "tower") lights.push({ x: b.x, y: b.y - 90, r: 90, color: LAMP, power: 0.6 });
         else if (["canner", "breeder", "solar", "drone", "coop", "lure"].includes(b.type)) lights.push({ x: b.x, y: b.y - 10, r: 36, color: WARM, power: 0.45 });
@@ -504,11 +505,8 @@ export class Renderer extends GardenRenderer {
       const { b, art } = m,
         top = b.y + 4 - art.h * 2,
         left = b.x - art.w;
-      if (art.fire) {
-        const f = flameArt(this.calm ? 0 : Math.floor(t * 9) % 3, true);
-        this.px(f, left + art.fire.x * 2, top + art.fire.y * 2 + 2);
-        if (art.stove) this.px(flameArt(this.calm ? 1 : (Math.floor(t * 7) + 1) % 3, false), left + art.stove.x * 2, top + art.stove.y * 2 + 6, { alpha: 0.9 });
-      }
+      if (art.fire) this.px(flameArt(this.calm ? 0 : Math.floor(t * 9) % 3, true), left + art.fire.x * 2, top + art.fire.y * 2 + 2);
+      if (art.stove) this.px(flameArt(this.calm ? 1 : (Math.floor(t * 7) + 1) % 3, false), left + art.stove.x * 2, top + art.stove.y * 2 + 6, { alpha: 0.9 });
       if (art.lamp && (b.type !== "lamp" || (e.c?.energy || 0) > 0) && night > 0.2) {
         c.fillStyle = "#ffe7a8";
         c.fillRect(left + art.lamp.x * 2 - 2, top + art.lamp.y * 2 - 4, 6, 8);
@@ -571,7 +569,7 @@ export class Renderer extends GardenRenderer {
     if (night > 0.55 && !raining && flies < 22 && this.every("fly", 0.35, dt)) {
       const spots = [[1240, 700, 220, 110], [180, 760, 260, 120], [1250, 230, 220, 110], [640, 840, 260, 90]],
         [cx, cy, rx, ry] = spots[Math.floor(R() * spots.length)];
-      fx.add({ x: cx + (R() - 0.5) * rx * 2, y: cy + (R() - 0.5) * ry * 2, vx: (R() - 0.5) * 14, vy: (R() - 0.5) * 10, t: 0, life: 6 + R() * 6, color: "#dcfa8c", layer: "glow", blink: this.calm ? 0.8 : 2.2 + R() * 2, phase: R() * 6, kind: "firefly", wind: 0.1 });
+      fx.add({ x: cx + (R() - 0.5) * rx * 2, y: cy + (R() - 0.5) * ry * 2, vx: (R() - 0.5) * 14, vy: (R() - 0.5) * 10, t: 0, life: 6 + R() * 6, color: "#dcfa8c", layer: "glow", blink: this.calm ? 0 : 2.2 + R() * 2, phase: R() * 6, kind: "firefly", wind: 0.1 });
     }
     // 白天偶尔飘下来的树叶
     if (night < 0.4 && !raining && this.every("leaf", 1.4, dt)) {

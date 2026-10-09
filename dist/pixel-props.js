@@ -415,6 +415,22 @@ const BUILD = {
     P.ellipse(7, 4, 3, 1.2, PAL.ember[2]);
     return done(P.outline());
   },
+  stove() {
+    // 寒潮用的铁火炉：炉身、炉门里的火、烟囱
+    const P = new Pix(22, 30);
+    P.rect(4, 12, 14, 14, PAL.ash[2]);
+    P.vline(4, 12, 25, PAL.ash[3]);
+    P.vline(17, 12, 25, PAL.ash[1]);
+    P.ellipse(11, 12, 7, 2, PAL.ash[3]);
+    P.rect(7, 17, 8, 6, PAL.ash[0]);
+    P.rect(8, 18, 6, 4, PAL.ember[1]);
+    for (const x of [5, 16]) P.rect(x, 26, 2, 3, PAL.ash[1]);
+    P.rect(13, 0, 3, 12, PAL.stone[2]);
+    P.vline(13, 0, 11, PAL.stone[3]);
+    P.rect(12, 0, 5, 2, PAL.stone[1]);
+    P.rect(2, 26, 18, 2, PAL.ash[1]);
+    return done(P.outline(), { stove: { x: 11, y: 21 } });
+  },
   scarecrow() {
     const P = new Pix(26, 36);
     P.vline(12, 6, 34, PAL.soil[1]);
