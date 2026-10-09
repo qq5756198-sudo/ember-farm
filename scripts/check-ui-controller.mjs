@@ -617,7 +617,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   e.dy.pending = { day: 20, id: 'S02', rolls: [0.5, 0.5, 0.5], tier: e.tier(), luck: false, choice: null, win: null, lines: [] };
   run(2); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /奖励 ×2/);
   click('dPick', '0'); clean(); assert.match(html(), /补给/); click('dStart');
-  const cache = e.dy.caches[0]; assert.ok(cache);
+  // 只看今天的补给点：前面直接跳到第 20 天，没有经过换日清理，可能还留着第 3 天的
+  const cache = e.dy.caches.find((c) => c.day === e.s.day); assert.ok(cache);
   e.travel(cache.region) || goRegion(cache.region);
   for (const z of e.enemies) z.dead = true;
   const ob = e.objects.find((o) => o.type === 'dailyCache'); assert.ok(ob);
@@ -791,6 +792,12 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // 每一页的底栏都没有“返回营地手册”；HUD 的营地消息是一页
   for (const panel of ['inventory', 'craft', 'build', 'map', 'skills']) { context.open(panel); assert.doesNotMatch(html(), /返回营地手册/, panel); click('close'); }
   click('rTab', 'events'); assert.equal(context.inspect().menu, 'rebuild'); assert.match(html(), /<h2 id="modal-title">营地消息<\/h2>/); assert.doesNotMatch(html(), /manual-nav/); click('close');
+  // 原来只在营地手册里的几页，现在各有各的地方：篝火灶上掌勺，出货箱上看订单，农舍里看房间与相册
+  const cook = e.s.buildings.find((b) => b.type === 'cook');
+  context.open('station', { buildingId: cook.id }); clean(); assert.match(html(), /掌勺料理/);
+  click('rOpen', 'frontier:kitchen'); assert.match(html(), /<h2 id="modal-title">料理<\/h2>/); click('close');
+  context.open('outpost', { view: 'shipping' }); clean(); assert.match(html(), /每日订单/); click('rOpen', 'camp:orders'); assert.match(html(), /<h2 id="modal-title">订单<\/h2>/); click('close');
+  context.open('home'); assert.match(html(), /房间与政策/); click('rOpen', 'frontier:rooms'); assert.match(html(), /<h2 id="modal-title">房间与政策<\/h2>/); click('close');
   // 池塘按 E：只开钓鱼与养殖那一页
   const pond = e.objects.find((o) => o.type === 'pond');
   if (pond) { Object.assign(e.s.player, { x: pond.x, y: pond.y + 30 }); run(1); Object.assign(e.s.player, { x: pond.x, y: pond.y + 30 }); press('e'); run(1); if (context.inspect().menu) { assert.doesNotMatch(html(), /manual-nav|camp-tabs|返回营地手册/); click('close'); } }

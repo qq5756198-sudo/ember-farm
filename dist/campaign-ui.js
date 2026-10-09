@@ -3,10 +3,10 @@
 import { outpostHud, hungerDeathNote } from "./outpost-ui.js";
 import { winterHud, alertBar, winterTitle, renderWinterView, handleWinterAction } from "./winter-ui.js";
 import { handleOutpostAction } from "./outpost-ui.js";
-import { renderManualSeasons, stationExtras, itemLinks, seasonsHud } from "./seasons-ui.js";
+import { renderManualSeasons, stationExtras as seasonsStationExtras, itemLinks, seasonsHud } from "./seasons-ui.js";
 import { dailyHud, dailyLocked } from "./daily-ui.js";
 import { renderSkillPage, menuLock, menuKey, thiefFrame } from "./thief-ui.js";
-import { renderGardenJournal, gardenTitle, renderGardenView, handleGardenAction, renderGardenBoard, placeTitle } from "./garden-ui.js";
+import { renderGardenJournal, gardenTitle, renderGardenView, handleGardenAction, renderGardenBoard, placeTitle, gardenStationExtras } from "./garden-ui.js";
 import {
   renderFarMap,
   buildCardExtras,
@@ -22,7 +22,8 @@ import {
 } from "./farlands-ui.js";
 
 export { dailyLocked, renderSkillPage, menuLock, menuKey, thiefFrame, placeTitle };
-export { stationExtras, hungerDeathNote, itemLinks, buildCardExtras, settingsExtras, applyAccess, mapKey, keyLabel, keyCaptureActive, cancelKeyCapture, captureKey, helpRows, readPad };
+export { hungerDeathNote, itemLinks, buildCardExtras, settingsExtras, applyAccess, mapKey, keyLabel, keyCaptureActive, cancelKeyCapture, captureKey, helpRows, readPad };
+export const stationExtras = (e, b) => seasonsStationExtras(e, b) + gardenStationExtras(e, b);
 export const campaignTitle = (ui) => gardenTitle(ui, winterTitle);
 export const renderCampaignView = (e, ui) => renderGardenView(e, ui, renderWinterView);
 export const renderCampaignJournal = (e, ui) => renderGardenJournal(e, ui);

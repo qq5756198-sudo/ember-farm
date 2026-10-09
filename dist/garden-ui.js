@@ -158,6 +158,18 @@ export function renderGardenJournal(e, ui = {}) {
   return end > 0 ? html.slice(0, end) + strip + html.slice(end) : html + strip;
 }
 
+// ================= 加工台、出货箱上的入口（原来只在营地手册里） =================
+const STATION_PAGES = {
+  cook: [["frontier:kitchen", "掌勺料理（小游戏）"]],
+  workbench: [["camp:orders", "每日订单"]],
+  weaponbench: [["frontier:combat", "武器与潜行"]],
+};
+export function gardenStationExtras(e, b) {
+  const list = STATION_PAGES[b?.type] || [];
+  return list.length ? `<div class="button-row g-station">${list.map(([id, label]) => button("rOpen", id, label)).join("")}</div>` : "";
+}
+const SHIPPING_PAGES = [["camp:orders", "每日订单"], ["camp:messages", "商人与消息"]];
+
 // ================= 视图、标题、动作 =================
 const TITLES = { gPick: "选种", gPlot: "这块田", gBoard: "菜地告示牌" };
 export function gardenTitle(ui, fallback) {
@@ -169,7 +181,13 @@ export function renderGardenView(e, ui = {}, fallback) {
   if (ui.view === "gPick") body = viewPick(e, ui);
   else if (ui.view === "gPlot") body = viewPlot(e, ui);
   else if (ui.view === "gBoard") body = renderGardenBoard(e);
-  if (body === null) return renderThiefView(e, ui, fallback);
+  if (body === null) {
+    const html = renderThiefView(e, ui, fallback);
+    if (ui.view !== "shipping") return html;
+    const extra = `<div class="button-row g-station">${SHIPPING_PAGES.map(([id, label]) => button("rOpen", id, label)).join("")}</div>`;
+    const end = html.lastIndexOf("</div>");
+    return end > 0 ? html.slice(0, end) + extra + html.slice(end) : html + extra;
+  }
   return `<div class="outpost-page view-${esc(ui.view)}">${body}</div>`;
 }
 // 去掉营地手册之后，每一页的标题就是这个地方的名字
