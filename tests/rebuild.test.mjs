@@ -160,9 +160,9 @@ test('new nested state, contracts and active chapter battles round-trip; invalid
   for(const mutate of [s=>s.rebuild.claimed=['radio'],s=>s.rebuild.arcs.farmer=4,s=>s.rebuild.battle.damage=-1,s=>s.rebuild.tech.power='true',s=>s.rebuild.annexDefeated=null,s=>s.rebuild.farmPlan='unknown',s=>s.rebuild.metrics.produced.unknown=1,s=>s.plots[0].rebuildNew='true']){const s=JSON.parse(e.serialize());mutate(s);assert.throws(()=>Engine.parse(JSON.stringify(s)));}
 });
 
-test('six purpose panels, embedded legacy tools and current objective retain actionable controls',()=>{
+test('six purpose pages, the old tools as single pages and the current objective keep actionable controls',()=>{
   const h={esc:s=>String(s),icon:()=>'',costs:()=>'',itemIcon:()=>'',itemName:id=>ITEMS[id]?.name||id};
-  for(const e of [make(),make(previousDemo())])for(const tab of ['overview',...PILLARS.map(p=>p.id)]){const html=renderRebuild(e,tab,h);assert.ok(html.includes('营地手册导航'));assert.ok(html.includes('manual-detail'));assert.equal(html.includes('undefined'),false);assert.equal((html.match(/data-action="rTab"/g)||[]).length>=7,true);}
-  const e=make(),html=renderRebuild(e,'production',h,{tool:{menu:'camp',tab:'production'}});assert.ok(html.includes('rebuild-tool-panel'));assert.equal(html.includes('camp-tabs'),false);assert.ok(renderObjective(e,h).includes('rTrack'));
+  for(const e of [make(),make(previousDemo())])for(const tab of ['overview',...PILLARS.map(p=>p.id)]){const html=renderRebuild(e,tab,h);assert.ok(html.includes('place-page'));assert.equal(html.includes('营地手册导航'),false);assert.equal(html.includes('manual-detail'),false);assert.equal(html.includes('undefined'),false);assert.ok((html.match(/data-action=/g)||[]).length>0,tab);}
+  const e=make(),html=renderRebuild(e,'production',h,{tool:{menu:'camp',tab:'production'}});assert.ok(html.includes('place-page'));assert.equal(html.includes('camp-tabs'),false);assert.ok(html.includes('data-action='));assert.ok(renderObjective(e,h).includes('rTrack'));
   let saved=0,closed=0;const ui={target:{region:'hospital'}};const ctx={engine:e,ui,showMenu:()=>{},closeMenu:()=>closed++,renderMenu:()=>{},save:()=>saved++,toast:()=>{}};assert.ok(handleRebuildAction('rTrack',{dataset:{id:'harvest'}},ctx));assert.equal(ui.target,null);assert.equal(e.r.focus,'harvest');assert.equal(closed,1);assert.equal(saved,1);assert.equal(handleRebuildAction('fullscreen',{dataset:{}},ctx),false);
 });

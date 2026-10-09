@@ -27,18 +27,11 @@ export function splitSections(html) {
 
 export function renderManagement(e, tab, body, toolBody, h, ui) {
   if(ui.guided){const p=PILLARS.find(p=>p.id===tab);return `<section class="guided-work"><header><div><small>当前任务用到的工作</small><h3>${p?.name||'营地工作'}</h3></div><button data-action="gJournal">返回任务</button></header><p>${p?.purpose||'处理眼前这一步，完成后回任务查看家园的变化。'}</p>${ui.tool?toolBody:body}<button data-action="gJournal">回到任务手记</button></section>`;}
-  const pillar = PILLARS.find(p => p.id === tab), tools = pillar?.tools || [];
-  const sections = splitSections(body), notes = sections.filter(s => !s.title), panels = sections.filter(s => s.title);
-  ui.sections ??= {};
-  const chosen = ui.tool ? 'tool:' + ui.tool.menu + ':' + ui.tool.tab : ui.sections[tab] || 'section:0';
-  const index = Math.max(0, Math.min(panels.length - 1, Number(chosen.split(':')[1]) || 0));
-  const active = ui.tool ? tools.find(t => t[0] === ui.tool.menu && t[1] === ui.tool.tab)?.[2] || '相关操作' : panels[index]?.title || '当前目标';
-  const nav = [['overview','当前目标'], ...PILLARS.map(p => [p.id,p.name]), ['events','营地事件']];
-  const side = `<nav class="manual-nav" aria-label="营地手册导航"><span class="manual-label">营地手册</span>${nav.map(([id,name],i) => `<button data-action="rTab" data-id="${id}" class="${tab === id ? 'active' : ''}" aria-current="${tab === id ? 'page' : 'false'}"><span class="nav-index">${i === 0 ? '◎' : i === 7 ? '✉' : '◇'}</span>${name}${id === 'events' ? `<small>${(e.activeEvents?.()||[]).length}</small>` : ''}</button>`).join('')}<div class="manual-nav-bottom"><button data-action="bOpen">边境手册</button><button data-menu="inventory">背包 · Tab</button><button data-menu="map">世界地图 · M</button><button data-action="dOpen">地区事务</button><button data-menu="pause">设置与存档</button></div></nav>`;
-  const listButton = (key, title, sub) => `<button class="manual-row ${chosen === key || (!ui.tool && key === 'section:' + index) ? 'selected' : ''}" data-action="clSelect" data-id="${esc(key)}" aria-pressed="${chosen === key || (!ui.tool && key === 'section:' + index)}"><b>${esc(title)}</b><small>${sub}</small><span aria-hidden="true">›</span></button>`;
-  const column = `<section class="manual-list" aria-label="${esc(pillar?.name || '目标')}项目"><div class="list-heading"><small>${e.r.ended ? '家园继续成长' : '第' + (e.chapter()+1) + '章 · ' + CHAPTERS[e.chapter()].name}</small><h3>${pillar?.name || '当前目标'}</h3><p>${pillar?.question || '这一步完成后，家园会改变什么？'}</p></div>${panels.map((p,i) => listButton('section:' + i,p.title,'进度 · 条件 · 下一步')).join('')}${tools.length ? '<div class="manual-label">经营操作</div>' : ''}${tools.map(([menu,sub,label]) => listButton('tool:' + menu + ':' + sub,label,'打开操作面板')).join('')}</section>`;
-  const detail = `<section class="manual-detail" aria-label="当前项目详情" tabindex="-1"><header class="detail-heading"><button class="mobile-back" data-action="clBack">‹ 返回列表</button><small>${pillar?.name || '重建计划'} / ${esc(active)}</small><h3>${esc(active)}</h3></header><div class="detail-scroll">${pillar ? `<p class="manual-purpose">${esc(pillar.purpose)}</p>` : ''}${notes.map(n => n.html).join('')}${ui.tool ? `<section class="rebuild-tool-panel">${toolBody}</section>` : panels[index]?.html.replace(/^<details\b/,'<details open') || '<p>选择左侧项目开始。</p>'}${tab === 'overview' && !ui.tool ? '<details class="rebuild-help"><summary>操作与营地委托</summary><p>WASD移动，E交互，左键使用工具。菜单中世界暂停。</p><button data-action="rOpen" data-id="legacyQuests:">营地委托</button></details>' : ''}</div></section>`;
-  return `<div class="rebuild-page manual ${ui.mobileDetail || ui.tool ? 'show-detail' : ''}">${side}${tab === 'events' ? body : column + detail}<nav class="manual-shortcuts" aria-label="常用操作"><button data-menu="inventory">背包</button><button data-action="gJournal">任务</button><button data-menu="map">地图</button><button data-action="dOpen">地区</button><button data-action="bOpen">边境</button><button data-menu="pause">设置</button></nav></div>`;
+  // v0.20.0：营地手册（左侧导航、项目列表、操作清单）已经去掉，每次只放这一处的内容
+  const place = PILLARS.find(p => p.id === tab);
+  if (ui.tool) return `<div class="place-page"><div class="detail-scroll">${toolBody}</div></div>`;
+  if (tab === 'events') return `<div class="place-page"><div class="manual place-events ${ui.mobileDetail ? 'show-detail' : ''}">${body}</div></div>`;
+  return `<div class="place-page">${place ? `<p class="manual-purpose">${esc(place.purpose)}</p>` : ''}<div class="detail-scroll">${body.replace(/^<details\b/, '<details open')}</div></div>`;
 }
 
 export function canvasPoint(clientX, clientY, rect, width = rect.width, height = rect.height) {

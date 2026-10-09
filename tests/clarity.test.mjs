@@ -31,13 +31,12 @@ test('section extraction retains nested real controls without splitting their fo
  const source='<p class="rebuild-note">说明</p><div class="rebuild-grid"><article class="rebuild-card"><h3>材料</h3><details><summary>条件</summary><input value="a>b"><button data-action="pay">交付</button></details></article><article class="rebuild-card"><h3>床位</h3><progress value="1" max="3"></progress></article></div>';
  const parts=splitSections(source);assert.equal(parts.length,3);assert.equal(parts[0].title,'');assert.equal(parts[1].title,'材料');assert.ok(parts[1].html.includes('data-action="pay"'));assert.ok(parts[1].html.endsWith('</article>'));assert.equal(parts[2].title,'床位');
 });
-test('every selected section and every legacy operation remains reachable through six-system navigation',()=>{
+test('the camp manual hub is gone: every pillar and every old tool is its own single-place page with working controls',()=>{
  const e=new Engine(eventDemoState());
  for(const tab of ['overview',...PILLARS.map(p=>p.id)]){
-  const ui={};const html=renderRebuild(e,tab,helper,ui);assert.match(html,/manual-nav/);assert.match(html,/manual-list/);assert.match(html,/manual-detail/);
-  const sections=[...html.matchAll(/data-id="(section:\d+)"/g)].map(m=>m[1]);assert.ok(sections.length>0,tab);
-  for(const id of sections){const detail=renderRebuild(e,tab,helper,{sections:{[tab]:id},mobileDetail:true});assert.doesNotMatch(detail,/undefined|NaN/);assert.ok(detail.includes('show-detail'));assert.ok(detail.includes('data-action="clBack"'));}
-  for(const [menu,sub,label] of PILLARS.find(p=>p.id===tab)?.tools||[]){assert.ok(html.includes('tool:'+menu+':'+sub),label);const tool=renderRebuild(e,tab,helper,{tool:{menu,tab:sub}});assert.ok(tool.includes('rebuild-tool-panel'));assert.doesNotMatch(tool,/undefined|NaN/);}
+  const html=renderRebuild(e,tab,helper,{});assert.match(html,/class="place-page"/,tab);assert.doesNotMatch(html,/manual-nav|manual-list|manual-detail|clSelect|undefined|NaN/,tab);
+  assert.ok((html.match(/data-action=/g)||[]).length>0,tab);
+  for(const [menu,sub,label] of PILLARS.find(p=>p.id===tab)?.tools||[]){const tool=renderRebuild(e,tab,helper,{tool:{menu,tab:sub}});assert.match(tool,/class="place-page"/,label);assert.doesNotMatch(tool,/manual-nav|camp-tabs|frontier-tabs|undefined|NaN/,label);assert.ok(tool.length>200,label);}
  }
 });
 test('the 20 event list has exactly one expanded event and routes each selected row to its own detail',()=>{

@@ -1,0 +1,342 @@
+/* v0.20.0「一亩田」：田边选种、这块田、菜地告示牌、任务手记里的“菜地”条，以及去掉营地手册后的单页。 */
+
+/* ---------- 每个地方自己的一页 ---------- */
+.place-page {
+  display: grid;
+  gap: 12px;
+}
+.place-page .manual-purpose {
+  margin: 0;
+  color: #cfd8c2;
+}
+.place-page .detail-scroll {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* 营地消息：列表和详情两栏；窄屏一次只显示一栏 */
+.place-page .place-events {
+  display: grid;
+  grid-template-columns: minmax(220px, 285px) minmax(0, 1fr);
+  grid-template-rows: auto;
+  min-height: 360px;
+}
+@media (max-width: 850px) {
+  .place-page .place-events {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+  }
+  .place-page .place-events .manual-list,
+  .place-page .place-events .manual-detail {
+    grid-row: auto;
+  }
+}
+
+/* ---------- 共用 ---------- */
+.g-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.g-head h3 {
+  margin: 2px 0 4px;
+  color: #f6e3b4;
+}
+.g-head p,
+.g-head small {
+  margin: 0;
+  color: #cfd8c2;
+}
+.g-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid #5d6b55;
+  border-radius: 999px;
+  color: #d9e1cf;
+  font-size: 12px;
+  max-width: 100%;
+}
+.g-tag.give {
+  border-color: #8fc9b8;
+  color: #bfe6da;
+}
+.g-tag.get,
+.g-tag.good {
+  border-color: #8fd07a;
+  color: #c8eab4;
+}
+.g-tag.bad {
+  border-color: #e9806e;
+  color: #ffc9bd;
+}
+
+/* ---------- 田边选种 ---------- */
+.seed-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.seed-opt {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 4px 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 12px;
+  text-align: left;
+}
+.seed-no {
+  display: inline-grid;
+  grid-row: 1 / span 3;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: #3a463c;
+  font-size: 12px;
+}
+.seed-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+.seed-main small,
+.seed-time {
+  color: #cfd8c2;
+  font-size: 12px;
+}
+.seed-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* ---------- 这块田 ---------- */
+.g-plot {
+  display: grid;
+  gap: 12px;
+}
+.care-dial {
+  display: grid;
+  justify-items: center;
+  min-width: 104px;
+  padding: 6px 12px;
+  border: 2px solid #5d6b55;
+  border-radius: 12px;
+}
+.care-dial b {
+  color: #f6e3b4;
+  font-size: 28px;
+  line-height: 1.1;
+}
+.care-dial small {
+  color: #aab7af;
+  font-size: 12px;
+}
+.care-dial.top {
+  border-color: #e9c05a;
+}
+.care-dial.top b {
+  color: #ffd76a;
+}
+.care-dial.low {
+  border-color: #e9806e;
+}
+.g-today {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.g-today li {
+  padding: 6px 10px;
+  border: 1px solid #46554c;
+  border-radius: 8px;
+  color: #d9e1cf;
+  font-size: 13px;
+}
+.g-today li.ok {
+  border-color: #6f9a5c;
+}
+.g-today li.ok::before {
+  content: "✓ ";
+  color: #b8e0a0;
+}
+.g-today li.bad {
+  border-color: #b8664f;
+}
+.g-today li.bad::before {
+  content: "! ";
+  color: #ffc9bd;
+}
+.g-facts {
+  display: grid;
+  grid-template-columns: 6em minmax(0, 1fr);
+  gap: 6px 12px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #1d2a24;
+  font-size: 13px;
+}
+.g-facts dt {
+  color: #bfe6da;
+}
+.g-facts dd {
+  margin: 0;
+  color: #d9e1cf;
+  line-height: 1.5;
+}
+.g-actions button {
+  min-height: 44px;
+}
+
+/* ---------- 菜地告示牌 ---------- */
+.g-board {
+  display: grid;
+  gap: 14px;
+}
+.g-board h3 {
+  margin: 0 0 8px;
+  color: #f6e3b4;
+}
+.g-board p {
+  margin: 6px 0 0;
+}
+.g-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+.g-stat {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid #46554c;
+  border-radius: 8px;
+  color: #cfd8c2;
+  font-size: 12px;
+}
+.g-stat b {
+  color: #f6e3b4;
+  font-size: 20px;
+}
+.g-stat.warn {
+  border-color: #b8664f;
+}
+.g-stat.warn b {
+  color: #ffc9bd;
+}
+.g-good {
+  color: #ffd76a;
+}
+.g-days {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.g-days li {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid #46554c;
+  border-radius: 8px;
+}
+.g-days small {
+  color: #cfd8c2;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.g-table {
+  overflow-x: auto;
+}
+.g-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.g-table th,
+.g-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #3a463c;
+  text-align: left;
+  white-space: nowrap;
+}
+.g-table thead th {
+  color: #aab7af;
+  font-weight: normal;
+}
+.g-table tbody th {
+  color: #f6e3b4;
+}
+
+/* ---------- 任务手记里的“菜地”条 ---------- */
+.garden-strip {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid #5d6b55;
+  border-left: 4px solid #9fd38a;
+  border-radius: 6px;
+  background: #1f2a22;
+}
+.garden-strip p {
+  flex: 1 1 260px;
+  margin: 0;
+}
+.garden-strip p b {
+  display: inline-block;
+  min-width: 5.5em;
+  margin-right: 8px;
+  color: #c8eab4;
+}
+
+@media (max-width: 640px) {
+  .g-days {
+    grid-template-columns: 1fr;
+  }
+  .g-facts {
+    grid-template-columns: 1fr;
+  }
+  .g-today {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .g-today li {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  .g-actions button {
+    flex: 1 1 40%;
+  }
+  .g-facts dt {
+    margin-top: 4px;
+  }
+  .care-dial {
+    min-width: 88px;
+  }
+}
+
+/* 色弱配色 */
+.a11y-color .g-tag.get,
+.a11y-color .g-tag.good,
+.a11y-color .g-today li.ok {
+  border-color: #4aa3ff;
+  color: #bcdcff;
+}
+.a11y-color .g-tag.bad,
+.a11y-color .g-today li.bad,
+.a11y-color .g-stat.warn {
+  border-color: #f0a040;
+}

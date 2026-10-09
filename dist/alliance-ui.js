@@ -178,7 +178,7 @@ export function renderStoryJournal(e, ui = {}) {
           .map((d) => `<p>${esc(d.name)} ${button("gMessage", "e:" + d.id, "继续这件事")}</p>`)
           .join("")}</details>`
       : "";
-  return `<div class="journal-page"><header class="journal-top"><span>第${e.s.day}天 · ${REGIONS[e.s.region].name}</span>${button("gCatalog", "", "选择其他委托")}</header>${main}${recipe}<div class="journal-options">${optionCards(e, story, ui)}</div>${messages}${letterArchive(e)}<details class="journal-extra"><summary>营地事务与熟悉的功能</summary><p>可以直接处理已熟悉的工作，不必按任务顺序游玩。</p><div class="journal-tools">${PILLARS.map((p) => button("gManage", p.id, p.name)).join("")}${button("gDistrict", "", "地区事务")}${button("gBeyond", "", "边境事务")}</div></details></div>`;
+  return `<div class="journal-page"><header class="journal-top"><span>第${e.s.day}天 · ${REGIONS[e.s.region].name}</span>${button("gCatalog", "", "选择其他委托")}</header>${main}${recipe}<div class="journal-options">${optionCards(e, story, ui)}</div>${messages}${letterArchive(e)}<details class="journal-extra"><summary>别的地方</summary><p>营地里的事，走到那个地方按 E 处理；地区和边境有自己的事务页。</p><div class="journal-tools">${button("gDistrict", "", "地区事务")}${button("gBeyond", "", "边境事务")}</div></details></div>`;
 }
 
 const ACTIONS = [

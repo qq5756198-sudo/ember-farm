@@ -756,7 +756,7 @@ test("key remapping translates keys, swaps clashes, refuses reserved keys and re
   assert.equal(keymapOf(settings).interact, "r");
   assert.equal(keymapOf(settings).reload, "x");
   startKeyCapture("craft");
-  assert.match(captureKey(settings, "f"), /成长与探索/);
+  assert.match(captureKey(settings, "f"), /远征路线/);
   startKeyCapture("craft");
   assert.match(captureKey(settings, "1"), /字母键/);
   startKeyCapture("craft");

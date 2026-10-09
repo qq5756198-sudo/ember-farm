@@ -107,14 +107,15 @@ const cycle=storage.get(Session.CAMPAIGN_SAVE);context.open('confirmTitle');clic
 context.open('restoreArchive',{files:{checkpoint:storage.get('ember-farm-before-new-v1')}});assert.ok(context.inspect().menu==='restoreArchive');assert.ok(html().includes('选择这座家园'));click('restoreCandidate','0');assert.equal(context.inspect().menu,'confirmImport');click('applyImport');assert.equal(context.inspect().engine.s.money,777);assert.equal(JSON.parse(JSON.parse(storage.get('ember-farm-before-import-v1')).main).region,'valley');
 // Regression panels use explicit test fixtures, never shipped launch buttons.
 context.fixture(Rebuild.demoState());e=context.inspect().engine;
-for(const p of RebuildData.PILLARS){click('rTab',p.id);clean();context.step(2000);for(const [menu,tab]of p.tools){click('rTool',menu+':'+tab);clean();assert.match(html(),/rebuild-tool-panel/);}}
+// v0.20.0：营地手册拆成一处一页。每一类、每一个旧操作都还能打开，但只是那一页，没有左侧导航、没有分页签。
+for(const p of RebuildData.PILLARS){context.open('rebuild',{tab:p.id});clean();assert.doesNotMatch(html(),/manual-nav|manual-list|camp-tabs|frontier-tabs/);context.step(2000);for(const [menu,tab]of p.tools){context.open(menu,{tab});clean();assert.match(html(),/class="place-page"/);assert.doesNotMatch(html(),/manual-nav|camp-tabs|frontier-tabs|返回营地手册/);assert.equal(context.inspect().menu,'rebuild');}}
 context.open('frontier',{tab:'water'});click('fWaterControl','gate');assert.equal(e.f.canals.open,true);
-click('rTool','frontier:kitchen');e.s.inventory.potato=2;e.s.inventory.bean=1;click('fStartCooking');assert.ok(e.f.cooking);for(let i=0;i<20;i++)context.step(3000+i*50);assert.ok(e.f.cooking.t>0);click('rTab','residents');const t=e.f.cooking.t;context.step(5000);assert.equal(e.f.cooking.t,t);
-click('rTab','farm');click('rSeed','seedBean');assert.equal(e.s.seed,'seedBean');assert.equal(context.inspect().menu,null);
+context.open('frontier',{tab:'kitchen'});e.s.inventory.potato=2;e.s.inventory.bean=1;click('fStartCooking');assert.ok(e.f.cooking);for(let i=0;i<20;i++)context.step(3000+i*50);assert.ok(e.f.cooking.t>0);click('rTab','residents');const t=e.f.cooking.t;context.step(5000);assert.equal(e.f.cooking.t,t);
+context.open('rebuild',{tab:'farm'});clean();assert.match(html(),/今天的菜地/);assert.match(html(),/<h2 id="modal-title">菜地告示牌<\/h2>/);click('close');
 context.open('rebuild',{tab:'production'});e.c.projects.market=1;e.s.buildings.push({id:'controller-bench',type:'workbench',x:880,y:760,hp:130,rotation:0});context.open('rebuild',{tab:'production'});document.querySelector('#supply-recipe').value='trailBread';document.querySelector('#supply-target').value='6';click('sPlan');assert.equal(e.u.plans.trailBread.target,6);e.s.inventory.radish=12;click('sDeposit','radish');assert.equal(e.s.storage.radish,12);click('sToggle','trailBread');assert.equal(e.u.plans.trailBread.enabled,false);
 context.fixture(Rebuild.eventDemoState());e=context.inspect().engine;context.open('rebuild',{tab:'events'});click('eFilter','all');assert.equal((html().match(/data-action="eSelect"/g)||[]).length,22);clean();click('eAccept','convoy');click('eChoose','convoy:repair');click('ePack','convoy');click('eTravel','convoy');assert.equal(e.s.region,'residential');Object.assign(e.s.player,e.echoLocation('convoy'));context.open('rebuild',{tab:'events',eventId:'convoy'});click('ePerform','convoy');const paid=e.qty('wood');click('ePerform','convoy');assert.equal(e.qty('wood'),paid);click('close');e.advanceMinutes(46);assert.equal(e.eventRecord('convoy').stage,1);click('eTravel','convoy');Object.assign(e.s.player,e.echoLocation('convoy'));context.open('rebuild',{tab:'events'});click('ePerform','convoy');assert.equal(e.eventRecord('convoy').status,'resolved');
 for(const panel of ['inventory','craft','build','map','pause','skills','legacyQuests']){context.open(panel);clean();}
-context.open('rebuild',{tab:'production'});click('clSelect','section:1');document.querySelector('.detail-scroll').scrollTop=147;click('clSelect','section:2');click('clSelect','section:1');assert.equal(document.querySelector('.detail-scroll').scrollTop,147);click('clBack');assert.ok(!document.querySelector('.manual').className.includes('show-detail'));
+context.open('rebuild',{tab:'production'});clean();assert.match(html(),/class="place-page"/);assert.doesNotMatch(html(),/manual-nav|clSelect/);assert.match(html(),/<h2 id="modal-title">生产与加工<\/h2>/);
 click('close');e.events=[];context.step(6000);const world=document.querySelector('#world');let captured;const actualUse=e.use;e.use=p=>{captured=p;return true;};world.events.pointerdown({clientX:683,clientY:356,button:0});const expected=context.inspect().renderer.worldPoint(683,300);assert.ok(Math.abs(captured.x-expected.x)<.001);assert.ok(Math.abs(captured.y-expected.y)<.001);listeners.pointerup();let uses=0;e.use=()=>{uses++;return true};document.querySelector('#touch-use').events.pointerdown({preventDefault(){}});assert.equal(uses,1);listeners.click({target:document.querySelector('#touch-use'),detail:1});assert.equal(uses,1);listeners.pointerup();e.use=actualUse;
 context.fixture(Rebuild.districtDemoState());e=context.inspect().engine;
 for(const region of Object.keys(DistrictData.DISTRICTS)){click('dRegion',region);for(const p of DistrictData.POINTS.filter(p=>p.region===region)){click('dPoint',p.id);assert.match(html(),new RegExp(p.name));clean();}for(const view of ['entrance','jobs','freight','workers','needs','ledger','storage']){click('dView',view);clean();}}
@@ -144,7 +145,7 @@ const newest=storage.get(Session.CAMPAIGN_SAVE);assert.ok(JSON.parse(newest).bey
 click('bView','events');click('bEvent','stillwind');click('bAccept','stillwind');click('bChoose','stillwind:short');Object.assign(e.s.player,e.beventLocation('stillwind'));click('bPerform','stillwind');assert.ok(e.b.records.stillwind.remaining>0);click('bPause','stillwind');assert.equal(e.b.records.stillwind.status,'paused');click('bAccept','stillwind');assert.equal(e.b.records.stillwind.status,'active');
 console.log('Beyond controller passed: five regions,40 point panels,20 event messages, construction costs/double-click, local storage, new save migration and native Canvas at four dimensions. Not a browser CSS/zoom test.');
 
-e.recruit('cartographer');for(const p of RebuildData.PILLARS){click('rTab',p.id);clean();}click('rTool','camp:residents');clean();assert.match(html(),/柏岚/);click('bView','life');clean();click('save');assert.ok(Beyond.Engine.parse(storage.get(Session.CAMPAIGN_SAVE)));
+e.recruit('cartographer');for(const p of RebuildData.PILLARS){click('rTab',p.id);clean();}context.open('camp',{tab:'residents'});clean();assert.match(html(),/柏岚/);click('bView','life');clean();click('save');assert.ok(Beyond.Engine.parse(storage.get(Session.CAMPAIGN_SAVE)));
 e.s.region='pinewood';e.assignRegion();assert.equal(typeof e.context(e.objects.find(o=>o.type==='beyondPoint')),'string');
 
 // The simplified journal and local facilities use the real controller, with all features retained.
@@ -715,7 +716,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const money = e.s.money;
   click('kGo', 'medic'); clean();
   assert.ok(e.th.pending, 'caught on the first gate'); assert.match(html(), /被发现了/);
-  // 底栏“返回营地手册”也绕不过去：被抓后点它，回到要了结的卡
+  // 任何 data-menu 按钮（比如顶栏的任务手记）也绕不过去：被抓后点它，回到要了结的卡
   const footer = () => listeners.click({ target: { closest: () => ({ dataset: { menu: 'rebuild' } }) } });
   footer(); assert.equal(context.inspect().menu, 'outpost', 'the footer cannot skip the caught card'); assert.ok(e.th.pending);
   if (!/caught-card/.test(html())) press('1');
@@ -748,4 +749,60 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.ok(back.skills.talents.includes('pickpocket')); assert.equal(back.theft.sus.medic >= 1, true);
   assert.equal(back.theft.pending, null); assert.equal(back.theft.stats.tries, 2); assert.equal(back.theft.stats.caught, 1);
   console.log('Thief controller passed: skills page via K learns a talent (locked ones refuse), V crouch behind a person shows 下手 in the context bar, E opens the preview, 1 starts, number keys pick a pocket, space takes inside the zone, Esc stops then closes, a failed first gate locks the caught card (Esc and close refused) until 1 apologises for 20 gold, journal strip → thief book, the dummy via E, Canvas marks at four sizes and save/parse.');
+}
+// v0.20.0「一亩田」: E on a plot tills, opens the seed picker (number key plants), waters, tends and opens the plot card; the farm board via E; N/F no longer open the journal; no page has a “返回营地手册” footer; objects open single-place pages; weeds, bugs, cover and a scarecrow on Canvas at four sizes; save/parse.
+{
+  let clock = 12000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  dailyOn = false;
+  context.fixture(Campaign.freshState());
+  const e = context.inspect().engine;
+  e.paused = false;
+  run(2);
+  const p = e.s.plots[1];
+  const stand = (q) => Object.assign(e.s.player, { x: q.x + 2, y: q.y + 6 });
+  stand(p); run(4); stand(p); run(4);
+  assert.match(document.querySelector('#context').innerHTML, /开垦土地/);
+  press('e'); run(1); assert.equal(p.tilled, true);
+  stand(p); run(4); stand(p); run(4);
+  assert.match(document.querySelector('#context').innerHTML, /选种/);
+  press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); clean();
+  assert.match(html(), /<h2 id="modal-title">选种<\/h2>/); assert.match(html(), /data-action="gPlant"/); assert.doesNotMatch(html(), /返回营地手册/);
+  press('1'); run(1);
+  assert.equal(context.inspect().menu, null, 'planting closes the picker'); assert.equal(p.crop, 'radish');
+  stand(p); press('e'); run(1); assert.ok(e.plotWatered(p), 'E waters');
+  stand(p); press('e'); run(1); assert.equal(e.g.plots[p.id].t, e.s.day, 'E tends');
+  stand(p); press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /<h2 id="modal-title">这块田<\/h2>/); assert.match(html(), /照料分/);
+  press('Escape'); assert.equal(context.inspect().menu, null);
+  // 菜地告示牌
+  const sign = e.objects.find((o) => o.type === 'frontierBoard');
+  Object.assign(e.s.player, { x: sign.x, y: sign.y + 24 }); run(4); Object.assign(e.s.player, { x: sign.x, y: sign.y + 24 }); run(4);
+  assert.match(document.querySelector('#context').innerHTML, /菜地告示牌/);
+  press('e'); run(1); clean(); assert.match(html(), /<h2 id="modal-title">菜地告示牌<\/h2>/); assert.match(html(), /今天的菜地/);
+  click('gScare'); assert.equal(context.inspect().menu, 'build'); assert.match(html(), /稻草人/); clean(); click('close');
+  context.open('outpost', { view: 'gBoard' }); click('gJournal'); assert.equal(context.inspect().menu, 'journey', 'the board opens the journal'); click('close');
+  // 任务手记变薄；N、F 不再打开它
+  press('j'); assert.equal(context.inspect().menu, 'journey'); clean(); assert.doesNotMatch(html(), /营地事务与熟悉的功能|data-action="gManage"|返回营地手册/); assert.match(html(), /garden-strip/); click('close');
+  press('n'); run(1); assert.equal(context.inspect().menu, null, 'N does nothing now');
+  press('f'); run(1); assert.equal(context.inspect().menu, null, 'F does nothing off an expedition');
+  // 每一页的底栏都没有“返回营地手册”；HUD 的营地消息是一页
+  for (const panel of ['inventory', 'craft', 'build', 'map', 'skills']) { context.open(panel); assert.doesNotMatch(html(), /返回营地手册/, panel); click('close'); }
+  click('rTab', 'events'); assert.equal(context.inspect().menu, 'rebuild'); assert.match(html(), /<h2 id="modal-title">营地消息<\/h2>/); assert.doesNotMatch(html(), /manual-nav/); click('close');
+  // 池塘按 E：只开钓鱼与养殖那一页
+  const pond = e.objects.find((o) => o.type === 'pond');
+  if (pond) { Object.assign(e.s.player, { x: pond.x, y: pond.y + 30 }); run(1); Object.assign(e.s.player, { x: pond.x, y: pond.y + 30 }); press('e'); run(1); if (context.inspect().menu) { assert.doesNotMatch(html(), /manual-nav|camp-tabs|返回营地手册/); click('close'); } }
+  // Canvas：杂草、菜青虫、盖布、乌鸦爪印、稻草人、肥力色条
+  for (let i = 2; i < 8; i++) { const q = e.s.plots[i]; e.s.debris = e.s.debris.filter((d) => Math.hypot(d.x - q.x, d.y - q.y) >= 15); q.tilled = true; }
+  e.s.inventory.seedPotato = 5; e.plantSeed(2, 'seedPotato'); e.plantSeed(3, 'seedPotato');
+  e.gRec(e.s.plots[2]).b = 2; e.gRec(e.s.plots[3]).w = e.s.day; e.gRec(e.s.plots[4]).w = e.s.day; e.gRec(e.s.plots[3]).cv = e.s.day; e.gRec(e.s.plots[2]).pk = 1; e.s.plots[5].fertility = 90; e.s.plots[6].fertility = 20;
+  e.s.buildings.push({ id: 'ctl-scare', type: 'scarecrow', x: 520, y: 400, rotation: 0, hp: 40 });
+  stand(e.s.plots[2]);
+  for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); run(3); }
+  context.inspect().renderer.resize(1366, 600, 1);
+  click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.garden.plots[2].b, 2); assert.equal(back.garden.plots[3].w, e.s.day); assert.ok(back.buildings.some((b) => b.type === 'scarecrow'));
+  console.log('Garden controller passed: E on a plot tills, opens the seed picker (1 plants and closes), waters, tends and opens the plot card; the farm board via E and its scarecrow button; the slim journal; N/F no longer open it; no footer “返回营地手册” on any page; 营地消息 and the pond open single pages; weeds, bugs, cover, crow marks, fertility strips and a scarecrow on Canvas at four sizes; save/parse.');
 }

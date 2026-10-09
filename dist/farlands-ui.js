@@ -286,7 +286,7 @@ export function applyAccess(settings, doc = globalThis.document) {
 // ---------- 设置：键位 ----------
 const DEFAULT_KEY = Object.fromEntries(KEY_ACTIONS.map(([a, k]) => [a, k]));
 const KEY_NAME = Object.fromEntries(KEY_ACTIONS.map(([a, , n]) => [a, n]));
-const FIXED = { k: "技能", n: "营地", f: "成长与探索" };
+const FIXED = { k: "技能", f: "远征路线" };
 const validKey = (k) => typeof k === "string" && /^[a-z]$/.test(k) && !RESERVED_KEYS.includes(k) && !FIXED[k];
 export function keymapOf(settings) {
   const raw = settings?.keymap && typeof settings.keymap === "object" && !Array.isArray(settings.keymap) ? settings.keymap : {},
@@ -342,7 +342,8 @@ export function helpRows(settings) {
     [K("reload"), "装填武器"],
     ["Tab", "背包"],
     [K("craft") + " / " + K("build") + " / " + K("map"), "制作 / 建造 / 地图"],
-    [K("journal") + " / N / F", "任务手记 / 营地 / 成长与探索"],
+    [K("journal") + " / K", "任务手记 / 技能"],
+    ["F", "远征途中：选下一站"],
     [K("crouch") + " / " + K("stone"), "切换蹲行 / 投石"],
     [K("photo") + " / " + K("aim"), "摄影 / 精英部位"],
     [K("defense") + " / " + K("log"), "防线视图 / 消息记录"],

@@ -380,6 +380,7 @@ test("buffs change growth, crafting, prices, travel and damage, and wear off", (
   nextDay(e);
   nextDay(e);
   assert.ok(!e.dy.buffs.some((b) => b.kind === "guard"), "expired");
+  e.s.weather = "晴朗"; // 同样的天气下（萝卜喜欢晴天）才能比
   assert.ok(Math.abs(e.cropGrowthRate(plot) - g0) < 1e-9);
 });
 

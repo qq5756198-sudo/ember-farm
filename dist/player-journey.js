@@ -7,7 +7,7 @@ export function firstHarvestStep(e){
  if(ready)return {title:'收下成熟的口粮',text:'靠近闪光的作物按 E 收获。收够两株后，在任务手记交付第一份成果。',plot:ready};
  if(dry)return {title:'给新苗浇水',text:'选浇水壶后点击作物，或靠近按 E。水用完了，到农舍旁的水井补满。',plot:dry};
  if(growing)return {title:'让口粮慢慢长成',text:'苗已浇好水。趁它生长，清理附近杂物，检查农场东侧的篝火灶与仓库。',plot:growing};
- if(empty){const available=Object.values(CROPS).some(c=>e.qty(c.seed)>0);return {title:available?'种下第一批口粮':'准备播种的种子',text:available?'靠近耕地按 E，自动播下当前种子；初始已选萝卜。想换作物时再从背包选择种子。':'检查农场仓库中的种子，或到集市向粮食商购买萝卜种子。',plot:empty};}
+ if(empty){const available=Object.values(CROPS).some(c=>e.qty(c.seed)>0);return {title:available?'种下第一批口粮':'准备播种的种子',text:available?'靠近耕地按 E，按 E 打开选种，挑一种种下；按数字键也行。':'检查农场仓库中的种子，或到集市向粮食商购买萝卜种子。',plot:empty};}
  const plot=plots.find(p=>!p.crop);return {title:'清理一块农田',text:'走到农舍前的荒地，靠近杂物按 E。清理后就能播种；没有杂物的荒地先按 E 开垦。',plot};
 }
 const outlook={valley:'分水闸与药圃能为餐桌和诊所持续供货。',stationMarket:'把富余的收成加工成餐食，带到商街换回维修资金。',courtyard:'修好街巷、照顾邻居，换来捷径与互助班组。',quarantine:'带来药草、布料与样本，让病房和试验室重新运作。',railDepot:'修好机床与货轨，把各地仓库连接起来。'};
