@@ -1,0 +1,369 @@
+/* 新画面（样张）：像素字体与界面换皮。只在 body.vis-on 时生效，设置里切回原画面就恢复。
+   配色只用调色板里的颜色：深色木头 + 锈铁边 + 余烬橙的重点。 */
+@font-face {
+  font-family: "Fusion Pixel";
+  src: url("fonts/fusion-pixel-12px.woff2") format("woff2");
+  font-display: swap;
+}
+
+body.vis-on {
+  --ink: #f1e3c2;
+  --dim: #c9b58a;
+  --panel: #241a14;
+  --border: #94502c;
+  --gold: #f6b05a;
+  --green: #aab258;
+  --red: #d2654c;
+  --px: "Fusion Pixel", "Microsoft YaHei", sans-serif;
+  --wood: repeating-linear-gradient(180deg, #2a1f17 0 10px, #251b14 10px 12px);
+  --frame: 0 0 0 2px #140f0b, 0 0 0 4px #94502c, 0 0 0 6px #5e2418, 0 0 0 8px #140f0b;
+  --btn: inset 2px 2px 0 #5a4030, inset -2px -2px 0 #1c130d;
+  --btn-hot: inset 2px 2px 0 #f6b05a, inset -2px -2px 0 #8e3a20;
+  background: #140f0b;
+}
+
+/* ---------- 顶栏与底栏 ---------- */
+body.vis-on .hud-top,
+body.vis-on .hud-dock {
+  background: var(--wood);
+  border-color: #140f0b;
+}
+body.vis-on .hud-top {
+  border-bottom: 2px solid #140f0b;
+  box-shadow: 0 2px 0 #94502c, 0 4px 0 #140f0b;
+  position: relative;
+  z-index: 2;
+}
+body.vis-on .hud-dock {
+  border-top: 2px solid #140f0b;
+  box-shadow: 0 -2px 0 #94502c, 0 -4px 0 #140f0b;
+}
+body.vis-on .hud-brand,
+body.vis-on .hud-time b,
+body.vis-on #time,
+body.vis-on .hud-location span:first-child,
+body.vis-on .hud-settings,
+body.vis-on .dock-menu b,
+body.vis-on .dock-objective b,
+body.vis-on #selected-label {
+  font-family: var(--px);
+  letter-spacing: 0;
+}
+body.vis-on .hud-brand span:last-child {
+  font-size: 24px;
+  font-weight: normal;
+  color: #ffdb8c;
+  text-shadow: 2px 2px 0 #140f0b;
+}
+body.vis-on .brand-mark {
+  color: #e5823a;
+}
+body.vis-on #time {
+  font-size: 24px;
+  font-weight: normal;
+  color: #ffdb8c;
+  text-shadow: 2px 2px 0 #140f0b;
+}
+body.vis-on .hud-food,
+body.vis-on .daily-chip {
+  border-radius: 0;
+  border: 2px solid #8e3a20;
+  background: #3a2216;
+  box-shadow: inset 1px 1px 0 #bf5a28;
+  font-family: var(--px);
+  font-size: 12px;
+}
+
+/* 生命、体力、饥饿：分格的像素条 */
+body.vis-on .hud-vitals .stat-name {
+  font-family: var(--px);
+  font-size: 12px;
+  color: #ddc98c;
+}
+body.vis-on .hud-vitals .stat-value {
+  font-family: var(--px);
+  font-size: 12px;
+}
+body.vis-on .bar {
+  height: 10px;
+  border-radius: 0;
+  background: #140f0b;
+  box-shadow: 0 0 0 2px #140f0b, inset 0 0 0 1px #4a3c30;
+  overflow: hidden;
+}
+body.vis-on .bar i {
+  border-radius: 0;
+  background-image: linear-gradient(90deg, transparent 0 calc(100% - 2px), rgba(20, 15, 11, 0.55) calc(100% - 2px)), linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0 2px, transparent 2px);
+  background-size: 8px 100%, 100% 100%;
+}
+
+/* ---------- 按钮 ---------- */
+body.vis-on .modal button,
+body.vis-on .hud-dock button,
+body.vis-on .hud-top .hud-settings,
+body.vis-on .hud-top .hud-location {
+  border-radius: 0;
+  border: 2px solid #140f0b;
+  background-color: #3a2a1f;
+  box-shadow: var(--btn);
+  color: var(--ink);
+}
+body.vis-on .modal button:hover,
+body.vis-on .hud-dock button:hover {
+  background-color: #4a3627;
+}
+body.vis-on .modal button:active,
+body.vis-on .hud-dock button:active {
+  box-shadow: inset -2px -2px 0 #5a4030, inset 2px 2px 0 #1c130d;
+}
+body.vis-on .modal button:disabled {
+  background-color: #2a1f17;
+  color: #7d6a3a;
+  box-shadow: none;
+}
+body.vis-on .modal button.primary,
+body.vis-on .hud-dock button.primary,
+body.vis-on .modal .primary,
+body.vis-on .handbook-entry {
+  background-color: #bf5a28;
+  box-shadow: var(--btn-hot);
+  color: #fff3dc;
+}
+body.vis-on .modal button.primary:hover,
+body.vis-on .handbook-entry:hover {
+  background-color: #d36a32;
+}
+body.vis-on .handbook-entry b {
+  font-weight: normal;
+  text-shadow: 2px 2px 0 #5e2418;
+}
+@media (min-width: 1000px) {
+  body.vis-on .handbook-entry b {
+    font-size: 24px;
+  }
+}
+body.vis-on .dock-objective {
+  background: #2a1f17 !important;
+}
+
+/* 物品栏的格子 */
+body.vis-on .hot-slot,
+body.vis-on .inventory-cell {
+  border-radius: 0;
+  border: 2px solid #140f0b;
+  background: #3a2a1f;
+  box-shadow: var(--btn);
+}
+body.vis-on .hot-slot.active,
+body.vis-on .inventory-cell.selected {
+  background: #4a3020;
+  box-shadow: inset 0 0 0 2px #f6b05a, inset 0 0 0 4px #8e3a20;
+}
+body.vis-on .hot-slot .key,
+body.vis-on .hot-slot .qty,
+body.vis-on .inventory-cell .count {
+  font-family: var(--px);
+  font-size: 12px;
+  color: #ffdb8c;
+  text-shadow: 1px 1px 0 #140f0b;
+}
+
+/* ---------- 弹出的每一页 ---------- */
+body.vis-on .modal-backdrop {
+  background: rgba(20, 15, 11, 0.55);
+}
+body.vis-on .modal {
+  background: #241a14;
+  border: none;
+  border-radius: 0;
+  box-shadow: var(--frame), 0 18px 60px rgba(0, 0, 0, 0.6);
+}
+body.vis-on .modal-header {
+  background: var(--wood);
+  border-bottom: 2px solid #140f0b;
+  box-shadow: 0 2px 0 #4a3c30;
+}
+body.vis-on .modal-header h2,
+body.vis-on #modal-title {
+  font-family: var(--px);
+  font-size: 24px;
+  font-weight: normal;
+  color: #ffdb8c;
+  letter-spacing: 0;
+  text-shadow: 2px 2px 0 #140f0b;
+}
+body.vis-on .modal-header small {
+  font-family: var(--px);
+  font-size: 12px;
+  color: #c9b58a;
+}
+body.vis-on .modal-header .close,
+body.vis-on .modal-header button[data-action="close"] {
+  font-family: var(--px);
+}
+body.vis-on .modal-content {
+  background: #241a14;
+}
+body.vis-on .modal-foot {
+  background: #1c140f;
+  border-top: 2px solid #140f0b;
+  font-family: var(--px);
+  font-size: 12px;
+  color: #c9b58a;
+}
+body.vis-on .modal h3 {
+  font-family: var(--px);
+  font-size: 24px;
+  font-weight: normal;
+  color: #f6b05a;
+  letter-spacing: 0;
+}
+body.vis-on .tabs button.active {
+  background-color: #6a3420;
+  box-shadow: var(--btn-hot);
+}
+
+/* 常见的卡片：从绿色换成木头和锈铁 */
+body.vis-on .item-detail,
+body.vis-on .g-facts,
+body.vis-on .g-stat,
+body.vis-on .g-today li,
+body.vis-on .g-days li,
+body.vis-on .care-dial,
+body.vis-on .seed-opt,
+body.vis-on .section-row,
+body.vis-on .recipe,
+body.vis-on .trade-item,
+body.vis-on .map-card,
+body.vis-on .garden-strip,
+body.vis-on .journal-main,
+body.vis-on .journal-options article,
+body.vis-on .daily-card,
+body.vis-on .settings-row {
+  background-color: #2a1f17;
+  border-radius: 0;
+  border-color: #4a3c30;
+}
+body.vis-on .care-dial b,
+body.vis-on .g-stat b {
+  font-family: var(--px);
+  font-weight: normal;
+}
+body.vis-on .care-dial b {
+  font-size: 24px;
+}
+body.vis-on .g-tag {
+  border-radius: 0;
+  font-family: var(--px);
+  font-size: 12px;
+}
+body.vis-on .seed-no {
+  border-radius: 0;
+  background: #6a3420;
+  font-family: var(--px);
+}
+
+/* 提示条与消息 */
+body.vis-on .toast,
+body.vis-on #context {
+  border-radius: 0;
+  background: #241a14;
+  border: 2px solid #140f0b;
+  box-shadow: 0 0 0 2px #94502c;
+}
+body.vis-on .dock-hints {
+  font-family: var(--px);
+  font-size: 12px;
+}
+
+/* 载入页与开始页 */
+body.vis-on .loading h1,
+body.vis-on .welcome h1 {
+  font-family: var(--px);
+  font-size: 48px;
+  font-weight: normal;
+  color: #ffdb8c;
+  letter-spacing: 0;
+  text-shadow: 4px 4px 0 #5e2418;
+}
+body.vis-on .modal button.primary:disabled,
+body.vis-on .modal button:disabled.primary {
+  background-color: #3a2a1f;
+  box-shadow: none;
+  color: #a28a4e;
+}
+
+/* ---------- 样张专用的预览条 ---------- */
+.vis-preview {
+  position: fixed;
+  top: 68px;
+  left: 16px;
+  width: 360px;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  max-width: calc(100vw - 32px);
+  justify-content: flex-start;
+  padding: 6px 10px;
+  background: #241a14f0;
+  box-shadow: 0 0 0 2px #140f0b, 0 0 0 4px #94502c, 0 0 0 6px #140f0b;
+  font-family: "Fusion Pixel", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  color: #f1e3c2;
+}
+.vis-preview b {
+  color: #ffdb8c;
+  font-weight: normal;
+}
+.vis-preview .vp-group {
+  display: flex;
+  gap: 2px;
+}
+.vis-preview button {
+  min-height: 26px;
+  padding: 2px 8px;
+  border: 2px solid #140f0b;
+  border-radius: 0;
+  background: #3a2a1f;
+  box-shadow: inset 2px 2px 0 #5a4030, inset -2px -2px 0 #1c130d;
+  color: #f1e3c2;
+  font: inherit;
+  cursor: pointer;
+}
+.vis-preview button:hover {
+  background: #4a3627;
+}
+.vis-preview button.on {
+  background: #bf5a28;
+  box-shadow: inset 2px 2px 0 #f6b05a, inset -2px -2px 0 #8e3a20;
+  color: #fff3dc;
+}
+.vis-preview.mini .vp-group:not(:last-child) {
+  display: none;
+}
+.vis-preview.mini .vp-group:last-child button:not([data-vp="hide"]) {
+  display: none;
+}
+
+/* 行囊与建造页里还带绿色的几处 */
+body.vis-on .echo-storage-summary span,
+body.vis-on .inventory-inspector,
+body.vis-on .cost span,
+body.vis-on .b-cost span {
+  background: #2a1f17;
+  border-color: #4a3c30;
+  border-radius: 0;
+}
+body.vis-on .echo-storage-summary b {
+  font-family: var(--px);
+  font-size: 24px;
+  font-weight: normal;
+  color: #ffdb8c;
+}
+
+body.title-screen .vis-preview {
+  display: none;
+}
