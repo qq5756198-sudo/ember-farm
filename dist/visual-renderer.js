@@ -1,15 +1,17 @@
-// 新画面（样张）：农场换成真像素底图、新的人物和作物、建筑和物件，一天四段的光影，看得见的天气。
-// 其他地图暂时还是原来的画法；设置里可以切回原来的画面。
+// 新画面：十五张地图都换成真像素底图，人物、感染者、作物、建筑和物件都是新画的，
+// 一天四段的光影、看得见的天气（雨、雪、雾、热浪），界面换成像素字体和木头锈铁的样子。
+// 设置里可以切回原来的画面；切换只改画面，不动存档。
 import { Renderer as GardenRenderer } from "./garden-renderer.js";
-import { CROPS, BUILDINGS, ITEMS, WORLD } from "./data.js";
-import { PAL, makeCanvas } from "./pixel-kit.js";
-import { bakeFarm, puddleSpots } from "./pixel-farm.js";
-import { personSprite, lookFor, PLAYER_LOOK, dirFromAngle, cropSprite, soilSprite, iconSprite, debrisSprite, shadowSprite, gardenSprite } from "./pixel-sprites.js";
+import { CROPS, BUILDINGS, ITEMS, WORLD, REGIONS } from "./data.js";
+import { PAL, makeCanvas, nearestPal } from "./pixel-kit.js";
+import { bakeMap, hasMapArt } from "./pixel-maps.js";
+import { pixelSheets } from "./pixel-sheets.js";
+import { personSprite, lookFor, PLAYER_LOOK, dirFromAngle, cropSprite, soilSprite, iconSprite, debrisSprite, shadowSprite, gardenSprite, zombieSprite } from "./pixel-sprites.js";
 import { buildingArt, objectArt, flameArt, carryArt } from "./pixel-props.js";
 import { LightMap, Particles, Weather, ambientFor, nightness, FIRE, LAMP, WARM, SCREEN, EMBER, FIREFLY } from "./pixel-light.js";
 
 const KEY = "ember-farm-visual-v1";
-export const VIS = { on: true, preview: { minute: null, weather: null } };
+export const VIS = { on: true, preview: { minute: null, weather: null }, listeners: [] };
 try {
   if (globalThis.localStorage?.getItem(KEY) === "off") VIS.on = false;
 } catch {
@@ -23,8 +25,19 @@ export function setVisual(on) {
     /* 存不了也照常切换 */
   }
   globalThis.document?.body?.classList?.toggle("vis-on", VIS.on);
+  for (const fn of VIS.listeners) {
+    try {
+      fn(VIS.on);
+    } catch {
+      /* 某个界面没刷新也不影响切换 */
+    }
+  }
 }
 const FONT = '"Fusion Pixel", "Microsoft YaHei", sans-serif';
+const RAIN = ["小雨", "暴雨", "酸雨"];
+const SNOW = ["小雪", "大雪"];
+const ZOMBIE_ICONS = new Set([16, 17, 18, 19, 20, 21, 22, 23, 58, 59]);
+const GREEN = new Set(["farm", "residential", "valley", "pinewood", "archive", "quarantine", "hospital", "courtyard", "stationMarket"]);
 // 颜色的明暗，0 黑 1 白；认不出的颜色当亮色
 function lightness(color) {
   const m = /^#([0-9a-f]{6})/i.exec(String(color));
@@ -38,46 +51,144 @@ try {
   /* 测试环境里没有页面 */
 }
 
+// ---------- 旧画法的颜色换成调色板里的颜色 ----------
+// 只换不太鲜艳的颜色（原来的绿灰、土黄这些）；鲜艳的颜色——危险提示、色弱模式的蓝和橙——原样保留。
+const palCache = new Map();
+function parseColor(v) {
+  let m = /^#([0-9a-f]{3,8})$/i.exec(v);
+  if (m) {
+    let h = m[1];
+    if (h.length === 3 || h.length === 4) h = [...h].map((c) => c + c).join("");
+    if (h.length !== 6 && h.length !== 8) return null;
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16), h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1];
+  }
+  m = /^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i.exec(v);
+  if (m) return [+m[1], +m[2], +m[3], m[4] == null ? 1 : +m[4]];
+  return null;
+}
+export function palColor(v) {
+  if (typeof v !== "string") return v;
+  let out = palCache.get(v);
+  if (out !== undefined) return out;
+  out = v;
+  const c = parseColor(v);
+  if (c) {
+    const [r, g, b, a] = c,
+      max = Math.max(r, g, b) / 255,
+      min = Math.min(r, g, b) / 255,
+      l = (max + min) / 2,
+      sat = max === min ? 0 : (max - min) / (1 - Math.abs(2 * l - 1));
+    if (sat < 0.55) {
+      const p = nearestPal(r, g, b);
+      out = a >= 1 ? `rgb(${p[0]},${p[1]},${p[2]})` : `rgba(${p[0]},${p[1]},${p[2]},${a})`;
+    }
+  }
+  if (palCache.size < 4000) palCache.set(v, out);
+  return out;
+}
+function installPalette(r) {
+  const ctx = r.ctx;
+  if (!ctx) return;
+  for (const prop of ["fillStyle", "strokeStyle"]) {
+    let proto = Object.getPrototypeOf(ctx),
+      d = null;
+    while (proto && !(d = Object.getOwnPropertyDescriptor(proto, prop))) proto = Object.getPrototypeOf(proto);
+    if (!d?.set || !d?.get) continue;
+    try {
+      Object.defineProperty(ctx, prop, {
+        configurable: true,
+        get() {
+          return d.get.call(this);
+        },
+        set(v) {
+          d.set.call(this, r.vMap ? palColor(v) : v);
+        },
+      });
+    } catch {
+      /* 换不了颜色就照原样画 */
+    }
+  }
+}
+
 export class Renderer extends GardenRenderer {
   constructor(canvas, assets) {
     super(canvas, assets);
-    this.farmOrig = assets?.farm || null;
+    this.orig = assets ? { ...assets } : {};
+    this.arts = new Map();
+    this.sheets = null;
     this.lightMap = new LightMap();
     this.fx = new Particles();
     this.wx = new Weather();
     this.v = false;
-    this.farmArt = null;
+    this.art = null;
+    this.mood = {};
     this.spawn = {};
     this.late = [];
+    installPalette(this);
+    // 一开始就把小图集换好，界面上的物品格子第一次画出来就是像素版；切换画面时马上换回来
+    if (VIS.on) this.applyAssets(true, null);
+    VIS.listeners.push((on) => this.applyAssets(on, this.lastRegion));
   }
-  ensureFarm() {
-    if (this.farmArt === false) return false;
-    if (!this.farmArt) {
+  // 某张地图的新底图（第一次进去时才画）
+  artFor(region) {
+    if (!hasMapArt(region)) return null;
+    if (!this.arts.has(region)) {
+      let art = null;
       try {
-        const f = bakeFarm();
-        if (!f.canvas) throw new Error("no canvas");
-        this.farmArt = f;
-        this.puddles = puddleSpots(f.map);
+        art = bakeMap(region);
+        if (!art?.canvas) art = null;
       } catch (err) {
-        this.farmArt = false;
-        if (globalThis.console) console.warn("new farm art unavailable", err);
-        return false;
+        art = null;
+        if (globalThis.console) console.warn("new map art unavailable", region, err);
+      }
+      this.arts.set(region, art || false);
+    }
+    return this.arts.get(region) || null;
+  }
+  // 兼容旧的调用：农场底图
+  ensureFarm() {
+    return !!this.artFor("farm");
+  }
+  get farmArt() {
+    return this.arts.get("farm") || null;
+  }
+  // 新画面时把底图和三张小图集换成像素版，切回原画面时换回来
+  applyAssets(on, region) {
+    const a = this.assets;
+    if (!a) return;
+    if (on && !this.sheets) {
+      this.sheets = pixelSheets(this.orig);
+      if (this.sheets?.spritesUrl) {
+        try {
+          globalThis.document?.body?.style?.setProperty("--vis-sprites", `url("${this.sheets.spritesUrl}")`);
+        } catch {
+          /* 没有页面时不用管 */
+        }
       }
     }
-    return true;
+    for (const k of Object.keys(this.orig)) {
+      const sheet = on && this.sheets && (k === "sprites" || k === "expansion" || k === "frontier") ? this.sheets[k] : null;
+      a[k] = sheet || this.orig[k];
+    }
+    const key = REGIONS[region]?.asset;
+    if (on && this.art && key) a[key] = this.mapCanvas();
   }
   // ---------- 每帧 ----------
   draw(engine, mouse, dt = 0.016) {
-    const s = engine.s;
-    this.v = VIS.on && s.region === "farm" && this.ensureFarm();
+    const s = engine.s,
+      region = s.region,
+      art = VIS.on ? this.artFor(region) : null;
+    this.lastRegion = region;
+    this.v = !!art;
+    this.art = art;
+    this.mood = art?.mood || {};
+    this.indoor = !!this.mood.indoor;
+    this.vMap = this.v;
+    this.applyAssets(VIS.on, region);
     this.calm = !!s.settings?.access?.calm;
-    // 样张里的“画面预览”只改画面上的时间和天气，不动存档
+    const raw = VIS.preview.weather ?? s.weather;
     this.vMinute = VIS.preview.minute ?? s.minute;
-    this.vWeather = VIS.preview.weather ?? s.weather;
-    if (this.assets) {
-      if (!this.farmOrig) this.farmOrig = this.assets.farm;
-      this.assets.farm = this.v ? this.farmCanvas(s) : this.farmOrig;
-    }
+    this.vWeather = this.indoor ? "晴朗" : this.mood.snowy ? (raw === "暴雨" || raw === "酸雨" ? "大雪" : "小雪") : raw;
     this.late = [];
     this._textQueue = [];
     this._ghost = null;
@@ -88,20 +199,23 @@ export class Renderer extends GardenRenderer {
       super.draw(engine, mouse, dt);
     } finally {
       this._deferText = false;
+      this.vMap = false;
     }
   }
-  farmCanvas(s) {
-    const base = this.farmArt.canvas;
-    if (this.vWeather !== "高温" || this.calm) return base;
+  mapCanvas() {
+    const base = this.art.canvas;
+    if (this.vWeather !== "高温" || this.calm || this.indoor) return base;
     // 热浪：底图一条条横向轻轻扭动
-    if (!this.heat) {
+    if (!this.heat || this.heat.width !== base.width) {
       this.heat = makeCanvas(base.width, base.height);
       this.heatAt = -1;
+      this.heatOf = null;
     }
     if (!this.heat) return base;
     const t = Math.floor(this.time * 10);
-    if (t !== this.heatAt) {
+    if (t !== this.heatAt || this.heatOf !== base) {
       this.heatAt = t;
+      this.heatOf = base;
       const c = this.heat.getContext("2d");
       c.clearRect(0, 0, base.width, base.height);
       for (let y = 0; y < base.height; y += 2) {
@@ -231,6 +345,7 @@ export class Renderer extends GardenRenderer {
   }
   sprite(index, x, y, w, h, anchor, alpha, flip) {
     if (this._mute) return;
+    if (this.v && this._enemy && ZOMBIE_ICONS.has(index)) return this.drawZombie(this._enemy, x, y, alpha ?? 1);
     if (this.v && (index === 56 || index === 57) && anchor !== false) return this.drawVillager(this._obj, x, y, alpha ?? 1, index);
     return super.sprite(index, x, y, w, h, anchor, alpha, flip);
   }
@@ -276,11 +391,30 @@ export class Renderer extends GardenRenderer {
   person(sheet, x, y, facing = Math.PI / 2, moving = false, alpha = 1) {
     if (!this.v) return super.person(sheet, x, y, facing, moving, alpha);
     const role = sheet && sheet === this.helperSheet?.() ? "helper" : sheet && sheet === this.raiderSheet?.() ? "raider" : null,
-      key = this._obj?.id || this._obj?.name || (role || "npc") + Math.round(x / 50),
+      key = this._obj?.id || this._obj?.name || (this._enemy?.id != null ? "foe" + this._enemy.id : role || "npc"),
       look = lookFor(key, role),
       f = this.personFrame(look, key, facing, moving);
     this.pxShadow(x, y, 18);
     this.px(f.canvas, x, y, { flip: f.flip, alpha, foot: 1 });
+  }
+  // 感染者：按种类、朝向画，走路 4 帧；被打中时半透明（和原来一样）
+  drawEnemy(z, e) {
+    if (!this.v) return super.drawEnemy(z, e);
+    const prev = this._enemy;
+    this._enemy = z;
+    try {
+      return super.drawEnemy(z, e);
+    } finally {
+      this._enemy = prev;
+    }
+  }
+  drawZombie(z, x, y, alpha = 1) {
+    const type = z.type in { slow: 1, runner: 1, screamer: 1, armor: 1, elite: 1 } ? z.type : "slow",
+      { dir, flip } = dirFromAngle(z.facing ?? Math.PI / 2),
+      speed = type === "runner" ? 10 : type === "elite" ? 4 : 6,
+      frame = Math.floor(this.time * speed + (z.x + z.y) * 0.01) % 4;
+    this.pxShadow(x, y, type === "elite" ? 34 : 20);
+    this.px(zombieSprite(type, dir, frame), x, y, { flip, alpha, foot: 1 });
   }
   drawHelper(o, e) {
     if (!this.v) return super.drawHelper(o, e);
@@ -317,6 +451,7 @@ export class Renderer extends GardenRenderer {
       this.pxShadow(o.x, o.y, Math.min(34, art.w * 1.4));
       this.px(art.canvas, o.x, o.y + 4);
       if (art.screen) this.late.push({ kind: "screen", x: o.x, y: o.y + 4, art });
+      if (art.lamp) this.late.push({ kind: "objLamp", x: o.x, y: o.y + 4, art });
       this.muted(() => super.drawObject(o, e));
       return;
     }
@@ -327,6 +462,13 @@ export class Renderer extends GardenRenderer {
     } finally {
       this._obj = prev;
     }
+  }
+  // 边境的储物点、出口、去下一张图的门
+  drawWayPoint(o, e) {
+    if (!this.v) return super.drawWayPoint(o, e);
+    if (this._mute) return;
+    const art = objectArt(o.type);
+    if (art) this.px(art.canvas, o.x, o.y + 4);
   }
   labelsAllowed(x, y) {
     if (this.labelScope === "building") return this.buildingLabels;
@@ -479,20 +621,74 @@ export class Renderer extends GardenRenderer {
     }
     if (p.crop && p.trait) this.text(({ early: "早", abundant: "丰", hardy: "旱" })[p.trait] || "", p.x - 13, p.y - 17, "#eed786", 12);
   }
+  // 溪谷试验田的种植位：和农场一样的耕地；净化带是一格长着青草的土
+  drawValleyPlot(p, e) {
+    if (!this.v) return super.drawValleyPlot(p, e);
+    const c = this.ctx;
+    if (p.buffer) {
+      const X = Math.round((p.x - 18) / 2) * 2,
+        Y = Math.round((p.y - 18) / 2) * 2;
+      c.fillStyle = "#3a2519";
+      c.fillRect(X - 2, Y - 2, 40, 40);
+      c.fillStyle = "#4c632d";
+      c.fillRect(X, Y, 36, 36);
+      c.fillStyle = "#869843";
+      for (let k = 0; k < 8; k++) c.fillRect(X + ((k * 13) % 32), Y + ((k * 7) % 30) + 2, 2, 4);
+    } else {
+      const s = soilSprite(e.valleyWatered(p), (p.id ?? Math.round(p.x)) % 3);
+      if (s) c.drawImage(s, Math.round((p.x - 20) / 2) * 2, Math.round((p.y - 20) / 2) * 2, 40, 40);
+    }
+    this.valleyPlotLabel(p, e);
+  }
   drawLivingCrop(plot, e) {
     if (!this.v) return super.drawLivingCrop(plot, e);
     if (!plot.crop || !CROPS[plot.crop]) return;
     const ratio = plot.growth / CROPS[plot.crop].grow,
       stage = Math.min(3, Math.floor(ratio * 4)),
       ripe = ratio >= 1,
-      sway = ripe && !this.calm ? Math.round(Math.sin(this.time * 2.2 + plot.id * 1.7) * 0.6) : 0;
+      sway = ripe && !this.calm ? Math.round(Math.sin(this.time * 2.2 + (plot.id ?? plot.x) * 1.7) * 0.6) : 0;
     this.px(cropSprite(plot.crop, stage), plot.x, plot.y + 8, { dx: sway });
-    if (ripe) this.late.push({ kind: "ripe", x: plot.x, y: plot.y, id: plot.id });
-    else if (!e.plotWatered(plot)) this.late.push({ kind: "thirsty", x: plot.x, y: plot.y, id: plot.id });
+    const watered = e.s.region === "valley" ? e.valleyWatered?.(plot) : e.plotWatered(plot);
+    if (ripe) this.late.push({ kind: "ripe", x: plot.x, y: plot.y, id: plot.id ?? plot.x });
+    else if (!watered) this.late.push({ kind: "thirsty", x: plot.x, y: plot.y, id: plot.id ?? plot.x });
   }
   drawFarm(e) {
-    if (this.v) this.wx.drawPuddles(this.ctx, this.puddles || [], this.time, ambientFor(this.vMinute, this.vWeather), ["小雨", "暴雨", "酸雨"].includes(this.vWeather));
+    if (this.v) this.drawPuddles();
     super.drawFarm(e);
+  }
+  drawRuins(e) {
+    if (this.v) {
+      this.drawPuddles();
+      if (e.s.region === "market") this.marketTables();
+    }
+    return super.drawRuins(e);
+  }
+  // 集市路口两张摆货的木桌（原来的货就摆在这两处）
+  marketTables() {
+    const c = this.ctx;
+    for (const [x0, x1, y] of [[592, 738, 444], [984, 1046, 566]]) {
+      c.fillStyle = "rgba(20,15,11,.4)";
+      c.fillRect(x0 + 6, y + 8, x1 - x0, 6);
+      c.fillStyle = "#3a2519";
+      c.fillRect(x0 + 4, y, 4, 12);
+      c.fillRect(x1 - 8, y, 4, 12);
+      c.fillStyle = "#1c140f";
+      c.fillRect(x0 - 2, y - 14, x1 - x0 + 4, 16);
+      c.fillStyle = "#8d6340";
+      c.fillRect(x0, y - 12, x1 - x0, 12);
+      c.fillStyle = "#ad8258";
+      c.fillRect(x0, y - 12, x1 - x0, 2);
+      c.fillStyle = "#a8433a";
+      for (let x = x0; x < x1; x += 16) c.fillRect(x, y - 2, 8, 4);
+    }
+  }
+  drawPuddles() {
+    if (this.indoor || !this.art?.puddles?.length) return;
+    const w = this.wx,
+      saved = w.wet;
+    if (this.mood.wet) w.wet = Math.max(w.wet, 0.85);
+    w.drawPuddles(this.ctx, this.art.puddles, this.time, ambientFor(this.vMinute, this.vWeather), RAIN.includes(this.vWeather));
+    w.wet = saved;
   }
   // 菜地的状态：肥力边、盖布、杂草、菜青虫、乌鸦爪印（和原来的一样，只是画成像素）
   drawGarden(e) {
@@ -528,9 +724,129 @@ export class Renderer extends GardenRenderer {
     this.pxShadow(d.x, d.y + 12, 16);
     this.px(debrisSprite(ITEMS[d.type] ? d.type : "scrap", Number(d.id) % 3 || 0), d.x, d.y + 14);
   }
+  // ---------- 各地图上会变化的东西 ----------
+  // 废墟里的封锁路障、封锁门：一排木板和铁皮
+  drawBlockade(rect) {
+    if (!this.v) return super.drawBlockade(rect);
+    this.barricade(rect, rect.door ? "door" : "wood");
+    this.text(rect.door ? "封锁门" : "封锁路障", rect.x + rect.w / 2, rect.y + rect.h / 2, "#e1c28a", 12);
+  }
+  // 雨巷的路障、货运站吊来的货箱
+  drawDistrictBlock(r) {
+    if (!this.v) return super.drawDistrictBlock(r);
+    this.barricade(r, r.districtCrate ? "crate" : "wood");
+  }
+  barricade(r, kind) {
+    const c = this.ctx,
+      X = Math.round(r.x / 2) * 2,
+      Y = Math.round(r.y / 2) * 2,
+      W = Math.round(r.w / 2) * 2,
+      H = Math.round(r.h / 2) * 2;
+    c.fillStyle = "rgba(20,15,11,.45)";
+    c.fillRect(X + 4, Y + H, W, 6);
+    if (kind === "door") {
+      c.fillStyle = "#1c140f";
+      c.fillRect(X - 2, Y - 2, W + 4, H + 4);
+      c.fillStyle = "#454847";
+      c.fillRect(X, Y, W, H);
+      c.fillStyle = "#62645d";
+      for (let y = Y + 2; y < Y + H; y += 6) c.fillRect(X, y, W, 2);
+      c.fillStyle = "#b9703c";
+      c.fillRect(X + W / 2 - 2, Y + H / 2 - 4, 4, 8);
+      return;
+    }
+    if (kind === "crate") {
+      for (let y = Y; y < Y + H; y += 20)
+        for (let x = X; x < X + W; x += 24) {
+          c.fillStyle = "#1c140f";
+          c.fillRect(x, y, 24, 20);
+          c.fillStyle = "#8d6340";
+          c.fillRect(x + 2, y + 2, 20, 16);
+          c.fillStyle = "#ad8258";
+          c.fillRect(x + 2, y + 2, 20, 2);
+          c.fillStyle = "#704a2f";
+          for (let k = 0; k < 8; k++) c.fillRect(x + 4 + k * 2, y + 4 + k * 2 - (k > 5 ? 2 : 0), 2, 2);
+        }
+      return;
+    }
+    // 木板路障：竖的木桩，横钉几块板子，中间插着几根削尖的木头
+    const vertical = H > W;
+    c.fillStyle = "#1c140f";
+    c.fillRect(X - 2, Y - 2, W + 4, H + 4);
+    c.fillStyle = "#553522";
+    c.fillRect(X, Y, W, H);
+    c.fillStyle = "#8d6340";
+    if (vertical) for (let y = Y + 4; y < Y + H - 4; y += 14) c.fillRect(X - 2, y, W + 4, 6);
+    else for (let x = X + 4; x < X + W - 4; x += 14) c.fillRect(x, Y - 2, 6, H + 4);
+    c.fillStyle = "#ad8258";
+    if (vertical) for (let y = Y + 4; y < Y + H - 4; y += 14) c.fillRect(X - 2, y, W + 4, 2);
+    else for (let x = X + 4; x < X + W - 4; x += 14) c.fillRect(x, Y - 2, 2, H + 4);
+    c.fillStyle = "#94502c";
+    if (vertical) c.fillRect(X + W / 2 - 2, Y, 4, H);
+    else c.fillRect(X, Y + H / 2 - 2, W, 4);
+  }
+  // 检修间：关着时门口一道卷帘、里面暗着；开了就只剩门框
+  drawAnnex(e) {
+    if (!this.v) return super.drawAnnex(e);
+    const c = this.ctx,
+      open = !!e.r?.annexOpen;
+    if (!open) {
+      c.fillStyle = "rgba(20,15,11,.42)";
+      c.fillRect(1310, 820, 170, 110);
+      c.fillStyle = "#1c140f";
+      c.fillRect(1380, 802, 80, 20);
+      c.fillStyle = "#62645d";
+      c.fillRect(1382, 804, 76, 16);
+      c.fillStyle = "#454847";
+      for (let y = 806; y < 820; y += 4) c.fillRect(1382, y, 76, 2);
+      c.fillStyle = "#f6b05a";
+      for (let x = 1382; x < 1458; x += 8) c.fillRect(x, 818, 4, 2);
+    } else {
+      c.fillStyle = "#454847";
+      c.fillRect(1378, 800, 4, 22);
+      c.fillRect(1458, 800, 4, 22);
+    }
+    this.text(open ? "检修间 · 通信核心" : "封闭检修间", 1395, 952, "#e2d5a7", 14);
+  }
+  // 沉湾船坞中间的干船坞：没抽水时是一池浑水，抽干了是湿泥底、几根枕木
+  drawDrainPool(e, drained) {
+    if (!this.v) return super.drawDrainPool(e, drained);
+    const c = this.ctx,
+      X = 820,
+      Y = 350,
+      W = 154,
+      H = 164;
+    if (!drained) {
+      c.fillStyle = "#1f3f43";
+      c.fillRect(X, Y, W, H);
+      c.fillStyle = "#2e5e5e";
+      for (let y = Y + 6; y < Y + H; y += 18) c.fillRect(X + 8 + ((y / 18) % 3) * 10, y, W - 40, 2);
+      c.fillStyle = "#6fa69a";
+      const t = this.calm ? 0 : this.time;
+      for (let k = 0; k < 6; k++) c.fillRect(Math.round((X + 10 + ((k * 37 + t * 12) % (W - 30))) / 2) * 2, Y + 14 + k * 24, 10, 2);
+    } else {
+      c.fillStyle = "#3a2519";
+      c.fillRect(X, Y, W, H);
+      c.fillStyle = "#553522";
+      for (let y = Y + 4; y < Y + H; y += 8) c.fillRect(X + 2, y, W - 4, 4);
+      c.fillStyle = "#1f3f43";
+      c.fillRect(X + 30, Y + 60, 40, 8);
+      c.fillRect(X + 90, Y + 110, 30, 6);
+      c.fillStyle = "#704a2f";
+      for (let x = X + 12; x < X + W - 8; x += 26) c.fillRect(x, Y + 20, 6, H - 40);
+    }
+  }
+  // 疯长的草丛已经画在底图里了
+  drawCover(r) {
+    if (!this.v) return super.drawCover(r);
+  }
   drawOldLandmark(e) {
     if (this.v) return;
     return super.drawOldLandmark(e);
+  }
+  drawDistrictDepth(e) {
+    if (this.v) return;
+    return super.drawDistrictDepth(e);
   }
   drawWeather(e) {
     if (this.v) return;
@@ -540,8 +856,16 @@ export class Renderer extends GardenRenderer {
   collectLights(e, night) {
     const s = e.s,
       lights = [],
+      art = this.art,
+      sc = this.camera.scale,
+      vx0 = this.camera.x - 160,
+      vy0 = this.camera.y - 160,
+      vx1 = this.camera.x + this.w / sc + 160,
+      vy1 = this.camera.y + this.h / sc + 160,
+      inView = (x, y) => x > vx0 && x < vx1 && y > vy0 && y < vy1,
       flick = (seed) => (this.calm ? 1 : 0.88 + 0.12 * Math.sin(this.time * 9 + seed) * Math.sin(this.time * 5.3 + seed * 2));
-    if (night > 0.05) {
+    if (night <= 0.05 && !this.indoor) return lights;
+    if (s.region === "farm")
       for (const b of s.buildings || []) {
         if (b.hp <= 0) continue;
         if (b.type === "cook") lights.push({ x: b.x - 10, y: b.y - 8, r: 170 * flick(b.x), color: FIRE, power: 0.9 });
@@ -550,18 +874,29 @@ export class Renderer extends GardenRenderer {
         else if (b.type === "tower") lights.push({ x: b.x, y: b.y - 90, r: 90, color: LAMP, power: 0.6 });
         else if (["canner", "breeder", "solar", "drone", "coop", "lure"].includes(b.type)) lights.push({ x: b.x, y: b.y - 10, r: 36, color: WARM, power: 0.45 });
       }
-      for (const l of this.farmArt.lights) {
-        if (l.kind === "window") lights.push({ x: l.x * 2, y: l.y * 2 + 26, r: l.dim ? 40 : 66, color: WARM, power: l.dim ? 0.5 : 0.85, flat: 0.55 });
-        if (l.kind === "lantern") lights.push({ x: l.x * 2, y: l.y * 2 + 10, r: 86 * flick(3), color: LAMP, power: 0.9 });
-      }
-      for (const o of e.objects || []) if (o.type === "sign") lights.push({ x: o.x, y: o.y - 30, r: 34, color: SCREEN, power: 0.55 });
-      for (const m of this.farmArt.embers) lights.push({ x: m.x * 2, y: m.y * 2, r: 14 * flick(m.x), color: EMBER, power: 0.5 });
-      for (const f of this.fx.list) if (f.kind === "firefly") lights.push({ x: f.x, y: f.y, r: 16, color: FIREFLY, power: 0.4 });
-      // 自己身边总留一小圈光，夜里也看得清人物
-      const p = s.player,
-        torch = e.qty?.("flashlight") ? 170 : 96;
-      lights.push({ x: p.x, y: p.y - 18, r: torch, color: [176, 160, 132], power: 0.5 });
+    for (const l of art.lights) {
+      const x = l.x * 2,
+        y = l.y * 2;
+      if (!inView(x, y)) continue;
+      const col = l.color || LAMP;
+      if (l.kind === "window") lights.push({ x, y: y + 26, r: l.dim ? 40 : 66, color: col === LAMP ? WARM : col, power: l.dim ? 0.5 : 0.85, flat: 0.55 });
+      else if (l.kind === "lantern") lights.push({ x, y: y + 10, r: 86 * flick(x), color: LAMP, power: 0.9 });
+      else if (l.kind === "lamp") lights.push({ x, y: y + 30, r: 112, color: col, power: 0.85, flat: 0.62 });
+      else if (l.kind === "bulb") lights.push({ x, y: y + 6, r: 28, color: col, power: 0.6, small: true });
+      else if (l.kind === "neon") lights.push({ x, y: y + 10, r: 54, color: col, power: 0.7, flat: 0.7 });
+      else if (l.kind === "beacon") lights.push({ x, y, r: 20, color: col, power: Math.sin(this.time * 3 + x) > 0 || this.calm ? 0.8 : 0.25, small: true });
+      else if (l.kind === "fire") lights.push({ x, y, r: 140 * flick(x), color: FIRE, power: 0.9 });
+      else if (l.kind === "fluoro") lights.push({ x, y, r: 150, color: col, power: 0.8, flat: 0.7 });
+      else if (l.kind === "grow") lights.push({ x, y, r: 60, color: col, power: 0.55 });
     }
+    for (const o of e.objects || []) if (o.type === "sign") lights.push({ x: o.x, y: o.y - 30, r: 34, color: SCREEN, power: 0.55 });
+    for (const m of art.embers) if (!m.flame && inView(m.x * 2, m.y * 2)) lights.push({ x: m.x * 2, y: m.y * 2, r: 14 * flick(m.x), color: EMBER, power: 0.5, small: true });
+    for (const f of this.fx.list) if (f.kind === "firefly") lights.push({ x: f.x, y: f.y, r: 16, color: FIREFLY, power: 0.4, small: true });
+    // 自己身边总留一小圈光，夜里也看得清人物；在外面探索时手电筒更要紧
+    const p = s.player,
+      explore = !this.indoor && !["farm", "market"].includes(s.region),
+      torch = e.qty?.("flashlight") ? (explore ? 280 : 170) : explore ? 140 : 96;
+    lights.push({ x: p.x, y: p.y - 18, r: torch, color: [176, 160, 132], power: explore ? 0.62 : 0.5 });
     return lights;
   }
   drawNight(e) {
@@ -570,17 +905,23 @@ export class Renderer extends GardenRenderer {
       s = e.s,
       sc = this.camera.scale,
       view = { x: this.camera.x, y: this.camera.y, w: this.w / sc, h: this.h / sc },
-      night = nightness(this.vMinute),
+      night = this.indoor ? 0.85 : nightness(this.vMinute),
       weather = this.vWeather,
-      raining = ["小雨", "暴雨", "酸雨"].includes(weather);
-    // 受光照的一层：烟、叶子、尘土，然后是雨
+      raining = RAIN.includes(weather);
+    // 受光照的一层：烟、叶子、尘土，然后是雨或雪
     this.fx.draw(c, "world", this.time);
-    this.wx.drawSplashes(c, view, weather, this.time, this.calm);
-    this.wx.drawRain(c, view, weather, this.time, this.calm);
-    this.wx.drawMist(c, view, weather, this.time, this.calm);
+    if (!this.indoor) {
+      this.wx.drawSplashes(c, view, weather, this.time, this.calm);
+      this.wx.drawRain(c, view, weather, this.time, this.calm);
+      this.wx.drawMist(c, view, weather, this.time, this.calm);
+      if (SNOW.includes(weather)) this.wx.drawSnow(c, view, weather === "大雪", this.time, this.calm);
+      if (this.mood.mist) this.wx.drawFog(c, view, this.time, this.calm, "#cfd8cc", night > 0.4 ? 0.6 : 1.2);
+    }
     // 环境色 + 灯光，用“正片叠底”压到整个画面上
-    let amb = ambientFor(this.vMinute, weather);
-    if (this.wx.flash > 0) amb = amb.map((v) => Math.round(v + (255 - v) * this.wx.flash * 0.45));
+    let amb = this.indoor ? [118, 124, 142] : ambientFor(this.vMinute, weather);
+    // 夜里在外面探索：四周更黑，手电筒照到的地方才看得清
+    if (!this.indoor && night > 0.3 && !["farm", "market"].includes(s.region)) amb = amb.map((v) => Math.round(v * (1 - 0.38 * night)));
+    if (this.wx.flash > 0 && !this.indoor) amb = amb.map((v) => Math.round(v + (255 - v) * this.wx.flash * 0.45));
     const lit = this.lightMap.render(view, amb, this.collectLights(e, night));
     if (lit) {
       c.save();
@@ -589,17 +930,17 @@ export class Renderer extends GardenRenderer {
       c.drawImage(lit.canvas, lit.x, lit.y, lit.w, lit.h);
       c.restore();
     }
-    if (weather === "高温" && night < 0.3) {
+    if (weather === "高温" && night < 0.3 && !this.indoor) {
       c.save();
       c.globalCompositeOperation = "screen";
       c.fillStyle = "rgba(255,236,190,0.16)";
       c.fillRect(view.x, view.y, view.w, view.h);
       c.restore();
     }
-    // 自己发光的东西：窗户、火苗、灯泡、终端屏幕、余烬、火星和萤火虫
-    this.drawEmissive(e, night);
+    // 自己发光的东西：窗户、火苗、灯泡、招牌、终端屏幕、余烬、火星和萤火虫
+    this.drawEmissive(e, night, view);
     this.fx.draw(c, "glow", this.time);
-    if (this.wx.flash > 0.6) {
+    if (this.wx.flash > 0.6 && !this.indoor) {
       c.fillStyle = `rgba(235,240,255,${(this.wx.flash - 0.6) * 0.3})`;
       c.fillRect(view.x, view.y, view.w, view.h);
     }
@@ -621,24 +962,63 @@ export class Renderer extends GardenRenderer {
     this.drawNearRing(e);
     this.drawGhostNow();
   }
-  drawEmissive(e, night) {
+  drawEmissive(e, night, view) {
     const c = this.ctx,
-      t = this.time;
-    // 窗户和门灯
+      t = this.time,
+      art = this.art,
+      vis = (x, y) => x > view.x - 40 && x < view.x + view.w + 40 && y > view.y - 40 && y < view.y + view.h + 40;
+    // 窗户、门灯、路灯头、串灯、霓虹招牌、信号灯
     if (night > 0.3)
-      for (const l of this.farmArt.lights) {
-        c.fillStyle = l.kind === "lantern" ? "#ffe2a0" : `rgba(255,206,120,${0.55 + 0.35 * night})`;
+      for (const l of art.lights) {
+        const x = l.x * 2,
+          y = l.y * 2;
+        if (!vis(x, y)) continue;
         if (l.kind === "window") {
           const w = l.w * 2,
             h = l.h * 2,
-            X = l.x * 2 - w / 2,
-            Y = l.y * 2 - h / 2;
+            X = Math.round((x - w / 2) / 2) * 2,
+            Y = Math.round((y - h / 2) / 2) * 2;
+          c.fillStyle = `rgba(255,206,120,${(l.dim ? 0.35 : 0.55) + 0.35 * night})`;
           c.fillRect(X, Y, w, h);
           c.fillStyle = "rgba(122,74,40,.9)";
-          c.fillRect(X + w / 2 - 1, Y, 2, h);
-          c.fillRect(X, Y + h / 2 - 1, w, 2);
-        } else c.fillRect(l.x * 2 - 2, l.y * 2 - 4, 6, 8);
+          if (w >= 10) c.fillRect(X + Math.round(w / 4) * 2 - 1, Y, 2, h);
+          if (h >= 10) c.fillRect(X, Y + Math.round(h / 4) * 2 - 1, w, 2);
+        } else if (l.kind === "lantern" || l.kind === "lamp") {
+          c.fillStyle = "#ffe2a0";
+          c.fillRect(Math.round(x / 2) * 2 - 2, Math.round(y / 2) * 2 - 2, l.kind === "lamp" ? 6 : 6, 4);
+        } else if (l.kind === "bulb") {
+          c.fillStyle = "#ffdb8c";
+          c.fillRect(Math.round(x / 2) * 2, Math.round(y / 2) * 2, 2, 2);
+        } else if (l.kind === "neon") {
+          const w = (l.w || 10) * 2,
+            h = (l.h || 6) * 2,
+            X = Math.round((x - w / 2) / 2) * 2,
+            Y = Math.round((y - h / 2) / 2) * 2,
+            [r, g, b] = l.color || [255, 140, 90],
+            pulse = this.calm ? 1 : 0.8 + 0.2 * Math.sin(t * 2.4 + x);
+          c.fillStyle = `rgba(${r},${g},${b},${0.7 * pulse})`;
+          c.fillRect(X, Y, w, 2);
+          c.fillRect(X, Y + h - 2, w, 2);
+          c.fillRect(X, Y, 2, h);
+          c.fillRect(X + w - 2, Y, 2, h);
+          c.fillStyle = `rgba(${r},${g},${b},${0.35 * pulse})`;
+          c.fillRect(X + 2, Y + 2, w - 4, h - 4);
+        } else if (l.kind === "beacon") {
+          if (!this.calm && Math.sin(t * 3 + x) < 0) continue;
+          const [r, g, b] = l.color || [255, 80, 60];
+          c.fillStyle = `rgb(${r},${g},${b})`;
+          c.fillRect(Math.round(x / 2) * 2 - 1, Math.round(y / 2) * 2 - 1, 4, 4);
+        } else if (l.kind === "grow") {
+          c.fillStyle = "rgba(220,140,255,.55)";
+          c.fillRect(Math.round(x / 2) * 2 - 24, Math.round(y / 2) * 2 - 8, 48, 2);
+          c.fillRect(Math.round(x / 2) * 2 - 24, Math.round(y / 2) * 2 + 6, 48, 2);
+        }
       }
+    // 火桶里的火苗（白天也看得见）
+    for (const [i, m] of art.embers.entries()) {
+      if (!m.flame || !vis(m.x * 2, m.y * 2)) continue;
+      this.px(flameArt(this.calm ? 0 : (Math.floor(t * 9) + i) % 3, false), m.x * 2, m.y * 2 + 2, { alpha: 0.95 });
+    }
     for (const m of this.late) {
       if (m.kind === "screen") {
         const sc = m.art.screen,
@@ -650,26 +1030,33 @@ export class Renderer extends GardenRenderer {
         const lines = Math.floor(t * 2) % 3;
         for (let k = 0; k <= lines; k++) c.fillRect(X + 2, Y + 4 + k * 4, 6 + ((k * 7) % 12), 2);
       }
-      if (m.kind !== "build") continue;
-      const { b, art } = m,
-        top = b.y + 4 - art.h * 2,
-        left = b.x - art.w;
-      if (art.fire) this.px(flameArt(this.calm ? 0 : Math.floor(t * 9) % 3, true), left + art.fire.x * 2, top + art.fire.y * 2 + 2);
-      if (art.stove) this.px(flameArt(this.calm ? 1 : (Math.floor(t * 7) + 1) % 3, false), left + art.stove.x * 2, top + art.stove.y * 2 + 6, { alpha: 0.9 });
-      if (art.lamp && (b.type !== "lamp" || (e.c?.energy || 0) > 0) && night > 0.2) {
-        c.fillStyle = "#ffe7a8";
-        c.fillRect(left + art.lamp.x * 2 - 2, top + art.lamp.y * 2 - 4, 6, 8);
+      if (m.kind === "objLamp" && night > 0.3) {
+        const X = Math.round((m.x - m.art.w) / 2) * 2 + m.art.lamp.x * 2,
+          Y = Math.round((m.y - m.art.h * 2) / 2) * 2 + m.art.lamp.y * 2;
+        c.fillStyle = "#ffe2a0";
+        c.fillRect(X - 2, Y - 2, 6, 6);
       }
-      if (art.glow && night > 0.2) {
-        c.fillStyle = art.glow.color;
+      if (m.kind !== "build") continue;
+      const { b, art: bart } = m,
+        top = b.y + 4 - bart.h * 2,
+        left = b.x - bart.w;
+      if (bart.fire) this.px(flameArt(this.calm ? 0 : Math.floor(t * 9) % 3, true), left + bart.fire.x * 2, top + bart.fire.y * 2 + 2);
+      if (bart.stove) this.px(flameArt(this.calm ? 1 : (Math.floor(t * 7) + 1) % 3, false), left + bart.stove.x * 2, top + bart.stove.y * 2 + 6, { alpha: 0.9 });
+      if (bart.lamp && (b.type !== "lamp" || (e.c?.energy || 0) > 0) && night > 0.2) {
+        c.fillStyle = "#ffe7a8";
+        c.fillRect(left + bart.lamp.x * 2 - 2, top + bart.lamp.y * 2 - 4, 6, 8);
+      }
+      if (bart.glow && night > 0.2) {
+        c.fillStyle = bart.glow.color;
         c.globalAlpha = this.calm ? 0.9 : 0.6 + 0.4 * Math.sin(t * 2 + b.x);
-        c.fillRect(left + art.glow.x * 2, top + art.glow.y * 2, 2, 2);
+        c.fillRect(left + bart.glow.x * 2, top + bart.glow.y * 2, 2, 2);
         c.globalAlpha = 1;
       }
     }
     // 烧过的地里的余烬
     if (night > 0.25)
-      for (const [i, m] of this.farmArt.embers.entries()) {
+      for (const [i, m] of art.embers.entries()) {
+        if (m.flame) continue;
         const a = this.calm ? 0.7 : 0.35 + 0.65 * Math.max(0, Math.sin(t * (1.3 + (i % 5) * 0.3) + i));
         c.globalAlpha = a * night;
         c.fillStyle = i % 3 ? "#e5823a" : "#f6b05a";
@@ -690,49 +1077,79 @@ export class Renderer extends GardenRenderer {
   stepFx(e, dt) {
     const s = e.s,
       fx = this.fx,
+      art = this.art,
       R = () => fx.rand(),
       minute = this.vMinute,
       weather = this.vWeather,
-      night = nightness(minute),
-      raining = ["小雨", "暴雨", "酸雨"].includes(weather),
-      wind = weather === "暴雨" ? 50 : raining ? 18 : 8;
+      night = this.indoor ? 0.85 : nightness(minute),
+      raining = RAIN.includes(weather),
+      wind = weather === "暴雨" || weather === "大雪" ? 50 : raining ? 18 : 8,
+      sc = this.camera.scale || 1,
+      view = { x: this.camera.x, y: this.camera.y, w: this.w / sc, h: this.h / sc },
+      near = (x, y, pad = 200) => x > view.x - pad && x < view.x + view.w + pad && y > view.y - pad && y < view.y + view.h + pad;
     this.wx.update(dt, weather, this.calm);
-    this.duskShadow = minute > 960 && minute < 1140 && !raining ? Math.min(1, (minute - 960) / 120) : 0;
+    this.duskShadow = !this.indoor && minute > 960 && minute < 1140 && !raining ? Math.min(1, (minute - 960) / 120) : 0;
+    // 换了地图就把上一张图的烟和叶子清掉
+    if (this.fxRegion !== s.region) {
+      this.fxRegion = s.region;
+      fx.list = [];
+    }
     if (e.paused) return;
     fx.update(dt, wind);
     // 篝火：火星和烟
-    for (const b of s.buildings || []) {
-      if (b.type !== "cook" || b.hp <= 0) continue;
-      const fireX = b.x - 34 + 22 + 2,
-        fireY = b.y + 4 - 48 + 32;
-      for (let i = this.every("spark" + b.id, this.calm ? 0.6 : 0.16, dt); i > 0; i--)
-        fx.add({ x: fireX + (R() - 0.5) * 10, y: fireY - 6, vx: (R() - 0.5) * 18, vy: -36 - R() * 34, t: 0, life: 0.7 + R() * 0.6, color: R() > 0.5 ? "#f6b05a" : "#ffdb8c", layer: "glow", wind: 0.4, kind: "spark" });
-      for (let i = this.every("smoke" + b.id, raining ? 0.8 : 0.45, dt); i > 0; i--)
-        fx.add({ x: fireX + (R() - 0.5) * 6, y: fireY - 14, vx: 4, vy: -16 - R() * 8, t: 0, life: 2.6 + R(), color: "#8a8478", alpha: 0.32, size: 2, grow: 1.2, wind: 1, kind: "smoke" });
+    if (s.region === "farm")
+      for (const b of s.buildings || []) {
+        if (b.type !== "cook" || b.hp <= 0) continue;
+        const fireX = b.x - 34 + 22 + 2,
+          fireY = b.y + 4 - 48 + 32;
+        for (let i = this.every("spark" + b.id, this.calm ? 0.6 : 0.16, dt); i > 0; i--)
+          fx.add({ x: fireX + (R() - 0.5) * 10, y: fireY - 6, vx: (R() - 0.5) * 18, vy: -36 - R() * 34, t: 0, life: 0.7 + R() * 0.6, color: R() > 0.5 ? "#f6b05a" : "#ffdb8c", layer: "glow", wind: 0.4, kind: "spark" });
+        for (let i = this.every("smoke" + b.id, raining ? 0.8 : 0.45, dt); i > 0; i--)
+          fx.add({ x: fireX + (R() - 0.5) * 6, y: fireY - 14, vx: 4, vy: -16 - R() * 8, t: 0, life: 2.6 + R(), color: "#8a8478", alpha: 0.32, size: 2, grow: 1.2, wind: 1, kind: "smoke" });
+      }
+    // 火桶：火星和烟
+    for (const [i, m] of art.embers.entries()) {
+      if (!m.flame || !near(m.x * 2, m.y * 2)) continue;
+      for (let k = this.every("barrel" + i, this.calm ? 0.8 : 0.25, dt); k > 0; k--)
+        fx.add({ x: m.x * 2 + (R() - 0.5) * 6, y: m.y * 2 - 4, vx: (R() - 0.5) * 14, vy: -30 - R() * 26, t: 0, life: 0.6 + R() * 0.5, color: R() > 0.5 ? "#f6b05a" : "#ffdb8c", layer: "glow", wind: 0.4, kind: "spark" });
+      for (let k = this.every("bsmoke" + i, 0.7, dt); k > 0; k--) fx.add({ x: m.x * 2 + (R() - 0.5) * 4, y: m.y * 2 - 10, vx: 3, vy: -14 - R() * 6, t: 0, life: 2.4, color: "#8a8478", alpha: 0.26, size: 2, grow: 1.2, wind: 1, kind: "smoke" });
     }
-    // 烟囱
-    const ch = this.farmArt.chimney;
-    for (let i = this.every("chimney", 0.6, dt); i > 0; i--) fx.add({ x: ch.x * 2 + (R() - 0.5) * 6, y: ch.y * 2, vx: 3, vy: -14 - R() * 6, t: 0, life: 3.2, color: "#9a948a", alpha: 0.28, size: 2, grow: 1.5, wind: 1, kind: "smoke" });
-    // 萤火虫：夜里、不下雨时，在池塘和草边
+    // 烟囱（工厂的大烟囱冒得多）
+    if (!this.indoor)
+      for (const [i, ch] of art.chimneys.entries()) {
+        if (!near(ch.x * 2, ch.y * 2, 400)) continue;
+        const big = !!ch.big;
+        for (let k = this.every("chimney" + i, big ? 0.25 : ch.small ? 1.2 : 0.6, dt); k > 0; k--)
+          fx.add({ x: ch.x * 2 + (R() - 0.5) * (big ? 12 : 6), y: ch.y * 2, vx: 3, vy: -14 - R() * 6, t: 0, life: big ? 4.5 : 3.2, color: big ? "#7d7a72" : "#9a948a", alpha: big ? 0.34 : 0.28, size: big ? 3 : 2, grow: 1.5, wind: 1, kind: "smoke" });
+      }
+    // 地下城：灯下飘着的灰
+    if (this.indoor && this.every("mote", 0.3, dt)) fx.add({ x: view.x + R() * view.w, y: view.y + R() * view.h, vx: (R() - 0.5) * 6, vy: -3 - R() * 3, t: 0, life: 5, color: "#cdd9d8", alpha: 0.35, kind: "dust", wind: 0 });
+    const green = GREEN.has(s.region) && !this.indoor && !this.mood.snowy;
+    // 萤火虫：夜里、不下雨时，在草地上
     const flies = fx.list.filter((p) => p.kind === "firefly").length;
-    if (night > 0.55 && !raining && flies < 22 && this.every("fly", 0.35, dt)) {
-      const spots = [[1240, 700, 220, 110], [180, 760, 260, 120], [1250, 230, 220, 110], [640, 840, 260, 90]],
-        [cx, cy, rx, ry] = spots[Math.floor(R() * spots.length)];
-      fx.add({ x: cx + (R() - 0.5) * rx * 2, y: cy + (R() - 0.5) * ry * 2, vx: (R() - 0.5) * 14, vy: (R() - 0.5) * 10, t: 0, life: 6 + R() * 6, color: "#dcfa8c", layer: "glow", blink: this.calm ? 0 : 2.2 + R() * 2, phase: R() * 6, kind: "firefly", wind: 0.1 });
+    if (green && night > 0.55 && !raining && flies < 22 && this.every("fly", 0.35, dt)) {
+      let x, y;
+      if (s.region === "farm") {
+        const spots = [[1240, 700, 220, 110], [180, 760, 260, 120], [1250, 230, 220, 110], [640, 840, 260, 90]],
+          [cx, cy, rx, ry] = spots[Math.floor(R() * spots.length)];
+        x = cx + (R() - 0.5) * rx * 2;
+        y = cy + (R() - 0.5) * ry * 2;
+      } else {
+        x = view.x + R() * view.w;
+        y = view.y + R() * view.h;
+        const code = art.map[Math.floor(y / 2) * 768 + Math.floor(x / 2)];
+        if (code !== 0 && code !== 10) x = null;
+      }
+      if (x != null) fx.add({ x, y, vx: (R() - 0.5) * 14, vy: (R() - 0.5) * 10, t: 0, life: 6 + R() * 6, color: "#dcfa8c", layer: "glow", blink: this.calm ? 0 : 2.2 + R() * 2, phase: R() * 6, kind: "firefly", wind: 0.1 });
     }
     // 白天偶尔飘下来的树叶
-    if (night < 0.4 && !raining && this.every("leaf", 1.4, dt)) {
-      const view = { x: this.camera.x, y: this.camera.y, w: this.w / this.camera.scale };
-      fx.add({ x: view.x + R() * view.w, y: view.y - 10, vx: 10 + R() * 10, vy: 16 + R() * 10, t: 0, life: 6, color: R() > 0.5 ? "#e5823a" : "#c4ab68", alpha: 0.85, kind: "leaf", wind: 0.6 });
-    }
+    if (green && night < 0.4 && !raining && this.every("leaf", 1.4, dt)) fx.add({ x: view.x + R() * view.w, y: view.y - 10, vx: 10 + R() * 10, vy: 16 + R() * 10, t: 0, life: 6, color: R() > 0.5 ? "#e5823a" : "#c4ab68", alpha: 0.85, kind: "leaf", wind: 0.6 });
     // 高温时的浮尘
-    if (weather === "高温" && this.every("dust", 0.12, dt)) {
-      const view = { x: this.camera.x, y: this.camera.y, w: this.w / this.camera.scale, h: this.h / this.camera.scale };
-      fx.add({ x: view.x + R() * view.w, y: view.y + R() * view.h, vx: 14 + R() * 8, vy: -4, t: 0, life: 3, color: "#efe2b4", alpha: 0.45, kind: "dust", wind: 0.3 });
-    }
-    // 走路扬起的土
+    if (weather === "高温" && this.every("dust", 0.12, dt)) fx.add({ x: view.x + R() * view.w, y: view.y + R() * view.h, vx: 14 + R() * 8, vy: -4, t: 0, life: 3, color: "#efe2b4", alpha: 0.45, kind: "dust", wind: 0.3 });
+    // 走路扬起的土（雪地里是雪沫）
     const p = s.player;
-    if (e.walking && this.every("step", 0.2, dt)) for (let k = 0; k < 2; k++) fx.add({ x: p.x + (R() - 0.5) * 12, y: p.y - 2, vx: (R() - 0.5) * 16, vy: -8 - R() * 6, t: 0, life: 0.45, color: raining ? "#3a2a20" : "#c4ab68", alpha: 0.55, kind: "dust" });
+    if (e.walking && this.every("step", 0.2, dt))
+      for (let k = 0; k < 2; k++) fx.add({ x: p.x + (R() - 0.5) * 12, y: p.y - 2, vx: (R() - 0.5) * 16, vy: -8 - R() * 6, t: 0, life: 0.45, color: this.mood.snowy ? "#f6f8f2" : raining || this.mood.wet ? "#3a2a20" : this.indoor ? "#85857a" : "#c4ab68", alpha: 0.55, kind: "dust" });
     // 浇水的水花
     if (e.actionAnim > 0 && e.currentItem?.() === "water" && this.every("splash", 0.05, dt)) {
       const a = p.facing || 0;

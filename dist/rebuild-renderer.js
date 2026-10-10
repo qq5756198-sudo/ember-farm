@@ -13,8 +13,9 @@ export class Renderer extends FrontierRenderer {
   drawRuins(e){
     super.drawRuins(e);const c=this.ctx,d=OUTPOSTS[e.s.region];
     if(d&&e.r.outposts[e.s.region]>=2){c.save();c.beginPath();c.arc(d.x,d.y,115,0,Math.PI*2);c.fillStyle='#314d3750';c.fill();c.strokeStyle='#b6ce8d90';c.stroke();c.fillStyle='#314d37b5';c.fillRect(d.x-52,d.y-23,150,70);c.strokeStyle='#b6ce8d';c.strokeRect(d.x-52,d.y-23,150,70);this.atlas(e.s.region==='hospital'?14:e.s.region==='residential'?5:7,d.x-28,d.y+32,43,40);this.badge('已恢复 · 防护区补给',d.x+20,d.y-100,'#d9e7b6');c.restore();}
-    if(e.s.region==='warehouse'){c.save();c.fillStyle=e.r.annexOpen?'#51615199':'#26382ddd';c.fillRect(ANNEX.x,ANNEX.y,ANNEX.w,ANNEX.h);c.strokeStyle='#a49769';c.lineWidth=3;c.strokeRect(ANNEX.x,ANNEX.y,ANNEX.w,ANNEX.h);if(e.r.annexOpen){c.fillStyle='#938b61';c.fillRect(1380,808,80,6);}this.text(e.r.annexOpen?'检修间 · 通信核心':'封闭检修间',1395,952,'#e2d5a7',14);c.restore();}
+    if(e.s.region==='warehouse')this.drawAnnex(e);
   }
+  drawAnnex(e){const c=this.ctx;c.save();c.fillStyle=e.r.annexOpen?'#51615199':'#26382ddd';c.fillRect(ANNEX.x,ANNEX.y,ANNEX.w,ANNEX.h);c.strokeStyle='#a49769';c.lineWidth=3;c.strokeRect(ANNEX.x,ANNEX.y,ANNEX.w,ANNEX.h);if(e.r.annexOpen){c.fillStyle='#938b61';c.fillRect(1380,808,80,6);}this.text(e.r.annexOpen?'检修间 · 通信核心':'封闭检修间',1395,952,'#e2d5a7',14);c.restore();}
   drawObject(o,e){
     if(o.type==='radioStation'||o.type==='network')return;
     if(['visitor','outpostResident'].includes(o.type)){this.shadow(o.x,o.y,20);this.sprite(o.icon,o.x,o.y,49,64);this.text(o.name,o.x,o.y-78,'#e7d8b0',13);return;}

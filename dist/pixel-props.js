@@ -631,6 +631,41 @@ const OBJ = {
     P.rect(19, 0, 4, 3, PAL.cloth[1]);
     return done(P.outline());
   },
+  store() {
+    // 储物点：几只木箱、一只铁桶，上面搭着防水布
+    const P = new Pix(40, 30);
+    for (const [x, y, w, h] of [[2, 14, 14, 13], [15, 17, 12, 10], [8, 5, 12, 10]]) {
+      P.rect(x, y, w, h, PAL.soil[2]);
+      P.hline(x, x + w - 1, y, PAL.straw[2]);
+      P.line(x, y + 1, x + w - 1, y + h - 1, PAL.soil[1]);
+      P.vline(x + w - 1, y, y + h - 1, PAL.soil[1]);
+    }
+    P.poly([[6, 6], [24, 3], [26, 12], [5, 14]], PAL.water[2]);
+    P.poly([[8, 7], [22, 5], [23, 10], [8, 12]], PAL.water[3]);
+    P.line(6, 6, 2, 16, PAL.straw[1]);
+    P.line(24, 3, 28, 15, PAL.straw[1]);
+    P.rect(29, 13, 8, 14, RUST[1]);
+    P.vline(29, 13, 26, RUST[2]);
+    P.hline(29, 36, 19, RUST[0]);
+    P.ellipse(33, 13, 4, 1.4, RUST[2]);
+    return done(P.outline());
+  },
+  exitSign() {
+    // 出口路牌：一根木杆、两块指路的箭头板、挂着一盏小灯
+    const P = new Pix(30, 36);
+    P.rect(13, 6, 3, 29, PAL.soil[1]);
+    P.vline(13, 6, 34, PAL.soil[2]);
+    P.poly([[2, 8], [22, 8], [27, 12], [22, 16], [2, 16]], PAL.soil[3]);
+    P.hline(2, 22, 8, PAL.straw[2]);
+    for (let x = 5; x < 20; x += 4) P.rect(x, 11, 2, 2, PAL.straw[4]);
+    P.poly([[28, 19], [8, 19], [3, 23], [8, 27], [28, 27]], PAL.soil[2]);
+    P.hline(8, 28, 19, PAL.soil[3]);
+    for (let x = 10; x < 26; x += 4) P.rect(x, 22, 2, 2, PAL.straw[3]);
+    P.rect(17, 3, 4, 4, PAL.ember[4]);
+    P.set(18, 2, OUTLINE);
+    P.rect(10, 34, 9, 2, PAL.stone[2]);
+    return done(P.outline(), { lamp: { x: 19, y: 5 } });
+  },
   pond() {
     // 钓鱼点：插着一根鱼竿，放着一只桶
     const P = new Pix(22, 26);
@@ -651,7 +686,10 @@ export function buildingArt(type, rotated = false, open = false) {
   if (!BUILD[key]) return null;
   return cached("build:" + key, () => BUILD[key]());
 }
+// 几种地图上的出入口、储物点共用一张图
+const ALIAS = { districtStore: "store", beyondStore: "store", districtExit: "exitSign", beyondExit: "exitSign", beyondGate: "districtGate" };
 export function objectArt(type) {
+  type = ALIAS[type] || type;
   if (!OBJ[type]) return null;
   return cached("obj:" + type, () => {
     const r = OBJ[type]();
@@ -659,7 +697,7 @@ export function objectArt(type) {
   });
 }
 export const hasBuildingArt = (type) => !!BUILD[type];
-export const hasObjectArt = (type) => !!OBJ[type];
+export const hasObjectArt = (type) => !!OBJ[ALIAS[type] || type];
 
 // 火苗：三帧
 export function flameArt(frame, big = true) {

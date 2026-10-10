@@ -14,6 +14,7 @@ export const PAL = {
   night: ["#141a2e", "#1f2a46", "#33446a", "#566a96"],
   cloth: ["#7a2e2a", "#a8433a", "#d2654c", "#3e4a5c", "#5a6b80", "#e9dcc0"],
   skin: ["#7a4a36", "#b0765a", "#dba27c", "#f2c9a0"],
+  snow: ["#8b9ea4", "#aebfc2", "#cdd9d8", "#e6ede9", "#f6f8f2"],
 };
 export const OUTLINE = "#1c140f";
 
@@ -36,6 +37,24 @@ export const css = (c, a = 1) => {
   const [r, g, b] = rgb(c);
   return a >= 1 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},${a})`;
 };
+// 调色板里离某个颜色最近的一格（按人眼对绿最敏感加权）
+let flat = null;
+export function nearestPal(r, g, b) {
+  if (!flat) flat = [...Object.values(PAL).flat(), OUTLINE].map((c) => rgb(c));
+  let best = flat[0],
+    bd = Infinity;
+  for (const c of flat) {
+    const dr = c[0] - r,
+      dg = c[1] - g,
+      db = c[2] - b,
+      d = dr * dr * 2 + dg * dg * 4 + db * db * 3;
+    if (d < bd) {
+      bd = d;
+      best = c;
+    }
+  }
+  return best;
+}
 // 从一组颜色里按 0–1 取一档
 export const ramp = (name, t) => {
   const r = PAL[name];

@@ -39,6 +39,8 @@ export function ambientFor(minute, weather) {
   else if (weather === "暴雨") c = blend(c, [104, 120, 156], day ? 0.62 : 0.3);
   else if (weather === "酸雨") c = blend(c, [178, 200, 104], day ? 0.62 : 0.28);
   else if (weather === "高温") c = blend(c, [255, 246, 222], day ? 0.5 : 0.1);
+  else if (weather === "小雪") c = blend(c, [214, 224, 238], day ? 0.35 : 0.15);
+  else if (weather === "大雪") c = blend(c, [176, 190, 214], day ? 0.55 : 0.25);
   return c;
 }
 // 夜深程度 0（白天）到 1（深夜），用来决定灯亮不亮、萤火虫出不出来
@@ -48,6 +50,8 @@ export function nightness(minute) {
 }
 
 // ---------- 光照图 ----------
+const RINGS = [[1, 0.1], [0.84, 0.11], [0.68, 0.13], [0.52, 0.15], [0.36, 0.18], [0.22, 0.22]],
+  RINGS_SMALL = [[1, 0.16], [0.6, 0.22], [0.3, 0.3]];
 // 光照图按美术像素画（地图 2 个单位一格），放大后自然是一块块的像素光
 export class LightMap {
   constructor() {
@@ -82,7 +86,7 @@ export class LightMap {
       // 四圈色阶：外圈淡、内圈亮
       const [cr, cg, cb] = l.color,
         p = l.power ?? 1;
-      for (const [k, a] of [[1, 0.1], [0.84, 0.11], [0.68, 0.13], [0.52, 0.15], [0.36, 0.18], [0.22, 0.22]]) {
+      for (const [k, a] of l.small ? RINGS_SMALL : RINGS) {
         c.fillStyle = `rgba(${cr},${cg},${cb},${a * p})`;
         c.beginPath();
         c.ellipse(Math.round(lx), Math.round(ly), Math.max(1, Math.round(r * k)), Math.max(1, Math.round(r * k * (l.flat ?? 0.82))), 0, 0, Math.PI * 2);
@@ -195,6 +199,42 @@ export class Weather {
       ctx.fillRect(x, y, 360, 14);
       ctx.fillRect(x + 40, y - 8, 260, 8);
       ctx.fillRect(x - 30, y + 14, 420, 6);
+    }
+    ctx.globalAlpha = 1;
+  }
+  // 下雪：慢慢飘、左右晃，近处的雪片大一点
+  drawSnow(ctx, view, heavy, time, calm) {
+    const n = calm ? 50 : heavy ? 280 : 140,
+      fall = heavy ? 70 : 42;
+    ctx.fillStyle = "#f6f8f2";
+    for (let i = 0; i < n; i++) {
+      const near = hash2(i, 4, 9) > 0.8,
+        speed = (0.6 + hash2(i, 3, 9) * 0.6) * (near ? 1.6 : 1),
+        sy = hash2(i, 2, 9) * (view.h + 100),
+        y = ((sy + time * fall * speed) % (view.h + 100)) - 50,
+        sway = calm ? 0 : Math.sin(time * (0.8 + hash2(i, 5, 9)) + i) * 10,
+        x = ((hash2(i, 1, 9) * (view.w + 100) + sway + time * (heavy ? 26 : 8)) % (view.w + 100)) - 50,
+        wx = Math.round((view.x + x) / 2) * 2,
+        wy = Math.round((view.y + y) / 2) * 2;
+      ctx.globalAlpha = near ? 0.6 : 0.4;
+      ctx.fillStyle = "#8b9ea4";
+      ctx.fillRect(wx, wy + 2, near ? 4 : 2, 2);
+      ctx.globalAlpha = near ? 0.95 : 0.75;
+      ctx.fillStyle = "#f6f8f2";
+      ctx.fillRect(wx, wy, near ? 4 : 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+  // 常年的薄雾（松林）：几条很淡的雾带慢慢飘过
+  drawFog(ctx, view, time, calm, color = "#cfd8cc", strength = 1) {
+    ctx.fillStyle = color;
+    for (let i = 0; i < 7; i++) {
+      const y = Math.round((view.y + ((i * 151 + (calm ? 0 : time * 4)) % (view.h + 160)) - 80) / 2) * 2,
+        x = Math.round((view.x + ((i * 283 + (calm ? 0 : time * 9)) % (view.w + 500)) - 400) / 2) * 2;
+      ctx.globalAlpha = 0.05 * strength;
+      ctx.fillRect(x, y, 420, 18);
+      ctx.fillRect(x + 50, y - 10, 300, 10);
+      ctx.fillRect(x - 40, y + 18, 480, 8);
     }
     ctx.globalAlpha = 1;
   }

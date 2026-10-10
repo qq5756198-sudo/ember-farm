@@ -1,0 +1,1544 @@
+/* 自动生成（scripts/build-visual-css.py）：新画面下把原来的绿色系换成调色板里的木头、锈铁颜色。不要手改。 */
+/* alliance.css */
+body.vis-on .story-progress li {
+  border: 1px solid #625244;
+  background: #352a21;
+}
+/* alliance.css */
+body.vis-on .story-progress li.done {
+  border-color: #869843;
+}
+/* alliance.css */
+body.vis-on .story-lines {
+  border: 1px solid #625244;
+}
+/* alliance.css */
+body.vis-on .story-line {
+  border-top: 1px solid #5a4030;
+  background: #352a21;
+}
+/* alliance.css */
+body.vis-on .story-line.now {
+  background: #4a3627;
+}
+/* alliance.css */
+body.vis-on .xiaoqi {
+  border: 1px solid #a28a4e;
+}
+/* alliance.css */
+body.vis-on .story-choice article {
+  border: 1px solid #a28a4e;
+  background: #352a21;
+}
+/* alliance.css */
+body.vis-on .story-letters .story-letter {
+  background: #352a21;
+}
+/* beyond.css */
+body.vis-on .b-nav {
+  border-right: 1px solid #4a3c30;
+  background: #2a1f17;
+}
+/* beyond.css */
+body.vis-on .b-nav button.selected {
+  background: #4a3c30;
+  border-color: #7d6a3a;
+}
+/* beyond.css */
+body.vis-on .b-nav-divider {
+  background: #5a4030;
+}
+/* beyond.css */
+body.vis-on .b-detail {
+  background: #2a1f17;
+}
+/* beyond.css */
+body.vis-on .b-card {
+  background: #3a2a1f;
+  border: 1px solid #5a4030;
+}
+/* beyond.css */
+body.vis-on .b-facts div {
+  background: #2a1f17;
+}
+/* beyond.css */
+body.vis-on .b-action-list>article,
+body.vis-on .b-storage article,
+body.vis-on .b-job {
+  border-top: 1px solid #5a4030;
+}
+/* beyond.css */
+body.vis-on .b-place {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* beyond.css */
+body.vis-on .b-event-list button {
+  background: #3a2a1f;
+}
+/* beyond.css */
+body.vis-on .b-event-list .selected {
+  background: #4a3c30;
+}
+/* beyond.css */
+body.vis-on .b-promise {
+  background: #2a1f17;
+}
+/* beyond.css */
+body.vis-on .b-choices article {
+  border: 1px solid #7d6a3a;
+}
+/* beyond.css */
+body.vis-on .b-progress {
+  background: #4a3627;
+}
+/* beyond.css */
+body.vis-on .b-log li {
+  border-bottom: 1px solid #5a4030;
+}
+/* beyond.css */
+body.vis-on .b-teaser {
+  background: #4a3627;
+  border: 1px solid #625244;
+}
+/* beyond.css */
+body.vis-on .b-world {
+  border-top: 1px solid #625244;
+}
+/* beyond.css */
+body.vis-on .b-destination {
+  border: 1px solid #625244;
+  background: #3a2a1f;
+}
+/* beyond.css */
+@media(max-width:760px) {
+body.vis-on .b-nav {
+  border-bottom: 1px solid #5a4030;
+}
+}
+/* clarity.css */
+body.vis-on {
+  background: #1c140f;
+}
+/* clarity.css */
+body.vis-on button {
+  border: 1px solid #625244;
+  background: #3a2a1f;
+}
+/* clarity.css */
+body.vis-on button:hover {
+  background: #4a3c30;
+  border-color: #a28a4e;
+}
+/* clarity.css */
+body.vis-on button:disabled {
+  background: #352a21;
+  border-color: #4a3c30;
+}
+/* clarity.css */
+body.vis-on button.active,
+body.vis-on button[aria-pressed=true] {
+  background: #4a3c30;
+  border-color: #c4ab68;
+}
+/* clarity.css */
+body.vis-on input,
+body.vis-on select,
+body.vis-on textarea {
+  border: 1px solid #7d6a3a;
+  background: #241a14;
+}
+/* clarity.css */
+body.vis-on .hud-top {
+  background: #2a1f17;
+  border-bottom: 1px solid #625244;
+}
+/* clarity.css */
+body.vis-on .hud-vitals .bar {
+  background: #1c140f;
+}
+/* clarity.css */
+body.vis-on #world-viewport {
+  background: #352a21;
+}
+/* clarity.css */
+body.vis-on .hud-dock {
+  background: #2a1f17;
+  border-top: 1px solid #7d6a3a;
+}
+/* clarity.css */
+body.vis-on .hot-slot {
+  border: 1px solid #5a4030;
+  background: #241a14;
+}
+/* clarity.css */
+body.vis-on .dock-objective {
+  border-left: 1px solid #625244;
+}
+/* clarity.css */
+body.vis-on .dock-feedback {
+  border-top: 1px solid #4a3627;
+}
+/* clarity.css */
+body.vis-on #context kbd {
+  border: 1px solid #a28a4e;
+}
+/* clarity.css */
+body.vis-on .modal-backdrop {
+  background: rgba(20,15,11,0.863);
+}
+/* clarity.css */
+body.vis-on .modal {
+  background: #2a1f17;
+  border: 1px solid #7d6a3a;
+}
+/* clarity.css */
+body.vis-on .modal-header {
+  background: #352a21;
+  border-bottom: 1px solid #5a4030;
+}
+/* clarity.css */
+body.vis-on .modal-foot {
+  background: #2a1f17;
+  border-top: 1px solid #5a4030;
+}
+/* clarity.css */
+body.vis-on .manual-nav {
+  background: #2a1f17;
+  border-right: 1px solid #5a4030;
+}
+/* clarity.css */
+body.vis-on .manual-nav>button.active {
+  background: #4a3c30;
+  border: 1px solid #7d6a3a;
+}
+/* clarity.css */
+body.vis-on .manual-list {
+  border-right: 1px solid #5a4030;
+  background: #352a21;
+}
+/* clarity.css */
+body.vis-on .manual-row.selected {
+  background: #4a3c30;
+  border-color: #a28a4e;
+}
+/* clarity.css */
+body.vis-on .manual-detail {
+  background: #352a21;
+}
+/* clarity.css */
+body.vis-on .detail-heading {
+  border-bottom: 1px solid #5a4030;
+}
+/* clarity.css */
+body.vis-on .manual-purpose {
+  border-bottom: 1px solid #5a4030;
+}
+/* clarity.css */
+body.vis-on .manual .rebuild-note {
+  background: #3a2a1f;
+  border-left: 2px solid #a28a4e;
+}
+/* clarity.css */
+body.vis-on .manual .frontier-card,
+body.vis-on .manual .camp-card,
+body.vis-on .manual .rebuild-crops article {
+  border-bottom: 1px solid #5a4030;
+}
+/* clarity.css */
+body.vis-on .manual .rebuild-source {
+  border-top: 1px solid #5a4030;
+}
+/* clarity.css */
+body.vis-on .manual .echo-metrics,
+body.vis-on .manual .rebuild-report,
+body.vis-on .manual .camp-summary {
+  background: #2a1f17;
+}
+/* clarity.css */
+body.vis-on .manual .rebuild-result,
+body.vis-on .manual .echo-outcome {
+  background: #2a1f17;
+}
+/* clarity.css */
+body.vis-on .manual .rebuild-checklist li {
+  border-bottom: 1px solid #5a4030;
+}
+/* clarity.css */
+body.vis-on .manual .cost span {
+  background: #2a1f17;
+}
+/* clarity.css */
+body.vis-on .echo-choice-grid>section {
+  background: #2a1f17;
+  border: 1px solid #7d6a3a;
+}
+/* clarity.css */
+body.vis-on .manual .echo-service {
+  border-bottom: 1px solid #5a4030;
+}
+/* clarity.css */
+body.vis-on .recipe {
+  border-color: #625244;
+  background: #2a1f17;
+}
+/* clarity.css */
+body.vis-on .inventory-cell {
+  border-color: #625244;
+}
+/* clarity.css */
+body.vis-on .region-preview {
+  background: #241a14;
+  border: 1px solid #7d6a3a;
+}
+/* clarity.css */
+body.vis-on .inventory-inspector {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* clarity.css */
+@media(max-width:850px) {
+body.vis-on .modal-backdrop {
+  background: #241a14;
+}
+}
+/* clarity.css */
+@media(max-width:850px) {
+body.vis-on .manual-nav {
+  border-bottom: 1px solid #5a4030;
+}
+}
+/* clarity.css */
+@media(pointer:coarse) {
+body.vis-on .touch-controls button {
+  background: #4a3627;
+}
+}
+/* clarity.css */
+@media(pointer:coarse) {
+body.vis-on .touch-actions button {
+  background: #625244;
+  border-color: #a28a4e;
+}
+}
+/* clarity.css */
+@media(pointer:coarse) {
+body.vis-on #joystick {
+  border: 1px solid #a28a4e;
+  background: #2a1f17;
+}
+}
+/* clarity.css */
+@media(pointer:coarse) {
+body.vis-on #joystick span {
+  background: #7d6a3a;
+  border: 1px solid #aab258;
+}
+}
+/* clarity.css */
+@media(max-width:850px) {
+body.vis-on .manual-shortcuts {
+  border-top: 1px solid #625244;
+  background: #2a1f17;
+}
+}
+/* daily.css */
+body.vis-on .daily-art {
+  border: 2px solid #5a4030;
+}
+/* daily.css */
+body.vis-on .daily-tag {
+  border: 1px solid var(--tone, #a28a4e);
+}
+/* daily.css */
+body.vis-on .daily-text {
+  background: #2a1f17;
+}
+/* daily.css */
+body.vis-on .daily-opt {
+  border: 1px solid #625244;
+  background: #352a21;
+}
+/* daily.css */
+body.vis-on .chance i.w {
+  background: #aab258;
+}
+/* daily.css */
+body.vis-on .daily-lines {
+  background: #2a1f17;
+}
+/* daily.css */
+body.vis-on .daily-strip {
+  border: 1px solid #625244;
+}
+/* districts.css */
+body.vis-on .district-nav {
+  background: #241a14;
+  border-right: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-nav button span {
+  background: #4a3627;
+}
+/* districts.css */
+body.vis-on .district-nav button[aria-current=page],
+body.vis-on .district-nav button[aria-pressed=true] {
+  background: #4a3627;
+  border-color: #7d6a3a;
+}
+/* districts.css */
+body.vis-on .district-nav-bottom {
+  border-top: 1px solid #4a3c30;
+}
+/* districts.css */
+body.vis-on .district-list {
+  background: #2a1f17;
+  border-right: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-list-row.selected {
+  background: #4a3c30;
+}
+/* districts.css */
+body.vis-on .district-detail {
+  background: #352a21;
+}
+/* districts.css */
+body.vis-on .district-detail-top {
+  border-bottom: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-result {
+  background: #2a1f17;
+}
+/* districts.css */
+body.vis-on .district-actions {
+  border-top: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-action {
+  border-bottom: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-note,
+body.vis-on .district-next {
+  background: #2a1f17;
+  border: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-facts>div {
+  border-bottom: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-table th {
+  background: #2a1f17;
+}
+/* districts.css */
+body.vis-on .district-table th,
+body.vis-on .district-table td {
+  border-bottom: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-metrics {
+  background: #2a1f17;
+  border: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-job,
+body.vis-on .district-worker {
+  border-bottom: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-power {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* districts.css */
+body.vis-on .district-empty {
+  border: 1px dashed #625244;
+}
+/* districts.css */
+body.vis-on .district-timeline li {
+  border-left: 2px solid #7d6a3a;
+}
+/* districts.css */
+body.vis-on .district-need {
+  border-bottom: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-chain span:not(:nth-child(2)) {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* districts.css */
+body.vis-on .district-report {
+  background: #2a1f17;
+  border: 1px solid #7d6a3a;
+}
+/* districts.css */
+body.vis-on .district-source {
+  border-top: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-world-head {
+  border-bottom: 1px solid #625244;
+}
+/* districts.css */
+body.vis-on .district-pair {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* districts.css */
+body.vis-on .district-origin {
+  border-bottom: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-mark {
+  background: #4a3627;
+}
+/* districts.css */
+body.vis-on .district-launch {
+  background: #4a3627;
+  border: 1px solid #a28a4e;
+}
+/* districts.css */
+@media(max-width:850px) {
+body.vis-on .district-nav {
+  border-bottom: 1px solid #625244;
+}
+}
+/* echoes.css */
+body.vis-on button:disabled {
+  background: #352a21;
+  border-color: #625244;
+}
+/* echoes.css */
+body.vis-on button[aria-pressed=true] {
+  background: #5a4030;
+}
+/* echoes.css */
+body.vis-on .modal {
+  background: #352a21;
+  border: 1px solid #a28a4e;
+  box-shadow: 0 20px 70px rgba(20,15,11,0.871);
+}
+/* echoes.css */
+body.vis-on .modal-header {
+  background: #3a2a1f;
+}
+/* echoes.css */
+body.vis-on .rebuild-card,
+body.vis-on .camp-card,
+body.vis-on .recipe,
+body.vis-on .map-card {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .rebuild-tools {
+  border-top: 1px solid #7d6a3a;
+}
+/* echoes.css */
+body.vis-on .cost span {
+  background: #3a2a1f;
+}
+/* echoes.css */
+body.vis-on .supply-status,
+body.vis-on .echo-status {
+  background: #3a2a1f;
+  border-left: 3px solid #aab258;
+}
+/* echoes.css */
+body.vis-on .echo-details {
+  border-top: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .echo-metrics span,
+body.vis-on .echo-storage-summary span {
+  background: #3a2a1f;
+  border: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .echo-chapters span {
+  border: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .echo-chapters .done {
+  border-color: #aab258;
+}
+/* echoes.css */
+body.vis-on .echo-materials>div {
+  border: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .echo-badge {
+  border: 1px solid #7d6a3a;
+}
+/* echoes.css */
+body.vis-on .echo-choice-grid section,
+body.vis-on .echo-step {
+  border: 1px solid #7d6a3a;
+  background: #352a21;
+}
+/* echoes.css */
+body.vis-on .echo-outcome {
+  background: #4a3627;
+  border-left: 3px solid #aab258;
+}
+/* echoes.css */
+body.vis-on .echo-summary,
+body.vis-on .echo-service {
+  border-bottom: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .echo-work-grid>article {
+  border: 1px solid #625244;
+  background: #352a21;
+}
+/* echoes.css */
+body.vis-on .echo-timeline li {
+  border-left: 2px solid #7d6a3a;
+}
+/* echoes.css */
+body.vis-on .recipe-flow {
+  background: #3a2a1f;
+}
+/* echoes.css */
+body.vis-on .echo-item-source {
+  border-top: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .version {
+  background: rgba(58,42,31,0.941);
+}
+/* farlands.css */
+body.vis-on .far-strip {
+  border: 1px solid #625244;
+  background: #2a1f17;
+}
+/* farlands.css */
+body.vis-on .night-scene {
+  background: linear-gradient(180deg, #151d2a, #2a1f17);
+}
+/* farlands.css */
+body.vis-on .bond-bar {
+  background: #4a3627;
+}
+/* farlands.css */
+body.vis-on .dog-skills li {
+  border: 1px solid #5a4030;
+}
+/* garden.css */
+body.vis-on .g-tag {
+  border: 1px solid #625244;
+}
+/* garden.css */
+body.vis-on .g-tag.give {
+  border-color: #aab258;
+}
+/* garden.css */
+body.vis-on .g-tag.get,
+body.vis-on .g-tag.good {
+  border-color: #aab258;
+}
+/* garden.css */
+body.vis-on .seed-no {
+  background: #4a3c30;
+}
+/* garden.css */
+body.vis-on .care-dial {
+  border: 2px solid #625244;
+}
+/* garden.css */
+body.vis-on .g-today li {
+  border: 1px solid #5a4030;
+}
+/* garden.css */
+body.vis-on .g-today li.ok {
+  border-color: #869843;
+}
+/* garden.css */
+body.vis-on .g-facts {
+  background: #2a1f17;
+}
+/* garden.css */
+body.vis-on .g-stat {
+  border: 1px solid #5a4030;
+}
+/* garden.css */
+body.vis-on .g-days li {
+  border: 1px solid #5a4030;
+}
+/* garden.css */
+body.vis-on .g-table th,
+body.vis-on .g-table td {
+  border-bottom: 1px solid #4a3c30;
+}
+/* garden.css */
+body.vis-on .garden-strip {
+  border: 1px solid #625244;
+  border-left: 4px solid #aab258;
+  background: #2a1f17;
+}
+/* outpost.css */
+body.vis-on .hud-food {
+  border: 1px solid #7d6a3a;
+  background: #352a21;
+}
+/* outpost.css */
+body.vis-on .consequence {
+  border: 1px solid #625244;
+}
+/* outpost.css */
+body.vis-on .consequence div {
+  background: #2a1f17;
+  border-left: 1px solid #4a3c30;
+}
+/* outpost.css */
+body.vis-on .story-choice button[disabled] {
+  background: #4a3c30;
+  border-color: #625244;
+}
+/* outpost.css */
+body.vis-on .portrait {
+  border: 2px solid #7d6a3a;
+  background: #2a1f17;
+}
+/* outpost.css */
+body.vis-on .npc-head {
+  border: 1px solid #7d6a3a;
+  background: #352a21;
+}
+/* outpost.css */
+body.vis-on .outpost-strip {
+  border: 1px solid #625244;
+  background: #2a1f17;
+}
+/* outpost.css */
+body.vis-on .summary-grid div {
+  border: 1px solid #625244;
+  background: #352a21;
+}
+/* outpost.css */
+body.vis-on .ship-row {
+  border-top: 1px solid #4a3c30;
+}
+/* outpost.css */
+body.vis-on .offer {
+  border: 1px solid #a28a4e;
+  background: #352a21;
+}
+/* outpost.css */
+body.vis-on .tag {
+  border: 1px solid #a28a4e;
+}
+/* outpost.css */
+body.vis-on .tag.good {
+  border-color: #aab258;
+}
+/* outpost.css */
+body.vis-on .clue {
+  border: 1px solid #625244;
+  background: #352a21;
+}
+/* outpost.css */
+body.vis-on .review-choices .consequence div {
+  border-top: 1px solid #4a3c30;
+}
+/* outpost.css */
+body.vis-on .msg-log li {
+  border-left: 3px solid #625244;
+  background: #352a21;
+}
+/* outpost.css */
+@media (max-width: 760px) {
+body.vis-on .consequence div {
+  border-top: 1px solid #4a3c30;
+}
+}
+/* player.css */
+body.vis-on .title-screen .modal-backdrop {
+  background: linear-gradient(100deg,rgba(36,26,20,0.933),rgba(42,31,23,0.722));
+}
+/* player.css */
+body.vis-on .modal.welcome {
+  border: 1px solid #7d6a3a;
+  background: linear-gradient(120deg,rgba(58,42,31,0.961),rgba(36,26,20,0.961));
+}
+/* player.css */
+body.vis-on .title-actions {
+  border-left: 1px solid #625244;
+}
+/* player.css */
+body.vis-on .title-actions button {
+  background: #3a2a1f;
+  border-color: #625244;
+}
+/* player.css */
+body.vis-on .title-actions button.primary:disabled {
+  background: #3a2a1f;
+  border-color: #625244;
+}
+/* player.css */
+body.vis-on .title-footer {
+  border-top: 1px solid #625244;
+}
+/* player.css */
+body.vis-on .settings-section {
+  border-top: 1px solid #625244;
+}
+/* player.css */
+body.vis-on .settings-end {
+  border-top: 1px solid #625244;
+}
+/* player.css */
+body.vis-on .archive-row {
+  border-bottom: 1px solid #5a4030;
+}
+/* player.css */
+body.vis-on .journey-card {
+  border-left: 2px solid #c4ab68!important;
+}
+/* player.css */
+@media(max-height:500px) and (min-width:600px) {
+body.vis-on .title-actions {
+  border-left: 1px solid #625244;
+}
+}
+/* rebuild.css */
+body.vis-on .rebuild-tabs {
+  border-bottom: 1px solid #7d6a3a;
+}
+/* rebuild.css */
+body.vis-on .rebuild-page button.active {
+  background: #7d6a3a;
+}
+/* rebuild.css */
+body.vis-on .rebuild-purpose {
+  border-left: 3px solid #aab258;
+  background: #3a2a1f;
+}
+/* rebuild.css */
+body.vis-on .rebuild-card {
+  background: #352a21;
+  border: 1px solid #7d6a3a;
+}
+/* rebuild.css */
+body.vis-on .rebuild-primary {
+  background: #3a2a1f;
+}
+/* rebuild.css */
+body.vis-on .rebuild-result {
+  background: rgba(42,31,23,0.502);
+}
+/* rebuild.css */
+body.vis-on .rebuild-chapters>div {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* rebuild.css */
+body.vis-on .rebuild-chapters .current {
+  background: #4a3c30;
+}
+/* rebuild.css */
+body.vis-on .rebuild-chapters .complete {
+  border-color: #aab258;
+}
+/* rebuild.css */
+body.vis-on .rebuild-note {
+  border-left: 3px solid #c4ab68;
+  background: #4a3627;
+}
+/* rebuild.css */
+body.vis-on .rebuild-crops article {
+  border: 1px solid #7d6a3a;
+  background: #352a21;
+}
+/* rebuild.css */
+body.vis-on .rebuild-contract {
+  border-top: 1px solid #7d6a3a;
+}
+/* rebuild.css */
+body.vis-on .rebuild-find {
+  border-top: 1px solid rgba(125,106,58,0.302);
+}
+/* rebuild.css */
+body.vis-on .rebuild-status {
+  border: 1px solid #a28a4e;
+  background: #4a3c30;
+}
+/* rebuild.css */
+body.vis-on .rebuild-page select {
+  background: #2a1f17;
+  border: 1px solid #a28a4e;
+}
+/* rebuild.css */
+body.vis-on .rebuild-tools {
+  border-top: 1px solid #7d6a3a;
+}
+/* rebuild.css */
+body.vis-on .rebuild-tool-panel {
+  border: 1px solid #7d6a3a;
+  background: #2a1f17;
+}
+/* rebuild.css */
+body.vis-on .rebuild-log li {
+  border-bottom: 1px solid rgba(125,106,58,0.333);
+}
+/* rebuild.css */
+body.vis-on .rebuild-help {
+  border-top: 1px solid #7d6a3a;
+}
+/* rebuild.css */
+body.vis-on .rebuild-report span {
+  background: #4a3627;
+}
+/* rebuild.css */
+body.vis-on .item-purpose {
+  border-left: 2px solid #aab258;
+}
+/* seasons.css */
+body.vis-on .hud-date:hover,
+body.vis-on .hud-date:focus-visible {
+  border-color: #a28a4e;
+  background: #3a2a1f;
+}
+/* seasons.css */
+body.vis-on .handbook-entry.has-new::after {
+  box-shadow: 0 0 0 2px #2a1f17;
+}
+/* seasons.css */
+body.vis-on .patience i {
+  background: #aab258;
+}
+/* seasons.css */
+body.vis-on .calendar li {
+  border: 1px solid #4a3c30;
+  background: #2a1f17;
+}
+/* seasons.css */
+body.vis-on .calendar li.today {
+  background: #352a21;
+}
+/* seasons.css */
+body.vis-on .tag {
+  background: #3a2a1f;
+}
+/* seasons.css */
+body.vis-on .people li {
+  border: 1px solid #4a3c30;
+  background: #2a1f17;
+}
+/* style.css */
+body.vis-on {
+  background: #241a14;
+}
+/* style.css */
+body.vis-on button {
+  border: 1px solid #7d6a3a;
+  background: #4a3627;
+}
+/* style.css */
+body.vis-on button:hover {
+  background: #625244;
+}
+/* style.css */
+body.vis-on .glass {
+  background: linear-gradient(145deg,rgba(58,42,31,0.929),rgba(42,31,23,0.929));
+  border: 1px solid #a28a4e;
+  box-shadow: 0 3px 0 #241a14,0 6px 18px #121b2540;
+}
+/* style.css */
+body.vis-on .version {
+  background: rgba(58,42,31,0.675);
+}
+/* style.css */
+body.vis-on .bar {
+  background: #241a14;
+}
+/* style.css */
+body.vis-on .day-meter {
+  background: #2a1f17;
+}
+/* style.css */
+body.vis-on .quest-track progress::-webkit-progress-bar {
+  background: #241a14;
+}
+/* style.css */
+body.vis-on .quest-track progress::-webkit-progress-value {
+  background: #aab258;
+}
+/* style.css */
+body.vis-on .selected-label {
+  background: rgba(42,31,23,0.851);
+  border: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .hotbar {
+  background: rgba(42,31,23,0.961);
+  border: 2px solid #7d6a3a;
+  box-shadow: 0 3px 0 #241a14,0 5px 20px #121c2470;
+}
+/* style.css */
+body.vis-on .hot-slot {
+  border: 1px solid #625244;
+  background: #4a3627;
+}
+/* style.css */
+body.vis-on .hot-slot:hover {
+  background: #5a4030;
+}
+/* style.css */
+body.vis-on .control-hints kbd {
+  border: 1px solid rgba(125,106,58,0.549);
+  background: rgba(42,31,23,0.729);
+}
+/* style.css */
+body.vis-on .toast {
+  background: rgba(42,31,23,0.922);
+  border-left: 3px solid #aab258;
+  box-shadow: 0 3px 15px rgba(36,26,20,0.4);
+}
+/* style.css */
+body.vis-on .modal {
+  background: #352a21;
+  box-shadow: 0 0 0 4px #2a1f17,0 20px 80px #0c1721c0;
+}
+/* style.css */
+body.vis-on .modal-header {
+  border-bottom: 1px solid rgba(162,138,78,0.333);
+  background: #3a2a1f;
+}
+/* style.css */
+body.vis-on .modal-foot {
+  border-top: 1px solid rgba(162,138,78,0.302);
+}
+/* style.css */
+body.vis-on .tabs button {
+  background: #3a2a1f;
+}
+/* style.css */
+body.vis-on .tabs button.active {
+  background: #5a4030;
+}
+/* style.css */
+body.vis-on .inventory-cell {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* style.css */
+body.vis-on .inventory-cell:hover {
+  background: #4a3c30;
+}
+/* style.css */
+body.vis-on .item-detail {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* style.css */
+body.vis-on .primary {
+  background: #7d6a3a;
+}
+/* style.css */
+body.vis-on .primary:hover {
+  background: #a28a4e;
+}
+/* style.css */
+body.vis-on .recipe {
+  border: 1px solid #625244;
+  background: #2a1f17;
+}
+/* style.css */
+body.vis-on .trade-item {
+  border: 1px solid #625244;
+  background: #352a21;
+}
+/* style.css */
+body.vis-on .qty-input {
+  background: #241a14;
+  border: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .map-card {
+  border: 1px solid #7d6a3a;
+  background: #2a1f17;
+}
+/* style.css */
+body.vis-on .map-card.current {
+  background: #4a3c30;
+}
+/* style.css */
+body.vis-on .welcome .difficulty select {
+  background: #3a2a1f;
+  border: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .settings-row {
+  border-bottom: 1px solid rgba(98,82,68,0.333);
+}
+/* style.css */
+body.vis-on .settings-row select {
+  background: #2a1f17;
+  border: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .skill-card {
+  background: #2a1f17;
+  border: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .loading {
+  background: #352a21;
+}
+/* style.css */
+body.vis-on .note {
+  background: #4a3627;
+}
+/* style.css */
+body.vis-on .search {
+  background: #2a1f17;
+  border: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .camp-tabs {
+  border-bottom: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .camp-tabs button.active {
+  background: #7d6a3a;
+}
+/* style.css */
+body.vis-on .camp-card {
+  border: 1px solid #7d6a3a;
+  background: #2a1f17;
+}
+/* style.css */
+body.vis-on .camp-summary span {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* style.css */
+body.vis-on .forecast>div {
+  background: #3a2a1f;
+  border-top: 3px solid #aab258;
+}
+/* style.css */
+body.vis-on .camp-card select,
+body.vis-on .stall-form input,
+body.vis-on .stall-form select {
+  background: #2a1f17;
+  border: 1px solid #a28a4e;
+}
+/* style.css */
+body.vis-on .story {
+  border-top: 1px solid rgba(98,82,68,0.333);
+}
+/* style.css */
+body.vis-on .stall-form {
+  background: #4a3627;
+}
+/* style.css */
+body.vis-on .frontier-tabs {
+  border-bottom: 1px solid rgba(125,106,58,0.376);
+}
+/* style.css */
+body.vis-on .frontier-tabs button.active,
+body.vis-on .challenge-list button.active {
+  background: #7d6a3a;
+}
+/* style.css */
+body.vis-on .frontier-card {
+  background: rgba(53,42,33,0.788);
+  border: 1px solid rgba(125,106,58,0.396);
+}
+/* style.css */
+body.vis-on .frontier-card select,
+body.vis-on .frontier-card input {
+  background: #2a1f17;
+  border: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .frontier-note {
+  background: rgba(58,42,31,0.502);
+}
+/* style.css */
+body.vis-on .soil-grid button {
+  background: rgba(125,106,58,0.18)*.3));
+  border: 1px solid rgba(125,106,58,0.333);
+}
+/* style.css */
+body.vis-on .furniture-list>div {
+  border-bottom: 1px solid rgba(125,106,58,0.231);
+}
+/* style.css */
+body.vis-on .resident-line {
+  border-top: 1px solid rgba(125,106,58,0.267);
+}
+/* style.css */
+body.vis-on .eco-grid .eco-grass {
+  background: #7d6a3a;
+}
+/* style.css */
+body.vis-on .eco-grid .eco-forest {
+  background: #5a4030;
+}
+/* style.css */
+body.vis-on .species-list>div {
+  border-bottom: 1px solid rgba(125,106,58,0.302);
+}
+/* style.css */
+body.vis-on .pack-grid button.cargo {
+  background: #625244;
+  border-color: #a28a4e;
+}
+/* style.css */
+body.vis-on .pack-grid button {
+  background: #2a1f17;
+}
+/* style.css */
+body.vis-on .kit-list>span {
+  background: #4a3627;
+}
+/* style.css */
+body.vis-on .module-row {
+  border-bottom: 1px solid rgba(125,106,58,0.267);
+}
+/* style.css */
+body.vis-on .circuit-grid {
+  border-right: 4px solid #aab258;
+}
+/* style.css */
+body.vis-on .circuit-grid button {
+  background: #3a2a1f;
+}
+/* style.css */
+body.vis-on .circuit-grid button.powered {
+  background: #625244;
+}
+/* style.css */
+body.vis-on .plant-guide p {
+  border-bottom: 1px solid rgba(125,106,58,0.259);
+}
+/* style.css */
+body.vis-on .photo-grid figure {
+  background: #2a1f17;
+}
+/* style.css */
+body.vis-on .cooking-track {
+  background: #2a1f17;
+  border: 1px solid #a28a4e;
+}
+/* style.css */
+body.vis-on .cook-window {
+  background: #a28a4e;
+}
+/* style.css */
+body.vis-on .cook-window.stir {
+  background: #7d6a3a;
+}
+/* style.css */
+body.vis-on .meal-row {
+  border-bottom: 1px solid rgba(162,138,78,0.333);
+}
+/* style.css */
+body.vis-on .exhibit-slots>div {
+  border: 1px solid #a28a4e;
+  background: #3a2a1f;
+}
+/* supply.css */
+body.vis-on .supply-planner,
+body.vis-on .supply-panel {
+  background: linear-gradient(120deg,#3a2a1f,#352a21);
+}
+/* supply.css */
+body.vis-on .supply-panel select,
+body.vis-on .supply-planner select,
+body.vis-on .supply-panel input {
+  background: #2a1f17;
+  border: 1px solid #7d6a3a;
+}
+/* supply.css */
+body.vis-on .supply-materials article,
+body.vis-on .supply-plan-list article {
+  border: 1px solid #625244;
+  background: rgba(42,31,23,0.502);
+}
+/* supply.css */
+body.vis-on .supply-status,
+body.vis-on .supply-shortage {
+  background: rgba(36,26,20,0.4);
+}
+/* supply.css */
+body.vis-on .supply-panel details {
+  border-top: 1px solid #625244;
+}
+/* supply.css */
+body.vis-on .supply-choice>div {
+  border: 1px solid #625244;
+}
+/* supply.css */
+body.vis-on .supply-choice>div.chosen {
+  background: rgba(90,64,48,0.4);
+}
+/* thief.css */
+body.vis-on .skill-col {
+  border: 1px solid #625244;
+  background: #352a21;
+}
+/* thief.css */
+body.vis-on .skill-thief {
+  border-color: #aab258;
+}
+/* thief.css */
+body.vis-on .skill-xp {
+  background: #4a3c30;
+}
+/* thief.css */
+body.vis-on .skill-xp i {
+  background: #aab258;
+}
+/* thief.css */
+body.vis-on .skill-thief .skill-xp i {
+  background: #aab258;
+}
+/* thief.css */
+body.vis-on .skill-spec {
+  background: #2a1f17;
+}
+/* thief.css */
+body.vis-on .talent {
+  border: 1px solid #5a4030;
+}
+/* thief.css */
+body.vis-on .talent.owned {
+  border-color: #aab258;
+  background: #26331d;
+}
+/* thief.css */
+body.vis-on .odds-chip {
+  border: 1px solid #625244;
+}
+/* thief.css */
+body.vis-on .odds-parts {
+  background: #2a1f17;
+}
+/* thief.css */
+body.vis-on .pocket {
+  border: 1px solid #5a4030;
+}
+/* thief.css */
+body.vis-on .pocket-no {
+  background: #4a3c30;
+}
+/* thief.css */
+body.vis-on .tier-tag.tier-normal {
+  background: #4a3c30;
+}
+/* thief.css */
+body.vis-on .attn-bar {
+  border: 1px solid #625244;
+  background: #2a1f17;
+}
+/* thief.css */
+body.vis-on .pocket-btn.current {
+  border-color: #aab258;
+  box-shadow: 0 0 0 2px rgba(170,178,88,0.2);
+}
+/* thief.css */
+body.vis-on .swing-bar {
+  border: 1px solid #625244;
+  background: #2a1f17;
+}
+/* thief.css */
+body.vis-on .swing-bar .zone {
+  background: rgba(170,178,88,0.333);
+  border-left: 2px solid #aab258;
+  border-right: 2px solid #aab258;
+}
+/* thief.css */
+body.vis-on .swing-bar .marker {
+  box-shadow: 0 0 0 1px #2a1f17;
+}
+/* thief.css */
+body.vis-on .thief-strip {
+  border: 1px solid #625244;
+  border-left: 4px solid #aab258;
+}
+/* wayfinding.css */
+body.vis-on .atlas-layout {
+  background: #2a1f17;
+}
+/* wayfinding.css */
+body.vis-on .atlas-toolbar {
+  border-bottom: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .atlas-scroll {
+  background: #3a2a1f;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node strong {
+  background: rgba(53,42,33,0.91);
+  border: 1px solid #a28a4e;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node small {
+  background: rgba(53,42,33,0.878);
+}
+/* wayfinding.css */
+body.vis-on .atlas-symbol {
+  background: #4a3c30;
+  border: 2px solid #c4ab68;
+  box-shadow: 0 3px 0 #2a1f17;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node.locked .atlas-symbol {
+  background: #3a2a1f;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node.locked strong {
+  border-color: #7d6a3a;
+}
+/* wayfinding.css */
+body.vis-on .atlas-info {
+  background: #352a21;
+  border-left: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .atlas-materials span {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .atlas-primary button:first-child {
+  background: #7d6a3a;
+}
+/* wayfinding.css */
+body.vis-on .atlas-note {
+  border-top: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .atlas-local canvas {
+  border: 1px solid #a28a4e;
+}
+/* wayfinding.css */
+body.vis-on .journal-main {
+  border: 1px solid #a28a4e;
+  background: linear-gradient(135deg,#4a3627,#3a2a1f);
+}
+/* wayfinding.css */
+body.vis-on .journal-next {
+  background: #352a21;
+}
+/* wayfinding.css */
+body.vis-on .journal-steps li>span {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .journal-outcome {
+  border-top: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .journal-options article {
+  border: 1px solid #625244;
+  background: #3a2a1f;
+}
+/* wayfinding.css */
+body.vis-on .journal-extra {
+  border-top: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .journal-catalog article {
+  border-top: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .journal-recipe {
+  background: #4a3627;
+}
+/* wayfinding.css */
+body.vis-on .journal-flow span {
+  background: #2a1f17;
+}
+/* wayfinding.css */
+body.vis-on .journal-job {
+  border-top: 1px solid #7d6a3a;
+}
+/* wayfinding.css */
+body.vis-on .feature-purpose {
+  background: #4a3627;
+}
+/* wayfinding.css */
+body.vis-on .simple-site-other {
+  border-top: 1px solid #625244;
+}
+/* wayfinding.css */
+@media(max-width:850px) {
+body.vis-on .atlas-info {
+  border-top: 1px solid #7d6a3a;
+}
+}
+/* wayfinding.css */
+body.vis-on .atlas-landmark {
+  background: rgba(42,31,23,0.933);
+  border: 1px solid #7d6a3a;
+}
+/* wayfinding.css */
+body.vis-on .atlas-landmark i {
+  background: #c4ab68;
+}
+/* winter.css */
+body.vis-on .alert-item {
+  border: 1px solid #7d6a3a;
+  background: rgba(42,31,23,0.902);
+}
+/* winter.css */
+body.vis-on .alert-item:hover,
+body.vis-on .alert-item:focus-visible {
+  background: rgba(58,42,31,0.902);
+}
+/* winter.css */
+body.vis-on .alert-item::before {
+  background: #7d6a3a;
+}
+/* winter.css */
+body.vis-on .ladder li {
+  border: 1px solid #625244;
+  background: #2a1f17;
+}
+/* winter.css */
+body.vis-on .ladder li.on {
+  background: #aab258;
+  border-color: #aab258;
+}
+/* winter.css */
+body.vis-on .decree-grid article.current,
+body.vis-on .story-choice article.current {
+  background: #352a21;
+}
+/* winter.css */
+body.vis-on .decree-grid .consequence div {
+  border-top: 1px solid #4a3c30;
+}
+/* winter.css */
+body.vis-on .story-choice article.done {
+  border-color: #aab258;
+}
+/* winter.css */
+body.vis-on .collection li {
+  border: 1px solid #4a3c30;
+  background: #2a1f17;
+}
+/* winter.css */
+body.vis-on .collection li.done {
+  border-color: #869843;
+  background: #26331d;
+}
+/* winter.css */
+body.vis-on .collection .bar {
+  background: #3a2a1f;
+}
+/* winter.css */
+body.vis-on .collection .bar i {
+  background: #aab258;
+}

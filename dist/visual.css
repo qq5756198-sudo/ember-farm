@@ -1,4 +1,4 @@
-/* 新画面（样张）：像素字体与界面换皮。只在 body.vis-on 时生效，设置里切回原画面就恢复。
+/* 新画面：像素字体与界面换皮。只在 body.vis-on 时生效，设置里切回原画面就恢复。
    配色只用调色板里的颜色：深色木头 + 锈铁边 + 余烬橙的重点。 */
 @font-face {
   font-family: "Fusion Pixel";
@@ -303,61 +303,6 @@ body.vis-on .modal button:disabled.primary {
   color: #a28a4e;
 }
 
-/* ---------- 样张专用的预览条 ---------- */
-.vis-preview {
-  position: fixed;
-  top: 68px;
-  left: 16px;
-  width: 360px;
-  z-index: 8;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 6px 10px;
-  max-width: calc(100vw - 32px);
-  justify-content: flex-start;
-  padding: 6px 10px;
-  background: #241a14f0;
-  box-shadow: 0 0 0 2px #140f0b, 0 0 0 4px #94502c, 0 0 0 6px #140f0b;
-  font-family: "Fusion Pixel", "Microsoft YaHei", sans-serif;
-  font-size: 12px;
-  color: #f1e3c2;
-}
-.vis-preview b {
-  color: #ffdb8c;
-  font-weight: normal;
-}
-.vis-preview .vp-group {
-  display: flex;
-  gap: 2px;
-}
-.vis-preview button {
-  min-height: 26px;
-  padding: 2px 8px;
-  border: 2px solid #140f0b;
-  border-radius: 0;
-  background: #3a2a1f;
-  box-shadow: inset 2px 2px 0 #5a4030, inset -2px -2px 0 #1c130d;
-  color: #f1e3c2;
-  font: inherit;
-  cursor: pointer;
-}
-.vis-preview button:hover {
-  background: #4a3627;
-}
-.vis-preview button.on {
-  background: #bf5a28;
-  box-shadow: inset 2px 2px 0 #f6b05a, inset -2px -2px 0 #8e3a20;
-  color: #fff3dc;
-}
-.vis-preview.mini .vp-group:not(:last-child) {
-  display: none;
-}
-.vis-preview.mini .vp-group:last-child button:not([data-vp="hide"]) {
-  display: none;
-}
-
 /* 行囊与建造页里还带绿色的几处 */
 body.vis-on .echo-storage-summary span,
 body.vis-on .inventory-inspector,
@@ -374,14 +319,18 @@ body.vis-on .echo-storage-summary b {
   color: #ffdb8c;
 }
 
-body.title-screen .vis-preview {
-  display: none;
+/* 物品格子里的小图换成像素版（排布和原来一样） */
+body.vis-on .item-icon {
+  background-image: var(--vis-sprites, url("assets/sprites.png"));
 }
-body.modal-open .vis-preview {
-  display: none;
+
+/* 世界地图：地形图换成旧纸地图的颜色 */
+body.vis-on .atlas-terrain {
+  filter: sepia(0.6) saturate(0.85) hue-rotate(-12deg) brightness(0.95);
 }
-.vis-preview.old button[data-vp="t"],
-.vis-preview.old button[data-vp="w"] {
-  opacity: 0.45;
-  pointer-events: none;
+body.vis-on .atlas-node strong,
+body.vis-on .atlas-node small {
+  font-family: var(--px);
+  font-weight: normal;
+  border-radius: 0;
 }

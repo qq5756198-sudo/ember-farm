@@ -42,7 +42,7 @@ const ASH = [
 
 const T = { grass: 0, road: 1, track: 2, field: 3, water: 4, shore: 5, sand: 6, ash: 7, scorch: 8, bridge: 9, path: 10, deck: 11 };
 
-function distSeg(px, py, ax, ay, bx, by) {
+export function distSeg(px, py, ax, ay, bx, by) {
   const dx = bx - ax,
     dy = by - ay,
     t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
@@ -293,12 +293,12 @@ function paintScatter(P, map) {
 
 // ---------- 道具 ----------
 // 先在小缓冲里画，再描边、投影、盖上去
-function sprite(w, h, draw) {
+export function sprite(w, h, draw) {
   const S = new Pix(w, h);
   draw(S);
   return S;
 }
-function place(P, S, x, y, opt = {}) {
+export function place(P, S, x, y, opt = {}) {
   // x,y 是脚底中心
   const ox = Math.round(x - S.w / 2),
     oy = Math.round(y - S.h);
@@ -311,7 +311,7 @@ function place(P, S, x, y, opt = {}) {
 }
 
 // 树：活树、秋树、枯树
-function tree(seed, kind = "live", size = 1) {
+export function tree(seed, kind = "live", size = 1) {
   const r = rng(seed),
     R = Math.round(11 + 6 * size + r() * 3),
     W = R * 2 + 8,
@@ -375,7 +375,7 @@ function tree(seed, kind = "live", size = 1) {
     S.outline(OUTLINE, 0.85);
   });
 }
-function rock(seed, w = 12, h = 8) {
+export function rock(seed, w = 12, h = 8) {
   const r = rng(seed);
   return sprite(w + 2, h + 2, (S) => {
     const cx = (w + 2) / 2,
@@ -391,7 +391,7 @@ function rock(seed, w = 12, h = 8) {
     S.outline(OUTLINE, 0.85);
   });
 }
-function bush(seed, R = 6, flowers = null) {
+export function bush(seed, R = 6, flowers = null) {
   const r = rng(seed);
   return sprite(R * 2 + 4, R * 2 + 3, (S) => {
     const cx = R + 2,
@@ -407,7 +407,7 @@ function bush(seed, R = 6, flowers = null) {
   });
 }
 // 生锈的汽车（俯视略带正面）
-function car(seed, sunk = false) {
+export function car(seed, sunk = false) {
   const r = rng(seed);
   return sprite(40, 22, (S) => {
     const body = [PAL.rust[1], PAL.rust[2], PAL.rust[3]],
@@ -437,7 +437,7 @@ function car(seed, sunk = false) {
     S.outline(OUTLINE);
   });
 }
-function drums(seed, n = 3) {
+export function drums(seed, n = 3) {
   const r = rng(seed);
   return sprite(8 * n + 4, 14, (S) => {
     for (let i = 0; i < n; i++) {
@@ -455,7 +455,7 @@ function drums(seed, n = 3) {
     S.outline(OUTLINE);
   });
 }
-function tires(seed) {
+export function tires(seed) {
   return sprite(18, 12, (S) => {
     for (const [x, y] of [[3, 7], [10, 7], [6, 3]]) {
       S.ellipse(x + 2, y + 1, 4, 2.5, PAL.ash[1]);
@@ -466,7 +466,7 @@ function tires(seed) {
     S.outline(OUTLINE);
   });
 }
-function hay(seed) {
+export function hay(seed) {
   return sprite(16, 13, (S) => {
     S.ellipse(8, 7, 7, 5.5, PAL.straw[2]);
     for (let y = 2; y < 13; y++) for (let x = 1; x < 15; x++) if (S.opaque(x, y)) S.set(x, y, dither("straw", 0.75 - ((x - 8) / 14) * 0.6 - ((y - 7) / 11) * 0.5, x, y));
@@ -476,7 +476,7 @@ function hay(seed) {
     S.outline(OUTLINE);
   });
 }
-function woodpile() {
+export function woodpile() {
   return sprite(22, 14, (S) => {
     for (let row = 0; row < 3; row++)
       for (let i = 0; i < 4 - row; i++) {
@@ -490,7 +490,7 @@ function woodpile() {
   });
 }
 // 电线杆：返回小图和杆顶（相对脚底）
-function pole() {
+export function pole() {
   return sprite(14, 48, (S) => {
     S.rect(6, 4, 2, 44, PAL.soil[1]);
     S.vline(6, 4, 47, PAL.soil[2]);
@@ -500,7 +500,7 @@ function pole() {
     S.outline(OUTLINE);
   });
 }
-function billboard() {
+export function billboard() {
   return sprite(46, 34, (S) => {
     for (const x of [8, 36]) {
       S.rect(x, 18, 2, 16, PAL.rust[1]);
@@ -523,7 +523,7 @@ function billboard() {
   });
 }
 // 木栅栏与铁皮围挡
-function fenceWood(P, x0, x1, y, seed = 1) {
+export function fenceWood(P, x0, x1, y, seed = 1) {
   const r = rng(seed);
   for (let x = x0; x <= x1; x++) {
     P.set(x, y - 5, PAL.soil[2]);
@@ -539,7 +539,7 @@ function fenceWood(P, x0, x1, y, seed = 1) {
     P.set(x + 1, y - 10, OUTLINE);
   }
 }
-function fenceScrap(P, x0, x1, y, seed = 2) {
+export function fenceScrap(P, x0, x1, y, seed = 2) {
   const r = rng(seed);
   for (let x = x0; x <= x1; x += 8) {
     const col = r() > 0.35 ? PAL.rust : [PAL.stone[1], PAL.stone[2], PAL.stone[3], PAL.stone[4]],

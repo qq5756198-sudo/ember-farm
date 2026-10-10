@@ -22,10 +22,11 @@ export class Renderer extends DistrictRenderer{
   if(id==='frost'){for(const step of this.visualFootsteps){c.save();c.globalAlpha=(1-(this.time-step.t)/11)*.6;c.translate(step.x,step.y);c.rotate(step.a);rect(-4,-8,8,4,'#667f85');rect(5,3,8,4,'#667f85');c.restore();}for(let i=0;i<5;i++){rect(548+i*173,890,23,3,'#e5ebdc');rect(555+i*173,897,16,2,'#8aa2a3');}}
   if(id==='shelter'){for(const [x,y]of [[190,465],[650,470],[1010,565],[1380,565]]){const flow=(t*17)%42;line(x+flow,y,x+flow+10,y,'#bfcca487',2);line(x+flow+10,y,x+flow+5,y-4,'#bfcca487',2);}}
   if(id==='pinewood'){const forest=e.b?.forest||[];for(let i=0;i<3;i++){const readyDay=Number(forest[i]||0),x=550+i*265,y=770;const cut=readyDay>e.s.day;if(cut){rect(x-13,y-6,27,17,'#79674a');circle(x,y-8,15,'#baa077');circle(x,y-8,9,'#8f7c55');}else{pine(x,y,.55);pine(x+32,y+12,.45);}if(stateOf(e,'pinewood_forest').flags?.['select'+i])rect(x-18,y+19,59,3,'#9cb17b');}}
-  if(id==='shipyard'){const drained=!!stateOf(e,'shipyard_drain').flags?.pump;rect(820,350,155,165,drained?'#9ba38a':'#416c70');rect(824,354,147,157,drained?'#aab098':'#57858a');for(let k=0;k<7;k++){if(drained){rect(829,360+k*21,137,2,'#788c77');rect(834+k*18,355,2,153,'#c0bda0');}else{rect(832+(k%3)*11,365+k*21,104,3,'#81aaa7');rect(824,357+k*22,4,16,'#aac0a6');}}if(drained){rect(831,504,135,4,'#c7c09b');rect(831,358,135,4,'#c7c09b');}}
+  if(id==='shipyard')this.drawDrainPool(e,!!stateOf(e,'shipyard_drain').flags?.pump);
   if(e.f?.dog?.rescued&&e.b?.dog?.mode!=='home'&&!e.objects.some(o=>o.type==='partnerDog'))this.drawObject({type:'partnerDog',icon:40,x:e.f.dog.x,y:e.f.dog.y,name:'麦穗'},e);
   this.drawEventSets(e);
  }
+ drawDrainPool(e,drained){const{rect}=pixelPainter(this.ctx);rect(820,350,155,165,drained?'#9ba38a':'#416c70');rect(824,354,147,157,drained?'#aab098':'#57858a');for(let k=0;k<7;k++){if(drained){rect(829,360+k*21,137,2,'#788c77');rect(834+k*18,355,2,153,'#c0bda0');}else{rect(832+(k%3)*11,365+k*21,104,3,'#81aaa7');rect(824,357+k*22,4,16,'#aac0a6');}}if(drained){rect(831,504,135,4,'#c7c09b');rect(831,358,135,4,'#c7c09b');}}
  drawObject(o,e){
   if(o.type==='beyondEvent'){if(NEAR(o,e.s.player,140))this.badge(o.name,o.x,o.y-121,'#efdb9c');return;}
   if(['beyondPoint','beyondGate','beyondStore','beyondExit'].includes(o.type)){
