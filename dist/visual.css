@@ -21,6 +21,11 @@ body.vis-on {
   --btn-hot: inset 2px 2px 0 #f6b05a, inset -2px -2px 0 #8e3a20;
   background: #140f0b;
 }
+/* 色弱配色打开时，红、绿两个变量还是照色弱配色的来（蓝 = 危险，橙 = 提醒） */
+body.vis-on.a11y-color {
+  --red: #ffb15c;
+  --green: #7cc4ff;
+}
 
 /* ---------- 顶栏与底栏 ---------- */
 body.vis-on .hud-top,
@@ -64,6 +69,14 @@ body.vis-on #time {
   color: #ffdb8c;
   text-shadow: 2px 2px 0 #140f0b;
 }
+/* 窄屏：像素字缩回 12 号，顶栏不挤出屏幕 */
+@media (max-width: 420px) {
+  body.vis-on .hud-brand span:last-child,
+  body.vis-on #time {
+    font-size: 12px;
+    text-shadow: 1px 1px 0 #140f0b;
+  }
+}
 body.vis-on .hud-food,
 body.vis-on .daily-chip {
   border-radius: 0;
@@ -91,6 +104,16 @@ body.vis-on .bar {
   box-shadow: 0 0 0 2px #140f0b, inset 0 0 0 1px #4a3c30;
   overflow: hidden;
 }
+/* 生命、体力、饥饿条的颜色换成调色板里的红、绿、稻草黄 */
+body.vis-on #stat-bars .stat:nth-child(1) .bar i {
+  background-color: #d2654c;
+}
+body.vis-on #stat-bars .stat:nth-child(2) .bar i {
+  background-color: #aab258;
+}
+body.vis-on #stat-bars .stat:nth-child(3) .bar i {
+  background-color: #ddc98c;
+}
 body.vis-on .bar i {
   border-radius: 0;
   background-image: linear-gradient(90deg, transparent 0 calc(100% - 2px), rgba(20, 15, 11, 0.55) calc(100% - 2px)), linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0 2px, transparent 2px);
@@ -98,33 +121,66 @@ body.vis-on .bar i {
 }
 
 /* ---------- 按钮 ---------- */
+/* 所有按钮都是方角 */
 body.vis-on .modal button:not(.atlas-node),
 body.vis-on .hud-dock button,
 body.vis-on .hud-top .hud-settings,
 body.vis-on .hud-top .hud-location {
   border-radius: 0;
+}
+/* 木头按钮的颜色只给普通按钮；带状态（主要、危险、选中、当前、已装……）的按钮保留各自的颜色，下面另有像素版 */
+body.vis-on .modal button:not(.atlas-node, .primary, .danger, .active, .selected, .on, .current, .chosen, .packed, .target, .today, .done, .ready, .warn, .gold, .bad, .good, .ok, .locked, .here),
+body.vis-on .hud-dock button:not(.primary, .danger, .active, .selected, .on, .current, .chosen, .warn, .gold),
+body.vis-on .hud-top .hud-settings,
+body.vis-on .hud-top .hud-location {
   border: 2px solid #140f0b;
   background-color: #3a2a1f;
   box-shadow: var(--btn);
   color: var(--ink);
 }
-body.vis-on .modal button:not(.atlas-node):hover,
-body.vis-on .hud-dock button:hover {
+body.vis-on .modal button:not(.atlas-node, .primary, .danger, .active, .selected, .on, .current, .chosen, .packed, .target, .today, .done, .ready, .warn, .gold, .bad, .good, .ok, .locked, .here):hover,
+body.vis-on .hud-dock button:not(.primary, .danger, .active, .selected, .on, .current, .chosen, .warn, .gold):hover {
   background-color: #4a3627;
 }
 body.vis-on .modal button:not(.atlas-node):active,
 body.vis-on .hud-dock button:active {
   box-shadow: inset -2px -2px 0 #5a4030, inset 2px 2px 0 #1c130d;
 }
-body.vis-on .modal button:not(.atlas-node):disabled {
+/* 选中、当前、开着的：余烬色的底、亮边 */
+body.vis-on .modal button:is(.active, .selected, .on, .current, .chosen, .target, .today):not(.atlas-node),
+body.vis-on .hud-dock button:is(.active, .selected, .on, .current, .chosen):not(.hot-slot) {
+  border: 2px solid #140f0b;
+  background-color: #6a3420;
+  box-shadow: var(--btn-hot);
+  color: #fff3dc;
+}
+/* 危险的操作：暗红 */
+body.vis-on .modal button.danger:not(.atlas-node),
+body.vis-on .hud-dock button.danger {
+  border: 2px solid #140f0b;
+  background-color: #5e2418;
+  box-shadow: inset 2px 2px 0 #a8433a, inset -2px -2px 0 #2e130d;
+  color: #ffdbcf;
+}
+body.vis-on .modal button.danger:not(.atlas-node):hover,
+body.vis-on .hud-dock button.danger:hover {
+  background-color: #7a2e2a;
+}
+/* 用不了的按钮：暗下去、没有立体边 */
+body.vis-on .modal button:not(.atlas-node):disabled,
+body.vis-on .hud-dock button:disabled,
+body.vis-on .modal button:not(.atlas-node):disabled:hover,
+body.vis-on .hud-dock button:disabled:hover {
+  border-color: #241a14;
   background-color: #2a1f17;
-  color: #a28a4e;
+  color: #7d6a3a;
   box-shadow: none;
 }
 body.vis-on .modal button.primary,
 body.vis-on .hud-dock button.primary,
 body.vis-on .modal .primary,
 body.vis-on .handbook-entry {
+  border: 2px solid #140f0b;
   background-color: #bf5a28;
   box-shadow: var(--btn-hot);
   color: #fff3dc;

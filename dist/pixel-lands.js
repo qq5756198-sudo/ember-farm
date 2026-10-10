@@ -479,11 +479,8 @@ function quarantine() {
   lab({ x: 310, y: 50, w: 140, h: 75, doors: [{ at: 0.5, kind: "glass", w: 16 }], wallDeco: [{ type: "sign", w: 40, dy: 3, color: PAL.water[1], ink: PAL.stone[5], neon: [150, 230, 220] }], roofDeco: [{ type: "dish", at: 0.2 }, { type: "antenna", at: 0.8, beacon: true }, { type: "vents", n: 4 }], seed: 532 });
   lab({ x: 520, y: 50, w: 150, h: 75, stripe: PAL.leaf[3], doors: [{ at: 0.7, kind: "glass", w: 12 }], wallDeco: [{ type: "cross", at: 0.2, dy: 4 }], roofDeco: [{ type: "ac", n: 3 }, { type: "tank", at: 0.85 }], seed: 533 });
   lab({ x: 305, y: 235, w: 155, h: 50, wallH: 22, floors: 1, doors: [{ at: 0.5, kind: "glass", w: 14 }], wallDeco: [{ type: "hazard" }], roofDeco: [{ type: "vents", n: 5 }, { type: "solar", at: 0.1, w: 28, h: 8 }], seed: 534 });
-  // 试验温室：一排玻璃顶的小房子
-  for (const [x, w] of [[142, 136], [332, 96], [502, 140]]) H(sc, { x, y: 414, w, h: 46, roof: "glass", wall: "white", wallH: 14, windows: false, doors: [{ at: 0.5, kind: "glass", w: 8, h: 10 }], pipe: false, seed: x });
-  at(sc, 462, () => {
-    for (const [x, w] of [[142, 136], [332, 96], [502, 140]]) for (let i = x + 3; i < x + w - 3; i += 2) for (let y = 449; y < 458; y++) if (hash2(i, y, 3) > 0.4) sc.P.set(i, y, dither("leaf", 0.5 + hash2(i, y, 4) * 0.4, i, y));
-  });
+  // 试验田：三块平的苗床（人能从上面走过去，所以不画成房子），木框里一行行的苗，插着白色编号牌
+  for (const [x, w] of [[142, 136], [332, 96], [502, 140]]) testBed(sc, x, 415, w, 42, x);
   // 帐篷、消毒淋浴、发电机、样本箱、铁丝网
   for (const [x, y] of [[150, 150], [700, 150], [700, 330], [120, 330]]) if (!sc.near(x, y, 14)) at(sc, y, () => tent(sc, x, y, 24, [PAL.stone[5], PAL.stone[4]], "cross"));
   for (const [x, y] of [[268, 300], [520, 300]]) if (!sc.near(x, y, 12)) at(sc, y, () => decon(sc.P, x, y));
@@ -497,6 +494,40 @@ function quarantine() {
   scatter(sc, 120, ["stain", "paper", "crack"], (x, y, c) => c === S.paving);
   sc.flushProps();
   return sc.done({ variant: "quarantine" });
+}
+function testBed(sc, x0, y0, w, h, seed) {
+  sc.area(
+    { x: x0, y: y0, w, h },
+    (x, y) => {
+      const ix = x - x0,
+        iy = y - y0;
+      if (ix === 0 || iy === 0 || ix === w - 1 || iy === h - 1) return OUTLINE;
+      if (ix < 3 || iy < 3 || ix >= w - 3 || iy >= h - 3) return iy === 1 || ix === 1 ? PAL.soil[3] : PAL.soil[2];
+      const col = Math.floor((ix - 3) / 6),
+        row = (ix - 3) % 6;
+      // 每六列一行苗：一棵挨一棵（每四格一棵，中间亮、两边暗），偶尔缺一棵
+      const plant = Math.floor((iy - 3) / 4),
+        k = (iy - 3) % 4;
+      if (row >= 1 && row <= 3 && hash2(col, plant, seed) > 0.05 && !(k === 3 && row !== 2)) {
+        const light = row === 2 ? (k === 1 ? 0.86 : 0.66) : row === 1 ? 0.52 : 0.36;
+        return dither("leaf", light + (hash2(col, plant, seed + 1) - 0.5) * 0.16, x, y);
+      }
+      return dither("soil", 0.1 + hash2(x, y, seed + 2) * 0.14, x, y);
+    },
+    // 记成“沙地”：不撒草、不积水，人照样能走
+    S.sand,
+  );
+  const P = sc.P;
+  // 编号牌：每三行插一块
+  for (let k = 0; x0 + 5 + k * 18 < x0 + w - 4; k++) {
+    const x = x0 + 5 + k * 18;
+    P.vline(x, y0 + 2, y0 + 5, PAL.stone[1]);
+    P.rect(x - 1, y0 - 1, 4, 3, PAL.stone[5]);
+    P.set(x, y0, PAL.water[2]);
+  }
+  // 滴灌管沿着下边
+  P.hline(x0 + 3, x0 + w - 4, y0 + h - 2, PAL.stone[3]);
+  for (let x = x0 + 6; x < x0 + w - 4; x += 6) P.set(x, y0 + h - 2, PAL.water[4]);
 }
 function decon(P, x, y) {
   // 消毒淋浴：铁架子挂着塑料帘
@@ -677,10 +708,12 @@ function pinewood() {
       const x = gx + Math.round((R() - 0.5) * 10),
         y = gy + Math.round((R() - 0.5) * 8);
       if (!clear(x, y) || sc.near(x, y, 30) || sc.inBlock(x, y, 8)) continue;
+      // 空地上能走：松树稀一点（成片的林子在四边），多些灌木、蕨和树桩
       const roll = R();
-      if (roll < 0.34) pineIn(sc, x, y, 6200 + gx * 7 + gy, 0.85 + R() * 0.6);
-      else if (roll < 0.44) bushIn(sc, x, y, 6300 + gx + gy, 4 + Math.floor(R() * 3));
-      else if (roll < 0.5) at(sc, y, () => fern(sc.P, x, y));
+      if (roll < 0.09) pineIn(sc, x, y, 6200 + gx * 7 + gy, 0.85 + R() * 0.6);
+      else if (roll < 0.2) bushIn(sc, x, y, 6300 + gx + gy, 4 + Math.floor(R() * 3));
+      else if (roll < 0.32) at(sc, y, () => fern(sc.P, x, y));
+      else if (roll < 0.35) at(sc, y, () => stump(sc.P, x, y));
     }
   for (const [x, y] of [[300, 30], [360, 22], [410, 34], [700, 30], [40, 60], [60, 100]]) pineIn(sc, x, y, 6400 + x, 1.2);
   border(sc, "pine", 6130, 30);
@@ -990,10 +1023,11 @@ function frost() {
       const x = gx + Math.round((R() - 0.5) * 10),
         y = gy + Math.round((R() - 0.5) * 8);
       if (!clear(x, y) || sc.near(x, y, 30) || sc.inBlock(x, y, 8)) continue;
+      // 空地上能走：雪松稀一点（成片的林子在四边），多些雪堆和石头
       const roll = R();
-      if (roll < 0.22) pineIn(sc, x, y, 6500 + gx * 3 + gy, 0.75 + R() * 0.55, true);
-      else if (roll < 0.34) at(sc, y, () => snowDrift(sc.P, x, y, R));
-      else if (roll < 0.4) at(sc, y, () => snowRock(sc.P, x, y, R));
+      if (roll < 0.08) pineIn(sc, x, y, 6500 + gx * 3 + gy, 0.75 + R() * 0.55, true);
+      else if (roll < 0.22) at(sc, y, () => snowDrift(sc.P, x, y, R));
+      else if (roll < 0.29) at(sc, y, () => snowRock(sc.P, x, y, R));
     }
   for (const [x0, x1, y] of [[120, 300, 136], [470, 690, 136]]) at(sc, y, () => fenceWood(sc.P, x0, x1, y, x0));
   at(sc, 470, () => snowcat(sc.P, 140, 470));

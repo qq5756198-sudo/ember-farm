@@ -18,19 +18,24 @@ export const MAP_MOOD = {
 export function hasMapArt(region) {
   return region === "farm" || !!TABLE[region];
 }
-export function bakeMap(region) {
+// 画好后只留画布和地面种类；逐像素的原始数据很大（每张约 1.5 MB），只有测试要看时才留着
+export function bakeMap(region, { keepPix = false } = {}) {
+  let out = null;
   if (region === "farm") {
     const f = bakeFarm();
-    return {
+    out = {
       ...f,
       chimneys: [f.chimney].filter(Boolean),
       puddles: puddleSpots(f.map),
       mood: {},
     };
+  } else {
+    const make = TABLE[region];
+    if (!make) return null;
+    const art = make();
+    const codes = region === "shelter" ? [] : [S.road, S.paving, S.dirt, S.wood];
+    out = { ...art, puddles: codes.length ? puddlesOn(art.map, codes, region === "courtyard" ? 46 : 34, 900 + region.length * 13) : [], mood: MAP_MOOD[region] || {} };
   }
-  const make = TABLE[region];
-  if (!make) return null;
-  const art = make();
-  const codes = region === "shelter" ? [] : [S.road, S.paving, S.dirt, S.wood];
-  return { ...art, puddles: codes.length ? puddlesOn(art.map, codes, region === "courtyard" ? 46 : 34, 900 + region.length * 13) : [], mood: MAP_MOOD[region] || {} };
+  if (!keepPix) delete out.pix;
+  return out;
 }

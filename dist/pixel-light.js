@@ -165,26 +165,28 @@ export class Weather {
       }
     } else this.nextFlash = 4;
   }
-  // 雨丝：只画在镜头范围内，对齐像素
-  drawRain(ctx, view, weather, time, calm) {
+  // 雨丝：只画在镜头范围内，对齐像素；一段四个像素高，画得快。
+  // skip(x, y) 返回 true 的地方不画（人和感染者身上不挡雨丝，看得清动作）
+  drawRain(ctx, view, weather, time, calm, skip = null) {
     if (!["小雨", "暴雨", "酸雨"].includes(weather)) return;
     const storm = weather === "暴雨",
       acid = weather === "酸雨",
-      n = calm ? 60 : storm ? 380 : 200,
+      n = calm ? 60 : storm ? 260 : 150,
       fall = storm ? 680 : 460,
       slant = storm ? 0.34 : 0.16,
-      len = storm ? 14 : 10;
+      len = storm ? 16 : 12,
+      W = view.w + 200,
+      Hh = view.h + 200;
     ctx.fillStyle = acid ? "#d4e08e" : "#dfeaf2";
     ctx.globalAlpha = storm ? 0.62 : 0.55;
     for (let i = 0; i < n; i++) {
-      const sx = hash2(i, 1, 9) * (view.w + 200),
-        sy = hash2(i, 2, 9) * (view.h + 200),
-        speed = 0.8 + hash2(i, 3, 9) * 0.4,
-        y = ((sy + time * fall * speed) % (view.h + 200)) - 100,
-        x = ((sx - y * slant + time * fall * slant * speed) % (view.w + 200) + view.w + 200) % (view.w + 200) - 100,
+      const speed = 0.8 + hash2(i, 3, 9) * 0.4,
+        y = ((hash2(i, 2, 9) * Hh + time * fall * speed) % Hh) - 100,
+        x = ((((hash2(i, 1, 9) * W - y * slant + time * fall * slant * speed) % W) + W) % W) - 100,
         wx = Math.round((view.x + x) / 2) * 2,
         wy = Math.round((view.y + y) / 2) * 2;
-      for (let k = 0; k < len; k += 2) ctx.fillRect(wx - Math.round(k * slant / 2) * 2, wy + k, 2, 2);
+      if (skip && skip(wx, wy + len / 2)) continue;
+      for (let k = 0; k < len; k += 4) ctx.fillRect(wx - Math.round((k * slant) / 2) * 2, wy + k, 2, 4);
     }
     ctx.globalAlpha = 1;
   }

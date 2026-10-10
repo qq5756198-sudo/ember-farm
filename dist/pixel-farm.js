@@ -55,24 +55,37 @@ function streamDist(x, y) {
   return d;
 }
 const near = (x, y, r) => KEEP.some(([kx, ky]) => Math.hypot(kx - x, ky - y) < r);
+// 到一个方框的距离（方框里是 0）：离得够远就不用一段段地量，结果一样，画得快
+const boxOf = (pts) => ({ x0: Math.min(...pts.map((p) => p[0])), x1: Math.max(...pts.map((p) => p[0])), y0: Math.min(...pts.map((p) => p[1])), y1: Math.max(...pts.map((p) => p[1])) });
+const boxFar = (x, y, x0, y0, x1, y1, reach) => {
+  const dx = Math.max(x0 - x, 0, x - x1),
+    dy = Math.max(y0 - y, 0, y - y1);
+  return dx * dx + dy * dy >= reach * reach;
+};
+const SB = boxOf(LAYOUT.stream);
+// 小路：线段离这个点超过 reach 就当作很远
+const segNear = (x, y, ax, ay, bx, by, reach) => (boxFar(x, y, Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by), reach) ? Infinity : distSeg(x, y, ax, ay, bx, by));
 const inRect = (x, y, r, pad = 0) => x >= r.x0 - pad && x < r.x1 + pad && y >= r.y0 - pad && y < r.y1 + pad;
 
 // ---------- 地形 ----------
 function terrainType(x, y) {
   const L = LAYOUT,
     n = vnoise(x * 0.21, y * 0.21, 3);
-  // 溪流与桥
-  const sd = streamDist(x, y) + (vnoise(x * 0.1, y * 0.1, 9) - 0.5) * 4;
+  // 溪流与桥（离溪流 18 格以外，下面三个判断都不会成立）
+  const sd = boxFar(x, y, SB.x0, SB.y0, SB.x1, SB.y1, 18) ? Infinity : streamDist(x, y) + (vnoise(x * 0.1, y * 0.1, 9) - 0.5) * 4;
   const onBridge = x >= 700 && y >= L.road.y0 - 2 && y <= L.road.y1 + 2;
   if (onBridge && sd < 16) return T.bridge;
   if (sd < 9) return T.water;
   if (sd < 12) return T.shore;
   // 池塘
   const p = L.pond,
-    pd = ((x - p.cx) / p.rx) ** 2 + ((y - p.cy) / p.ry) ** 2 + (fbm(x * 0.05, y * 0.05, 21, 3) - 0.5) * 0.42;
-  if (pd < 1) return T.water;
-  if (pd < 1.14) return T.shore;
-  if (pd < 1.3) return T.sand;
+    pe = ((x - p.cx) / p.rx) ** 2 + ((y - p.cy) / p.ry) ** 2;
+  if (pe < 1.52) {
+    const pd = pe + (fbm(x * 0.05, y * 0.05, 21, 3) - 0.5) * 0.42;
+    if (pd < 1) return T.water;
+    if (pd < 1.14) return T.shore;
+    if (pd < 1.3) return T.sand;
+  }
   // 码头（钓鱼点旁）
   if (x >= 534 && x <= 562 && y >= 382 && y <= 393) return T.deck;
   // 旧公路
@@ -88,16 +101,18 @@ function terrainType(x, y) {
   if (x >= 154 && x <= 174 && y >= 140 && y <= 152) return T.path;
   if (x >= 376 && x <= 396 && y >= 120 && y <= 152) return T.path;
   const worn = (d, w) => d < w + n || (d < w + 3 + n * 2 && hash2(x, y, 51) > 0.5);
-  if (worn(distSeg(x, y, 466, 436, 500, 438), 4)) return T.path;
-  if (worn(distSeg(x, y, 466, 300, 490, 352) + 0, 1.6) || worn(distSeg(x, y, 490, 352, 516, 400), 1.6)) return T.path;
-  if (worn(distSeg(x, y, 354, 290, 400, 284), 1.4) || worn(distSeg(x, y, 400, 284, 438, 286), 1.4)) return T.path;
+  if (worn(segNear(x, y, 466, 436, 500, 438, 10), 4)) return T.path;
+  if (worn(segNear(x, y, 466, 300, 490, 352, 7), 1.6) || worn(segNear(x, y, 490, 352, 516, 400, 7), 1.6)) return T.path;
+  if (worn(segNear(x, y, 354, 290, 400, 284, 7), 1.4) || worn(segNear(x, y, 400, 284, 438, 286, 7), 1.4)) return T.path;
   // 农田（休耕的土）
   const f = L.field,
     edge = (vnoise(x * 0.3, y * 0.3, 8) - 0.5) * 3;
   if (x > f.x0 + edge && x < f.x1 + edge && y > f.y0 + edge && y < f.y1 + edge) return T.field;
   // 烧过的地
   for (const [ax, ay, ar] of ASH) {
-    const d = Math.hypot(x - ax, (y - ay) * 1.3) + (fbm(x * 0.09, y * 0.09, 31, 3) - 0.5) * 14;
+    const base = Math.hypot(x - ax, (y - ay) * 1.3);
+    if (base >= ar + 7) continue;
+    const d = base + (fbm(x * 0.09, y * 0.09, 31, 3) - 0.5) * 14;
     if (d < ar * 0.62) return T.ash;
     if (d < ar) return T.scorch;
   }

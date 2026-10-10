@@ -1,129 +1,1261 @@
-/* 自动生成（scripts/build-visual-css.py）：新画面下把原来的绿色系换成调色板里的木头、锈铁颜色。不要手改。 */
-/* alliance.css */
-body.vis-on .story-progress li {
-  border: 1px solid #625244;
-  background: #352a21;
+/* 自动生成（scripts/build-visual-css.py），不要手改。新画面下的颜色层：按原来样式表的顺序把所有颜色声明抄一遍，
+   绿色系换成调色板里的木头、锈铁和稻草色，选中、危险、警告这些状态之间谁盖谁和原来一样。 */
+/* style.css */
+body.vis-on {
+  color: var(--ink);
 }
-/* alliance.css */
-body.vis-on .story-progress li.done {
-  border-color: #869843;
+/* style.css */
+body.vis-on {
+  background: #241a14;
 }
-/* alliance.css */
-body.vis-on .story-lines {
-  border: 1px solid #625244;
-}
-/* alliance.css */
-body.vis-on .story-line {
-  border-top: 1px solid #5a4030;
-  background: #352a21;
-}
-/* alliance.css */
-body.vis-on .story-line.now {
+/* style.css */
+body.vis-on button {
+  color: inherit;
+  border: 1px solid #7d6a3a;
   background: #4a3627;
 }
-/* alliance.css */
-body.vis-on .xiaoqi {
+/* style.css */
+body.vis-on button:hover {
+  background: #625244;
+}
+/* style.css */
+body.vis-on button:focus-visible {
+  outline: 2px solid var(--gold);
+}
+/* style.css */
+body.vis-on #world {
+  outline: 0;
+}
+/* style.css */
+body.vis-on .glass {
+  background: linear-gradient(145deg,rgba(58,42,31,0.929),rgba(42,31,23,0.929));
   border: 1px solid #a28a4e;
+  box-shadow: 0 3px 0 #241a14,0 6px 18px #121b2540;
 }
-/* alliance.css */
-body.vis-on .story-choice article {
-  border: 1px solid #a28a4e;
-  background: #352a21;
+/* style.css */
+body.vis-on .seed-mark {
+  color: var(--gold);
 }
-/* alliance.css */
-body.vis-on .story-letters .story-letter {
-  background: #352a21;
+/* style.css */
+body.vis-on .version {
+  background: rgba(58,42,31,0.675);
+  color: #ddc98c;
 }
-/* beyond.css */
-body.vis-on .b-nav {
-  border-right: 1px solid #4a3c30;
+/* style.css */
+body.vis-on .stat-name {
+  color: #e9dcc0;
+}
+/* style.css */
+body.vis-on .bar {
+  background: #241a14;
+}
+/* style.css */
+body.vis-on .bar i {
+  background: var(--color);
+}
+/* style.css */
+body.vis-on .stat-value {
+  color: #e9dcc0;
+}
+/* style.css */
+body.vis-on .date-row {
+  color: #d6d9bf;
+}
+/* style.css */
+body.vis-on .date-row strong {
+  color: var(--ink);
+}
+/* style.css */
+body.vis-on .coins {
+  color: var(--gold);
+}
+/* style.css */
+body.vis-on .day-meter {
   background: #2a1f17;
 }
-/* beyond.css */
-body.vis-on .b-nav button.selected {
-  background: #4a3c30;
-  border-color: #7d6a3a;
+/* style.css */
+body.vis-on .day-meter i {
+  background: #e3c586;
 }
-/* beyond.css */
-body.vis-on .b-nav-divider {
-  background: #5a4030;
+/* style.css */
+body.vis-on .quest-title {
+  color: #f2dfad;
 }
-/* beyond.css */
-body.vis-on .b-detail {
-  background: #2a1f17;
+/* style.css */
+body.vis-on .quest-copy {
+  color: #ddc98c;
 }
-/* beyond.css */
-body.vis-on .b-card {
-  background: #3a2a1f;
-  border: 1px solid #5a4030;
+/* style.css */
+body.vis-on .quest-track {
+  color: #ddc98c;
 }
-/* beyond.css */
-body.vis-on .b-facts div {
-  background: #2a1f17;
+/* style.css */
+body.vis-on .quest-track progress::-webkit-progress-bar {
+  background: #241a14;
 }
-/* beyond.css */
-body.vis-on .b-action-list>article,
-body.vis-on .b-storage article,
-body.vis-on .b-job {
-  border-top: 1px solid #5a4030;
+/* style.css */
+body.vis-on .quest-track progress::-webkit-progress-value {
+  background: #aab258;
 }
-/* beyond.css */
-body.vis-on .b-place {
-  background: #2a1f17;
-  border: 1px solid #625244;
+/* style.css */
+body.vis-on .quest-reward {
+  color: #c4ab68;
 }
-/* beyond.css */
-body.vis-on .b-event-list button {
-  background: #3a2a1f;
-}
-/* beyond.css */
-body.vis-on .b-event-list .selected {
-  background: #4a3c30;
-}
-/* beyond.css */
-body.vis-on .b-promise {
-  background: #2a1f17;
-}
-/* beyond.css */
-body.vis-on .b-choices article {
+/* style.css */
+body.vis-on .selected-label {
+  background: rgba(42,31,23,0.851);
   border: 1px solid #7d6a3a;
 }
-/* beyond.css */
-body.vis-on .b-progress {
+/* style.css */
+body.vis-on .selected-label span {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .hotbar {
+  background: rgba(42,31,23,0.961);
+  border: 2px solid #7d6a3a;
+  box-shadow: 0 3px 0 #241a14,0 5px 20px #121c2470;
+}
+/* style.css */
+body.vis-on .hot-slot {
+  border: 1px solid #625244;
   background: #4a3627;
 }
-/* beyond.css */
-body.vis-on .b-log li {
-  border-bottom: 1px solid #5a4030;
+/* style.css */
+body.vis-on .hot-slot:hover {
+  background: #5a4030;
 }
-/* beyond.css */
-body.vis-on .b-teaser {
-  background: #4a3627;
-  border: 1px solid #625244;
+/* style.css */
+body.vis-on .hot-slot.active {
+  outline: 2px solid #e7c47f;
+  background: #6a6a38;
 }
-/* beyond.css */
-body.vis-on .b-world {
-  border-top: 1px solid #625244;
+/* style.css */
+body.vis-on .hot-slot .key {
+  color: #ddc98c;
 }
-/* beyond.css */
-body.vis-on .b-destination {
-  border: 1px solid #625244;
+/* style.css */
+body.vis-on .hot-slot .qty {
+  text-shadow: 1px 1px #000;
+}
+/* style.css */
+body.vis-on .item-icon {
+  background-image: url('assets/sprites.png');
+}
+/* style.css */
+body.vis-on .control-hints {
+  color: #e0e5c5;
+  text-shadow: 0 1px 2px #1c140f;
+}
+/* style.css */
+body.vis-on .control-hints kbd {
+  color: #f0dfb0;
+  border: 1px solid rgba(125,106,58,0.549);
+  background: rgba(42,31,23,0.729);
+}
+/* style.css */
+body.vis-on .toast {
+  background: rgba(42,31,23,0.922);
+  border-left: 3px solid #aab258;
+  box-shadow: 0 3px 15px rgba(36,26,20,0.4);
+}
+/* style.css */
+body.vis-on .toast.warn {
+  border-color: #dd9472;
+}
+/* style.css */
+body.vis-on .toast.gold {
+  border-color: var(--gold);
+}
+/* style.css */
+body.vis-on .modal-backdrop {
+  background: #101b20a8;
+}
+/* style.css */
+body.vis-on .modal {
+  background: #352a21;
+  border: 2px solid #92976b;
+  box-shadow: 0 0 0 4px #2a1f17,0 20px 80px #0c1721c0;
+}
+/* style.css */
+body.vis-on .modal-header {
+  border-bottom: 1px solid rgba(162,138,78,0.333);
   background: #3a2a1f;
 }
-/* beyond.css */
-@media(max-width:760px) {
-body.vis-on .b-nav {
-  border-bottom: 1px solid #5a4030;
+/* style.css */
+body.vis-on .modal-header small {
+  color: #c4ab68;
 }
+/* style.css */
+body.vis-on .modal-header .close {
+  border: none;
+  background: transparent;
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .modal-foot {
+  border-top: 1px solid rgba(162,138,78,0.302);
+  color: #c4ab68;
+}
+/* style.css */
+body.vis-on .tabs button {
+  background: #3a2a1f;
+}
+/* style.css */
+body.vis-on .tabs button.active {
+  color: #f4d8a0;
+  border-color: #b4b577;
+  background: #5a4030;
+}
+/* style.css */
+body.vis-on .inventory-cell {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* style.css */
+body.vis-on .inventory-cell small {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .inventory-cell .count {
+  color: #f0d690;
+}
+/* style.css */
+body.vis-on .inventory-cell:hover {
+  background: #4a3c30;
+}
+/* style.css */
+body.vis-on .section-row h3 {
+  color: #aab258;
+}
+/* style.css */
+body.vis-on .muted {
+  color: #c4ab68;
+}
+/* style.css */
+body.vis-on .item-detail {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* style.css */
+body.vis-on .item-detail h3 {
+  color: #eed8a3;
+}
+/* style.css */
+body.vis-on .item-detail p {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .primary {
+  background: #7d6a3a;
+  color: #fff6d7;
+  border-color: #b7ba79;
+}
+/* style.css */
+body.vis-on .primary:hover {
+  background: #a28a4e;
+}
+/* style.css */
+body.vis-on .danger {
+  background: #573931;
+  border-color: #976453;
+}
+/* style.css */
+body.vis-on .recipe {
+  border: 1px solid #625244;
+  background: #2a1f17;
+}
+/* style.css */
+body.vis-on .recipe h3 {
+  color: #ebddba;
+}
+/* style.css */
+body.vis-on .recipe p {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .cost {
+  color: #c4ab68;
+}
+/* style.css */
+body.vis-on .cost .missing {
+  color: #e29b7e;
+}
+/* style.css */
+body.vis-on .trade-item {
+  border: 1px solid #625244;
+  background: #352a21;
+}
+/* style.css */
+body.vis-on .trade-item small {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .trade-item strong {
+  color: #e3c87d;
+}
+/* style.css */
+body.vis-on .qty-input {
+  background: #241a14;
+  border: 1px solid #7d6a3a;
+  color: #e7e8c4;
+}
+/* style.css */
+body.vis-on .map-card {
+  border: 1px solid #7d6a3a;
+  background: #2a1f17;
+}
+/* style.css */
+body.vis-on .map-card.current {
+  border-color: #d4bb6f;
+  background: #4a3c30;
+}
+/* style.css */
+body.vis-on .map-card h3 {
+  color: #f0dfb5;
+}
+/* style.css */
+body.vis-on .map-card p {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .map-card .risk {
+  color: #ddb078;
+}
+/* style.css */
+body.vis-on .welcome h1 {
+  color: #f0dfb3;
+}
+/* style.css */
+body.vis-on .welcome .subtitle {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .welcome p {
+  color: #e9dcc0;
+}
+/* style.css */
+body.vis-on .welcome .intro-stages {
+  color: #d5c489;
+}
+/* style.css */
+body.vis-on .welcome .difficulty {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .welcome .difficulty select {
+  background: #3a2a1f;
+  color: #e4e8c5;
+  border: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .welcome .hint {
+  color: #c4ab68;
+}
+/* style.css */
+body.vis-on .settings-row {
+  border-bottom: 1px solid rgba(98,82,68,0.333);
+}
+/* style.css */
+body.vis-on .settings-row small {
+  color: #c4ab68;
+}
+/* style.css */
+body.vis-on .settings-row input[type=range] {
+  accent-color: #bcc781;
+}
+/* style.css */
+body.vis-on .settings-row select {
+  background: #2a1f17;
+  color: #e1e5c3;
+  border: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .help-grid {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .help-grid kbd {
+  color: #f0d598;
+}
+/* style.css */
+body.vis-on .skill-card {
+  background: #2a1f17;
+  border: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .skill-card h3 {
+  color: #ecdbaf;
+}
+/* style.css */
+body.vis-on .skill-card p {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .loading {
+  background: #352a21;
+}
+/* style.css */
+body.vis-on .loading-mark {
+  color: var(--gold);
+}
+/* style.css */
+body.vis-on .loading p {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .note {
+  background: #4a3627;
+  border-left: 3px solid #c6ba73;
+  color: #aab258;
+}
+/* style.css */
+body.vis-on .key-resource {
+  color: #ebd093;
+}
+/* style.css */
+body.vis-on .ready {
+  color: #aab258;
+}
+/* style.css */
+body.vis-on .search {
+  background: #2a1f17;
+  border: 1px solid #7d6a3a;
+  color: var(--ink);
+}
+/* style.css */
+body.vis-on .confirm-text {
+  color: #e2b894;
+}
+/* style.css */
+body.vis-on .camp-tabs {
+  border-bottom: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .camp-tabs button.active {
+  background: #7d6a3a;
+  border-color: #d4c980;
+  color: #fff2cb;
+}
+/* style.css */
+body.vis-on .camp-body h3 {
+  color: #efdbac;
+}
+/* style.css */
+body.vis-on .camp-body p {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .camp-card {
+  border: 1px solid #7d6a3a;
+  background: #2a1f17;
+}
+/* style.css */
+body.vis-on .camp-card canvas.item-icon,
+body.vis-on canvas[data-atlas] {
+  background: none;
+}
+/* style.css */
+body.vis-on .camp-summary span {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* style.css */
+body.vis-on .camp-summary b {
+  color: #e6c777;
+}
+/* style.css */
+body.vis-on .forecast>div {
+  background: #3a2a1f;
+  border-top: 3px solid #aab258;
+}
+/* style.css */
+body.vis-on .forecast b {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .forecast strong {
+  color: #f0d59a;
+}
+/* style.css */
+body.vis-on .forecast small {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .camp-card select,
+body.vis-on .stall-form input,
+body.vis-on .stall-form select {
+  background: #2a1f17;
+  color: #efead2;
+  border: 1px solid #a28a4e;
+}
+/* style.css */
+body.vis-on .story {
+  border-top: 1px solid rgba(98,82,68,0.333);
+}
+/* style.css */
+body.vis-on .story b {
+  color: #dbd09f;
+}
+/* style.css */
+body.vis-on .stall-form {
+  background: #4a3627;
+}
+/* style.css */
+body.vis-on .release-label {
+  color: #ead197;
+}
+/* style.css */
+body.vis-on .loading .release-label {
+  color: #ead197;
+}
+/* style.css */
+body.vis-on .feature-number {
+  color: var(--gold);
+}
+/* style.css */
+body.vis-on .frontier-tabs {
+  border-bottom: 1px solid rgba(125,106,58,0.376);
+}
+/* style.css */
+body.vis-on .frontier-tabs button.active,
+body.vis-on .challenge-list button.active {
+  background: #7d6a3a;
+  color: #fff4d0;
+  border-color: #acb481;
+}
+/* style.css */
+body.vis-on .frontier-card {
+  background: rgba(53,42,33,0.788);
+  border: 1px solid rgba(125,106,58,0.396);
+}
+/* style.css */
+body.vis-on .frontier-card h3 {
+  color: #e6d9a6;
+}
+/* style.css */
+body.vis-on .frontier-card p {
+  color: #e9dcc0;
+}
+/* style.css */
+body.vis-on .frontier-card .muted {
+  color: #c4ab68;
+}
+/* style.css */
+body.vis-on .frontier-card label {
+  color: #d0d5b4;
+}
+/* style.css */
+body.vis-on .frontier-card select,
+body.vis-on .frontier-card input {
+  color: #ede7c9;
+  background: #2a1f17;
+  border: 1px solid #7d6a3a;
+}
+/* style.css */
+body.vis-on .frontier-card input::placeholder {
+  color: #c4ab68;
+}
+/* style.css */
+body.vis-on .frontier-note {
+  color: #ddc98c;
+  border-left: 3px solid #b7b57a;
+  background: rgba(58,42,31,0.502);
+}
+/* style.css */
+body.vis-on .feature-num {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .card-foot a {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .soil-grid button {
+  background: rgba(125,106,58,0.18)*.3));
+  border: 1px solid rgba(125,106,58,0.333);
+}
+/* style.css */
+body.vis-on .soil-grid button.selected {
+  outline: 2px solid #e2d28c;
+}
+/* style.css */
+body.vis-on .soil-grid small {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .furniture-list>div {
+  border-bottom: 1px solid rgba(125,106,58,0.231);
+}
+/* style.css */
+body.vis-on .resident-line {
+  border-top: 1px solid rgba(125,106,58,0.267);
+}
+/* style.css */
+body.vis-on .resident-line small {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .canal-grid button.flowing {
+  background: #397d88;
+  color: #aab258;
+  border-color: #9ecad0;
+}
+/* style.css */
+body.vis-on .canal-grid button.dug {
+  background: #64513e;
+}
+/* style.css */
+body.vis-on .eco-grid .eco-polluted {
+  background: #604560;
+  color: #dfbdc9;
+}
+/* style.css */
+body.vis-on .eco-grid .eco-grass {
+  background: #7d6a3a;
+}
+/* style.css */
+body.vis-on .eco-grid .eco-forest {
+  background: #5a4030;
+}
+/* style.css */
+body.vis-on .eco-grid .eco-wetland {
+  background: #416f78;
+}
+/* style.css */
+body.vis-on .eco-grid .eco-field {
+  background: #77583b;
+}
+/* style.css */
+body.vis-on .species-list>div {
+  border-bottom: 1px solid rgba(125,106,58,0.302);
+}
+/* style.css */
+body.vis-on .pack-grid button.packed {
+  background: #66583d;
+  border-color: #b8aa74;
+}
+/* style.css */
+body.vis-on .pack-grid button.cargo {
+  background: #625244;
+  border-color: #a28a4e;
+}
+/* style.css */
+body.vis-on .pack-grid button {
+  background: #2a1f17;
+}
+/* style.css */
+body.vis-on .kit-list>span {
+  background: #4a3627;
+}
+/* style.css */
+body.vis-on .module-row {
+  border-bottom: 1px solid rgba(125,106,58,0.267);
+}
+/* style.css */
+body.vis-on .circuit-grid {
+  border-left: 4px solid #e2c369;
+  border-right: 4px solid #aab258;
+}
+/* style.css */
+body.vis-on .circuit-grid button {
+  color: #cfad69;
+  background: #3a2a1f;
+}
+/* style.css */
+body.vis-on .circuit-grid button.powered {
+  color: #dfeba2;
+  background: #625244;
+}
+/* style.css */
+body.vis-on .clue-row {
+  border-left: 2px solid #c0b37f;
+}
+/* style.css */
+body.vis-on .plant-guide p {
+  border-bottom: 1px solid rgba(125,106,58,0.259);
+}
+/* style.css */
+body.vis-on .plant-guide small {
+  color: #c4ab68;
+}
+/* style.css */
+body.vis-on .photo-grid figure {
+  background: #2a1f17;
+  border: 1px solid #8a8159;
+}
+/* style.css */
+body.vis-on .demo-nav {
+  border: 1px solid #b7a46b88;
+  background: #554a2b40;
+}
+/* style.css */
+body.vis-on .demo-nav span {
+  color: #c9cdb0;
+}
+/* style.css */
+body.vis-on .demo-start small {
+  color: #ddc98c;
+}
+/* style.css */
+body.vis-on .cooking-track {
+  background: #2a1f17;
+  border: 1px solid #a28a4e;
+}
+/* style.css */
+body.vis-on .cook-window {
+  background: #a28a4e;
+}
+/* style.css */
+body.vis-on .cook-window.add {
+  background: #b89550;
+}
+/* style.css */
+body.vis-on .cook-window.stir {
+  background: #7d6a3a;
+}
+/* style.css */
+body.vis-on .cooking-track i {
+  background: #fff1c7;
+  box-shadow: 0 0 6px #fff3b2;
+}
+/* style.css */
+body.vis-on .meal-row {
+  border-bottom: 1px solid rgba(162,138,78,0.333);
+}
+/* style.css */
+body.vis-on .exhibit-slots>div {
+  border: 1px solid #a28a4e;
+  background: #3a2a1f;
+}
+/* style.css */
+body.vis-on .frontier-tabs button:focus-visible,
+body.vis-on .frontier-card button:focus-visible {
+  outline: 2px solid #f2da92;
+}
+/* rebuild.css */
+body.vis-on .rebuild-heading small {
+  color: #ddc98c;
+}
+/* rebuild.css */
+body.vis-on .rebuild-heading strong {
+  color: #efdfa9;
+}
+/* rebuild.css */
+body.vis-on .rebuild-tabs {
+  border-bottom: 1px solid #7d6a3a;
+}
+/* rebuild.css */
+body.vis-on .rebuild-page button.active {
+  background: #7d6a3a;
+  border-color: #d8c184;
+  color: #fff0c4;
+}
+/* rebuild.css */
+body.vis-on .rebuild-purpose {
+  border-left: 3px solid #aab258;
+  background: #3a2a1f;
+}
+/* rebuild.css */
+body.vis-on .rebuild-purpose b {
+  color: #e7d79e;
+}
+/* rebuild.css */
+body.vis-on .rebuild-purpose p {
+  color: #ddc98c;
+}
+/* rebuild.css */
+body.vis-on .rebuild-card {
+  background: #352a21;
+  border: 1px solid #7d6a3a;
+}
+/* rebuild.css */
+body.vis-on .rebuild-card h3 {
+  color: #eedaa4;
+}
+/* rebuild.css */
+body.vis-on .rebuild-card h4 {
+  color: #e8dcb8;
+}
+/* rebuild.css */
+body.vis-on .rebuild-card p {
+  color: #ddc98c;
+}
+/* rebuild.css */
+body.vis-on .rebuild-card .muted {
+  color: #c4ab68;
+}
+/* rebuild.css */
+body.vis-on .rebuild-primary {
+  border-top: 3px solid #d5bc72;
+  background: #3a2a1f;
+}
+/* rebuild.css */
+body.vis-on .rebuild-result {
+  border-left: 3px solid #d4b971;
+  background: rgba(42,31,23,0.502);
+}
+/* rebuild.css */
+body.vis-on .rebuild-result b {
+  color: #e4d498;
+}
+/* rebuild.css */
+body.vis-on .rebuild-checklist li {
+  color: #e9dcc0;
+}
+/* rebuild.css */
+body.vis-on .rebuild-checklist li.done {
+  color: #aab258;
+}
+/* rebuild.css */
+body.vis-on .rebuild-chapters>div {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* rebuild.css */
+body.vis-on .rebuild-chapters small,
+body.vis-on .rebuild-chapters span {
+  color: #c4ab68;
+}
+/* rebuild.css */
+body.vis-on .rebuild-chapters b {
+  color: #d4d8b6;
+}
+/* rebuild.css */
+body.vis-on .rebuild-chapters .current {
+  background: #4a3c30;
+  border-color: #d3bb73;
+}
+/* rebuild.css */
+body.vis-on .rebuild-chapters .complete {
+  border-color: #aab258;
+}
+/* rebuild.css */
+body.vis-on .rebuild-note {
+  color: #ddc98c;
+  border-left: 3px solid #c4ab68;
+  background: #4a3627;
+}
+/* rebuild.css */
+body.vis-on .rebuild-crops article {
+  border: 1px solid #7d6a3a;
+  background: #352a21;
+}
+/* rebuild.css */
+body.vis-on .rebuild-crops b {
+  color: #e9d9a7;
+}
+/* rebuild.css */
+body.vis-on .rebuild-crops p {
+  color: #ddc98c;
+}
+/* rebuild.css */
+body.vis-on .rebuild-crops small {
+  color: #ddc98c;
+}
+/* rebuild.css */
+body.vis-on .rebuild-contract {
+  border-top: 1px solid #7d6a3a;
+}
+/* rebuild.css */
+body.vis-on .rebuild-contract b {
+  color: #e1d4a0;
+}
+/* rebuild.css */
+body.vis-on .rebuild-find {
+  border-top: 1px solid rgba(125,106,58,0.302);
+}
+/* rebuild.css */
+body.vis-on .rebuild-find>span {
+  color: #e4d5a9;
+}
+/* rebuild.css */
+body.vis-on .rebuild-find small {
+  color: #ddc98c;
+}
+/* rebuild.css */
+body.vis-on .rebuild-status {
+  color: #aab258;
+  border: 1px solid #a28a4e;
+  background: #4a3c30;
+}
+/* rebuild.css */
+body.vis-on .rebuild-page label {
+  color: #e9dcc0;
+}
+/* rebuild.css */
+body.vis-on .rebuild-page select {
+  background: #2a1f17;
+  color: #efe8ca;
+  border: 1px solid #a28a4e;
+}
+/* rebuild.css */
+body.vis-on .rebuild-tools {
+  border-top: 1px solid #7d6a3a;
+}
+/* rebuild.css */
+body.vis-on .rebuild-tools>b {
+  color: #aab258;
+}
+/* rebuild.css */
+body.vis-on .rebuild-tool-panel {
+  border: 1px solid #7d6a3a;
+  background: #2a1f17;
+}
+/* rebuild.css */
+body.vis-on .rebuild-source {
+  color: #c4ab68;
+}
+/* rebuild.css */
+body.vis-on .rebuild-source a {
+  color: #aab258;
+}
+/* rebuild.css */
+body.vis-on .rebuild-log li {
+  border-bottom: 1px solid rgba(125,106,58,0.333);
+  color: #ddc98c;
+}
+/* rebuild.css */
+body.vis-on .rebuild-log small {
+  color: #c4ab68;
+}
+/* rebuild.css */
+body.vis-on .rebuild-help {
+  border-top: 1px solid #7d6a3a;
+}
+/* rebuild.css */
+body.vis-on .rebuild-help summary {
+  color: #aab258;
+}
+/* rebuild.css */
+body.vis-on .rebuild-report span {
+  color: #ddc98c;
+  background: #4a3627;
+}
+/* rebuild.css */
+body.vis-on .rebuild-report b {
+  color: #e7ce8b;
+}
+/* rebuild.css */
+body.vis-on .rebuild-map-status {
+  color: #aab258;
+}
+/* rebuild.css */
+body.vis-on .item-purpose {
+  color: #dbd8aa!important;
+  border-left: 2px solid #aab258;
+}
+/* rebuild.css */
+body.vis-on .quest-next {
+  color: #d5d4a5;
+}
+/* supply.css */
+body.vis-on .supply-planner,
+body.vis-on .supply-panel {
+  border-color: #867951;
+  background: linear-gradient(120deg,#3a2a1f,#352a21);
+}
+/* supply.css */
+body.vis-on .supply-tag {
+  color: #edcf87;
+}
+/* supply.css */
+body.vis-on .supply-form label,
+body.vis-on .supply-picker {
+  color: #e9dcc0;
+}
+/* supply.css */
+body.vis-on .supply-panel select,
+body.vis-on .supply-planner select,
+body.vis-on .supply-panel input {
+  background: #2a1f17;
+  color: #f0e6cb;
+  border: 1px solid #7d6a3a;
+}
+/* supply.css */
+body.vis-on .supply-materials article,
+body.vis-on .supply-plan-list article {
+  border: 1px solid #625244;
+  background: rgba(42,31,23,0.502);
+}
+/* supply.css */
+body.vis-on .supply-materials small {
+  color: #ddc98c;
+}
+/* supply.css */
+body.vis-on .supply-done {
+  color: #aab258;
+}
+/* supply.css */
+body.vis-on .supply-status,
+body.vis-on .supply-shortage {
+  border-left: 3px solid #cdb976;
+  background: rgba(36,26,20,0.4);
+}
+/* supply.css */
+body.vis-on .supply-panel details {
+  border-top: 1px solid #625244;
+}
+/* supply.css */
+body.vis-on .supply-panel summary {
+  color: #ecd397;
+}
+/* supply.css */
+body.vis-on .supply-choice>div {
+  border: 1px solid #625244;
+}
+/* supply.css */
+body.vis-on .supply-choice>div.chosen {
+  border-color: #d8bd76;
+  background: rgba(90,64,48,0.4);
+}
+/* supply.css */
+body.vis-on .supply-planner .missing {
+  color: #f1aa85;
+}
+/* echoes.css */
+body.vis-on button:disabled {
+  color: #ddc98c;
+  background: #352a21;
+  border-color: #625244;
+}
+/* echoes.css */
+body.vis-on button:focus-visible,
+body.vis-on input:focus-visible,
+body.vis-on select:focus-visible,
+body.vis-on summary:focus-visible,
+body.vis-on a:focus-visible {
+  outline: 3px solid #ffe0a1;
+}
+/* echoes.css */
+body.vis-on .primary {
+  background: #796136;
+  color: #fff8e7;
+  border-color: #dabc7a;
+}
+/* echoes.css */
+body.vis-on .primary:hover {
+  background: #907440;
+}
+/* echoes.css */
+body.vis-on button[aria-pressed=true] {
+  background: #5a4030;
+  border-color: #dfbf7f;
+  color: #fff0c7;
+}
+/* echoes.css */
+body.vis-on a {
+  color: #e1d195;
+}
+/* echoes.css */
+body.vis-on .modal {
+  background: #352a21;
+  border: 1px solid #a28a4e;
+  box-shadow: 0 20px 70px rgba(20,15,11,0.871);
+}
+/* echoes.css */
+body.vis-on .modal-header {
+  background: #3a2a1f;
+}
+/* echoes.css */
+body.vis-on .modal-header small {
+  color: #ddc98c;
+}
+/* echoes.css */
+body.vis-on .modal-foot {
+  color: #ddc98c;
+}
+/* echoes.css */
+body.vis-on .modal-content p,
+body.vis-on .modal-content .muted,
+body.vis-on .recipe p {
+  color: #ddc98c;
+}
+/* echoes.css */
+body.vis-on .modal-content small {
+  color: #ddc98c;
+}
+/* echoes.css */
+body.vis-on .rebuild-card,
+body.vis-on .camp-card,
+body.vis-on .recipe,
+body.vis-on .map-card {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .rebuild-tools {
+  border-top: 1px solid #7d6a3a;
+}
+/* echoes.css */
+body.vis-on .cost {
+  color: #aab258;
+}
+/* echoes.css */
+body.vis-on .cost span {
+  background: #3a2a1f;
+}
+/* echoes.css */
+body.vis-on .cost .missing,
+body.vis-on .missing {
+  color: #ffb99f;
+}
+/* echoes.css */
+body.vis-on .supply-status,
+body.vis-on .echo-status {
+  background: #3a2a1f;
+  border-left: 3px solid #aab258;
+}
+/* echoes.css */
+body.vis-on .echo-details {
+  border-top: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .echo-details summary,
+body.vis-on .echo-history summary,
+body.vis-on details>summary {
+  color: #e9d4a2;
+}
+/* echoes.css */
+body.vis-on .echo-main {
+  border-top: 3px solid #dfbf7f;
+}
+/* echoes.css */
+body.vis-on .echo-metrics span,
+body.vis-on .echo-storage-summary span {
+  background: #3a2a1f;
+  border: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .echo-metrics b,
+body.vis-on .echo-storage-summary b {
+  color: #edcc8a;
+}
+/* echoes.css */
+body.vis-on .echo-chapters span {
+  border: 1px solid #625244;
+  color: #e9dcc0;
+}
+/* echoes.css */
+body.vis-on .echo-chapters .done {
+  border-color: #aab258;
+  color: #aab258;
+}
+/* echoes.css */
+body.vis-on .echo-materials>div {
+  border: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .echo-toolbar>span {
+  color: #ddc98c;
+}
+/* echoes.css */
+body.vis-on .echo-focused {
+  border-color: #e5c585;
+}
+/* echoes.css */
+body.vis-on .echo-number {
+  color: #dfbf7f;
+}
+/* echoes.css */
+body.vis-on .echo-badge {
+  border: 1px solid #7d6a3a;
+  color: #aab258;
+}
+/* echoes.css */
+body.vis-on .echo-choice-grid section,
+body.vis-on .echo-step {
+  border: 1px solid #7d6a3a;
+  background: #352a21;
+}
+/* echoes.css */
+body.vis-on .echo-choice-grid dt,
+body.vis-on .echo-work-grid dt {
+  color: #ddc98c;
+}
+/* echoes.css */
+body.vis-on .echo-choice-grid dd,
+body.vis-on .echo-work-grid dd {
+  color: #f0ead4;
+}
+/* echoes.css */
+body.vis-on .echo-reason {
+  color: #f2c3a3;
+}
+/* echoes.css */
+body.vis-on .echo-outcome {
+  background: #4a3627;
+  border-left: 3px solid #aab258;
+}
+/* echoes.css */
+body.vis-on .echo-summary,
+body.vis-on .echo-service {
+  border-bottom: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .echo-summary span {
+  color: #ddc98c;
+}
+/* echoes.css */
+body.vis-on .echo-work-grid>article {
+  border: 1px solid #625244;
+  background: #352a21;
+}
+/* echoes.css */
+body.vis-on .echo-timeline li {
+  border-left: 2px solid #7d6a3a;
+  color: #ddc98c;
+}
+/* echoes.css */
+body.vis-on .echo-timeline li.done {
+  border-color: #dbbe7e;
+  color: #f2deaf;
+}
+/* echoes.css */
+body.vis-on .echo-history li {
+  color: #efe2b4;
+}
+/* echoes.css */
+body.vis-on .echo-history li.warn {
+  color: #f0bca1;
+}
+/* echoes.css */
+body.vis-on .echo-history li.gold {
+  color: #e9d29a;
+}
+/* echoes.css */
+body.vis-on .echo-step progress {
+  accent-color: #aab258;
+}
+/* echoes.css */
+body.vis-on .recipe-flow {
+  background: #3a2a1f;
+}
+/* echoes.css */
+body.vis-on .echo-item-source {
+  border-top: 1px solid #625244;
+}
+/* echoes.css */
+body.vis-on .version {
+  color: #f2ddb1;
+  background: rgba(58,42,31,0.941);
+}
+/* echoes.css */
+body.vis-on .echo-rule {
+  background: #382f22;
+  border: 1px solid #a58c5d;
+  color: #f4deb2;
 }
 /* clarity.css */
 body.vis-on {
   background: #1c140f;
+  color: var(--ink);
 }
 /* clarity.css */
 body.vis-on button {
   border: 1px solid #625244;
   background: #3a2a1f;
+  color: var(--ink);
 }
 /* clarity.css */
 body.vis-on button:hover {
@@ -133,13 +1265,53 @@ body.vis-on button:hover {
 /* clarity.css */
 body.vis-on button:disabled {
   background: #352a21;
+  color: #a28a4e;
   border-color: #4a3c30;
+}
+/* clarity.css */
+body.vis-on button:focus-visible,
+body.vis-on a:focus-visible,
+body.vis-on summary:focus-visible,
+body.vis-on input:focus-visible,
+body.vis-on select:focus-visible {
+  outline: 3px solid #efc190;
+}
+/* clarity.css */
+body.vis-on button.primary {
+  background: #c18b5b;
+  border-color: #dda36d;
+  color: #251d17;
+}
+/* clarity.css */
+body.vis-on button.primary:hover {
+  background: #dcab7b;
+}
+/* clarity.css */
+body.vis-on button.primary:disabled {
+  background: #51483b;
+  color: #b8b09e;
+  border-color: #6c614f;
+}
+/* clarity.css */
+body.vis-on button.danger {
+  background: #563930;
+  border-color: #936256;
 }
 /* clarity.css */
 body.vis-on button.active,
 body.vis-on button[aria-pressed=true] {
   background: #4a3c30;
   border-color: #c4ab68;
+  color: #aab258;
+}
+/* clarity.css */
+body.vis-on a {
+  color: #e0bb94;
+}
+/* clarity.css */
+body.vis-on small,
+body.vis-on .muted {
+  color: var(--dim);
 }
 /* clarity.css */
 body.vis-on input,
@@ -147,6 +1319,11 @@ body.vis-on select,
 body.vis-on textarea {
   border: 1px solid #7d6a3a;
   background: #241a14;
+  color: var(--ink);
+}
+/* clarity.css */
+body.vis-on progress {
+  accent-color: #c4ab68;
 }
 /* clarity.css */
 body.vis-on .hud-top {
@@ -154,12 +1331,59 @@ body.vis-on .hud-top {
   border-bottom: 1px solid #625244;
 }
 /* clarity.css */
+body.vis-on .hud-brand {
+  border: 0;
+  background: none;
+}
+/* clarity.css */
+body.vis-on .hud-brand small {
+  color: #d6ac7b;
+}
+/* clarity.css */
+body.vis-on .brand-mark {
+  color: #dda36d;
+}
+/* clarity.css */
+body.vis-on .hud-vitals .stat-name {
+  color: #ddc98c;
+}
+/* clarity.css */
+body.vis-on .hud-vitals .stat-value {
+  color: #f0eee5;
+}
+/* clarity.css */
 body.vis-on .hud-vitals .bar {
   background: #1c140f;
 }
 /* clarity.css */
+body.vis-on .bar i {
+  background: var(--color);
+}
+/* clarity.css */
+body.vis-on .hud-coins {
+  color: #ddbc86;
+}
+/* clarity.css */
+body.vis-on .hud-location {
+  border: 0;
+  background: transparent;
+}
+/* clarity.css */
+body.vis-on .hud-location span:last-child {
+  color: #c4ab68;
+}
+/* clarity.css */
+body.vis-on .hud-settings {
+  background: transparent;
+  border-color: transparent;
+}
+/* clarity.css */
 body.vis-on #world-viewport {
   background: #352a21;
+}
+/* clarity.css */
+body.vis-on #world {
+  outline: none;
 }
 /* clarity.css */
 body.vis-on .hud-dock {
@@ -167,21 +1391,113 @@ body.vis-on .hud-dock {
   border-top: 1px solid #7d6a3a;
 }
 /* clarity.css */
+body.vis-on .handbook-entry small {
+  color: #352a21;
+}
+/* clarity.css */
+body.vis-on .dock-menu>div button {
+  background: transparent;
+  border-color: transparent;
+}
+/* clarity.css */
+body.vis-on #selected-label {
+  color: #e1c8a8;
+}
+/* clarity.css */
+body.vis-on #selected-label span {
+  color: #c4ab68;
+}
+/* clarity.css */
+body.vis-on .hotbar {
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+/* clarity.css */
 body.vis-on .hot-slot {
   border: 1px solid #5a4030;
   background: #241a14;
 }
 /* clarity.css */
+body.vis-on .hot-slot.active {
+  outline: none;
+  border: 2px solid #dcad77;
+  background: #494a32;
+}
+/* clarity.css */
+body.vis-on .hot-slot .key {
+  color: #c3c5b4;
+}
+/* clarity.css */
+body.vis-on .hot-slot .qty {
+  text-shadow: 1px 1px #111;
+}
+/* clarity.css */
 body.vis-on .dock-objective {
+  border: 0;
   border-left: 1px solid #625244;
+  background: transparent;
+}
+/* clarity.css */
+body.vis-on .dock-objective>b {
+  color: #efc796;
 }
 /* clarity.css */
 body.vis-on .dock-feedback {
   border-top: 1px solid #4a3627;
 }
 /* clarity.css */
+body.vis-on .dock-feedback button {
+  background: transparent;
+  border: 0;
+}
+/* clarity.css */
+body.vis-on #context {
+  color: #aab258;
+}
+/* clarity.css */
 body.vis-on #context kbd {
   border: 1px solid #a28a4e;
+  color: #e9c796;
+}
+/* clarity.css */
+body.vis-on #horde-warning {
+  color: #ffc0a0;
+}
+/* clarity.css */
+body.vis-on #building-banner {
+  color: #f0cd96;
+}
+/* clarity.css */
+body.vis-on #fishing-status {
+  color: #aab258;
+}
+/* clarity.css */
+body.vis-on #buff-summary {
+  color: #ddc98c;
+}
+/* clarity.css */
+body.vis-on .dock-hints {
+  color: #a28a4e;
+}
+/* clarity.css */
+body.vis-on #event-entry {
+  color: #e0bb94;
+}
+/* clarity.css */
+body.vis-on .toast {
+  background: none;
+  box-shadow: none;
+  border: 0;
+  color: #e9dcc0;
+}
+/* clarity.css */
+body.vis-on .toast.warn {
+  color: #ffc3aa;
+}
+/* clarity.css */
+body.vis-on .toast.gold {
+  color: #eed1a0;
 }
 /* clarity.css */
 body.vis-on .modal-backdrop {
@@ -191,11 +1507,21 @@ body.vis-on .modal-backdrop {
 body.vis-on .modal {
   background: #2a1f17;
   border: 1px solid #7d6a3a;
+  box-shadow: 0 16px 64px #0005;
 }
 /* clarity.css */
 body.vis-on .modal-header {
   background: #352a21;
   border-bottom: 1px solid #5a4030;
+}
+/* clarity.css */
+body.vis-on .modal-header .close {
+  background: transparent;
+  border: 0;
+}
+/* clarity.css */
+body.vis-on .modal-content {
+  scrollbar-color: #7d6a3a #2a1f17;
 }
 /* clarity.css */
 body.vis-on .modal-foot {
@@ -208,9 +1534,32 @@ body.vis-on .manual-nav {
   border-right: 1px solid #5a4030;
 }
 /* clarity.css */
+body.vis-on .manual-label {
+  color: #c4ab68;
+}
+/* clarity.css */
+body.vis-on .manual-nav>button {
+  border-color: transparent;
+  background: transparent;
+}
+/* clarity.css */
 body.vis-on .manual-nav>button.active {
   background: #4a3c30;
   border: 1px solid #7d6a3a;
+  color: #f1e3c3;
+}
+/* clarity.css */
+body.vis-on .nav-index {
+  color: #c4ab68;
+}
+/* clarity.css */
+body.vis-on .manual-nav button small {
+  color: #d9bc87;
+}
+/* clarity.css */
+body.vis-on .manual-nav-bottom button {
+  background: transparent;
+  border: 0;
 }
 /* clarity.css */
 body.vis-on .manual-list {
@@ -218,25 +1567,90 @@ body.vis-on .manual-list {
   background: #352a21;
 }
 /* clarity.css */
+body.vis-on .list-heading small {
+  color: #b5b89a;
+}
+/* clarity.css */
+body.vis-on .list-heading h3 {
+  color: #eee6d1;
+}
+/* clarity.css */
+body.vis-on .list-heading p {
+  color: #c4ab68;
+}
+/* clarity.css */
+body.vis-on .manual-row {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #f1e3c2;
+}
+/* clarity.css */
+body.vis-on .manual-row small {
+  color: #c4ab68;
+}
+/* clarity.css */
+body.vis-on .manual-row>span {
+  color: #bcab87;
+}
+/* clarity.css */
 body.vis-on .manual-row.selected {
   background: #4a3c30;
   border-color: #a28a4e;
+  color: #f4dfba;
+}
+/* clarity.css */
+body.vis-on .manual-row.selected small {
+  color: #ced0b1;
 }
 /* clarity.css */
 body.vis-on .manual-detail {
   background: #352a21;
+  outline: none;
 }
 /* clarity.css */
 body.vis-on .detail-heading {
   border-bottom: 1px solid #5a4030;
 }
 /* clarity.css */
+body.vis-on .detail-heading small {
+  color: #c4ab68;
+}
+/* clarity.css */
+body.vis-on .detail-heading h3 {
+  color: #f0e2c5;
+}
+/* clarity.css */
+body.vis-on .detail-scroll {
+  scrollbar-color: #7d6a3a #2a1f17;
+}
+/* clarity.css */
 body.vis-on .manual-purpose {
+  color: #ddc98c;
   border-bottom: 1px solid #5a4030;
+}
+/* clarity.css */
+body.vis-on .rebuild-page .rebuild-card,
+body.vis-on .rebuild-tool-panel,
+body.vis-on .manual .frontier-card,
+body.vis-on .manual .camp-card {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+/* clarity.css */
+body.vis-on .manual .rebuild-card h3,
+body.vis-on .manual .frontier-card h3,
+body.vis-on .camp-body h3 {
+  color: #edd4ad;
+}
+/* clarity.css */
+body.vis-on .manual .rebuild-card p {
+  color: #ddc98c;
 }
 /* clarity.css */
 body.vis-on .manual .rebuild-note {
   background: #3a2a1f;
+  border: 0;
   border-left: 2px solid #a28a4e;
 }
 /* clarity.css */
@@ -246,8 +1660,13 @@ body.vis-on .manual .rebuild-crops article {
   border-bottom: 1px solid #5a4030;
 }
 /* clarity.css */
+body.vis-on .manual .rebuild-crops article {
+  background: transparent;
+}
+/* clarity.css */
 body.vis-on .manual .rebuild-source {
   border-top: 1px solid #5a4030;
+  color: #c4ab68;
 }
 /* clarity.css */
 body.vis-on .manual .echo-metrics,
@@ -256,13 +1675,36 @@ body.vis-on .manual .camp-summary {
   background: #2a1f17;
 }
 /* clarity.css */
+body.vis-on .manual .echo-metrics span,
+body.vis-on .manual .rebuild-report span,
+body.vis-on .manual .camp-summary span {
+  background: none;
+  border: 0;
+  color: #c4ab68;
+}
+/* clarity.css */
+body.vis-on .manual .echo-metrics b,
+body.vis-on .manual .rebuild-report b,
+body.vis-on .manual .camp-summary b {
+  color: #e2be85;
+}
+/* clarity.css */
 body.vis-on .manual .rebuild-result,
 body.vis-on .manual .echo-outcome {
   background: #2a1f17;
+  border-left: 2px solid #bbaa76;
 }
 /* clarity.css */
 body.vis-on .manual .rebuild-checklist li {
   border-bottom: 1px solid #5a4030;
+}
+/* clarity.css */
+body.vis-on .manual summary {
+  color: #e9dcc0;
+}
+/* clarity.css */
+body.vis-on .cost .missing {
+  color: #f1ad98;
 }
 /* clarity.css */
 body.vis-on .manual .cost span {
@@ -274,8 +1716,22 @@ body.vis-on .echo-choice-grid>section {
   border: 1px solid #7d6a3a;
 }
 /* clarity.css */
+body.vis-on .event-list .manual-row .event-status {
+  color: #c7b58d;
+}
+/* clarity.css */
+body.vis-on .manual .echo-reason {
+  color: #f0b7a0;
+}
+/* clarity.css */
+body.vis-on .manual .echo-step {
+  background: transparent;
+  border: 0;
+}
+/* clarity.css */
 body.vis-on .manual .echo-service {
   border-bottom: 1px solid #5a4030;
+  background: none;
 }
 /* clarity.css */
 body.vis-on .recipe {
@@ -283,8 +1739,24 @@ body.vis-on .recipe {
   background: #2a1f17;
 }
 /* clarity.css */
+body.vis-on .recipe h3 {
+  color: #e7d4b2;
+}
+/* clarity.css */
+body.vis-on .recipe p {
+  color: #ddc98c;
+}
+/* clarity.css */
 body.vis-on .inventory-cell {
   border-color: #625244;
+}
+/* clarity.css */
+body.vis-on .welcome .release-label {
+  color: #e1b98c;
+}
+/* clarity.css */
+body.vis-on .release-label {
+  color: #e1b98c;
 }
 /* clarity.css */
 body.vis-on .region-preview {
@@ -292,9 +1764,26 @@ body.vis-on .region-preview {
   border: 1px solid #7d6a3a;
 }
 /* clarity.css */
+body.vis-on .modal-foot button {
+  border: 0;
+  background: transparent;
+  color: #dbc29a;
+}
+/* clarity.css */
 body.vis-on .inventory-inspector {
   background: #2a1f17;
   border: 1px solid #625244;
+}
+/* clarity.css */
+body.vis-on .inventory-inspector .item-detail {
+  border: 0;
+  background: none;
+}
+/* clarity.css */
+@media(max-width:850px) {
+body.vis-on .dock-objective {
+  border: 0;
+}
 }
 /* clarity.css */
 @media(max-width:850px) {
@@ -304,8 +1793,22 @@ body.vis-on .modal-backdrop {
 }
 /* clarity.css */
 @media(max-width:850px) {
+body.vis-on .modal,
+body.vis-on .modal.frontier-modal {
+  border: 0;
+}
+}
+/* clarity.css */
+@media(max-width:850px) {
 body.vis-on .manual-nav {
+  border-right: 0;
   border-bottom: 1px solid #5a4030;
+}
+}
+/* clarity.css */
+@media(max-width:850px) {
+body.vis-on .manual-list {
+  border: 0;
 }
 }
 /* clarity.css */
@@ -319,6 +1822,14 @@ body.vis-on .touch-controls button {
 body.vis-on .touch-actions button {
   background: #625244;
   border-color: #a28a4e;
+}
+}
+/* clarity.css */
+@media(pointer:coarse) {
+body.vis-on .touch-actions #touch-use {
+  background: #a5784d;
+  border-color: #d5aa73;
+  color: #fff0d4;
 }
 }
 /* clarity.css */
@@ -342,49 +1853,38 @@ body.vis-on .manual-shortcuts {
   background: #2a1f17;
 }
 }
-/* daily.css */
-body.vis-on .daily-art {
-  border: 2px solid #5a4030;
-}
-/* daily.css */
-body.vis-on .daily-tag {
-  border: 1px solid var(--tone, #a28a4e);
-}
-/* daily.css */
-body.vis-on .daily-text {
-  background: #2a1f17;
-}
-/* daily.css */
-body.vis-on .daily-opt {
-  border: 1px solid #625244;
-  background: #352a21;
-}
-/* daily.css */
-body.vis-on .chance i.w {
-  background: #aab258;
-}
-/* daily.css */
-body.vis-on .daily-lines {
-  background: #2a1f17;
-}
-/* daily.css */
-body.vis-on .daily-strip {
-  border: 1px solid #625244;
-}
 /* districts.css */
 body.vis-on .district-nav {
   background: #241a14;
   border-right: 1px solid #5a4030;
 }
 /* districts.css */
+body.vis-on .district-nav-title {
+  color: #efe2c3;
+}
+/* districts.css */
+body.vis-on .district-nav-title small {
+  color: #c4ab68;
+}
+/* districts.css */
+body.vis-on .district-nav button {
+  border: 1px solid transparent;
+  background: transparent;
+}
+/* districts.css */
 body.vis-on .district-nav button span {
   background: #4a3627;
+  color: #aab258;
 }
 /* districts.css */
 body.vis-on .district-nav button[aria-current=page],
 body.vis-on .district-nav button[aria-pressed=true] {
   background: #4a3627;
   border-color: #7d6a3a;
+}
+/* districts.css */
+body.vis-on .district-nav-caption {
+  color: #c4ab68;
 }
 /* districts.css */
 body.vis-on .district-nav-bottom {
@@ -396,8 +1896,26 @@ body.vis-on .district-list {
   border-right: 1px solid #5a4030;
 }
 /* districts.css */
+body.vis-on .district-list-title h3 {
+  color: #efe3c9;
+}
+/* districts.css */
+body.vis-on .district-list-title p {
+  color: #ddc98c;
+}
+/* districts.css */
+body.vis-on .district-list-row {
+  border-color: transparent;
+  background: transparent;
+}
+/* districts.css */
 body.vis-on .district-list-row.selected {
   background: #4a3c30;
+  border-color: var(--district);
+}
+/* districts.css */
+body.vis-on .district-number {
+  color: var(--district);
 }
 /* districts.css */
 body.vis-on .district-detail {
@@ -408,8 +1926,33 @@ body.vis-on .district-detail-top {
   border-bottom: 1px solid #5a4030;
 }
 /* districts.css */
+body.vis-on .district-scroll h2 {
+  color: #f0e3c8;
+}
+/* districts.css */
+body.vis-on .district-scroll h3 {
+  color: #e5cfaa;
+}
+/* districts.css */
+body.vis-on .district-scroll p {
+  color: #ddc98c;
+}
+/* districts.css */
+body.vis-on .district-kicker {
+  color: var(--district);
+}
+/* districts.css */
 body.vis-on .district-result {
+  border-left: 3px solid var(--district);
   background: #2a1f17;
+}
+/* districts.css */
+body.vis-on .district-result b {
+  color: var(--district);
+}
+/* districts.css */
+body.vis-on .district-action-meta {
+  color: #ddc98c;
 }
 /* districts.css */
 body.vis-on .district-actions {
@@ -420,17 +1963,46 @@ body.vis-on .district-action {
   border-bottom: 1px solid #5a4030;
 }
 /* districts.css */
+body.vis-on .district-action b {
+  color: #efe2c4;
+}
+/* districts.css */
+body.vis-on .district-reason {
+  color: #ebbc98!important;
+}
+/* districts.css */
+body.vis-on .district-reason.done {
+  color: #aab258!important;
+}
+/* districts.css */
+body.vis-on .district-error {
+  color: #ffc0ae!important;
+}
+/* districts.css */
 body.vis-on .district-note,
 body.vis-on .district-next {
   background: #2a1f17;
   border: 1px solid #5a4030;
 }
 /* districts.css */
+body.vis-on .district-caption {
+  color: #c4ab68!important;
+}
+/* districts.css */
 body.vis-on .district-facts>div {
   border-bottom: 1px solid #5a4030;
 }
 /* districts.css */
+body.vis-on .district-facts dt {
+  color: #c4ab68;
+}
+/* districts.css */
+body.vis-on .district-facts dd {
+  color: #e2dfc9;
+}
+/* districts.css */
 body.vis-on .district-table th {
+  color: #c4ab68;
   background: #2a1f17;
 }
 /* districts.css */
@@ -439,9 +2011,22 @@ body.vis-on .district-table td {
   border-bottom: 1px solid #5a4030;
 }
 /* districts.css */
+body.vis-on .district-form label,
+body.vis-on .district-field {
+  color: #ddc98c;
+}
+/* districts.css */
 body.vis-on .district-metrics {
   background: #2a1f17;
   border: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-metrics b {
+  color: #dbc18b;
+}
+/* districts.css */
+body.vis-on .district-metrics span {
+  color: #ddc98c;
 }
 /* districts.css */
 body.vis-on .district-job,
@@ -454,16 +2039,36 @@ body.vis-on .district-power {
   border: 1px solid #625244;
 }
 /* districts.css */
+body.vis-on .district-power b {
+  color: #aab258;
+}
+/* districts.css */
 body.vis-on .district-empty {
   border: 1px dashed #625244;
+}
+/* districts.css */
+body.vis-on .district-empty>span {
+  color: #a28a4e;
+}
+/* districts.css */
+body.vis-on .district-empty p {
+  color: #ddc98c;
 }
 /* districts.css */
 body.vis-on .district-timeline li {
   border-left: 2px solid #7d6a3a;
 }
 /* districts.css */
+body.vis-on .district-timeline span {
+  color: #c4ab68;
+}
+/* districts.css */
 body.vis-on .district-need {
   border-bottom: 1px solid #5a4030;
+}
+/* districts.css */
+body.vis-on .district-chain {
+  color: #daceaa;
 }
 /* districts.css */
 body.vis-on .district-chain span:not(:nth-child(2)) {
@@ -478,10 +2083,23 @@ body.vis-on .district-report {
 /* districts.css */
 body.vis-on .district-source {
   border-top: 1px solid #5a4030;
+  color: #c4ab68;
 }
 /* districts.css */
 body.vis-on .district-world-head {
   border-bottom: 1px solid #625244;
+}
+/* districts.css */
+body.vis-on .district-world-head small {
+  color: #ddc98c;
+}
+/* districts.css */
+body.vis-on .district-world-head h3 {
+  color: #efdfbd;
+}
+/* districts.css */
+body.vis-on .district-world-head p {
+  color: #ddc98c;
 }
 /* districts.css */
 body.vis-on .district-pair {
@@ -493,8 +2111,43 @@ body.vis-on .district-origin {
   border-bottom: 1px solid #5a4030;
 }
 /* districts.css */
+body.vis-on .district-origin>span {
+  color: #c4ab68;
+}
+/* districts.css */
+body.vis-on .district-pair-line {
+  color: #c4ab68;
+}
+/* districts.css */
 body.vis-on .district-mark {
   background: #4a3627;
+  border: 1px solid var(--district);
+  color: var(--district);
+}
+/* districts.css */
+body.vis-on .district-new h3 {
+  color: #ecdfbd;
+}
+/* districts.css */
+body.vis-on .district-new small {
+  color: var(--district);
+}
+/* districts.css */
+body.vis-on .district-state {
+  color: #ddc98c;
+}
+/* districts.css */
+body.vis-on .district-pair p {
+  color: #ddc98c;
+}
+/* districts.css */
+body.vis-on .district-meter span,
+body.vis-on .district-pair>small {
+  color: #ddc98c;
+}
+/* districts.css */
+body.vis-on .district-legend {
+  color: #ddc98c;
 }
 /* districts.css */
 body.vis-on .district-launch {
@@ -507,263 +2160,42 @@ body.vis-on .district-nav {
   border-bottom: 1px solid #625244;
 }
 }
-/* echoes.css */
-body.vis-on button:disabled {
-  background: #352a21;
-  border-color: #625244;
-}
-/* echoes.css */
-body.vis-on button[aria-pressed=true] {
-  background: #5a4030;
-}
-/* echoes.css */
-body.vis-on .modal {
-  background: #352a21;
-  border: 1px solid #a28a4e;
-  box-shadow: 0 20px 70px rgba(20,15,11,0.871);
-}
-/* echoes.css */
-body.vis-on .modal-header {
-  background: #3a2a1f;
-}
-/* echoes.css */
-body.vis-on .rebuild-card,
-body.vis-on .camp-card,
-body.vis-on .recipe,
-body.vis-on .map-card {
-  background: #2a1f17;
-  border: 1px solid #625244;
-}
-/* echoes.css */
-body.vis-on .rebuild-tools {
-  border-top: 1px solid #7d6a3a;
-}
-/* echoes.css */
-body.vis-on .cost span {
-  background: #3a2a1f;
-}
-/* echoes.css */
-body.vis-on .supply-status,
-body.vis-on .echo-status {
-  background: #3a2a1f;
-  border-left: 3px solid #aab258;
-}
-/* echoes.css */
-body.vis-on .echo-details {
-  border-top: 1px solid #625244;
-}
-/* echoes.css */
-body.vis-on .echo-metrics span,
-body.vis-on .echo-storage-summary span {
-  background: #3a2a1f;
-  border: 1px solid #625244;
-}
-/* echoes.css */
-body.vis-on .echo-chapters span {
-  border: 1px solid #625244;
-}
-/* echoes.css */
-body.vis-on .echo-chapters .done {
-  border-color: #aab258;
-}
-/* echoes.css */
-body.vis-on .echo-materials>div {
-  border: 1px solid #625244;
-}
-/* echoes.css */
-body.vis-on .echo-badge {
-  border: 1px solid #7d6a3a;
-}
-/* echoes.css */
-body.vis-on .echo-choice-grid section,
-body.vis-on .echo-step {
-  border: 1px solid #7d6a3a;
-  background: #352a21;
-}
-/* echoes.css */
-body.vis-on .echo-outcome {
-  background: #4a3627;
-  border-left: 3px solid #aab258;
-}
-/* echoes.css */
-body.vis-on .echo-summary,
-body.vis-on .echo-service {
-  border-bottom: 1px solid #625244;
-}
-/* echoes.css */
-body.vis-on .echo-work-grid>article {
-  border: 1px solid #625244;
-  background: #352a21;
-}
-/* echoes.css */
-body.vis-on .echo-timeline li {
-  border-left: 2px solid #7d6a3a;
-}
-/* echoes.css */
-body.vis-on .recipe-flow {
-  background: #3a2a1f;
-}
-/* echoes.css */
-body.vis-on .echo-item-source {
-  border-top: 1px solid #625244;
-}
-/* echoes.css */
-body.vis-on .version {
-  background: rgba(58,42,31,0.941);
-}
-/* farlands.css */
-body.vis-on .far-strip {
-  border: 1px solid #625244;
-  background: #2a1f17;
-}
-/* farlands.css */
-body.vis-on .night-scene {
-  background: linear-gradient(180deg, #151d2a, #2a1f17);
-}
-/* farlands.css */
-body.vis-on .bond-bar {
-  background: #4a3627;
-}
-/* farlands.css */
-body.vis-on .dog-skills li {
-  border: 1px solid #5a4030;
-}
-/* garden.css */
-body.vis-on .g-tag {
-  border: 1px solid #625244;
-}
-/* garden.css */
-body.vis-on .g-tag.give {
-  border-color: #aab258;
-}
-/* garden.css */
-body.vis-on .g-tag.get,
-body.vis-on .g-tag.good {
-  border-color: #aab258;
-}
-/* garden.css */
-body.vis-on .seed-no {
-  background: #4a3c30;
-}
-/* garden.css */
-body.vis-on .care-dial {
-  border: 2px solid #625244;
-}
-/* garden.css */
-body.vis-on .g-today li {
-  border: 1px solid #5a4030;
-}
-/* garden.css */
-body.vis-on .g-today li.ok {
-  border-color: #869843;
-}
-/* garden.css */
-body.vis-on .g-facts {
-  background: #2a1f17;
-}
-/* garden.css */
-body.vis-on .g-stat {
-  border: 1px solid #5a4030;
-}
-/* garden.css */
-body.vis-on .g-days li {
-  border: 1px solid #5a4030;
-}
-/* garden.css */
-body.vis-on .g-table th,
-body.vis-on .g-table td {
-  border-bottom: 1px solid #4a3c30;
-}
-/* garden.css */
-body.vis-on .garden-strip {
-  border: 1px solid #625244;
-  border-left: 4px solid #aab258;
-  background: #2a1f17;
-}
-/* outpost.css */
-body.vis-on .hud-food {
-  border: 1px solid #7d6a3a;
-  background: #352a21;
-}
-/* outpost.css */
-body.vis-on .consequence {
-  border: 1px solid #625244;
-}
-/* outpost.css */
-body.vis-on .consequence div {
-  background: #2a1f17;
-  border-left: 1px solid #4a3c30;
-}
-/* outpost.css */
-body.vis-on .story-choice button[disabled] {
-  background: #4a3c30;
-  border-color: #625244;
-}
-/* outpost.css */
-body.vis-on .portrait {
-  border: 2px solid #7d6a3a;
-  background: #2a1f17;
-}
-/* outpost.css */
-body.vis-on .npc-head {
-  border: 1px solid #7d6a3a;
-  background: #352a21;
-}
-/* outpost.css */
-body.vis-on .outpost-strip {
-  border: 1px solid #625244;
-  background: #2a1f17;
-}
-/* outpost.css */
-body.vis-on .summary-grid div {
-  border: 1px solid #625244;
-  background: #352a21;
-}
-/* outpost.css */
-body.vis-on .ship-row {
-  border-top: 1px solid #4a3c30;
-}
-/* outpost.css */
-body.vis-on .offer {
-  border: 1px solid #a28a4e;
-  background: #352a21;
-}
-/* outpost.css */
-body.vis-on .tag {
-  border: 1px solid #a28a4e;
-}
-/* outpost.css */
-body.vis-on .tag.good {
-  border-color: #aab258;
-}
-/* outpost.css */
-body.vis-on .clue {
-  border: 1px solid #625244;
-  background: #352a21;
-}
-/* outpost.css */
-body.vis-on .review-choices .consequence div {
-  border-top: 1px solid #4a3c30;
-}
-/* outpost.css */
-body.vis-on .msg-log li {
-  border-left: 3px solid #625244;
-  background: #352a21;
-}
-/* outpost.css */
-@media (max-width: 760px) {
-body.vis-on .consequence div {
-  border-top: 1px solid #4a3c30;
+/* districts.css */
+@media(max-width:850px) {
+body.vis-on .district-list {
+  border: 0;
 }
 }
 /* player.css */
-body.vis-on .title-screen .modal-backdrop {
+body.vis-on.title-screen .modal-backdrop {
   background: linear-gradient(100deg,rgba(36,26,20,0.933),rgba(42,31,23,0.722));
 }
 /* player.css */
 body.vis-on .modal.welcome {
   border: 1px solid #7d6a3a;
   background: linear-gradient(120deg,rgba(58,42,31,0.961),rgba(36,26,20,0.961));
+  box-shadow: 0 28px 90px #0008;
+}
+/* player.css */
+body.vis-on .title-eyebrow,
+body.vis-on .title-section {
+  color: #ddc98c;
+}
+/* player.css */
+body.vis-on .title-emblem {
+  color: #d2b078;
+}
+/* player.css */
+body.vis-on .welcome h1 {
+  color: var(--paper);
+}
+/* player.css */
+body.vis-on .welcome .title-motto {
+  color: #e2c49a;
+}
+/* player.css */
+body.vis-on .welcome .title-copy {
+  color: #ddc98c;
 }
 /* player.css */
 body.vis-on .title-actions {
@@ -775,17 +2207,48 @@ body.vis-on .title-actions button {
   border-color: #625244;
 }
 /* player.css */
+body.vis-on .title-actions button.primary {
+  background: #cba373;
+  border-color: #e1bb86;
+  color: #251d17;
+}
+/* player.css */
 body.vis-on .title-actions button.primary:disabled {
   background: #3a2a1f;
+  color: #c4ab68;
   border-color: #625244;
+}
+/* player.css */
+body.vis-on .title-actions button small {
+  color: inherit;
+}
+/* player.css */
+body.vis-on .welcome .title-save-note,
+body.vis-on .welcome .save-notice {
+  color: #ddc98c;
+}
+/* player.css */
+body.vis-on .welcome .save-notice {
+  color: #ffd0ae;
+  background: #483b2e;
+  border-left: 2px solid #cba373;
 }
 /* player.css */
 body.vis-on .title-footer {
   border-top: 1px solid #625244;
+  color: #c4ab68;
+}
+/* player.css */
+body.vis-on .title-footer span:last-child {
+  color: #dbbf95;
 }
 /* player.css */
 body.vis-on .settings-section {
   border-top: 1px solid #625244;
+}
+/* player.css */
+body.vis-on .settings-section>summary {
+  color: #e8d6b6;
 }
 /* player.css */
 body.vis-on .settings-end {
@@ -800,102 +2263,1019 @@ body.vis-on .journey-card {
   border-left: 2px solid #c4ab68!important;
 }
 /* player.css */
+body.vis-on .district-operation {
+  color: #ddc98c!important;
+}
+/* player.css */
+body.vis-on .district-detail-top small {
+  color: #c4ab68;
+}
+/* player.css */
+@media(max-width:850px) {
+body.vis-on .modal.welcome {
+  border: 0;
+}
+}
+/* player.css */
+@media(max-width:850px) {
+body.vis-on .title-actions {
+  border: 0;
+}
+}
+/* player.css */
 @media(max-height:500px) and (min-width:600px) {
 body.vis-on .title-actions {
   border-left: 1px solid #625244;
 }
 }
-/* rebuild.css */
-body.vis-on .rebuild-tabs {
-  border-bottom: 1px solid #7d6a3a;
+/* beyond.css */
+body.vis-on .b-shell {
+  color: #e5e4d3;
 }
-/* rebuild.css */
-body.vis-on .rebuild-page button.active {
-  background: #7d6a3a;
+/* beyond.css */
+body.vis-on .b-nav {
+  border-right: 1px solid #4a3c30;
+  background: #2a1f17;
 }
-/* rebuild.css */
-body.vis-on .rebuild-purpose {
-  border-left: 3px solid #aab258;
+/* beyond.css */
+body.vis-on .b-nav button {
+  border-color: transparent;
+  background: transparent;
+}
+/* beyond.css */
+body.vis-on .b-nav button.selected {
+  background: #4a3c30;
+  border-color: #7d6a3a;
+}
+/* beyond.css */
+body.vis-on .b-nav small,
+body.vis-on .b-muted {
+  color: #c4ab68;
+}
+/* beyond.css */
+body.vis-on .b-nav-divider {
+  background: #5a4030;
+}
+/* beyond.css */
+body.vis-on .b-eyebrow {
+  color: #d5ba80;
+}
+/* beyond.css */
+body.vis-on .b-detail {
+  background: #2a1f17;
+}
+/* beyond.css */
+body.vis-on .b-card {
   background: #3a2a1f;
+  border: 1px solid #5a4030;
 }
-/* rebuild.css */
-body.vis-on .rebuild-card {
-  background: #352a21;
-  border: 1px solid #7d6a3a;
+/* beyond.css */
+body.vis-on .b-lead {
+  color: #e9dcc0;
 }
-/* rebuild.css */
-body.vis-on .rebuild-primary {
-  background: #3a2a1f;
+/* beyond.css */
+body.vis-on .b-facts div {
+  background: #2a1f17;
 }
-/* rebuild.css */
-body.vis-on .rebuild-result {
-  background: rgba(42,31,23,0.502);
+/* beyond.css */
+body.vis-on .b-cost {
+  color: #d9c995;
 }
-/* rebuild.css */
-body.vis-on .rebuild-chapters>div {
+/* beyond.css */
+body.vis-on .b-reason {
+  color: #d9b58a!important;
+}
+/* beyond.css */
+body.vis-on .b-action-list>article,
+body.vis-on .b-storage article,
+body.vis-on .b-job {
+  border-top: 1px solid #5a4030;
+}
+/* beyond.css */
+body.vis-on .b-storage small {
+  color: #cfbd86;
+}
+/* beyond.css */
+body.vis-on .b-place {
   background: #2a1f17;
   border: 1px solid #625244;
 }
-/* rebuild.css */
-body.vis-on .rebuild-chapters .current {
+/* beyond.css */
+body.vis-on .b-place>span {
+  color: #d6bd7f;
+}
+/* beyond.css */
+body.vis-on .b-place small {
+  color: #ddc98c;
+}
+/* beyond.css */
+body.vis-on .b-event-list button {
+  background: #3a2a1f;
+}
+/* beyond.css */
+body.vis-on .b-event-list small {
+  color: #c4ab68;
+}
+/* beyond.css */
+body.vis-on .b-event-list .selected {
+  border-color: #d0b272;
   background: #4a3c30;
 }
-/* rebuild.css */
-body.vis-on .rebuild-chapters .complete {
-  border-color: #aab258;
+/* beyond.css */
+body.vis-on .b-promise {
+  border-left: 3px solid #bead72;
+  background: #2a1f17;
 }
-/* rebuild.css */
-body.vis-on .rebuild-note {
-  border-left: 3px solid #c4ab68;
+/* beyond.css */
+body.vis-on .b-promise small {
+  color: #ddc792;
+}
+/* beyond.css */
+body.vis-on .b-choices article {
+  border: 1px solid #7d6a3a;
+}
+/* beyond.css */
+body.vis-on .b-steps {
+  color: #c4ab68;
+}
+/* beyond.css */
+body.vis-on .b-steps .current {
+  color: #f1d894;
+}
+/* beyond.css */
+body.vis-on .b-steps .done {
+  color: #aab258;
+}
+/* beyond.css */
+body.vis-on .b-progress {
   background: #4a3627;
 }
-/* rebuild.css */
-body.vis-on .rebuild-crops article {
+/* beyond.css */
+body.vis-on .b-progress span {
+  color: #e9dcc0;
+}
+/* beyond.css */
+body.vis-on .b-log li {
+  border-bottom: 1px solid #5a4030;
+}
+/* beyond.css */
+body.vis-on .b-log small {
+  color: #cbbd8c;
+}
+/* beyond.css */
+body.vis-on .b-teaser {
+  background: #4a3627;
+  border: 1px solid #625244;
+}
+/* beyond.css */
+body.vis-on .b-teaser span {
+  color: #ddc98c;
+}
+/* beyond.css */
+body.vis-on .b-world {
+  border-top: 1px solid #625244;
+}
+/* beyond.css */
+body.vis-on .b-destination {
+  border: 1px solid #625244;
+  border-top: 3px solid var(--b-accent);
+  background: #3a2a1f;
+}
+/* beyond.css */
+body.vis-on .b-destination small {
+  color: #cebf91;
+}
+/* beyond.css */
+body.vis-on .b-map-mark {
+  color: var(--b-accent);
+}
+/* beyond.css */
+@media(max-width:760px) {
+body.vis-on .b-nav {
+  border-right: 0;
+  border-bottom: 1px solid #5a4030;
+}
+}
+/* wayfinding.css */
+body.vis-on .atlas-layout {
+  background: #2a1f17;
+}
+/* wayfinding.css */
+body.vis-on .atlas-toolbar {
+  border-bottom: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .atlas-toolbar>span {
+  color: #cccfb8;
+}
+/* wayfinding.css */
+body.vis-on .atlas-scroll {
+  background: #3a2a1f;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #aab258;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node:hover {
+  background: transparent;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node strong {
+  background: rgba(53,42,33,0.91);
+  border: 1px solid #a28a4e;
+  text-shadow: none;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node small {
+  color: #e9dcc0;
+  text-shadow: 0 1px 3px #241a14;
+  background: rgba(53,42,33,0.878);
+}
+/* wayfinding.css */
+body.vis-on .atlas-symbol {
+  color: #cad1a6;
+  background: #4a3c30;
+  border: 2px solid #c4ab68;
+  box-shadow: 0 3px 0 #2a1f17;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node.locked .atlas-symbol {
+  color: #a28a4e;
+  border-color: #7d6a3a;
+  background: #3a2a1f;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node.locked strong {
+  border-color: #7d6a3a;
+  color: #ddc98c;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node.selected strong {
+  border-color: #edcf86;
+  background: #5b5940;
+  color: #fff1c0;
+  box-shadow: 0 0 0 2px #d8bc7070;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node.here .atlas-symbol {
+  color: #ffdb8d;
+  border-color: #f0d594;
+  background: #625c39;
+}
+/* wayfinding.css */
+body.vis-on .atlas-node:focus-visible {
+  outline: 2px solid #f1d691;
+}
+/* wayfinding.css */
+body.vis-on .atlas-info {
+  background: #352a21;
+  border-left: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .atlas-info h3 {
+  color: #e5dcae;
+}
+/* wayfinding.css */
+body.vis-on .atlas-info h4 {
+  color: #c8c69e;
+}
+/* wayfinding.css */
+body.vis-on .atlas-info small {
+  color: #c4ab68;
+}
+/* wayfinding.css */
+body.vis-on .atlas-status {
+  color: #ddc38b;
+}
+/* wayfinding.css */
+body.vis-on .atlas-conditions li {
+  color: #ddc98c;
+}
+/* wayfinding.css */
+body.vis-on .atlas-conditions .met,
+body.vis-on .atlas-materials .met {
+  color: #aab258;
+}
+/* wayfinding.css */
+body.vis-on .atlas-materials span {
+  background: #2a1f17;
+  border: 1px solid #625244;
+  color: #dcba8e;
+}
+/* wayfinding.css */
+body.vis-on .atlas-primary button:first-child {
+  background: #7d6a3a;
+  color: #fff4cf;
+  border-color: #adb381;
+}
+/* wayfinding.css */
+body.vis-on .atlas-blocked {
+  color: #e1b78a;
+}
+/* wayfinding.css */
+body.vis-on .atlas-note {
+  border-top: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .atlas-risk {
+  color: #c8bc96;
+}
+/* wayfinding.css */
+body.vis-on .atlas-local canvas {
+  border: 1px solid #a28a4e;
+}
+/* wayfinding.css */
+body.vis-on .atlas-local p {
+  color: #ddc98c;
+}
+/* wayfinding.css */
+body.vis-on .journal-top {
+  color: #ddc98c;
+}
+/* wayfinding.css */
+body.vis-on .journal-main {
+  border: 1px solid #a28a4e;
+  border-top: 3px solid #c7b37b;
+  background: linear-gradient(135deg,#4a3627,#3a2a1f);
+}
+/* wayfinding.css */
+body.vis-on .journal-eyebrow {
+  color: #d5c692;
+}
+/* wayfinding.css */
+body.vis-on .journal-main h2 {
+  color: #f1e8c6;
+}
+/* wayfinding.css */
+body.vis-on .journal-why {
+  color: #e9dcc0;
+}
+/* wayfinding.css */
+body.vis-on .journal-next {
+  background: #352a21;
+  border-left: 3px solid #e0c489;
+}
+/* wayfinding.css */
+body.vis-on .journal-next small {
+  color: #c7bd88;
+}
+/* wayfinding.css */
+body.vis-on .journal-next h3 {
+  color: #eadfb7;
+}
+/* wayfinding.css */
+body.vis-on .journal-steps li {
+  color: #c4ab68;
+}
+/* wayfinding.css */
+body.vis-on .journal-steps li>span {
+  background: #2a1f17;
+  border: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .journal-steps li.current {
+  color: #f0db9c;
+}
+/* wayfinding.css */
+body.vis-on .journal-steps li.current>span {
+  background: #a89d65;
+  color: #352a21;
+  border-color: #dfd395;
+}
+/* wayfinding.css */
+body.vis-on .journal-steps .done {
+  color: #aab258;
+}
+/* wayfinding.css */
+body.vis-on .journal-outcome {
+  border-top: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .journal-outcome b {
+  color: #c8bf8d;
+}
+/* wayfinding.css */
+body.vis-on .journal-outcome p {
+  color: #e9dcc0;
+}
+/* wayfinding.css */
+body.vis-on .journal-pay {
+  color: #c4ab68;
+}
+/* wayfinding.css */
+body.vis-on .journal-actions button:first-child {
+  background: #99a16a;
+  color: #251d17;
+  border: 1px solid #c2c991;
+}
+/* wayfinding.css */
+body.vis-on .journal-options article {
+  border: 1px solid #625244;
+  background: #3a2a1f;
+}
+/* wayfinding.css */
+body.vis-on .journal-options small {
+  color: #c2b889;
+}
+/* wayfinding.css */
+body.vis-on .journal-options p {
+  color: #ddc98c;
+}
+/* wayfinding.css */
+body.vis-on .journal-extra {
+  border-top: 1px solid #625244;
+  color: #ddc98c;
+}
+/* wayfinding.css */
+body.vis-on .journal-catalog article {
+  border-top: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .journal-catalog p {
+  color: #ddc98c;
+}
+/* wayfinding.css */
+body.vis-on .journal-complete {
+  color: #aab258;
+}
+/* wayfinding.css */
+body.vis-on .journal-recipe {
+  border: 1px solid #8a8c5f;
+  background: #4a3627;
+}
+/* wayfinding.css */
+body.vis-on .journal-flow span {
+  background: #2a1f17;
+}
+/* wayfinding.css */
+body.vis-on .journal-flow i {
+  color: #d7c891;
+}
+/* wayfinding.css */
+body.vis-on .journal-job {
+  border-top: 1px solid #7d6a3a;
+}
+/* wayfinding.css */
+body.vis-on .journal-reason {
+  color: #e2bd89;
+}
+/* wayfinding.css */
+body.vis-on .feature-purpose {
+  border-left: 3px solid #b7b774;
+  background: #4a3627;
+}
+/* wayfinding.css */
+body.vis-on .feature-purpose>span {
+  color: #ccbd8c;
+}
+/* wayfinding.css */
+body.vis-on .simple-site-header small {
+  color: #ddc98c;
+}
+/* wayfinding.css */
+body.vis-on .simple-site-other {
+  border-top: 1px solid #625244;
+}
+/* wayfinding.css */
+body.vis-on .guided-work>p {
+  color: #ddc98c;
+}
+/* wayfinding.css */
+@media(max-width:850px) {
+body.vis-on .atlas-info {
+  border-left: 0;
+  border-top: 1px solid #7d6a3a;
+}
+}
+/* wayfinding.css */
+@media(max-height:550px) {
+body.vis-on .atlas-info {
+  border-top: 0;
+}
+}
+/* wayfinding.css */
+body.vis-on .atlas-landmark {
+  color: #efe2b4;
+  background: rgba(42,31,23,0.933);
+  border: 1px solid #7d6a3a;
+}
+/* wayfinding.css */
+body.vis-on .atlas-landmark i {
+  background: #c4ab68;
+}
+/* wayfinding.css */
+body.vis-on .atlas-landmark.target {
+  color: #f4de9d;
+  border-color: #e1c179;
+  background: #514a2dea;
+}
+/* wayfinding.css */
+body.vis-on .atlas-landmark.target i {
+  background: #f4de9d;
+}
+/* alliance.css */
+body.vis-on .story-progress li {
+  border: 1px solid #625244;
+  color: #c4ab68;
+  background: #352a21;
+}
+/* alliance.css */
+body.vis-on .story-progress li.done {
+  color: #aab258;
+  border-color: #869843;
+}
+/* alliance.css */
+body.vis-on .story-progress li.current {
+  color: #352a21;
+  background: #cdbb7c;
+  border-color: #e4d39a;
+}
+/* alliance.css */
+body.vis-on .story-lines {
+  border: 1px solid #625244;
+}
+/* alliance.css */
+body.vis-on .story-line {
+  border-top: 1px solid #5a4030;
+  background: #352a21;
+}
+/* alliance.css */
+body.vis-on .story-line:first-child {
+  border-top: 0;
+}
+/* alliance.css */
+body.vis-on .story-line dt {
+  color: #c8bf8d;
+}
+/* alliance.css */
+body.vis-on .story-line dd {
+  color: #e9dcc0;
+}
+/* alliance.css */
+body.vis-on .story-line dd b {
+  color: #eadfb7;
+}
+/* alliance.css */
+body.vis-on .story-line.now {
+  background: #4a3627;
+  box-shadow: inset 3px 0 0 #e0c489;
+}
+/* alliance.css */
+body.vis-on .story-line.now dd {
+  color: #f3e7bf;
+}
+/* alliance.css */
+body.vis-on .xiaoqi {
+  border: 1px solid #a28a4e;
+}
+/* alliance.css */
+body.vis-on .story-choice article {
+  border: 1px solid #a28a4e;
+  background: #352a21;
+}
+/* alliance.css */
+body.vis-on .story-choice small {
+  color: #c7bd88;
+}
+/* alliance.css */
+body.vis-on .story-choice h3 {
+  color: #f0e3b5;
+}
+/* alliance.css */
+body.vis-on .story-choice .story-pack {
+  color: #aab258;
+}
+/* alliance.css */
+body.vis-on .story-choice button {
+  background: #99a16a;
+  color: #251d17;
+  border: 1px solid #c2c991;
+}
+/* alliance.css */
+body.vis-on .story-letters .story-letter {
+  border-left: 3px solid #8fa7b8;
+  background: #352a21;
+}
+/* alliance.css */
+body.vis-on .story-letters .story-helper {
+  color: #bcd4e8;
+}
+/* alliance.css */
+body.vis-on .story-log {
+  color: #c4ab68;
+}
+/* outpost.css */
+body.vis-on .hud-food {
+  border: 1px solid #7d6a3a;
+  color: #aab258;
+  background: #352a21;
+}
+/* outpost.css */
+body.vis-on .hud-food.warn {
+  color: #f2d48a;
+  border-color: #a99251;
+  background: #3a3520;
+}
+/* outpost.css */
+body.vis-on .hud-food.danger {
+  color: #ffd9cf;
+  border-color: #d06a58;
+  background: #5a2620;
+}
+/* outpost.css */
+body.vis-on #horde-warning.raid {
+  background: #5a2620;
+  border-color: #d06a58;
+}
+/* outpost.css */
+body.vis-on .consequence {
+  border: 1px solid #625244;
+}
+/* outpost.css */
+body.vis-on .consequence div {
+  background: #2a1f17;
+  border-left: 1px solid #4a3c30;
+}
+/* outpost.css */
+body.vis-on .consequence div:first-child {
+  border-left: 0;
+}
+/* outpost.css */
+body.vis-on .consequence dt {
+  color: #c8bf8d;
+}
+/* outpost.css */
+body.vis-on .consequence dd {
+  color: #efe2b4;
+}
+/* outpost.css */
+body.vis-on .story-lack {
+  color: #f1b4a2;
+}
+/* outpost.css */
+body.vis-on .story-choice button[disabled] {
+  background: #4a3c30;
+  color: #c4ab68;
+  border-color: #625244;
+}
+/* outpost.css */
+body.vis-on .portrait {
+  border: 2px solid #7d6a3a;
+  background: #2a1f17;
+}
+/* outpost.css */
+body.vis-on .npc-head {
   border: 1px solid #7d6a3a;
   background: #352a21;
 }
-/* rebuild.css */
-body.vis-on .rebuild-contract {
-  border-top: 1px solid #7d6a3a;
+/* outpost.css */
+body.vis-on .npc-head b {
+  color: #f0e3b5;
 }
-/* rebuild.css */
-body.vis-on .rebuild-find {
-  border-top: 1px solid rgba(125,106,58,0.302);
+/* outpost.css */
+body.vis-on .npc-head small {
+  color: #c4ab68;
 }
-/* rebuild.css */
-body.vis-on .rebuild-status {
-  border: 1px solid #a28a4e;
-  background: #4a3c30;
+/* outpost.css */
+body.vis-on .npc-line {
+  color: #e9e1c0;
 }
-/* rebuild.css */
-body.vis-on .rebuild-page select {
+/* outpost.css */
+body.vis-on .outpost-strip {
+  border: 1px solid #625244;
   background: #2a1f17;
+}
+/* outpost.css */
+body.vis-on .outpost-food b {
+  color: #aab258;
+}
+/* outpost.css */
+body.vis-on .outpost-food.warn b {
+  color: #f2d48a;
+}
+/* outpost.css */
+body.vis-on .outpost-food.danger b {
+  color: #ff9a8a;
+}
+/* outpost.css */
+body.vis-on .outpost-food span {
+  color: #c4ab68;
+}
+/* outpost.css */
+body.vis-on .outpost-alert {
+  border-left: 3px solid #d06a58;
+  background: #3a2622;
+  color: #f6d8cf;
+}
+/* outpost.css */
+body.vis-on .crew-list small {
+  color: #c4ab68;
+}
+/* outpost.css */
+body.vis-on .station-rush {
+  border: 1px solid #7d6a4e;
+  background: #2a2a20;
+}
+/* outpost.css */
+body.vis-on .station-rush h3 {
+  color: #f0e3b5;
+}
+/* outpost.css */
+body.vis-on .rush-row {
+  border-top: 1px solid #44423a;
+}
+/* outpost.css */
+body.vis-on .rush-row span {
+  color: #c7c1a6;
+}
+/* outpost.css */
+body.vis-on .rush-row.incident b {
+  color: #ff9a8a;
+}
+/* outpost.css */
+body.vis-on .day-summary h3,
+body.vis-on .raid-report h3 {
+  color: #f0e3b5;
+}
+/* outpost.css */
+body.vis-on .summary-grid div {
+  border: 1px solid #625244;
+  background: #352a21;
+}
+/* outpost.css */
+body.vis-on .summary-grid dt {
+  color: #c8bf8d;
+}
+/* outpost.css */
+body.vis-on .summary-grid dd {
+  color: #eef0dc;
+}
+/* outpost.css */
+body.vis-on .summary-threats li {
+  color: #f2d48a;
+}
+/* outpost.css */
+body.vis-on .raid-report.won h3 {
+  color: #aab258;
+}
+/* outpost.css */
+body.vis-on .raid-report.lost h3 {
+  color: #ff9a8a;
+}
+/* outpost.css */
+body.vis-on .ship-row {
+  border-top: 1px solid #4a3c30;
+}
+/* outpost.css */
+body.vis-on .ship-row small {
+  color: #ddc98c;
+}
+/* outpost.css */
+body.vis-on .ledger {
+  color: #ddc98c;
+}
+/* outpost.css */
+body.vis-on .offer {
   border: 1px solid #a28a4e;
+  background: #352a21;
 }
-/* rebuild.css */
-body.vis-on .rebuild-tools {
-  border-top: 1px solid #7d6a3a;
+/* outpost.css */
+body.vis-on .offer h3 {
+  color: #f0e3b5;
 }
-/* rebuild.css */
-body.vis-on .rebuild-tool-panel {
+/* outpost.css */
+body.vis-on .tag {
+  border: 1px solid #a28a4e;
+  color: #c7bd88;
+}
+/* outpost.css */
+body.vis-on .tag.bad {
+  color: #ffb3a6;
+  border-color: #d06a58;
+}
+/* outpost.css */
+body.vis-on .tag.good {
+  color: #aab258;
+  border-color: #aab258;
+}
+/* outpost.css */
+body.vis-on .clue {
+  border: 1px solid #625244;
+  background: #352a21;
+}
+/* outpost.css */
+body.vis-on .clue dt {
+  color: #c8bf8d;
+}
+/* outpost.css */
+body.vis-on .clue dd {
+  color: #e9e1c0;
+}
+/* outpost.css */
+body.vis-on .review-choices .consequence div {
+  border-left: 0;
+  border-top: 1px solid #4a3c30;
+}
+/* outpost.css */
+body.vis-on .review-choices .consequence div:first-child {
+  border-top: 0;
+}
+/* outpost.css */
+body.vis-on .msg-log li {
+  border-left: 3px solid #625244;
+  background: #352a21;
+}
+/* outpost.css */
+body.vis-on .msg-log li.warn {
+  border-color: #d06a58;
+}
+/* outpost.css */
+body.vis-on .msg-log li.gold {
+  border-color: #e0c489;
+}
+/* outpost.css */
+body.vis-on .msg-log small {
+  color: #c4ab68;
+}
+/* outpost.css */
+@media (max-width: 760px) {
+body.vis-on .consequence div {
+  border-left: 0;
+  border-top: 1px solid #4a3c30;
+}
+}
+/* outpost.css */
+@media (max-width: 760px) {
+body.vis-on .consequence div:first-child {
+  border-top: 0;
+}
+}
+/* winter.css */
+body.vis-on .alert-item {
   border: 1px solid #7d6a3a;
+  background: rgba(42,31,23,0.902);
+  color: #aab258;
+  box-shadow: 0 2px 6px #0006;
+}
+/* winter.css */
+body.vis-on .alert-item:hover,
+body.vis-on .alert-item:focus-visible {
+  background: rgba(58,42,31,0.902);
+}
+/* winter.css */
+body.vis-on .alert-item.danger {
+  border-color: #d06a58;
+  color: #ffe1d8;
+}
+/* winter.css */
+body.vis-on .alert-item.warn {
+  border-color: #c9a55a;
+  color: #f6e3b4;
+}
+/* winter.css */
+body.vis-on .alert-item.gold {
+  border-color: #f1d98a;
+  color: #fff3c8;
+}
+/* winter.css */
+body.vis-on .alert-item::before {
+  background: #7d6a3a;
+  color: #251d17;
+}
+/* winter.css */
+body.vis-on .alert-item.danger::before {
+  background: #d06a58;
+}
+/* winter.css */
+body.vis-on .alert-item.warn::before {
+  background: #c9a55a;
+}
+/* winter.css */
+body.vis-on .alert-item.gold::before {
+  background: #f1d98a;
+}
+/* winter.css */
+body.vis-on #season-chip.ok {
+  color: #ffe2b8;
+  border-color: #b98a4a;
+  background: #3a2a1c;
+}
+/* winter.css */
+body.vis-on .ladder-row > b {
+  color: #f0e3b5;
+}
+/* winter.css */
+body.vis-on .ladder li {
+  border: 1px solid #625244;
+  background: #2a1f17;
+  color: #a28a4e;
+}
+/* winter.css */
+body.vis-on .ladder li span {
+  color: #7d6a3a;
+}
+/* winter.css */
+body.vis-on .ladder li.partial {
+  color: #c7bd88;
+}
+/* winter.css */
+body.vis-on .ladder li.on {
+  color: #251d17;
+  background: #aab258;
+  border-color: #aab258;
+}
+/* winter.css */
+body.vis-on .ladder li.on span {
+  color: #667d36;
+}
+/* winter.css */
+body.vis-on .winter-strip {
+  border: 1px solid #5a6a7a;
+  background: #1c2a2d;
+}
+/* winter.css */
+body.vis-on .frost-forecast {
+  border-left: 3px solid #89c6d0;
+  background: #1a2c30;
+  color: #d8eef2;
+}
+/* winter.css */
+body.vis-on .decree-grid article.current,
+body.vis-on .story-choice article.current {
+  border-color: #f1d98a;
+  background: #352a21;
+  box-shadow: inset 0 0 0 1px #f1d98a55;
+}
+/* winter.css */
+body.vis-on .decree-grid article.current small:first-child {
+  color: #f1d98a;
+}
+/* winter.css */
+body.vis-on .decree-grid .consequence div {
+  border-left: 0;
+  border-top: 1px solid #4a3c30;
+}
+/* winter.css */
+body.vis-on .decree-grid .consequence div:first-child {
+  border-top: 0;
+}
+/* winter.css */
+body.vis-on .exhibit {
+  border: 1px solid #a8936a;
+  background: #3a3224;
+  color: #f0e3b5;
+}
+/* winter.css */
+body.vis-on .story-choice article.done {
+  border-color: #aab258;
+}
+/* winter.css */
+body.vis-on .story-choice article.done > small:first-child::after {
+  color: #aab258;
+}
+/* winter.css */
+body.vis-on .collection li {
+  border: 1px solid #4a3c30;
   background: #2a1f17;
 }
-/* rebuild.css */
-body.vis-on .rebuild-log li {
-  border-bottom: 1px solid rgba(125,106,58,0.333);
+/* winter.css */
+body.vis-on .collection li.done {
+  border-color: #869843;
+  background: #26331d;
 }
-/* rebuild.css */
-body.vis-on .rebuild-help {
-  border-top: 1px solid #7d6a3a;
+/* winter.css */
+body.vis-on .collection b {
+  color: #f0e3b5;
 }
-/* rebuild.css */
-body.vis-on .rebuild-report span {
-  background: #4a3627;
+/* winter.css */
+body.vis-on .collection .bar {
+  background: #3a2a1f;
 }
-/* rebuild.css */
-body.vis-on .item-purpose {
-  border-left: 2px solid #aab258;
+/* winter.css */
+body.vis-on .collection .bar i {
+  background: #aab258;
+}
+/* winter.css */
+body.vis-on .collection li.done .bar i {
+  background: #f1d98a;
+}
+/* winter.css */
+body.vis-on .collection small {
+  color: #c4ab68;
+}
+/* winter.css */
+body.vis-on .collection li.done small {
+  color: #aab258;
+}
+/* seasons.css */
+body.vis-on .hud-date {
+  border: 1px solid transparent;
+  background: none;
+  color: inherit;
 }
 /* seasons.css */
 body.vis-on .hud-date:hover,
@@ -904,12 +3284,66 @@ body.vis-on .hud-date:focus-visible {
   background: #3a2a1f;
 }
 /* seasons.css */
+body.vis-on .new-badge {
+  background: #d06a58;
+  color: #fff3ec;
+}
+/* seasons.css */
 body.vis-on .handbook-entry.has-new::after {
+  background: #d06a58;
+  color: #fff3ec;
   box-shadow: 0 0 0 2px #2a1f17;
+}
+/* seasons.css */
+body.vis-on .intro-card {
+  border: 1px solid #e9c05a;
+  background: #3a3524;
+  color: #f6e3b4;
+}
+/* seasons.css */
+body.vis-on .intro-card b {
+  color: #f3d27a;
+}
+/* seasons.css */
+body.vis-on .seasons-strip {
+  border: 1px solid #7d6a4e;
+  background: #2a2a20;
+}
+/* seasons.css */
+body.vis-on .fest-today {
+  color: #f3d27a;
+}
+/* seasons.css */
+body.vis-on .fest-stars {
+  color: #c4ab68;
+}
+/* seasons.css */
+body.vis-on .fest-stars li.on {
+  color: #f3d27a;
+}
+/* seasons.css */
+body.vis-on .guest small {
+  color: #f3d27a;
+}
+/* seasons.css */
+body.vis-on .patience {
+  background: #3a3530;
 }
 /* seasons.css */
 body.vis-on .patience i {
   background: #aab258;
+}
+/* seasons.css */
+body.vis-on .hearts {
+  color: #e06a7a;
+}
+/* seasons.css */
+body.vis-on .hearts i {
+  color: #e06a7a88;
+}
+/* seasons.css */
+body.vis-on .hearts b {
+  color: #7d6a3a;
 }
 /* seasons.css */
 body.vis-on .calendar li {
@@ -918,367 +3352,335 @@ body.vis-on .calendar li {
 }
 /* seasons.css */
 body.vis-on .calendar li.today {
+  border-color: #f3d27a;
   background: #352a21;
+}
+/* seasons.css */
+body.vis-on .calendar b {
+  color: #f0e3b5;
 }
 /* seasons.css */
 body.vis-on .tag {
   background: #3a2a1f;
+  color: #aab258;
+}
+/* seasons.css */
+body.vis-on .tag.fest {
+  background: #5a4a20;
+  color: #f6e3b4;
+}
+/* seasons.css */
+body.vis-on .tag.canteen {
+  background: #3a3524;
+  color: #f3d27a;
+}
+/* seasons.css */
+body.vis-on .tag.caravan {
+  background: #2a3a4a;
+  color: #cfe3f0;
+}
+/* seasons.css */
+body.vis-on .tag.danger {
+  background: #5a2620;
+  color: #ffd9cf;
+}
+/* seasons.css */
+body.vis-on .tag.cold {
+  background: #2a3a44;
+  color: #d8eef2;
+}
+/* seasons.css */
+body.vis-on .tag.bday {
+  background: #4a2a3a;
+  color: #f6d0dc;
+}
+/* seasons.css */
+body.vis-on .tag.quiet {
+  background: none;
+  color: #7d6a3a;
 }
 /* seasons.css */
 body.vis-on .people li {
   border: 1px solid #4a3c30;
   background: #2a1f17;
 }
-/* style.css */
-body.vis-on {
-  background: #241a14;
+/* seasons.css */
+body.vis-on .people li small {
+  color: #c4ab68;
 }
-/* style.css */
-body.vis-on button {
-  border: 1px solid #7d6a3a;
-  background: #4a3627;
+/* seasons.css */
+body.vis-on .people li p {
+  color: #c7c1a6;
 }
-/* style.css */
-body.vis-on button:hover {
-  background: #625244;
+/* seasons.css */
+body.vis-on .apprentice h3 {
+  color: #f0e3b5;
 }
-/* style.css */
-body.vis-on .glass {
-  background: linear-gradient(145deg,rgba(58,42,31,0.929),rgba(42,31,23,0.929));
-  border: 1px solid #a28a4e;
-  box-shadow: 0 3px 0 #241a14,0 6px 18px #121b2540;
+/* seasons.css */
+body.vis-on .adj-line b {
+  color: #f3d27a;
 }
-/* style.css */
-body.vis-on .version {
-  background: rgba(58,42,31,0.675);
+/* seasons.css */
+body.vis-on .adj-line span {
+  color: #c4ab68;
 }
-/* style.css */
-body.vis-on .bar {
-  background: #241a14;
+/* seasons.css */
+body.vis-on .link-chip small {
+  color: #c4ab68;
 }
-/* style.css */
-body.vis-on .day-meter {
+/* farlands.css */
+body.vis-on .far-strip {
+  border: 1px solid #625244;
+  border-left: 4px solid #f0a35a;
   background: #2a1f17;
 }
-/* style.css */
-body.vis-on .quest-track progress::-webkit-progress-bar {
-  background: #241a14;
+/* farlands.css */
+body.vis-on .far-row p b {
+  color: #f0c27a;
 }
-/* style.css */
-body.vis-on .quest-track progress::-webkit-progress-value {
+/* farlands.css */
+body.vis-on .far-row > small {
+  color: #ddc98c;
+}
+/* farlands.css */
+body.vis-on .far-row.muted p {
+  color: #c4ab68;
+}
+/* farlands.css */
+body.vis-on .far-row.night p b {
+  color: #f3d27a;
+}
+/* farlands.css */
+body.vis-on .far-row.danger p,
+body.vis-on .far-deadline {
+  color: #ffc9bd;
+}
+/* farlands.css */
+body.vis-on .night-scene {
+  background: linear-gradient(180deg, #151d2a, #2a1f17);
+  border: 1px solid #3f4d63;
+}
+/* farlands.css */
+body.vis-on .night-scene b {
+  color: #f3d27a;
+}
+/* farlands.css */
+body.vis-on .night-scene p {
+  color: #e9dcc0;
+}
+/* farlands.css */
+body.vis-on .bond-bar {
+  background: #4a3627;
+}
+/* farlands.css */
+body.vis-on .bond-bar span {
+  background: linear-gradient(90deg, #c9a55a, #f3d27a);
+}
+/* farlands.css */
+body.vis-on .dog-today {
+  color: #e9dcc0;
+}
+/* farlands.css */
+body.vis-on .dog-skills li {
+  border: 1px solid #5a4030;
+  color: #c4ab68;
+}
+/* farlands.css */
+body.vis-on .dog-skills li.on {
+  border-color: #c9a55a;
+  color: #f6e3b4;
+}
+/* farlands.css */
+body.vis-on .phone-tile span {
+  color: #f3d27a;
+}
+/* farlands.css */
+body.vis-on .hud-phone {
+  background: transparent;
+  border-color: transparent;
+}
+/* farlands.css */
+body.vis-on .far-pin {
+  border: 1px solid #f0a35a;
+  background: #1a1408e6;
+  color: #ffd9a8;
+}
+/* farlands.css */
+body.vis-on .far-pin.night {
+  border-color: #f3d27a;
+  color: #fff0c4;
+}
+/* farlands.css */
+body.vis-on .far-pin.danger {
+  border-color: #e9806e;
+  color: #ffd2c8;
+}
+/* farlands.css */
+body.vis-on.a11y-color .far-pin.danger {
+  border-color: #4aa3ff;
+  color: #dcefff;
+}
+/* farlands.css */
+body.vis-on .recipe .advance {
+  border-color: #d6bf87;
+  color: #f3e2b8;
+}
+/* farlands.css */
+body.vis-on.a11y-color .alert-item.danger,
+body.vis-on.a11y-color .far-row.danger {
+  border-color: #4aa3ff;
+  color: #dcefff;
+}
+/* farlands.css */
+body.vis-on.a11y-color .alert-item.warn {
+  border-color: #ffb000;
+  color: #fff0cc;
+}
+/* farlands.css */
+body.vis-on.a11y-color .alert-item.gold {
+  border-color: #ffffff;
+  color: #ffffff;
+}
+/* farlands.css */
+body.vis-on.a11y-color .toast.warn,
+body.vis-on.a11y-color .hud-food.danger,
+body.vis-on.a11y-color .story-lack,
+body.vis-on.a11y-color .far-row.danger p,
+body.vis-on.a11y-color .far-deadline {
+  border-color: #4aa3ff;
+  color: #bfe0ff;
+}
+/* farlands.css */
+body.vis-on.a11y-color .hud-food.warn {
+  color: #ffc766;
+}
+/* farlands.css */
+body.vis-on.a11y-color .toast.gold,
+body.vis-on.a11y-color .dog-skills li.on,
+body.vis-on.a11y-color .fest-stars li.on {
+  border-color: #ffffff;
+  color: #ffffff;
+}
+/* daily.css */
+body.vis-on .daily-art {
+  border: 2px solid #5a4030;
+}
+/* daily.css */
+body.vis-on .daily-head small {
+  color: #ddc98c;
+}
+/* daily.css */
+body.vis-on .daily-head h3 {
+  color: #f6e3b4;
+}
+/* daily.css */
+body.vis-on .daily-tag {
+  border: 1px solid var(--tone, #a28a4e);
+  color: var(--tone, #e9dcc0);
+}
+/* daily.css */
+body.vis-on .daily-text {
+  border-left: 4px solid #e9c05a;
+  background: #2a1f17;
+  color: #ecebdc;
+}
+/* daily.css */
+body.vis-on .daily-prev,
+body.vis-on .daily-luck {
+  color: #e9dcc0;
+}
+/* daily.css */
+body.vis-on .daily-luck {
+  color: #f3d27a;
+}
+/* daily.css */
+body.vis-on .daily-opt {
+  border: 1px solid #625244;
+  background: #352a21;
+}
+/* daily.css */
+body.vis-on .daily-opt h4 {
+  color: #f6e3b4;
+}
+/* daily.css */
+body.vis-on .daily-opt dt {
+  color: #c4ab68;
+}
+/* daily.css */
+body.vis-on .daily-opt dd {
+  color: #ecebdc;
+}
+/* daily.css */
+body.vis-on .daily-opt .risk dd {
+  color: #ffc9bd;
+}
+/* daily.css */
+body.vis-on .daily-opt .follow dd {
+  color: #d9c2f0;
+}
+/* daily.css */
+body.vis-on .chance i {
+  background: #4a3a34;
+}
+/* daily.css */
+body.vis-on .chance i.w {
   background: #aab258;
 }
-/* style.css */
-body.vis-on .selected-label {
-  background: rgba(42,31,23,0.851);
-  border: 1px solid #7d6a3a;
+/* daily.css */
+body.vis-on .chance i.on {
+  background: #e9806e;
 }
-/* style.css */
-body.vis-on .hotbar {
-  background: rgba(42,31,23,0.961);
-  border: 2px solid #7d6a3a;
-  box-shadow: 0 3px 0 #241a14,0 5px 20px #121c2470;
+/* daily.css */
+body.vis-on .daily-stock {
+  color: #c4ab68;
 }
-/* style.css */
-body.vis-on .hot-slot {
+/* daily.css */
+body.vis-on .daily-lines {
+  background: #2a1f17;
+}
+/* daily.css */
+body.vis-on .daily-result.won .daily-head h3 {
+  color: #aab258;
+}
+/* daily.css */
+body.vis-on .daily-result.lost .daily-head h3 {
+  color: #ffc9bd;
+}
+/* daily.css */
+body.vis-on .daily-strip {
   border: 1px solid #625244;
-  background: #4a3627;
-}
-/* style.css */
-body.vis-on .hot-slot:hover {
-  background: #5a4030;
-}
-/* style.css */
-body.vis-on .control-hints kbd {
-  border: 1px solid rgba(125,106,58,0.549);
-  background: rgba(42,31,23,0.729);
-}
-/* style.css */
-body.vis-on .toast {
-  background: rgba(42,31,23,0.922);
-  border-left: 3px solid #aab258;
-  box-shadow: 0 3px 15px rgba(36,26,20,0.4);
-}
-/* style.css */
-body.vis-on .modal {
-  background: #352a21;
-  box-shadow: 0 0 0 4px #2a1f17,0 20px 80px #0c1721c0;
-}
-/* style.css */
-body.vis-on .modal-header {
-  border-bottom: 1px solid rgba(162,138,78,0.333);
-  background: #3a2a1f;
-}
-/* style.css */
-body.vis-on .modal-foot {
-  border-top: 1px solid rgba(162,138,78,0.302);
-}
-/* style.css */
-body.vis-on .tabs button {
-  background: #3a2a1f;
-}
-/* style.css */
-body.vis-on .tabs button.active {
-  background: #5a4030;
-}
-/* style.css */
-body.vis-on .inventory-cell {
-  background: #2a1f17;
-  border: 1px solid #625244;
-}
-/* style.css */
-body.vis-on .inventory-cell:hover {
-  background: #4a3c30;
-}
-/* style.css */
-body.vis-on .item-detail {
-  background: #2a1f17;
-  border: 1px solid #625244;
-}
-/* style.css */
-body.vis-on .primary {
-  background: #7d6a3a;
-}
-/* style.css */
-body.vis-on .primary:hover {
-  background: #a28a4e;
-}
-/* style.css */
-body.vis-on .recipe {
-  border: 1px solid #625244;
-  background: #2a1f17;
-}
-/* style.css */
-body.vis-on .trade-item {
-  border: 1px solid #625244;
-  background: #352a21;
-}
-/* style.css */
-body.vis-on .qty-input {
-  background: #241a14;
-  border: 1px solid #7d6a3a;
-}
-/* style.css */
-body.vis-on .map-card {
-  border: 1px solid #7d6a3a;
-  background: #2a1f17;
-}
-/* style.css */
-body.vis-on .map-card.current {
-  background: #4a3c30;
-}
-/* style.css */
-body.vis-on .welcome .difficulty select {
-  background: #3a2a1f;
-  border: 1px solid #7d6a3a;
-}
-/* style.css */
-body.vis-on .settings-row {
-  border-bottom: 1px solid rgba(98,82,68,0.333);
-}
-/* style.css */
-body.vis-on .settings-row select {
-  background: #2a1f17;
-  border: 1px solid #7d6a3a;
-}
-/* style.css */
-body.vis-on .skill-card {
-  background: #2a1f17;
-  border: 1px solid #7d6a3a;
-}
-/* style.css */
-body.vis-on .loading {
-  background: #352a21;
-}
-/* style.css */
-body.vis-on .note {
-  background: #4a3627;
-}
-/* style.css */
-body.vis-on .search {
-  background: #2a1f17;
-  border: 1px solid #7d6a3a;
-}
-/* style.css */
-body.vis-on .camp-tabs {
-  border-bottom: 1px solid #7d6a3a;
-}
-/* style.css */
-body.vis-on .camp-tabs button.active {
-  background: #7d6a3a;
-}
-/* style.css */
-body.vis-on .camp-card {
-  border: 1px solid #7d6a3a;
-  background: #2a1f17;
-}
-/* style.css */
-body.vis-on .camp-summary span {
-  background: #2a1f17;
-  border: 1px solid #625244;
-}
-/* style.css */
-body.vis-on .forecast>div {
-  background: #3a2a1f;
-  border-top: 3px solid #aab258;
-}
-/* style.css */
-body.vis-on .camp-card select,
-body.vis-on .stall-form input,
-body.vis-on .stall-form select {
-  background: #2a1f17;
-  border: 1px solid #a28a4e;
-}
-/* style.css */
-body.vis-on .story {
-  border-top: 1px solid rgba(98,82,68,0.333);
-}
-/* style.css */
-body.vis-on .stall-form {
-  background: #4a3627;
-}
-/* style.css */
-body.vis-on .frontier-tabs {
-  border-bottom: 1px solid rgba(125,106,58,0.376);
-}
-/* style.css */
-body.vis-on .frontier-tabs button.active,
-body.vis-on .challenge-list button.active {
-  background: #7d6a3a;
-}
-/* style.css */
-body.vis-on .frontier-card {
-  background: rgba(53,42,33,0.788);
-  border: 1px solid rgba(125,106,58,0.396);
-}
-/* style.css */
-body.vis-on .frontier-card select,
-body.vis-on .frontier-card input {
-  background: #2a1f17;
-  border: 1px solid #7d6a3a;
-}
-/* style.css */
-body.vis-on .frontier-note {
-  background: rgba(58,42,31,0.502);
-}
-/* style.css */
-body.vis-on .soil-grid button {
-  background: rgba(125,106,58,0.18)*.3));
-  border: 1px solid rgba(125,106,58,0.333);
-}
-/* style.css */
-body.vis-on .furniture-list>div {
-  border-bottom: 1px solid rgba(125,106,58,0.231);
-}
-/* style.css */
-body.vis-on .resident-line {
-  border-top: 1px solid rgba(125,106,58,0.267);
-}
-/* style.css */
-body.vis-on .eco-grid .eco-grass {
-  background: #7d6a3a;
-}
-/* style.css */
-body.vis-on .eco-grid .eco-forest {
-  background: #5a4030;
-}
-/* style.css */
-body.vis-on .species-list>div {
-  border-bottom: 1px solid rgba(125,106,58,0.302);
-}
-/* style.css */
-body.vis-on .pack-grid button.cargo {
-  background: #625244;
-  border-color: #a28a4e;
-}
-/* style.css */
-body.vis-on .pack-grid button {
-  background: #2a1f17;
-}
-/* style.css */
-body.vis-on .kit-list>span {
-  background: #4a3627;
-}
-/* style.css */
-body.vis-on .module-row {
-  border-bottom: 1px solid rgba(125,106,58,0.267);
-}
-/* style.css */
-body.vis-on .circuit-grid {
-  border-right: 4px solid #aab258;
-}
-/* style.css */
-body.vis-on .circuit-grid button {
-  background: #3a2a1f;
-}
-/* style.css */
-body.vis-on .circuit-grid button.powered {
-  background: #625244;
-}
-/* style.css */
-body.vis-on .plant-guide p {
-  border-bottom: 1px solid rgba(125,106,58,0.259);
-}
-/* style.css */
-body.vis-on .photo-grid figure {
-  background: #2a1f17;
-}
-/* style.css */
-body.vis-on .cooking-track {
-  background: #2a1f17;
-  border: 1px solid #a28a4e;
-}
-/* style.css */
-body.vis-on .cook-window {
-  background: #a28a4e;
-}
-/* style.css */
-body.vis-on .cook-window.stir {
-  background: #7d6a3a;
-}
-/* style.css */
-body.vis-on .meal-row {
-  border-bottom: 1px solid rgba(162,138,78,0.333);
-}
-/* style.css */
-body.vis-on .exhibit-slots>div {
-  border: 1px solid #a28a4e;
-  background: #3a2a1f;
-}
-/* supply.css */
-body.vis-on .supply-planner,
-body.vis-on .supply-panel {
-  background: linear-gradient(120deg,#3a2a1f,#352a21);
-}
-/* supply.css */
-body.vis-on .supply-panel select,
-body.vis-on .supply-planner select,
-body.vis-on .supply-panel input {
-  background: #2a1f17;
-  border: 1px solid #7d6a3a;
-}
-/* supply.css */
-body.vis-on .supply-materials article,
-body.vis-on .supply-plan-list article {
-  border: 1px solid #625244;
-  background: rgba(42,31,23,0.502);
-}
-/* supply.css */
-body.vis-on .supply-status,
-body.vis-on .supply-shortage {
-  background: rgba(36,26,20,0.4);
-}
-/* supply.css */
-body.vis-on .supply-panel details {
-  border-top: 1px solid #625244;
-}
-/* supply.css */
-body.vis-on .supply-choice>div {
-  border: 1px solid #625244;
-}
-/* supply.css */
-body.vis-on .supply-choice>div.chosen {
-  background: rgba(90,64,48,0.4);
+  border-left: 4px solid #c9a5e6;
+  background: #1f2628;
+}
+/* daily.css */
+body.vis-on .daily-strip p b {
+  color: #d9c2f0;
+}
+/* daily.css */
+body.vis-on .daily-chip {
+  border-color: #c9a5e6;
+  color: #e8d6f6;
+}
+/* daily.css */
+body.vis-on.a11y-color .daily-opt .risk dd {
+  color: #bfe0ff;
+}
+/* daily.css */
+body.vis-on.a11y-color .chance i.w {
+  background: #4aa3ff;
+}
+/* daily.css */
+body.vis-on.a11y-color .chance i.on {
+  background: #f0a040;
+}
+/* thief.css */
+body.vis-on .skill-head p {
+  color: #e9dcc0;
+}
+/* thief.css */
+body.vis-on .skill-points {
+  border: 1px solid #e9c05a;
+  color: #f3d27a;
 }
 /* thief.css */
 body.vis-on .skill-col {
@@ -1288,6 +3690,14 @@ body.vis-on .skill-col {
 /* thief.css */
 body.vis-on .skill-thief {
   border-color: #aab258;
+}
+/* thief.css */
+body.vis-on .skill-col h3 {
+  color: #f6e3b4;
+}
+/* thief.css */
+body.vis-on .skill-col h3 span {
+  color: #ddc98c;
 }
 /* thief.css */
 body.vis-on .skill-xp {
@@ -1302,17 +3712,59 @@ body.vis-on .skill-thief .skill-xp i {
   background: #aab258;
 }
 /* thief.css */
+body.vis-on .skill-col small,
+body.vis-on .skill-desc {
+  color: #c4ab68;
+}
+/* thief.css */
 body.vis-on .skill-spec {
   background: #2a1f17;
+}
+/* thief.css */
+body.vis-on .skill-spec-row small {
+  color: #c4ab68;
 }
 /* thief.css */
 body.vis-on .talent {
   border: 1px solid #5a4030;
 }
 /* thief.css */
+body.vis-on .talent-top b {
+  color: #ecebdc;
+}
+/* thief.css */
+body.vis-on .talent p {
+  color: #e9dcc0;
+}
+/* thief.css */
+body.vis-on .talent small {
+  color: #e9c05a;
+}
+/* thief.css */
+body.vis-on .talent-meta {
+  color: #c4ab68;
+}
+/* thief.css */
 body.vis-on .talent.owned {
   border-color: #aab258;
   background: #26331d;
+}
+/* thief.css */
+body.vis-on .talent-done {
+  color: #aab258;
+}
+/* thief.css */
+body.vis-on .steal-head h3 {
+  color: #f6e3b4;
+}
+/* thief.css */
+body.vis-on .steal-head p,
+body.vis-on .steal-head small {
+  color: #e9dcc0;
+}
+/* thief.css */
+body.vis-on .sus-dots i {
+  background: #e9806e;
 }
 /* thief.css */
 body.vis-on .odds-chip {
@@ -1323,16 +3775,53 @@ body.vis-on .odds-parts {
   background: #2a1f17;
 }
 /* thief.css */
+body.vis-on .odds-parts .plus {
+  color: #aab258;
+}
+/* thief.css */
+body.vis-on .odds-parts .minus {
+  color: #ffc9bd;
+}
+/* thief.css */
 body.vis-on .pocket {
   border: 1px solid #5a4030;
+}
+/* thief.css */
+body.vis-on .pocket small {
+  color: #ffc9bd;
+}
+/* thief.css */
+body.vis-on .pocket.unknown {
+  color: #c4ab68;
 }
 /* thief.css */
 body.vis-on .pocket-no {
   background: #4a3c30;
 }
 /* thief.css */
+body.vis-on .tier-tag.tier-junk {
+  background: #4a3c30;
+  color: #ddc98c;
+}
+/* thief.css */
 body.vis-on .tier-tag.tier-normal {
   background: #4a3c30;
+  color: #aab258;
+}
+/* thief.css */
+body.vis-on .tier-tag.tier-important {
+  background: #4a3f22;
+  color: #f3d27a;
+}
+/* thief.css */
+body.vis-on .tier-tag.tier-treasure {
+  background: #5a4318;
+  color: #ffe29a;
+}
+/* thief.css */
+body.vis-on .pocket.tier-treasure,
+body.vis-on .pocket-btn.tier-treasure {
+  border-color: #e9c05a;
 }
 /* thief.css */
 body.vis-on .attn-bar {
@@ -1340,9 +3829,17 @@ body.vis-on .attn-bar {
   background: #2a1f17;
 }
 /* thief.css */
+body.vis-on .attn-bar i {
+  background: linear-gradient(90deg, #e9c05a, #e9806e);
+}
+/* thief.css */
 body.vis-on .pocket-btn.current {
   border-color: #aab258;
   box-shadow: 0 0 0 2px rgba(170,178,88,0.2);
+}
+/* thief.css */
+body.vis-on .swing small {
+  color: #c4ab68;
 }
 /* thief.css */
 body.vis-on .swing-bar {
@@ -1357,188 +3854,219 @@ body.vis-on .swing-bar .zone {
 }
 /* thief.css */
 body.vis-on .swing-bar .marker {
+  background: #f6e3b4;
   box-shadow: 0 0 0 1px #2a1f17;
+}
+/* thief.css */
+body.vis-on .steal-log {
+  color: #e9dcc0;
+}
+/* thief.css */
+body.vis-on .steal-result h3 {
+  color: #f6e3b4;
+}
+/* thief.css */
+body.vis-on .steal-result.won h3 {
+  color: #aab258;
+}
+/* thief.css */
+body.vis-on .steal-result.lost h3 {
+  color: #ffc9bd;
+}
+/* thief.css */
+body.vis-on .respec small {
+  color: #e9c05a;
 }
 /* thief.css */
 body.vis-on .thief-strip {
   border: 1px solid #625244;
   border-left: 4px solid #aab258;
+  background: #1f2628;
 }
-/* wayfinding.css */
-body.vis-on .atlas-layout {
-  background: #2a1f17;
+/* thief.css */
+body.vis-on .thief-strip p b {
+  color: #aab258;
 }
-/* wayfinding.css */
-body.vis-on .atlas-toolbar {
-  border-bottom: 1px solid #625244;
+/* thief.css */
+body.vis-on.a11y-color .swing-bar .zone {
+  background: #4aa3ff55;
+  border-color: #4aa3ff;
 }
-/* wayfinding.css */
-body.vis-on .atlas-scroll {
-  background: #3a2a1f;
+/* thief.css */
+body.vis-on.a11y-color .odds-parts .minus,
+body.vis-on.a11y-color .pocket small {
+  color: #f0a040;
 }
-/* wayfinding.css */
-body.vis-on .atlas-node strong {
-  background: rgba(53,42,33,0.91);
-  border: 1px solid #a28a4e;
+/* thief.css */
+body.vis-on.a11y-color .odds-parts .plus {
+  color: #4aa3ff;
 }
-/* wayfinding.css */
-body.vis-on .atlas-node small {
-  background: rgba(53,42,33,0.878);
+/* garden.css */
+body.vis-on .place-page .manual-purpose {
+  color: #e9dcc0;
 }
-/* wayfinding.css */
-body.vis-on .atlas-symbol {
+/* garden.css */
+body.vis-on .g-head h3 {
+  color: #f6e3b4;
+}
+/* garden.css */
+body.vis-on .g-head p,
+body.vis-on .g-head small {
+  color: #e9dcc0;
+}
+/* garden.css */
+body.vis-on .g-tag {
+  border: 1px solid #625244;
+  color: #e9dcc0;
+}
+/* garden.css */
+body.vis-on .g-tag.give {
+  border-color: #aab258;
+  color: #aab258;
+}
+/* garden.css */
+body.vis-on .g-tag.get,
+body.vis-on .g-tag.good {
+  border-color: #aab258;
+  color: #aab258;
+}
+/* garden.css */
+body.vis-on .g-tag.bad {
+  border-color: #e9806e;
+  color: #ffc9bd;
+}
+/* garden.css */
+body.vis-on .seed-no {
   background: #4a3c30;
-  border: 2px solid #c4ab68;
-  box-shadow: 0 3px 0 #2a1f17;
 }
-/* wayfinding.css */
-body.vis-on .atlas-node.locked .atlas-symbol {
-  background: #3a2a1f;
+/* garden.css */
+body.vis-on .seed-main small,
+body.vis-on .seed-time {
+  color: #e9dcc0;
 }
-/* wayfinding.css */
-body.vis-on .atlas-node.locked strong {
-  border-color: #7d6a3a;
+/* garden.css */
+body.vis-on .care-dial {
+  border: 2px solid #625244;
 }
-/* wayfinding.css */
-body.vis-on .atlas-info {
-  background: #352a21;
-  border-left: 1px solid #625244;
+/* garden.css */
+body.vis-on .care-dial b {
+  color: #f6e3b4;
 }
-/* wayfinding.css */
-body.vis-on .atlas-materials span {
-  background: #2a1f17;
-  border: 1px solid #625244;
+/* garden.css */
+body.vis-on .care-dial small {
+  color: #c4ab68;
 }
-/* wayfinding.css */
-body.vis-on .atlas-primary button:first-child {
-  background: #7d6a3a;
+/* garden.css */
+body.vis-on .care-dial.top {
+  border-color: #e9c05a;
 }
-/* wayfinding.css */
-body.vis-on .atlas-note {
-  border-top: 1px solid #625244;
+/* garden.css */
+body.vis-on .care-dial.top b {
+  color: #ffd76a;
 }
-/* wayfinding.css */
-body.vis-on .atlas-local canvas {
-  border: 1px solid #a28a4e;
+/* garden.css */
+body.vis-on .care-dial.low {
+  border-color: #e9806e;
 }
-/* wayfinding.css */
-body.vis-on .journal-main {
-  border: 1px solid #a28a4e;
-  background: linear-gradient(135deg,#4a3627,#3a2a1f);
+/* garden.css */
+body.vis-on .g-today li {
+  border: 1px solid #5a4030;
+  color: #e9dcc0;
 }
-/* wayfinding.css */
-body.vis-on .journal-next {
-  background: #352a21;
-}
-/* wayfinding.css */
-body.vis-on .journal-steps li>span {
-  background: #2a1f17;
-  border: 1px solid #625244;
-}
-/* wayfinding.css */
-body.vis-on .journal-outcome {
-  border-top: 1px solid #625244;
-}
-/* wayfinding.css */
-body.vis-on .journal-options article {
-  border: 1px solid #625244;
-  background: #3a2a1f;
-}
-/* wayfinding.css */
-body.vis-on .journal-extra {
-  border-top: 1px solid #625244;
-}
-/* wayfinding.css */
-body.vis-on .journal-catalog article {
-  border-top: 1px solid #625244;
-}
-/* wayfinding.css */
-body.vis-on .journal-recipe {
-  background: #4a3627;
-}
-/* wayfinding.css */
-body.vis-on .journal-flow span {
-  background: #2a1f17;
-}
-/* wayfinding.css */
-body.vis-on .journal-job {
-  border-top: 1px solid #7d6a3a;
-}
-/* wayfinding.css */
-body.vis-on .feature-purpose {
-  background: #4a3627;
-}
-/* wayfinding.css */
-body.vis-on .simple-site-other {
-  border-top: 1px solid #625244;
-}
-/* wayfinding.css */
-@media(max-width:850px) {
-body.vis-on .atlas-info {
-  border-top: 1px solid #7d6a3a;
-}
-}
-/* wayfinding.css */
-body.vis-on .atlas-landmark {
-  background: rgba(42,31,23,0.933);
-  border: 1px solid #7d6a3a;
-}
-/* wayfinding.css */
-body.vis-on .atlas-landmark i {
-  background: #c4ab68;
-}
-/* winter.css */
-body.vis-on .alert-item {
-  border: 1px solid #7d6a3a;
-  background: rgba(42,31,23,0.902);
-}
-/* winter.css */
-body.vis-on .alert-item:hover,
-body.vis-on .alert-item:focus-visible {
-  background: rgba(58,42,31,0.902);
-}
-/* winter.css */
-body.vis-on .alert-item::before {
-  background: #7d6a3a;
-}
-/* winter.css */
-body.vis-on .ladder li {
-  border: 1px solid #625244;
-  background: #2a1f17;
-}
-/* winter.css */
-body.vis-on .ladder li.on {
-  background: #aab258;
-  border-color: #aab258;
-}
-/* winter.css */
-body.vis-on .decree-grid article.current,
-body.vis-on .story-choice article.current {
-  background: #352a21;
-}
-/* winter.css */
-body.vis-on .decree-grid .consequence div {
-  border-top: 1px solid #4a3c30;
-}
-/* winter.css */
-body.vis-on .story-choice article.done {
-  border-color: #aab258;
-}
-/* winter.css */
-body.vis-on .collection li {
-  border: 1px solid #4a3c30;
-  background: #2a1f17;
-}
-/* winter.css */
-body.vis-on .collection li.done {
+/* garden.css */
+body.vis-on .g-today li.ok {
   border-color: #869843;
-  background: #26331d;
 }
-/* winter.css */
-body.vis-on .collection .bar {
-  background: #3a2a1f;
+/* garden.css */
+body.vis-on .g-today li.ok::before {
+  color: #aab258;
 }
-/* winter.css */
-body.vis-on .collection .bar i {
-  background: #aab258;
+/* garden.css */
+body.vis-on .g-today li.bad {
+  border-color: #b8664f;
+}
+/* garden.css */
+body.vis-on .g-today li.bad::before {
+  color: #ffc9bd;
+}
+/* garden.css */
+body.vis-on .g-facts {
+  background: #2a1f17;
+}
+/* garden.css */
+body.vis-on .g-facts dt {
+  color: #aab258;
+}
+/* garden.css */
+body.vis-on .g-facts dd {
+  color: #e9dcc0;
+}
+/* garden.css */
+body.vis-on .g-board h3 {
+  color: #f6e3b4;
+}
+/* garden.css */
+body.vis-on .g-stat {
+  border: 1px solid #5a4030;
+  color: #e9dcc0;
+}
+/* garden.css */
+body.vis-on .g-stat b {
+  color: #f6e3b4;
+}
+/* garden.css */
+body.vis-on .g-stat.warn {
+  border-color: #b8664f;
+}
+/* garden.css */
+body.vis-on .g-stat.warn b {
+  color: #ffc9bd;
+}
+/* garden.css */
+body.vis-on .g-good {
+  color: #ffd76a;
+}
+/* garden.css */
+body.vis-on .g-days li {
+  border: 1px solid #5a4030;
+}
+/* garden.css */
+body.vis-on .g-days small {
+  color: #e9dcc0;
+}
+/* garden.css */
+body.vis-on .g-table th,
+body.vis-on .g-table td {
+  border-bottom: 1px solid #4a3c30;
+}
+/* garden.css */
+body.vis-on .g-table thead th {
+  color: #c4ab68;
+}
+/* garden.css */
+body.vis-on .g-table tbody th {
+  color: #f6e3b4;
+}
+/* garden.css */
+body.vis-on .garden-strip {
+  border: 1px solid #625244;
+  border-left: 4px solid #aab258;
+  background: #2a1f17;
+}
+/* garden.css */
+body.vis-on .garden-strip p b {
+  color: #aab258;
+}
+/* garden.css */
+body.vis-on.a11y-color .g-tag.get,
+body.vis-on.a11y-color .g-tag.good,
+body.vis-on.a11y-color .g-today li.ok {
+  border-color: #4aa3ff;
+  color: #bcdcff;
+}
+/* garden.css */
+body.vis-on.a11y-color .g-tag.bad,
+body.vis-on.a11y-color .g-today li.bad,
+body.vis-on.a11y-color .g-stat.warn {
+  border-color: #f0a040;
 }

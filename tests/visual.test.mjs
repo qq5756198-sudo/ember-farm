@@ -26,7 +26,7 @@ const sheets = await import("../dist/pixel-sheets.js");
 const ALL = ["farm", "market", "residential", "hospital", "warehouse", "valley", "stationMarket", "courtyard", "quarantine", "railDepot", "pinewood", "shipyard", "shelter", "frost", "archive"];
 const baked = new Map();
 const art = (id) => {
-  if (!baked.has(id)) baked.set(id, maps.bakeMap(id));
+  if (!baked.has(id)) baked.set(id, maps.bakeMap(id, { keepPix: true }));
   return baked.get(id);
 };
 
@@ -42,6 +42,8 @@ test("all fifteen maps have new pixel art", { skip: !canvasLib && "@napi-rs/canv
     for (const l of a.lights) assert.ok(Number.isFinite(l.x) && Number.isFinite(l.y) && typeof l.kind === "string", id + " light is well formed");
     assert.ok(Array.isArray(a.puddles), id + " has puddle spots");
   }
+  // 游戏里用的那份不留逐像素数据（省内存）
+  assert.equal(maps.bakeMap("shelter").pix, undefined);
 });
 
 test("the four ruin maps no longer share one picture", { skip: !canvasLib && "@napi-rs/canvas not installed" }, () => {
@@ -149,7 +151,7 @@ test("the new/old visual switch writes only its own key and never touches saves"
 
 test("map art stays deterministic between bakes (no random layout per visit)", { skip: !canvasLib && "@napi-rs/canvas not installed" }, () => {
   for (const id of ["residential", "shelter", "archive"]) {
-    const a = maps.bakeMap(id).pix.d,
+    const a = maps.bakeMap(id, { keepPix: true }).pix.d,
       b = art(id).pix.d;
     assert.equal(a.length, b.length);
     let same = true;

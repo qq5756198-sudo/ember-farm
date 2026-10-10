@@ -66,6 +66,8 @@ export function lookFor(key, role = null) {
   if (role === "helper") Object.assign(look, { hat: "hardhat", vest: [PAL.ember[3], PAL.straw[4]], top: TOPS[1] });
   if (role === "raider") Object.assign(look, { hat: "hood", top: [PAL.ash[2], PAL.ash[1], PAL.ash[3]], mask: PAL.ash[0], pants: PANTS[2], scarf: null });
   if (role === "elder") Object.assign(look, { hair: PAL.stone[4], hairLight: PAL.stone[5], style: "short", hat: "straw" });
+  // 同一个人换了活计（种地→站岗）长相要跟着换，画好的小图按这个区分
+  look.sig = role || "";
   return look;
 }
 
@@ -321,7 +323,7 @@ function drawPerson(L, dir, frame, pose) {
   return P;
 }
 export function personSprite(look, key, dir, frame, pose) {
-  return cached(`person:${key}:${dir}:${frame}:${pose}`, () => canvasOf(drawPerson(look, dir, frame, pose)));
+  return cached(`person:${key}:${look.sig || ""}:${dir}:${frame}:${pose}`, () => canvasOf(drawPerson(look, dir, frame, pose)));
 }
 export const dirFromAngle = (a) => {
   if (a >= Math.PI / 4 && a < (Math.PI * 3) / 4) return { dir: "down", flip: false };

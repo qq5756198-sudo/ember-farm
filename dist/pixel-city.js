@@ -172,7 +172,10 @@ function blockYard(sc, b, kind, seed) {
 }
 const H = (sc, o) => sc.add(o.y + o.h - 1, () => house(sc, o));
 const at = (sc, y, fn) => sc.add(y, fn);
+// 树冠在树根上方：交互点、出口在树冠底下就不种（树冠会把人和提示挡住）
+const underCanopy = (sc, x, y) => sc.near(x, y - 14, 22);
 function treeIn(sc, x, y, seed, kind = "live", size = 0.8) {
+  if (underCanopy(sc, x, y)) return;
   sc.add(y, () => T.treeAt(sc.P, x, y, seed, kind, size));
 }
 function bushIn(sc, x, y, seed, r = 5, flowers = null) {
@@ -233,7 +236,11 @@ function sidewalkLife(sc, opt) {
     const list = front && opt.front ? opt.front : opt.kinds,
       kind = list[k++ % list.length];
     if (kind === "lamp") sc.add(y, () => T.lampPost(sc, x, y, opt.lampColor, R() < (opt.broken ?? 0.3)));
-    else if (kind === "tree") sc.add(y, () => T.treePit(sc, x, y, 900 + k, R() < (opt.dead ?? 0.25) ? "dead" : "live", 0.45 + R() * 0.25));
+    else if (kind === "tree") {
+      const dead = R() < (opt.dead ?? 0.25),
+        size = 0.45 + R() * 0.25;
+      if (!underCanopy(sc, x, y)) sc.add(y, () => T.treePit(sc, x, y, 900 + k, dead ? "dead" : "live", size));
+    }
     else if (kind === "bench") sc.add(y, () => T.bench(sc.P, x, y));
     else if (kind === "bin") sc.add(y, () => T.bin(sc.P, x, y, R() < 0.4));
     else if (kind === "hydrant") sc.add(y, () => T.hydrant(sc.P, x, y));

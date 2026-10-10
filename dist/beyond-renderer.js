@@ -21,11 +21,12 @@ export class Renderer extends DistrictRenderer{
   // Ground-level restoration is drawn before people so no new roof hides a threat.
   if(id==='frost'){for(const step of this.visualFootsteps){c.save();c.globalAlpha=(1-(this.time-step.t)/11)*.6;c.translate(step.x,step.y);c.rotate(step.a);rect(-4,-8,8,4,'#667f85');rect(5,3,8,4,'#667f85');c.restore();}for(let i=0;i<5;i++){rect(548+i*173,890,23,3,'#e5ebdc');rect(555+i*173,897,16,2,'#8aa2a3');}}
   if(id==='shelter'){for(const [x,y]of [[190,465],[650,470],[1010,565],[1380,565]]){const flow=(t*17)%42;line(x+flow,y,x+flow+10,y,'#bfcca487',2);line(x+flow+10,y,x+flow+5,y-4,'#bfcca487',2);}}
-  if(id==='pinewood'){const forest=e.b?.forest||[];for(let i=0;i<3;i++){const readyDay=Number(forest[i]||0),x=550+i*265,y=770;const cut=readyDay>e.s.day;if(cut){rect(x-13,y-6,27,17,'#79674a');circle(x,y-8,15,'#baa077');circle(x,y-8,9,'#8f7c55');}else{pine(x,y,.55);pine(x+32,y+12,.45);}if(stateOf(e,'pinewood_forest').flags?.['select'+i])rect(x-18,y+19,59,3,'#9cb17b');}}
+  if(id==='pinewood'){const forest=e.b?.forest||[];for(let i=0;i<3;i++){const readyDay=Number(forest[i]||0),x=550+i*265,y=770;this.drawForestPlot(i,x,y,readyDay>e.s.day,!!stateOf(e,'pinewood_forest').flags?.['select'+i]);}}
   if(id==='shipyard')this.drawDrainPool(e,!!stateOf(e,'shipyard_drain').flags?.pump);
   if(e.f?.dog?.rescued&&e.b?.dog?.mode!=='home'&&!e.objects.some(o=>o.type==='partnerDog'))this.drawObject({type:'partnerDog',icon:40,x:e.f.dog.x,y:e.f.dog.y,name:'麦穗'},e);
   this.drawEventSets(e);
  }
+ drawForestPlot(i,x,y,cut,selected){const{rect,circle,pine}=pixelPainter(this.ctx);if(cut){rect(x-13,y-6,27,17,'#79674a');circle(x,y-8,15,'#baa077');circle(x,y-8,9,'#8f7c55');}else{pine(x,y,.55);pine(x+32,y+12,.45);}if(selected)rect(x-18,y+19,59,3,'#9cb17b');}
  drawDrainPool(e,drained){const{rect}=pixelPainter(this.ctx);rect(820,350,155,165,drained?'#9ba38a':'#416c70');rect(824,354,147,157,drained?'#aab098':'#57858a');for(let k=0;k<7;k++){if(drained){rect(829,360+k*21,137,2,'#788c77');rect(834+k*18,355,2,153,'#c0bda0');}else{rect(832+(k%3)*11,365+k*21,104,3,'#81aaa7');rect(824,357+k*22,4,16,'#aac0a6');}}if(drained){rect(831,504,135,4,'#c7c09b');rect(831,358,135,4,'#c7c09b');}}
  drawObject(o,e){
   if(o.type==='beyondEvent'){if(NEAR(o,e.s.player,140))this.badge(o.name,o.x,o.y-121,'#efdb9c');return;}
@@ -156,8 +157,8 @@ export class Renderer extends DistrictRenderer{
   c.restore();if(e.reload){rect(p.x-25,p.y-78,50,5,'#17291f');rect(p.x-25,p.y-78,50*(1-e.reload.t/e.reload.max),5,'#e3d49b');this.text('装填中',p.x,p.y-87,'#eee1b3',11);}if(e.f?.crouch)this.badge(e.inCover?.()?'草丛隐蔽':'蹲行',p.x,p.y+20,'#cbdda5');
  }
  drawEnemy(z,e){super.drawEnemy(z,e);if(z.nest)return;const c=this.ctx,p=pixelPainter(c),{rect,line}=p,x=z.x,y=z.y;
-  if(z.type==='armor'){rect(x-25,y-44,10,13,'#899489');rect(x+16,y-44,10,13,'#899489');rect(x-10,y-44,20,18,'#697d73');line(x-7,y-41,x+7,y-30,'#aeb5a0',2);}
-  if(z.type==='runner'){const k=Math.sin(this.time*10)*3;line(x-13,y-5,x-20+k,y+3,'#809876',3);line(x+11,y-6,x+21-k,y-2,'#809876',3);}
+  if(z.type==='armor'&&!this.newEnemyArt){rect(x-25,y-44,10,13,'#899489');rect(x+16,y-44,10,13,'#899489');rect(x-10,y-44,20,18,'#697d73');line(x-7,y-41,x+7,y-30,'#aeb5a0',2);}
+  if(z.type==='runner'&&!this.newEnemyArt){const k=Math.sin(this.time*10)*3;line(x-13,y-5,x-20+k,y+3,'#809876',3);line(x+11,y-6,x+21-k,y-2,'#809876',3);}
   if(z.windup>0){c.save();c.strokeStyle='#f0c48e';c.lineWidth=2;c.setLineDash(z.type==='runner'?[9,5]:[]);const a=z.facing||0,r=z.type==='elite'?76:49;c.beginPath();c.moveTo(x+Math.cos(a-.55)*r,y+Math.sin(a-.55)*r);c.lineTo(x+Math.cos(a)*r*1.2,y+Math.sin(a)*r*1.2);c.lineTo(x+Math.cos(a+.55)*r,y+Math.sin(a+.55)*r);c.stroke();c.restore();}
   if(z.flash>0){const progress=1-clamp(z.flash/.15,0,1),color=z.type==='armor'||z.type==='elite'?'#ebd28d':'#bdad7a';for(let k=0;k<5;k++){const a=k*2.2+z.x,xx=x+Math.cos(a)*(8+progress*23),yy=y-26+Math.sin(a)*(5+progress*17);line(xx,yy,xx+Math.cos(a)*5,yy+Math.sin(a)*5,color,2);}}
  }

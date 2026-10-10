@@ -3,7 +3,9 @@
 // 设置里可以切回原来的画面；切换只改画面，不动存档。
 import { Renderer as GardenRenderer } from "./garden-renderer.js";
 import { CROPS, BUILDINGS, ITEMS, WORLD, REGIONS } from "./data.js";
-import { PAL, makeCanvas, nearestPal } from "./pixel-kit.js";
+import { PAL, makeCanvas, nearestPal, Pix, cached } from "./pixel-kit.js";
+import { RAMP, pine } from "./pixel-build.js";
+import { boat } from "./pixel-things.js";
 import { bakeMap, hasMapArt } from "./pixel-maps.js";
 import { pixelSheets } from "./pixel-sheets.js";
 import { personSprite, lookFor, PLAYER_LOOK, dirFromAngle, cropSprite, soilSprite, iconSprite, debrisSprite, shadowSprite, gardenSprite, zombieSprite } from "./pixel-sprites.js";
@@ -11,7 +13,7 @@ import { buildingArt, objectArt, flameArt, carryArt } from "./pixel-props.js";
 import { LightMap, Particles, Weather, ambientFor, nightness, FIRE, LAMP, WARM, SCREEN, EMBER, FIREFLY } from "./pixel-light.js";
 
 const KEY = "ember-farm-visual-v1";
-export const VIS = { on: true, preview: { minute: null, weather: null }, listeners: [] };
+export const VIS = { on: true, listeners: [] };
 try {
   if (globalThis.localStorage?.getItem(KEY) === "off") VIS.on = false;
 } catch {
@@ -37,6 +39,37 @@ const FONT = '"Fusion Pixel", "Microsoft YaHei", sans-serif';
 const RAIN = ["小雨", "暴雨", "酸雨"];
 const SNOW = ["小雪", "大雪"];
 const ZOMBIE_ICONS = new Set([16, 17, 18, 19, 20, 21, 22, 23, 58, 59]);
+// 田的编号：农场是数字，溪谷是字符串（valley-0-3），动画和变化要用数字
+const plotSeed = (p) => (typeof p.id === "number" ? p.id : Math.round((p.x || 0) * 0.13 + (p.y || 0) * 0.07));
+// 这几种颜色有含义（色弱配色、偷盗时的“背后/侧面/正面”眼睛、瞄准线），不换成调色板
+const KEEP_COLORS = new Set(["#4aa3ff", "#f0a040", "#8fd07a", "#e9c05a", "#e9806e", "#ff4a3a", "#ff8a7a"]);
+// 边境的点：读它的状态（和边境画法里的写法一样）
+const pointState = (e, id) => e.bpoint?.(id) || e.b?.points?.[id] || {};
+// 修好的地方夜里会亮（条件和原来一样）
+function beyondLit(o, e) {
+  const st = pointState(e, o.pointId),
+    flags = st.flags || {},
+    energy = (e.c?.energy || 0) > 0;
+  if (o.pointId === "shipyard_fog") return st.choice === "lamp" && energy;
+  if (o.pointId === "shelter_signals") return !!flags.repair;
+  if (o.pointId === "shelter_housing") return !!flags.repair && !!pointState(e, "shelter_air").flags?.service;
+  if (o.pointId === "frost_weather") return !!flags.repair && energy;
+  if (o.pointId === "frost_bearing") return !!flags.survey && energy;
+  if (o.pointId === "pinewood_lodge" || o.pointId === "frost_inn") return !!e.b?.modules?.includes(o.pointId + ":warm");
+  return false;
+}
+// 林场林地上的树桩和松树（画一次存起来）
+const stumpSprite = () =>
+  cached("forest-stump", () => {
+    const P = new Pix(15, 9);
+    P.rect(3, 3, 9, 5, PAL.soil[1]);
+    P.ellipse(7, 3, 4.5, 2, PAL.straw[2]);
+    P.ellipse(7, 3, 2.5, 1, PAL.soil[3]);
+    P.set(2, 7, PAL.soil[0]);
+    P.set(12, 7, PAL.soil[0]);
+    return P.toCanvas();
+  });
+const pineSprite = (seed, s) => cached("forest-pine:" + seed + ":" + s, () => pine(seed, s).toCanvas());
 const GREEN = new Set(["farm", "residential", "valley", "pinewood", "archive", "quarantine", "hospital", "courtyard", "stationMarket"]);
 // 颜色的明暗，0 黑 1 白；认不出的颜色当亮色
 function lightness(color) {
@@ -71,7 +104,7 @@ export function palColor(v) {
   let out = palCache.get(v);
   if (out !== undefined) return out;
   out = v;
-  const c = parseColor(v);
+  const c = KEEP_COLORS.has(v.slice(0, 7).toLowerCase()) ? null : parseColor(v);
   if (c) {
     const [r, g, b, a] = c,
       max = Math.max(r, g, b) / 255,
@@ -145,6 +178,14 @@ export class Renderer extends GardenRenderer {
     }
     return this.arts.get(region) || null;
   }
+  // 载入页还没关的时候先把当前地图画好，进游戏时不再卡一下
+  prepare(region) {
+    if (VIS.on && region) this.artFor(region);
+  }
+  // 感染者用新画法时，旧画法加在身上的护甲片、腿的线条就不画了
+  get newEnemyArt() {
+    return this.v;
+  }
   // 兼容旧的调用：农场底图
   ensureFarm() {
     return !!this.artFor("farm");
@@ -186,8 +227,8 @@ export class Renderer extends GardenRenderer {
     this.vMap = this.v;
     this.applyAssets(VIS.on, region);
     this.calm = !!s.settings?.access?.calm;
-    const raw = VIS.preview.weather ?? s.weather;
-    this.vMinute = VIS.preview.minute ?? s.minute;
+    const raw = s.weather;
+    this.vMinute = s.minute;
     this.vWeather = this.indoor ? "晴朗" : this.mood.snowy ? (raw === "暴雨" || raw === "酸雨" ? "大雪" : "小雪") : raw;
     this.late = [];
     this._textQueue = [];
@@ -448,8 +489,11 @@ export class Renderer extends GardenRenderer {
     if (!this.v) return super.drawObject(o, e);
     const art = objectArt(o.type);
     if (art) {
+      // 人走到门、牌子、储物点后面时，这些东西变淡，看得见人（和原来一样）
+      const p = e.s.player,
+        behind = art.h > 14 && p.y < o.y && p.y > o.y - art.h * 2 - 10 && Math.abs(p.x - o.x) < art.w + 6;
       this.pxShadow(o.x, o.y, Math.min(34, art.w * 1.4));
-      this.px(art.canvas, o.x, o.y + 4);
+      this.px(art.canvas, o.x, o.y + 4, { alpha: behind ? 0.42 : 1 });
       if (art.screen) this.late.push({ kind: "screen", x: o.x, y: o.y + 4, art });
       if (art.lamp) this.late.push({ kind: "objLamp", x: o.x, y: o.y + 4, art });
       this.muted(() => super.drawObject(o, e));
@@ -479,6 +523,8 @@ export class Renderer extends GardenRenderer {
     const d = BUILDINGS[b.type],
       art = d ? buildingArt(b.type, b.rotation % 2 === 1, !!b.open) : null;
     if (!art) return super.drawBuilding(b, e);
+    // 稻草人和火炉原来是另画的，新画法下只保留它们的字
+    if (b.type === "scarecrow" || b.type === "stove") return this.drawOwnBuilding(b, e, d, art);
     const broken = b.hp <= 0,
       p = e.s.player,
       near = Math.hypot(p.x - b.x, p.y - b.y) < 110;
@@ -508,6 +554,96 @@ export class Renderer extends GardenRenderer {
       c.fillStyle = b.hp / d.hp < 0.35 ? "#d2654c" : "#aab258";
       c.fillRect(X, Y, Math.round((w * b.hp) / d.hp / 2) * 2, 4);
     }
+  }
+  drawOwnBuilding(b, e, d, art) {
+    const broken = b.hp <= 0,
+      p = e.s.player;
+    this.pxShadow(b.x, b.y, Math.min(60, art.w * 1.5));
+    this.px(art.canvas, b.x, b.y + 4, { alpha: broken ? 0.45 : 1 });
+    if (!broken) this.late.push({ kind: "build", b, art });
+    if (b.type === "scarecrow" && b.hp < 20) this.text("要修", b.x, b.y - 72, "#f3b4a5", 11);
+    if (b.type === "stove" && Math.hypot(p.x - b.x, p.y - b.y) < 200) this.text(d.name + (this.stoveLit(b, e) ? "" : " · 熄火"), b.x, b.y - 74, this.stoveLit(b, e) ? "#f3d27a" : "#c9c2a8", 12);
+    if (d.hp && b.hp < d.hp && !broken) {
+      const c = this.ctx,
+        w = 40,
+        X = Math.round((b.x - w / 2) / 2) * 2,
+        Y = Math.round((b.y - art.h * 2 - 8) / 2) * 2;
+      c.fillStyle = "#140f0b";
+      c.fillRect(X - 2, Y - 2, w + 4, 8);
+      c.fillStyle = "#4a3c30";
+      c.fillRect(X, Y, w, 4);
+      c.fillStyle = b.hp / d.hp < 0.35 ? "#d2654c" : "#aab258";
+      c.fillRect(X, Y, Math.round((w * b.hp) / d.hp / 2) * 2, 4);
+    }
+  }
+  // 寒潮里火炉要点着才有火（和原来的条件一样）
+  stoveLit(b, e) {
+    const wi = e.w?.winter;
+    return b.hp > 0 && (!wi || !["prep", "cold"].includes(wi.phase) || !!wi.lit);
+  }
+  // 联盟终端：新画的牌子本身就是终端，只留来信的提示灯和字
+  drawTerminal(o, e) {
+    if (!this.v) return super.drawTerminal(o, e);
+    const alert = e.sc?.unread || e.canReply?.();
+    if (!alert) return;
+    if (this.calm || Math.floor(this.time * 3) % 2 === 0) {
+      const c = this.ctx;
+      c.fillStyle = "#1c140f";
+      c.fillRect(o.x + 12, o.y - 70, 8, 8);
+      c.fillStyle = "#f2c35e";
+      c.fillRect(o.x + 14, o.y - 68, 4, 4);
+    }
+    if (Math.hypot(o.x - e.s.player.x, o.y - e.s.player.y) < 190) this.badge(e.canReply?.() ? "可以回信" : "新来信", o.x, o.y - 82, "#f2d48b");
+  }
+  // 援建营地空地：木桩和小旗已经画在新图里，只留名字
+  drawCampSite(o, e) {
+    if (!this.v) return super.drawCampSite(o, e);
+    if (Math.hypot(o.x - e.s.player.x, o.y - e.s.player.y) < 160) this.badge("援建营地空地", o.x, o.y - 64, "#e6d6a3");
+  }
+  // 雾松林场的三片林地：长着松树，或者砍过只剩树桩
+  drawForestPlot(i, x, y, cut, selected) {
+    if (!this.v) return super.drawForestPlot(i, x, y, cut, selected);
+    if (cut) {
+      for (const [dx, dy] of [[-10, 2], [8, -2], [22, 8], [2, 12]]) {
+        this.pxShadow(x + dx + 2, y + dy, 12);
+        this.px(stumpSprite(), x + dx, y + dy);
+      }
+    } else {
+      for (const [dx, dy, s] of [[0, 0, 1], [30, 12, 0.8], [-22, 14, 0.85]]) {
+        const tree = pineSprite(i * 7 + Math.round(s * 10), s);
+        this.pxShadow(x + dx, y + dy, 18);
+        this.px(tree, x + dx, y + dy);
+      }
+    }
+    if (selected) {
+      const c = this.ctx;
+      c.fillStyle = "#aab258";
+      c.fillRect(Math.round((x - 26) / 2) * 2, y + 20, 64, 4);
+    }
+  }
+  // 远程武器的准星：等光照画完再画，夜里也看得清
+  drawCrosshair(engine, mouse) {
+    if (!this.v) return super.drawCrosshair(engine, mouse);
+    this._cross = mouse;
+  }
+  drawCrossNow() {
+    const m0 = this._cross;
+    this._cross = null;
+    if (!m0) return;
+    const c = this.ctx,
+      m = this.worldPoint(m0.x, m0.y),
+      X = Math.round(m.x / 2) * 2,
+      Y = Math.round(m.y / 2) * 2;
+    c.fillStyle = "#140f0b";
+    for (const [dx, dy, w, h] of [[-15, -1, 8, 4], [8, -1, 8, 4], [-1, -15, 4, 8], [-1, 8, 4, 8]]) c.fillRect(X + dx, Y + dy, w, h);
+    c.fillStyle = "#f1e3c2";
+    for (const [dx, dy, w, h] of [[-14, 0, 6, 2], [9, 0, 6, 2], [0, -14, 2, 6], [0, 9, 2, 6]]) c.fillRect(X + dx, Y + dy, w, h);
+    c.fillStyle = "#f6b05a";
+    c.fillRect(X, Y, 2, 2);
+  }
+  // 原来的交互椭圆圈换成新的虚线圈（光照之后画）
+  drawNearEllipse(engine) {
+    if (!this.v) return super.drawNearEllipse(engine);
   }
   // 建造时跟着鼠标的虚影：用新画法、跟着旋转，等光照画完再画，夜里也看得清
   drawBuildGhost(engine, mouse) {
@@ -635,7 +771,7 @@ export class Renderer extends GardenRenderer {
       c.fillStyle = "#869843";
       for (let k = 0; k < 8; k++) c.fillRect(X + ((k * 13) % 32), Y + ((k * 7) % 30) + 2, 2, 4);
     } else {
-      const s = soilSprite(e.valleyWatered(p), (p.id ?? Math.round(p.x)) % 3);
+      const s = soilSprite(e.valleyWatered(p), plotSeed(p) % 3);
       if (s) c.drawImage(s, Math.round((p.x - 20) / 2) * 2, Math.round((p.y - 20) / 2) * 2, 40, 40);
     }
     this.valleyPlotLabel(p, e);
@@ -646,11 +782,12 @@ export class Renderer extends GardenRenderer {
     const ratio = plot.growth / CROPS[plot.crop].grow,
       stage = Math.min(3, Math.floor(ratio * 4)),
       ripe = ratio >= 1,
-      sway = ripe && !this.calm ? Math.round(Math.sin(this.time * 2.2 + (plot.id ?? plot.x) * 1.7) * 0.6) : 0;
+      seed = plotSeed(plot),
+      sway = ripe && !this.calm ? Math.round(Math.sin(this.time * 2.2 + seed * 1.7) * 0.6) : 0;
     this.px(cropSprite(plot.crop, stage), plot.x, plot.y + 8, { dx: sway });
     const watered = e.s.region === "valley" ? e.valleyWatered?.(plot) : e.plotWatered(plot);
-    if (ripe) this.late.push({ kind: "ripe", x: plot.x, y: plot.y, id: plot.id ?? plot.x });
-    else if (!watered) this.late.push({ kind: "thirsty", x: plot.x, y: plot.y, id: plot.id ?? plot.x });
+    if (ripe) this.late.push({ kind: "ripe", x: plot.x, y: plot.y, id: seed });
+    else if (!watered) this.late.push({ kind: "thirsty", x: plot.x, y: plot.y, id: seed });
   }
   drawFarm(e) {
     if (this.v) this.drawPuddles();
@@ -660,8 +797,30 @@ export class Renderer extends GardenRenderer {
     if (this.v) {
       this.drawPuddles();
       if (e.s.region === "market") this.marketTables();
+      if (e.s.region === "shipyard" || e.s.region === "archive") this.drawWaterLife(e);
     }
     return super.drawRuins(e);
+  }
+  // 船坞和档案岛四周的水：一道道亮纹；河水清理过后更清；渡船开通后有船来回
+  drawWaterLife(e) {
+    const c = this.ctx,
+      t = this.calm ? 0 : this.time,
+      clean = !!e.b?.benefits?.cleanRiver;
+    c.fillStyle = clean ? "#a9cfbd" : "#6fa69a";
+    for (let i = 0; i < 42; i++) {
+      const x = i % 2 ? 1479 + (i % 3) * 8 : 29 + (i % 4) * 11,
+        y = Math.round(((i * 67 + t * 9) % 960) / 2) * 2 + 20;
+      c.fillRect(x, y, 12 + (i % 4) * 4, 2);
+    }
+    for (let k = 0; k < 15; k++) c.fillRect(100 + k * 93, Math.round((967 + Math.sin(k + t * 0.7) * 4) / 2) * 2, 22, 2);
+    if (e.s.region === "shipyard" && pointState(e, "shipyard_ferry").flags?.service) {
+      const ferry = cached("ferry", () => {
+        const P = new Pix(52, 20);
+        boat(P, 26, 18, 42, RAMP.light, false);
+        return P.toCanvas();
+      });
+      this.px(ferry, 240 + ((this.time * 16) % 1000), 984);
+    }
   }
   // 集市路口两张摆货的木桌（原来的货就摆在这两处）
   marketTables() {
@@ -690,9 +849,13 @@ export class Renderer extends GardenRenderer {
     w.drawPuddles(this.ctx, this.art.puddles, this.time, ambientFor(this.vMinute, this.vWeather), RAIN.includes(this.vWeather));
     w.wet = saved;
   }
-  // 菜地的状态：肥力边、盖布、杂草、菜青虫、乌鸦爪印（和原来的一样，只是画成像素）
+  // 菜地的状态：肥力边、盖布、杂草、菜青虫、乌鸦爪印（和原来的一样，只是画成像素）。
+  // 这些是状态标记，等光照画完再画，夜里也看得清。
   drawGarden(e) {
     if (!this.v) return super.drawGarden(e);
+    this.late.push({ kind: "garden" });
+  }
+  drawGardenMarks(e) {
     const c = this.ctx,
       day = e.s.day,
       color = !!e.s.settings?.access?.color;
@@ -889,7 +1052,10 @@ export class Renderer extends GardenRenderer {
       else if (l.kind === "fluoro") lights.push({ x, y, r: 150, color: col, power: 0.8, flat: 0.7 });
       else if (l.kind === "grow") lights.push({ x, y, r: 60, color: col, power: 0.55 });
     }
-    for (const o of e.objects || []) if (o.type === "sign") lights.push({ x: o.x, y: o.y - 30, r: 34, color: SCREEN, power: 0.55 });
+    for (const o of e.objects || []) {
+      if (o.type === "sign") lights.push({ x: o.x, y: o.y - 30, r: 34, color: SCREEN, power: 0.55 });
+      else if (o.type === "beyondPoint" && beyondLit(o, e)) lights.push({ x: o.x, y: o.y - 35, r: 120, color: o.pointId === "shelter_signals" ? [190, 225, 150] : [255, 210, 150], power: 0.85 });
+    }
     for (const m of art.embers) if (!m.flame && inView(m.x * 2, m.y * 2)) lights.push({ x: m.x * 2, y: m.y * 2, r: 14 * flick(m.x), color: EMBER, power: 0.5, small: true });
     for (const f of this.fx.list) if (f.kind === "firefly") lights.push({ x: f.x, y: f.y, r: 16, color: FIREFLY, power: 0.4, small: true });
     // 自己身边总留一小圈光，夜里也看得清人物；在外面探索时手电筒更要紧
@@ -911,16 +1077,19 @@ export class Renderer extends GardenRenderer {
     // 受光照的一层：烟、叶子、尘土，然后是雨或雪
     this.fx.draw(c, "world", this.time);
     if (!this.indoor) {
+      // 雨丝不落在人和感染者身上，攻击前的提示看得清（和原来一样）
+      const actors = [s.player, ...(e.enemies || []).filter((z) => !z.dead && z.x > view.x - 100 && z.x < view.x + view.w + 100 && z.y > view.y - 100 && z.y < view.y + view.h + 140)],
+        clear = (x, y) => actors.some((a) => Math.abs(x - a.x) < (a.windup > 0 ? 80 : 29) && Math.abs(y - a.y + 26) < (a.windup > 0 ? 85 : 52));
       this.wx.drawSplashes(c, view, weather, this.time, this.calm);
-      this.wx.drawRain(c, view, weather, this.time, this.calm);
+      this.wx.drawRain(c, view, weather, this.time, this.calm, clear);
       this.wx.drawMist(c, view, weather, this.time, this.calm);
       if (SNOW.includes(weather)) this.wx.drawSnow(c, view, weather === "大雪", this.time, this.calm);
       if (this.mood.mist) this.wx.drawFog(c, view, this.time, this.calm, "#cfd8cc", night > 0.4 ? 0.6 : 1.2);
     }
     // 环境色 + 灯光，用“正片叠底”压到整个画面上
-    let amb = this.indoor ? [118, 124, 142] : ambientFor(this.vMinute, weather);
+    let amb = this.indoor ? [146, 152, 168] : ambientFor(this.vMinute, weather);
     // 夜里在外面探索：四周更黑，手电筒照到的地方才看得清
-    if (!this.indoor && night > 0.3 && !["farm", "market"].includes(s.region)) amb = amb.map((v) => Math.round(v * (1 - 0.38 * night)));
+    if (!this.indoor && night > 0.3 && !["farm", "market"].includes(s.region)) amb = amb.map((v) => Math.round(v * (1 - 0.25 * night)));
     if (this.wx.flash > 0 && !this.indoor) amb = amb.map((v) => Math.round(v + (255 - v) * this.wx.flash * 0.45));
     const lit = this.lightMap.render(view, amb, this.collectLights(e, night));
     if (lit) {
@@ -945,6 +1114,7 @@ export class Renderer extends GardenRenderer {
       c.fillRect(view.x, view.y, view.w, view.h);
     }
     // 作物的状态小图标：放在最上面，夜里也看得清
+    if (this.late.some((m) => m.kind === "garden")) this.drawGardenMarks(e);
     for (const m of this.late) {
       if (m.kind === "ripe") {
         const tw = this.calm ? 1 : 0.65 + 0.35 * Math.sin(this.time * 4 + m.id);
@@ -961,6 +1131,7 @@ export class Renderer extends GardenRenderer {
     this._textQueue = [];
     this.drawNearRing(e);
     this.drawGhostNow();
+    this.drawCrossNow();
   }
   drawEmissive(e, night, view) {
     const c = this.ctx,
@@ -1027,7 +1198,7 @@ export class Renderer extends GardenRenderer {
         c.fillStyle = `rgba(110,210,140,${0.35 + 0.4 * night})`;
         c.fillRect(X, Y + 2, sc.w * 2, sc.h * 2 - 2);
         c.fillStyle = "#c9f5d2";
-        const lines = Math.floor(t * 2) % 3;
+        const lines = this.calm ? 2 : Math.floor(t * 2) % 3;
         for (let k = 0; k <= lines; k++) c.fillRect(X + 2, Y + 4 + k * 4, 6 + ((k * 7) % 12), 2);
       }
       if (m.kind === "objLamp" && night > 0.3) {
