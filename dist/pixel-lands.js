@@ -455,7 +455,7 @@ function cobble(x, y, base) {
   return dither("stone", t, x, y);
 }
 
-// 检疫科研园：白色的实验楼、消毒区、帐篷、发电机和铁丝网，下面一排试验温室
+// 检疫科研园：白色的实验楼、消毒区、帐篷、发电机和铁丝网，下面三块平的试验田
 function quarantine() {
   const sc = new Scene(5104, DKEEP);
   sc.fill((x, y) => ground.lush(x, y, 51), S.ground);
