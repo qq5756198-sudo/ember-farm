@@ -162,7 +162,7 @@ export function renderGardenJournal(e, ui = {}) {
 const STATION_PAGES = {
   cook: [["frontier:kitchen", "掌勺料理（小游戏）"]],
   workbench: [["camp:orders", "每日订单"]],
-  weaponbench: [["frontier:combat", "武器与潜行"]],
+  weaponbench: [["frontier:combat", "武器与潜行 · 修理改装"]],
 };
 export function gardenStationExtras(e, b) {
   const list = STATION_PAGES[b?.type] || [];

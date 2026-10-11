@@ -123,27 +123,18 @@ test("pixel sheets keep the layout of the original sheet", { skip: !canvasLib &&
   assert.equal(d[(25 * 40 + 34) * 4 + 3], 0);
 });
 
-test("the new/old visual switch writes only its own key and never touches saves", () => {
-  const store = new Map([
-    ["ember-farm-save-v1", "SAVE"],
-    ["ember-farm-backup-v1", "BACKUP"],
-    ["ember-farm-preferences-v1", "PREFS"],
-  ]);
+test("the new/old visual switch is gone: the pixel visuals are always on, an old 'off' preference is ignored", async () => {
+  assert.equal(visual.VIS.on, true);
+  assert.equal(typeof visual.setVisual, "undefined");
+  assert.ok(Object.isFrozen(visual.VIS));
+  // 以前存下的“旧画面”偏好：重新读进模块也还是新画面
+  const store = new Map([["ember-farm-visual-v1", "off"], ["ember-farm-save-v1", "SAVE"]]);
   const prev = globalThis.localStorage;
   globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)) };
   try {
-    const seen = [];
-    visual.VIS.listeners.push((on) => seen.push(on));
-    visual.setVisual(false);
-    assert.equal(visual.VIS.on, false);
-    assert.equal(store.get("ember-farm-visual-v1"), "off");
-    visual.setVisual(true);
-    assert.equal(store.get("ember-farm-visual-v1"), "on");
-    assert.deepEqual(seen.slice(-2), [false, true]);
+    const again = await import("../dist/visual-renderer.js?again=1");
+    assert.equal(again.VIS.on, true);
     assert.equal(store.get("ember-farm-save-v1"), "SAVE");
-    assert.equal(store.get("ember-farm-backup-v1"), "BACKUP");
-    assert.equal(store.get("ember-farm-preferences-v1"), "PREFS");
-    visual.VIS.listeners.pop();
   } finally {
     globalThis.localStorage = prev;
   }

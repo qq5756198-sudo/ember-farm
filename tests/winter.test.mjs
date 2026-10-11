@@ -440,7 +440,10 @@ test("in the cold, crops outside warm zones crawl and the player starves faster 
   e.s.player.hunger = 80;
   e.update(1, {});
   const coldDrop = 80 - e.s.player.hunger;
+  // v0.22：保暖看身上穿的（保温衣 4 点），光放在背包里不算
   e.s.inventory.warmCoat = 1;
+  assert.equal(e.playerCold(), true);
+  assert.ok(e.equip("warmCoat"));
   assert.equal(e.playerCold(), false);
   e.s.player.hunger = 80;
   e.update(1, {});
@@ -752,6 +755,8 @@ test("evidence makes medkits stronger and lets one bandage cure the sick camp", 
   e.s.inventory.medkit = 1;
   e.s.player.hp = 20;
   e.consume("medkit");
+  // v0.22：药包 8 秒内慢慢回；证据多回的 20 一起算进去
+  for (let i = 0; i < 180; i++) e.update(0.05, { x: 0, y: 0 });
   const plain = (ITEMS.medkit.heal || 0) + 20;
   assert.ok(e.s.player.hp >= Math.min(100, 20 + plain));
 });

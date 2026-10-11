@@ -82,7 +82,7 @@ globalThis.document=document;
 let raf;
 const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
-script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo});globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);started=true;closeMenu();};';
+script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo});globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
 for(let i=0;i<150&&!document.querySelector('#loading').hidden;i++)await new Promise(resolve=>setTimeout(resolve,20));
 if(!document.querySelector('#loading').hidden)console.log('Loading details:',document.querySelector('#loading').innerHTML);assert.equal(document.querySelector('#loading').hidden,true,'all game assets should finish loading');
@@ -95,6 +95,8 @@ context.open('pause');assert.equal(context.inspect().menu,'pause');assert.match(
 context.open('credits');assert.match(html(),/Link/);click('close');assert.equal(context.inspect().menu,'welcome');
 const original=storage.get(Session.CAMPAIGN_SAVE);click('newGame');assert.equal(storage.get(Session.CAMPAIGN_SAVE),original,'no replacement outside explicit confirmation');click('restart');assert.equal(context.inspect().menu,'confirmRestart');click('close');assert.equal(storage.get(Session.CAMPAIGN_SAVE),original);
 click('continueCampaign');const old=context.inspect().engine;assert.equal(old.s.money,777);assert.equal(context.inspect().started,true);assert.equal(context.inspect().menu,null);context.step(1000);
+// v0.22.0：旧档第一次读进来先弹“披挂上阵”说明卡，点“知道了”关掉，之后不再弹
+assert.equal(context.inspect().menu,'outpost','an upgraded save shows the gear card once');assert.match(html(),/披挂上阵/);assert.match(html(),/你的家园已经升级/);clean();click('gIntroOk');assert.equal(context.inspect().menu,null);assert.equal(old.gr.intro,true);assert.equal(old.gearIntroDue(),false,'the gear card does not come back');
 for(const action of ['startDemo','startEchoDemo','startDistrictDemo','fDemoVisit','returnMain'])click(action);assert.equal(context.inspect().engine,old);assert.equal(context.inspect().menu,null,'removed launch commands cannot switch saves');
 context.open('confirmTitle');failSave=true;click('backToTitle');assert.equal(context.inspect().menu,'confirmTitle');assert.equal(context.inspect().started,true);failSave=false;click('backToTitle');assert.equal(context.inspect().menu,'welcome');assert.equal(context.inspect().started,false);assert.equal(context.inspect().engine.s.money,777);
 click('restart');click('newGame');assert.equal(context.inspect().engine.s.money,80);assert.equal(context.inspect().started,true);assert.equal(JSON.parse(JSON.parse(storage.get('ember-farm-before-new-v1')).main).money,777);const newText=storage.get(Session.CAMPAIGN_SAVE);click('newGame');assert.equal(storage.get(Session.CAMPAIGN_SAVE),newText);
@@ -813,4 +815,94 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
   assert.equal(back.garden.plots[2].b, 2); assert.equal(back.garden.plots[3].w, e.s.day); assert.ok(back.buildings.some((b) => b.type === 'scarecrow'));
   console.log('Garden controller passed: E on a plot tills, opens the seed picker (1 plants and closes), waters, tends and opens the plot card; the farm board via E and its scarecrow button; the slim journal; N/F no longer open it; no footer “返回营地手册” on any page; 营地消息 and the pond open single pages; weeds, bugs, cover, crow marks, fertility strips and a scarecrow on Canvas at four sizes; save/parse.');
+}
+// v0.22.0「披挂」: the bag (Tab) shows the gear panel with eight slots and a trap; buttons equip, swap and take off; the new hotbar (4 melee, 5 ranged, 6 throw, 7 trap) and empty slots;
+// X shoves you free of a grab, E mashes; the touch 推开 button; the weapon bench gets 修理与改装 (repair, mod, dismantle); telegraphs, crawlers, traps and fire on Canvas at four sizes; save/parse.
+{
+  let clock = 13000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  dailyOn = false;
+  context.fixture(Campaign.freshState());
+  const e = context.inspect().engine;
+  e.paused = false;
+  run(2);
+  assert.equal(e.gearIntroDue(), false, 'a new game has no upgrade card');
+  // 快捷栏：10 格，4 是木棍，5（远程）空着
+  assert.equal((document.querySelector('#hotbar').innerHTML.match(/class="hot-slot/g) || []).length, 10);
+  assert.match(document.querySelector('#hotbar').innerHTML, /远程栏（空）/);
+  press('5'); run(4); assert.equal(e.s.slot, 4); assert.match(document.querySelector('#selected-label').innerHTML, /远程栏空着/);
+  press('4'); run(4); assert.equal(e.currentItem(), 'club'); assert.match(document.querySelector('#selected-label').innerHTML, /左键挥/);
+  // 行囊：装备栏
+  e.add({ leatherJacket: 1, tireArmor: 1, spear: 1 });
+  press('Tab'); assert.equal(context.inspect().menu, 'inventory'); clean();
+  assert.match(html(), /class="gear-panel"/); assert.equal((html().match(/data-action="gSlot"/g) || []).length, 9);
+  assert.match(html(), /data-doll="1"/);
+  click('gSlot', 'body'); assert.match(html(), /废胎护甲/); assert.match(html(), /▲|▼/); clean();
+  click('gEquip', 'tireArmor'); assert.equal(e.gr.slots.body, 'tireArmor'); clean();
+  click('gUnequip', 'body'); assert.equal(e.gr.slots.body, null);
+  click('gSlot', 'melee'); click('gEquip', 'spear'); assert.equal(e.gr.slots.melee, 'spear'); click('gSlot', 'melee');
+  click('item', 'leatherJacket'); assert.match(html(), /data-action="gEquip" data-id="leatherJacket"/); click('gEquip', 'leatherJacket'); assert.equal(e.gr.slots.body, 'leatherJacket');
+  click('close'); assert.equal(context.inspect().menu, null);
+  // 被抓住：X 推开；再抓一次连按 E 三下
+  e.s.region = 'residential'; e.s.enemies.residential = []; e.assignRegion(); e.enemies.length = 0;
+  Object.assign(e.s.player, { x: 700, y: 520, stamina: 100, facing: 0 });
+  const z = e.enemy('slow', 730, 520); z.state = 'chase'; e.enemies.push(z);
+  e.startGrab(z); run(4); assert.ok(e.gx.grab); assert.match(document.querySelector('#context').innerHTML, /挣开/);
+  press('x'); run(1); assert.equal(e.gx.grab, null, 'X shoves free');
+  e.gx.shoveCd = 0; e.startGrab(z); press('e'); press('e'); press('e'); run(1); assert.equal(e.gx.grab, null, 'three presses of E');
+  e.startGrab(z); click('touchShove'); assert.equal(e.gx.grab, null, 'the touch button shoves');
+  assert.ok(document.querySelectorAll('button').some((b) => b.dataset.action === 'touchShove'), 'touch controls have 推开');
+  // 场景里的状态小条
+  e.gx.bleed = 4; e.gr.inf = 30; run(4);
+  assert.equal(document.querySelector('#gear-status').hidden, false); assert.match(document.querySelector('#gear-status').innerHTML, /流血/); assert.match(document.querySelector('#gear-status').innerHTML, /感染 30%/);
+  { const b0 = e.gx.bleed, n0 = e.s.inventory.bandage || 0; click('gStatus', 'bleed'); assert.equal(e.gx.bleed, b0, 'the chip only explains'); assert.equal(e.s.inventory.bandage || 0, n0); }
+  e.gx.bleed = 0;
+  // Canvas：扑人的预兆、冲撞线、尖叫、爬行者、陷阱、火、被抓、倒地
+  const p = e.s.player;
+  const r = e.enemy('runner', p.x + 130, p.y); Object.assign(r, { state: 'chase', lunge: { phase: 'crouch', t: 99, a: Math.PI } }); e.enemies.push(r);
+  const a = e.enemy('armor', p.x + 220, p.y + 120); Object.assign(a, { state: 'chase', charge: { phase: 'stomp', t: 99, a: Math.atan2(-120, -220) } }); e.enemies.push(a);
+  const c = e.enemy('slow', p.x - 50, p.y + 40); Object.assign(c, { crawl: true, reach: 0.3 }); e.enemies.push(c);
+  const sc = e.enemy('screamer', p.x - 160, p.y - 60); Object.assign(sc, { state: 'chase', windup: 0.8 }); e.enemies.push(sc);
+  e.gr.traps.push({ id: 99901, kind: 'bearTrap', region: 'residential', x: p.x + 60, y: p.y + 40, uses: 3 });
+  e.gx.fires.push({ region: 'residential', x: p.x - 120, y: p.y + 120, r: 60, t: 99, max: 3 });
+  e.paused = true;
+  for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 50)); context.step((clock += 50)); }
+  e.gx.down = 2; context.step((clock += 50)); e.gx.down = 0;
+  e.s.minute = 23 * 60; e.add({ headlamp: 1 }); e.equip('headlamp'); context.step((clock += 50)); e.s.minute = 12 * 60;
+  context.inspect().renderer.resize(1366, 600, 1);
+  e.paused = false; e.gx.fires = []; e.enemies.length = 0;
+  // 武器台：修理与改装
+  e.s.region = 'farm'; e.assignRegion();
+  const wb = { id: 'ctl-wb', type: 'weaponbench', x: 900, y: 640, rotation: 0, hp: 100 }; e.s.buildings.push(wb);
+  Object.assign(e.s.player, { x: 900, y: 600 });
+  Object.assign(e.s.storage, { scrap: 20, cloth: 10, wood: 10 });
+  context.open('station', { buildingId: wb.id }); assert.match(html(), /武器与潜行 · 修理改装/); clean();
+  e.cond('spear').d = 3;
+  click('rOpen', 'frontier:combat'); assert.equal(context.inspect().menu, 'rebuild', 'repairs live on the existing 武器与潜行 page'); assert.match(html(), /修理与改装/); assert.match(html(), /武器改装/); clean();
+  // 修理那一行直接写修好以后的上限，不只放在悬停提示里
+  assert.match(html(), new RegExp('修好后耐久回满，上限 ' + e.cond('spear').m + ' → ' + e.repairNextMax('spear') + '（第 1/5 次）'));
+  click('gRepair', 'spear'); assert.equal(e.cond('spear').d, e.cond('spear').m); assert.equal(e.cond('spear').r, 1);
+  click('gMod', 'spear|wrap'); assert.ok(e.cond('spear').mods.wrap);
+  click('gDismantle', 'tireArmor'); assert.equal(e.qty('tireArmor', true), 0);
+  // 缺材料写在按钮旁边；手枪没有改装位也列出自制消音器（附带它的效果和还缺什么）
+  e.cond('spear').d = 2; e.s.storage.wood = 0; e.s.inventory.wood = 0; e.add({ pistol: 1 });
+  context.renderMenu();
+  assert.match(html(), /修理：还缺：木材/);
+  assert.match(html(), /data-action="gMod" data-id="pistol\|diySuppressor" disabled/);
+  assert.match(html(), /噪音 −55%，伤害 −10%，只能用 25 发；不占改装位/);
+  assert.match(html(), /还缺：自制消音器 ×1（先要拿到自制消音器的图纸）/);
+  e.s.storage.wood = 10;
+  clean(); click('close');
+  // 说明卡按 Esc（或右上角关闭）关掉也算看过，不会一直弹
+  e.gr.intro = false; run(1);
+  assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /披挂上阵/);
+  press('Escape'); run(2);
+  assert.equal(context.inspect().menu, null, 'Esc closes the gear card'); assert.equal(e.gearIntroDue(), false);
+  e.gr.intro = false; run(1); assert.equal(context.inspect().menu, 'outpost'); click('close'); run(2);
+  assert.equal(context.inspect().menu, null, 'the close button closes it for good'); assert.equal(e.gearIntroDue(), false);
+  // 存档
+  click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.gear.slots.melee, 'spear'); assert.equal(back.gear.slots.body, 'leatherJacket'); assert.equal(back.gear.cond.spear.r, 1); assert.ok(back.gear.cond.spear.mods.wrap);
+  console.log('Gear controller passed: Tab bag with the gear panel (nine slot buttons, doll), equip/swap/take off through buttons and the item detail, hotbar 4–7 with an empty ranged slot and its label, X shove and three E presses out of a grab, the touch 推开 button, the status strip (bleeding, infection), telegraphs/crawler/trap/fire/knockdown/headlamp on Canvas at four sizes, 修理与改装 on the existing 武器与潜行 page reached from the weapon bench (repair, mod, dismantle; the repaired cap, missing materials and a pistol suppressor written next to the buttons), the gear card closed for good by Esc or the close button, and save/parse.');
 }

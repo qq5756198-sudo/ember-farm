@@ -820,14 +820,20 @@ export class Engine extends OutpostEngine {
     if (ok && this.showcaseDone("fish") && this.c.fishing) this.c.fishing.biteAt = Math.max(0.8, this.c.fishing.biteAt - 0.6);
     return ok;
   }
+  // 药品额外回的生命（草药展柜、寒潮优先药品、许医生的证据）；v0.22 的慢慢回血也从这里取
+  medBonus(id) {
+    if (ITEMS[id]?.type !== "medicine") return 0;
+    let bonus = 0;
+    if (this.showcaseDone("herbs")) bonus += 10;
+    if (this.coldActive() && this.w.winter.priority === "medicine") bonus += 10;
+    if (this.w.evidence && id === "medkit") bonus += 20;
+    return bonus;
+  }
   consume(id) {
     const it = ITEMS[id],
       ok = super.consume(id);
     if (ok && it?.type === "medicine") {
-      let bonus = 0;
-      if (this.showcaseDone("herbs")) bonus += 10;
-      if (this.coldActive() && this.w.winter.priority === "medicine") bonus += 10;
-      if (this.w.evidence && id === "medkit") bonus += 20;
+      const bonus = this.medBonus(id);
       if (bonus) this.s.player.hp = Math.min(100, this.s.player.hp + bonus);
       if (id === "remedy" && this.s.region === "farm" && this.o.sick >= this.s.day) {
         this.o.sick = 0;

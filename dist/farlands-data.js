@@ -141,8 +141,33 @@ export const KEY_ACTIONS = [
   ["build", "b", "建造"],
   ["map", "m", "地图"],
   ["journal", "j", "任务手记"],
+  ["shove", "x", "推开"],
 ];
 export const RESERVED_KEYS = ["escape", "tab", "shift", " ", "enter", "1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "arrowup", "arrowdown", "arrowleft", "arrowright"];
+export const DEFAULT_KEY = Object.fromEntries(KEY_ACTIONS.map(([a, k]) => [a, k]));
+// 固定占用、不能改给别的动作的键
+export const FIXED_KEYS = { k: "技能", f: "远征路线" };
+export const validKey = (k) => typeof k === "string" && /^[a-z]$/.test(k) && !RESERVED_KEYS.includes(k) && !FIXED_KEYS[k];
+// 当前键位：玩家改过的盖在默认上
+export function keymapOf(settings) {
+  const raw = settings?.keymap && typeof settings.keymap === "object" && !Array.isArray(settings.keymap) ? settings.keymap : {},
+    map = { ...DEFAULT_KEY };
+  for (const [a, k] of Object.entries(raw)) if (Object.hasOwn(DEFAULT_KEY, a) && validKey(k)) map[a] = k;
+  // 后来新加的动作（比如 v0.22 的“推开”）默认键被玩家改给了别的动作：新动作换一个空着的键，玩家改过的不动。
+  for (const a of Object.keys(DEFAULT_KEY)) {
+    if (Object.hasOwn(raw, a) || !Object.entries(map).some(([b, k]) => b !== a && k === map[a])) continue;
+    const used = new Set(Object.values(map));
+    const free = "xyuiopnhjklbcmzrtgvfq".split("").find((k) => validKey(k) && !used.has(k));
+    if (free) map[a] = free;
+  }
+  // 坏数据里两个动作抢同一个键：全部退回默认。
+  if (new Set(Object.values(map)).size !== Object.keys(map).length) return { ...DEFAULT_KEY };
+  return map;
+}
+export function keyLabel(settings, action) {
+  const k = keymapOf(settings)[action] || "";
+  return k.toUpperCase();
+}
 
 // 第一次打开时的说明卡（和 v0.16 的“新”标记共用一套记录）。
 Object.assign(FEATURES, {

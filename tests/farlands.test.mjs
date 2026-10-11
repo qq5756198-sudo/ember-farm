@@ -746,15 +746,16 @@ test("key remapping translates keys, swaps clashes, refuses reserved keys and re
   assert.equal(mapKey(settings, "e"), "e");
   assert.ok(startKeyCapture("interact"));
   assert.ok(keyCaptureActive());
-  assert.match(captureKey(settings, "x"), /交互改为 X/);
+  // v0.22 起 X 默认是“推开”，这里换一个空着的 Y
+  assert.match(captureKey(settings, "y"), /交互改为 Y/);
   assert.equal(keyCaptureActive(), false);
-  assert.equal(mapKey(settings, "x"), "e");
+  assert.equal(mapKey(settings, "y"), "e");
   assert.equal(mapKey(settings, "e"), "", "the old key is freed");
-  assert.equal(keyLabel(settings, "interact"), "X");
+  assert.equal(keyLabel(settings, "interact"), "Y");
   startKeyCapture("reload");
-  assert.match(captureKey(settings, "x"), /换成 R/);
+  assert.match(captureKey(settings, "y"), /换成 R/);
   assert.equal(keymapOf(settings).interact, "r");
-  assert.equal(keymapOf(settings).reload, "x");
+  assert.equal(keymapOf(settings).reload, "y");
   startKeyCapture("craft");
   assert.match(captureKey(settings, "f"), /远征路线/);
   startKeyCapture("craft");
@@ -767,6 +768,10 @@ test("key remapping translates keys, swaps clashes, refuses reserved keys and re
   assert.match(helpRows(settings).map((r) => r[0]).join(" "), /R/);
   settings.keymap = { interact: "r", reload: "r" };
   assert.equal(keymapOf(settings).interact, "e", "clashing data falls back to defaults");
+  // 旧档里把交互改成了 X：推开换到空着的键，玩家改过的交互键不动
+  assert.equal(keymapOf({ keymap: { interact: "x" } }).interact, "x");
+  assert.notEqual(keymapOf({ keymap: { interact: "x" } }).shove, "x");
+  assert.equal(new Set(Object.values(keymapOf({ keymap: { interact: "x" } }))).size, Object.keys(keymapOf({})).length);
   const { e } = make();
   let persisted = 0;
   e.s.settings.keymap = { interact: "x" };

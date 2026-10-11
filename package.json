@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "test:ui": "node scripts/check-ui-controller.mjs"
+    "test:ui": "node scripts/check-ui-controller.mjs",
+    "sim:gear": "node scripts/gear-sim.mjs 40 1 residential,hospital none,club,right"
   }
 }

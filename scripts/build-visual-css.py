@@ -136,10 +136,11 @@ def vis_selector(s):
 
 
 def sheets():
-    """index.html 里的样式表，按引用的先后顺序（不含新画面自己的两份）"""
+    """index.html 里的样式表，按引用的先后顺序（不含新画面自己的三份）"""
     html = (DIST / 'index.html').read_text(encoding='utf-8')
     names = re.findall(r'<link[^>]+rel="stylesheet"[^>]+href="([^"]+\.css)"', html)
-    return [n for n in names if n not in ('visual.css', 'visual-auto.css') and (DIST / n).exists()]
+    # gear.css（v0.22）本来就是按新画面写的，不用再抄一层
+    return [n for n in names if n not in ('visual.css', 'visual-auto.css', 'gear.css') and (DIST / n).exists()]
 
 
 def main():

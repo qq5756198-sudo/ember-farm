@@ -27,6 +27,30 @@ const TOPS = [
 ];
 const PANTS = [[PAL.night[2], PAL.night[1]], [PAL.soil[1], PAL.soil[0]], [PAL.stone[2], PAL.stone[1]], [PAL.leaf[1], PAL.leaf[0]]];
 
+// v0.22 装备穿在身上的样子：look 里的 armor / glove / legs / feet / hat 字段
+const ARMOR_TOPS = {
+  coat: { top: [PAL.straw[1], PAL.straw[0], PAL.straw[2]], sleeve: true, long: 2, quilt: PAL.straw[0], wide: 1 },
+  leather: { top: [PAL.soil[2], PAL.soil[1], PAL.soil[3]], sleeve: true, collar: PAL.soil[3], zip: PAL.stone[4] },
+  tire: { plate: [PAL.ash[1], PAL.ash[0], PAL.ash[3]], strap: PAL.soil[2], tread: true, shoulder: true },
+  steel: { plate: [PAL.stone[3], PAL.stone[2], PAL.stone[5]], strap: PAL.soil[1], rivet: PAL.stone[5], shoulder: true },
+  riot: { top: [PAL.night[1], PAL.night[0], PAL.night[2]], sleeve: true, chest: [PAL.night[2], PAL.night[3]], shoulder: true, wide: 1 },
+};
+export const GLOVES = {
+  rag: { hand: [PAL.straw[2], PAL.straw[1]] },
+  work: { hand: [PAL.straw[1], PAL.soil[2]] },
+  leather: { hand: [PAL.soil[2], PAL.soil[1]], band: [PAL.soil[1], PAL.soil[3]] },
+  steel: { hand: [PAL.ash[2], PAL.ash[1]], band: [PAL.stone[3], PAL.stone[5]] },
+};
+const LEGS = {
+  jeans: { pants: [PAL.night[3], PAL.night[2]] },
+  knee: { pad: [PAL.ash[2], PAL.stone[3]] },
+  moto: { shin: [PAL.ember[1], PAL.ash[1], PAL.ember[2]] },
+};
+const FEET = {
+  cloth: { boots: [PAL.straw[1], PAL.straw[0]] },
+  soft: { boots: [PAL.stone[3], PAL.stone[2]] },
+  work: { boots: [PAL.soil[1], PAL.soil[0]], tall: true },
+};
 // 主角：乱蓬蓬的棕发、红围巾、橄榄色夹克、背包
 export const PLAYER_LOOK = {
   skin: PAL.skin[2],
@@ -82,18 +106,35 @@ function drawPerson(L, dir, frame, pose) {
     walk = pose === "walk" || pose === "reach",
     bob = walk && (frame === 1 || frame === 3) ? 1 : 0,
     top = 3 + bob + (L.hunch ? 1 : 0);
-  const [tc, td, tl] = L.top,
-    [pc, pd] = L.pants,
-    skin = L.skin;
+  const AR = ARMOR_TOPS[L.armor] || null,
+    [tc, td, tl] = AR?.top || L.top,
+    [ac, ad, al] = AR?.sleeve ? AR.top : L.top,
+    [pc, pd] = LEGS[L.legs]?.pants || L.pants,
+    boots = FEET[L.feet]?.boots || L.boots,
+    GL = GLOVES[L.glove] || null,
+    skin = L.skin,
+    hand = GL ? GL.hand[0] : skin,
+    handD = GL ? GL.hand[1] : L.skinDark;
   const bodyTop = top + 11,
     legTop = feet - 7;
   // ---- 腿 ----
+  const tall = FEET[L.feet]?.tall ? 1 : 0,
+    LG = LEGS[L.legs] || null;
   if (dir === "side") {
     const fwd = walk ? [0, 2, 0, -2][frame] : 0;
     P.rect(cx - 2 - fwd, legTop, 3, 6, pd);
-    P.rect(cx - 2 - fwd, feet - 1, 4, 2, L.boots[1]);
+    P.rect(cx - 2 - fwd, feet - 1 - tall, 4, 2 + tall, boots[1]);
     P.rect(cx - 1 + fwd, legTop, 3, 6, pc);
-    P.rect(cx - 1 + fwd, feet - 1, 4, 2, L.boots[0]);
+    P.rect(cx - 1 + fwd, feet - 1 - tall, 4, 2 + tall, boots[0]);
+    if (LG?.pad) {
+      P.rect(cx - 1 + fwd, legTop + 2, 3, 2, LG.pad[0]);
+      P.set(cx + 1 + fwd, legTop + 2, LG.pad[1]);
+    }
+    if (LG?.shin) {
+      P.rect(cx - 1 + fwd, legTop + 2, 3, 4, LG.shin[0]);
+      P.vline(cx + 1 + fwd, legTop + 2, legTop + 5, LG.shin[2]);
+      P.hline(cx - 1 + fwd, cx + 1 + fwd, legTop + 2, LG.shin[1]);
+    }
   } else {
     const lift = walk ? [0, 1, 0, -1][frame] : 0,
       l = Math.max(0, lift),
@@ -102,13 +143,28 @@ function drawPerson(L, dir, frame, pose) {
     P.rect(cx + 1, legTop, 4, 6 - r, pc);
     P.vline(cx - 1, legTop, feet - 2 - l, pd);
     P.vline(cx + 4, legTop, feet - 2 - r, pd);
-    P.rect(cx - 4, feet - 1 - l, 4, 2, L.boots[0]);
-    P.rect(cx + 1, feet - 1 - r, 4, 2, L.boots[0]);
-    P.hline(cx - 4, cx - 1, feet - l, L.boots[1]);
-    P.hline(cx + 1, cx + 4, feet - r, L.boots[1]);
+    P.rect(cx - 4, feet - 1 - l - tall, 4, 2 + tall, boots[0]);
+    P.rect(cx + 1, feet - 1 - r - tall, 4, 2 + tall, boots[0]);
+    P.hline(cx - 4, cx - 1, feet - l, boots[1]);
+    P.hline(cx + 1, cx + 4, feet - r, boots[1]);
+    if (LG?.pad) {
+      P.rect(cx - 4, legTop + 2 - l, 4, 2, LG.pad[0]);
+      P.rect(cx + 1, legTop + 2 - r, 4, 2, LG.pad[0]);
+      P.hline(cx - 4, cx - 2, legTop + 2 - l, LG.pad[1]);
+      P.hline(cx + 1, cx + 3, legTop + 2 - r, LG.pad[1]);
+    }
+    if (LG?.shin) {
+      P.rect(cx - 4, legTop + 2 - l, 4, 4 - tall, LG.shin[0]);
+      P.rect(cx + 1, legTop + 2 - r, 4, 4 - tall, LG.shin[0]);
+      P.hline(cx - 4, cx - 1, legTop + 2 - l, LG.shin[2]);
+      P.hline(cx + 1, cx + 4, legTop + 2 - r, LG.shin[2]);
+      P.vline(cx - 1, legTop + 3 - l, legTop + 4 - l, LG.shin[1]);
+      P.vline(cx + 4, legTop + 3 - r, legTop + 4 - r, LG.shin[1]);
+    }
   }
   // ---- 身体 ----
-  const bw = dir === "side" ? 8 : 12,
+  const wide = AR?.wide && dir !== "side" ? AR.wide : 0,
+    bw = (dir === "side" ? 8 : 12) + wide * 2,
     bx = cx - Math.floor(bw / 2) + (dir === "side" ? 0 : 0);
   P.rect(bx, bodyTop, bw, legTop - bodyTop + 1, tc);
   P.vline(bx, bodyTop + 1, legTop, tl);
@@ -135,6 +191,44 @@ function drawPerson(L, dir, frame, pose) {
     }
   }
   P.hline(bx, bx + bw - 1, legTop - 1, L.belt || PAL.soil[0]);
+  if (AR) {
+    const H = legTop - bodyTop;
+    // 保温衣：长到大腿，一道道绗线
+    if (AR.long) {
+      P.rect(bx, legTop, bw, AR.long, tc);
+      P.hline(bx, bx + bw - 1, legTop + AR.long - 1, td);
+      for (let y = bodyTop + 3; y < legTop + AR.long - 1; y += 3) P.hline(bx + 1, bx + bw - 2, y, AR.quilt);
+    }
+    if (AR.collar && dir !== "up") {
+      P.hline(cx - 3, cx + 3, bodyTop, AR.collar);
+      if (dir === "down") P.vline(cx, bodyTop + 1, legTop - 2, AR.zip);
+    }
+    // 背心：废胎、钢板，套在衣服外面，袖子还是原来的
+    if (AR.plate) {
+      const [c0, c1, c2] = AR.plate,
+        px0 = bx + (dir === "side" ? 1 : 1),
+        pw = bw - 2;
+      P.rect(px0, bodyTop + 1, pw, H - 2, c0);
+      P.hline(px0, px0 + pw - 1, bodyTop + 1, c2);
+      P.vline(px0 + pw - 1, bodyTop + 2, legTop - 2, c1);
+      if (AR.tread) for (let y = bodyTop + 3; y < legTop - 2; y += 2) for (let x = px0 + 1 + (y % 4 === 1 ? 1 : 0); x < px0 + pw - 1; x += 3) P.set(x, y, c2);
+      if (AR.rivet && dir !== "up") {
+        P.hline(px0 + 1, px0 + pw - 2, bodyTop + 5, c1);
+        for (const x of [px0 + 1, px0 + pw - 2]) {
+          P.set(x, bodyTop + 3, AR.rivet);
+          P.set(x, legTop - 3, AR.rivet);
+        }
+      }
+      if (dir === "down") {
+        P.vline(bx + 2, bodyTop - 1, bodyTop + 1, AR.strap);
+        P.vline(bx + bw - 3, bodyTop - 1, bodyTop + 1, AR.strap);
+      }
+    }
+    if (AR.chest && dir !== "up") {
+      P.rect(cx - 3, bodyTop + 2, dir === "side" ? 4 : 7, 5, AR.chest[0]);
+      P.hline(cx - 3, cx + (dir === "side" ? 0 : 3), bodyTop + 2, AR.chest[1]);
+    }
+  }
   // ---- 背包 ----
   if (L.bag) {
     if (dir === "up") {
@@ -154,15 +248,16 @@ function drawPerson(L, dir, frame, pose) {
   const swing = walk ? [0, 1, 0, -1][frame] : 0;
   if (pose === "work") {
     if (dir === "side") {
-      P.rect(cx, bodyTop + 2, 6, 3, td);
-      P.rect(cx + 6, bodyTop + 2, 2, 3, skin);
+      P.rect(cx, bodyTop + 2, 6, 3, ad);
+      P.rect(cx + 6, bodyTop + 2, 2, 3, hand);
+      if (GL?.band) P.vline(cx + 5, bodyTop + 2, bodyTop + 4, GL.band[0]);
     } else if (dir === "down") {
-      P.rect(bx - 1, bodyTop + 1, 3, 5, td);
-      P.rect(bx + bw - 2, bodyTop + 1, 3, 5, td);
-      P.rect(cx - 2, bodyTop + 5, 5, 2, skin);
+      P.rect(bx - 1, bodyTop + 1, 3, 5, ad);
+      P.rect(bx + bw - 2, bodyTop + 1, 3, 5, ad);
+      P.rect(cx - 2, bodyTop + 5, 5, 2, hand);
     } else {
-      P.rect(bx - 1, bodyTop + 1, 3, 5, td);
-      P.rect(bx + bw - 2, bodyTop + 1, 3, 5, td);
+      P.rect(bx - 1, bodyTop + 1, 3, 5, ad);
+      P.rect(bx + bw - 2, bodyTop + 1, 3, 5, ad);
     }
   } else if (pose === "reach" && dir !== "up") {
     // 感染者：两只手往前伸着
@@ -180,13 +275,33 @@ function drawPerson(L, dir, frame, pose) {
       P.rect(bx + bw - 3, bodyTop + 8 + Math.max(0, -swing), 3, 2, L.skinDark);
     }
   } else if (dir === "side") {
-    P.rect(cx - 1 + swing, bodyTop + 1, 3, 7, td);
-    P.rect(cx - 1 + swing * 2, bodyTop + 8, 3, 2, skin);
+    P.rect(cx - 1 + swing, bodyTop + 1, 3, 7, ad);
+    P.rect(cx - 1 + swing * 2, bodyTop + 8, 3, 2, hand);
+    if (GL?.band) P.hline(cx - 1 + swing, cx + 1 + swing, bodyTop + 6, GL.band[0]);
   } else {
-    P.rect(bx - 2, bodyTop + 1 + Math.max(0, swing), 2, 7, dir === "down" ? tl : td);
-    P.rect(bx + bw, bodyTop + 1 + Math.max(0, -swing), 2, 7, td);
-    P.rect(bx - 2, bodyTop + 8 + Math.max(0, swing), 2, 2, skin);
-    P.rect(bx + bw, bodyTop + 8 + Math.max(0, -swing), 2, 2, L.skinDark);
+    P.rect(bx - 2, bodyTop + 1 + Math.max(0, swing), 2, 7, dir === "down" ? al : ad);
+    P.rect(bx + bw, bodyTop + 1 + Math.max(0, -swing), 2, 7, ad);
+    P.rect(bx - 2, bodyTop + 8 + Math.max(0, swing), 2, 2, hand);
+    P.rect(bx + bw, bodyTop + 8 + Math.max(0, -swing), 2, 2, handD);
+    if (GL?.band) {
+      P.rect(bx - 2, bodyTop + 6 + Math.max(0, swing), 2, 2, GL.band[0]);
+      P.rect(bx + bw, bodyTop + 6 + Math.max(0, -swing), 2, 2, GL.band[0]);
+      P.set(bx - 2, bodyTop + 6 + Math.max(0, swing), GL.band[1]);
+    }
+  }
+  // 护肩压在胳膊上面
+  if (AR?.shoulder) {
+    const sc = AR.plate ? AR.plate[0] : AR.chest[0],
+      hl = AR.plate ? AR.plate[2] : AR.chest[1];
+    if (dir === "side") {
+      P.rect(cx - 2, bodyTop, 5, 3, sc);
+      P.hline(cx - 2, cx + 2, bodyTop, hl);
+    } else {
+      P.rect(bx - 2, bodyTop, 4, 3, sc);
+      P.rect(bx + bw - 2, bodyTop, 4, 3, sc);
+      P.hline(bx - 2, bx + 1, bodyTop, hl);
+      P.hline(bx + bw - 2, bx + bw + 1, bodyTop, hl);
+    }
   }
   // ---- 头 ----
   const hx = cx - 5,
@@ -289,6 +404,41 @@ function drawPerson(L, dir, frame, pose) {
     P.rect(hx - 1, hy - 2, 12, 6, L.top[1]);
     if (dir !== "up") P.rect(hx + 1, hy + 3, 8, 2, L.top[1]);
     if (dir === "up") P.rect(hx - 1, hy + 2, 12, 8, L.top[1]);
+  }
+  if (L.hat === "bandana") {
+    P.rect(hx, hy - 2, 10, 3, PAL.cloth[1]);
+    P.hline(hx + 1, hx + 8, hy - 2, PAL.cloth[2]);
+    P.hline(hx, hx + 9, hy, PAL.cloth[0]);
+    if (dir === "side") P.rect(hx - 2, hy, 2, 3, PAL.cloth[1]);
+    else if (dir === "up") P.rect(hx + 4, hy + 1, 2, 3, PAL.cloth[0]);
+    else P.set(hx + 9, hy + 1, PAL.cloth[0]);
+  } else if (L.hat === "moto") {
+    // 摩托头盔：圆顶、中间一道白条、黑色面罩，两侧护到下巴
+    P.rect(hx, hy - 3, 10, 6, PAL.ember[1]);
+    P.hline(hx + 1, hx + 8, hy - 4, PAL.ember[1]);
+    P.rect(hx - 1, hy - 2, 1, 9, PAL.ember[1]);
+    P.rect(hx + 10, hy - 2, 1, 9, PAL.ember[0]);
+    P.vline(hx + 9, hy - 2, hy + 2, PAL.ember[0]);
+    P.hline(hx + 2, hx + 5, hy - 4, PAL.ember[3]);
+    if (dir !== "side") P.vline(hx + 4, hy - 4, hy + 1, PAL.straw[4]);
+    else P.hline(hx + 1, hx + 7, hy - 3, PAL.straw[4]);
+    if (dir === "down") {
+      P.rect(hx + 1, hy + 2, 8, 2, PAL.ash[1]);
+      P.hline(hx + 2, hx + 4, hy + 2, PAL.stone[3]);
+    } else if (dir === "side") {
+      P.rect(hx - 1, hy + 2, 6, 6, PAL.ember[1]);
+      P.vline(hx - 1, hy + 2, hy + 7, PAL.ember[0]);
+      P.rect(hx + 6, hy + 2, 5, 2, PAL.ash[1]);
+    } else P.rect(hx - 1, hy + 2, 12, 6, PAL.ember[1]);
+  } else if (L.hat === "lamp") {
+    P.hline(hx - 1, hx + 10, hy + 1, PAL.ash[2]);
+    if (dir === "down") {
+      P.rect(hx + 3, hy - 1, 4, 3, PAL.ash[1]);
+      P.rect(hx + 4, hy, 2, 1, PAL.straw[4]);
+    } else if (dir === "side") {
+      P.rect(hx + 8, hy - 1, 3, 3, PAL.ash[1]);
+      P.set(hx + 10, hy, PAL.straw[4]);
+    }
   }
   if (L.hat === "riot") {
     P.rect(hx - 1, hy - 2, 12, 8, PAL.night[1]);
@@ -708,6 +858,45 @@ function bruteSprite(dir, frame) {
       const x = cx - 12 + Math.floor(r() * 25),
         y = top + Math.floor(r() * 26);
       if (P.opaque(x, y)) P.set(x, y, r() > 0.5 ? PAL.cloth[0] : PAL.cloth[1]);
+    }
+    P.outline(OUTLINE);
+    return canvasOf(P);
+  });
+}
+
+// v0.22：残血摔成爬行者——趴在地上、两只手往前扒，侧面画法（朝左时翻转），2 帧；reach 时一只手伸长
+export function crawlerSprite(type, frame, reach = false) {
+  const L = ZLOOK[type] || ZLOOK.slow;
+  return cached(`crawler:${type}:${frame}:${reach ? 1 : 0}`, () => {
+    const P = new Pix(32, 14),
+      y0 = 6,
+      [tc, td, tl] = L.top,
+      [pc, pd] = L.pants;
+    // 腿拖在后面
+    P.rect(1, y0 + 2, 8, 3, pc);
+    P.hline(1, 8, y0 + 4, pd);
+    P.rect(0, y0 + 2, 2, 3, L.boots[0]);
+    // 身子贴着地
+    P.rect(8, y0, 12, 6, tc);
+    P.hline(9, 19, y0, tl);
+    P.hline(8, 19, y0 + 5, td);
+    // 头抬着
+    P.rect(19, y0 - 4, 7, 7, L.skin);
+    P.hline(19, 25, y0 + 2, L.skinDark);
+    P.rect(19, y0 - 5, 6, 2, L.hair);
+    P.rect(23, y0 - 2, 2, 1, L.eyes || PAL.ember[4]);
+    // 手往前扒
+    const a = reach ? 7 : frame ? 3 : 1,
+      b = reach ? 2 : frame ? 1 : 3;
+    P.rect(18, y0 + 3, 4 + a, 2, td);
+    P.rect(22 + a, y0 + 3, 2, 2, L.skin);
+    P.rect(17, y0 + 4, 3 + b, 2, tc);
+    P.rect(20 + b, y0 + 5, 2, 2, L.skinDark);
+    const r = rng(seedOf(L.bloodSeed || "z") + frame);
+    for (let i = 0; i < 5; i++) {
+      const x = 8 + Math.floor(r() * 12),
+        y = y0 + Math.floor(r() * 6);
+      if (P.opaque(x, y)) P.set(x, y, r() > 0.5 ? PAL.cloth[0] : PAL.rust[0]);
     }
     P.outline(OUTLINE);
     return canvasOf(P);

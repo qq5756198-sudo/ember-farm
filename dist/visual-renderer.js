@@ -1,6 +1,6 @@
 // 新画面：十五张地图都换成真像素底图，人物、感染者、作物、建筑和物件都是新画的，
 // 一天四段的光影、看得见的天气（雨、雪、雾、热浪），界面换成像素字体和木头锈铁的样子。
-// 设置里可以切回原来的画面；切换只改画面，不动存档。
+// v0.22.0 起只有这一套画面（原来的“新/旧画面”开关去掉了；以前存下的“旧画面”偏好不再生效，存档不受影响）。
 import { Renderer as GardenRenderer } from "./garden-renderer.js";
 import { CROPS, BUILDINGS, ITEMS, WORLD, REGIONS } from "./data.js";
 import { PAL, makeCanvas, nearestPal, Pix, cached } from "./pixel-kit.js";
@@ -12,29 +12,7 @@ import { personSprite, lookFor, PLAYER_LOOK, dirFromAngle, cropSprite, soilSprit
 import { buildingArt, objectArt, flameArt, carryArt } from "./pixel-props.js";
 import { LightMap, Particles, Weather, ambientFor, nightness, FIRE, LAMP, WARM, SCREEN, EMBER, FIREFLY } from "./pixel-light.js";
 
-const KEY = "ember-farm-visual-v1";
-export const VIS = { on: true, listeners: [] };
-try {
-  if (globalThis.localStorage?.getItem(KEY) === "off") VIS.on = false;
-} catch {
-  /* 读不到就用默认的新画面 */
-}
-export function setVisual(on) {
-  VIS.on = !!on;
-  try {
-    globalThis.localStorage?.setItem(KEY, on ? "on" : "off");
-  } catch {
-    /* 存不了也照常切换 */
-  }
-  globalThis.document?.body?.classList?.toggle("vis-on", VIS.on);
-  for (const fn of VIS.listeners) {
-    try {
-      fn(VIS.on);
-    } catch {
-      /* 某个界面没刷新也不影响切换 */
-    }
-  }
-}
+export const VIS = Object.freeze({ on: true });
 const FONT = '"Fusion Pixel", "Microsoft YaHei", sans-serif';
 const RAIN = ["小雨", "暴雨", "酸雨"];
 const SNOW = ["小雪", "大雪"];
@@ -158,9 +136,8 @@ export class Renderer extends GardenRenderer {
     this.spawn = {};
     this.late = [];
     installPalette(this);
-    // 一开始就把小图集换好，界面上的物品格子第一次画出来就是像素版；切换画面时马上换回来
+    // 一开始就把小图集换好，界面上的物品格子第一次画出来就是像素版
     if (VIS.on) this.applyAssets(true, null);
-    VIS.listeners.push((on) => this.applyAssets(on, this.lastRegion));
   }
   // 某张地图的新底图（第一次进去时才画）
   artFor(region) {

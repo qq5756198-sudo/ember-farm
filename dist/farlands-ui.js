@@ -24,6 +24,11 @@ import {
   FNPCS,
   KEY_ACTIONS,
   RESERVED_KEYS,
+  keymapOf,
+  keyLabel,
+  DEFAULT_KEY,
+  FIXED_KEYS,
+  validKey,
 } from "./farlands-data.js";
 
 const esc = (v) =>
@@ -284,22 +289,9 @@ export function applyAccess(settings, doc = globalThis.document) {
 }
 
 // ---------- 设置：键位 ----------
-const DEFAULT_KEY = Object.fromEntries(KEY_ACTIONS.map(([a, k]) => [a, k]));
 const KEY_NAME = Object.fromEntries(KEY_ACTIONS.map(([a, , n]) => [a, n]));
-const FIXED = { k: "技能", f: "远征路线" };
-const validKey = (k) => typeof k === "string" && /^[a-z]$/.test(k) && !RESERVED_KEYS.includes(k) && !FIXED[k];
-export function keymapOf(settings) {
-  const raw = settings?.keymap && typeof settings.keymap === "object" && !Array.isArray(settings.keymap) ? settings.keymap : {},
-    map = { ...DEFAULT_KEY };
-  for (const [a, k] of Object.entries(raw)) if (DEFAULT_KEY[a] && validKey(k)) map[a] = k;
-  // 坏数据里两个动作抢同一个键：全部退回默认。
-  if (new Set(Object.values(map)).size !== Object.keys(map).length) return { ...DEFAULT_KEY };
-  return map;
-}
-export function keyLabel(settings, action) {
-  const k = keymapOf(settings)[action] || "";
-  return k.toUpperCase();
-}
+// 键位的默认值、校验和“读出当前键位”放在 farlands-data.js（引擎里的提示也要用）
+export { keymapOf, keyLabel };
 // 把玩家按下的键翻译成游戏原本认的键；被改掉的默认键不再生效。
 export function mapKey(settings, key) {
   const raw = settings?.keymap;
@@ -323,7 +315,7 @@ export function captureKey(settings, key) {
   capturing = null;
   if (!action) return "";
   if (key === "escape") return "已取消改键。";
-  if (!validKey(key)) return FIXED[key] ? `${key.toUpperCase()} 已经用于${FIXED[key]}，换一个键。` : "只能改成字母键，换一个。";
+  if (!validKey(key)) return FIXED_KEYS[key] ? `${key.toUpperCase()} 已经用于${FIXED_KEYS[key]}，换一个键。` : "只能改成字母键，换一个。";
   const map = keymapOf(settings),
     other = Object.keys(map).find((a) => a !== action && map[a] === key);
   if (other) map[other] = map[action];
@@ -338,7 +330,8 @@ export function helpRows(settings) {
     ["Shift", "跑步（消耗体力）"],
     [K("interact"), "附近交互 / 上下文种植"],
     ["左键 / 空格", "使用当前工具或攻击"],
-    ["1–0 / 滚轮", "切换快捷栏"],
+    ["1–0 / 滚轮", "切换快捷栏（远程栏选中时再按 5 换下一把）"],
+    [K("shove"), "推开身边的感染者；被抓住时立刻挣开"],
     [K("reload"), "装填武器"],
     ["Tab", "背包"],
     [K("craft") + " / " + K("build") + " / " + K("map"), "制作 / 建造 / 地图"],
@@ -404,6 +397,8 @@ export function settingsExtras(settings) {
     ["X", "使用工具或攻击（自动瞄准最近的感染者）"],
     ["Y", "背包"],
     ["LB / RB", "切换快捷栏"],
+    ["LT", "推开；被抓住时立刻挣开"],
+    ["RT", "跑步"],
     ["右摇杆", "朝向"],
     ["Start / Back", "设置 / 任务手记"],
   ]
