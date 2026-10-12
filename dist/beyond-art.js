@@ -69,4 +69,7 @@ function regionAsset(id){
  rect(75,474,143,5,'#c5b58c');rect(75,557,143,5,'#c5b58c');
  return canvas;
 }
+// v0.25：旧画法的底图只在新底图画不出来时才用得上，一张张按需画
+export const BEYOND_ART_IDS=Object.keys(BEYOND_THEMES);
+export function beyondAsset(id){return BEYOND_THEMES[id]?regionAsset(id):null;}
 export function createBeyondAssets(){const assets={};for(const id of Object.keys(BEYOND_THEMES))assets[id]=regionAsset(id);return assets;}

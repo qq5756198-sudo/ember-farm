@@ -14,6 +14,10 @@
 //   FEEL=0 关掉“站在毒雾、酸液里会察觉（九成，0.3–0.8 秒），往走得通的方向走开（不往墙上撞）”
 // 调数用：NOSWAP=bloater,faker,spitter（不放这几种）、UPATCH='{"spitter":{"cd":8}}'、UPLACE='{"spitter":{"warehouse":1}}'
 // 查个别的：SEEDS=1 列出死掉的那几趟、OFF=种子偏移、TRACE=1 每秒打一行
+// v0.25 长夜：地图写 longnight（例：node scripts/gear-sim.mjs 100 38 longnight late,mid）——主线打完、第 38 天 21:59 站在农场中间，
+//   一个人守（不算居民、瞭望塔、陷阱），守到 04:00 天亮或三波打完算守住；LNHELD=4 表示之前守住过几个（下一个按这个变大）
+// v0.25 出身：ORIGIN=medic 打法写 start（例：ORIGIN=hunter node scripts/gear-sim.mjs 100 1 residential,hospital,warehouse start）——
+//   开局那一套：大家都用开局的木材做一根矛（退伍兵也是，WEAPON=pipe 让他拿自己的铁管）；身上穿出身给的，出身的规则照算；绷带用完会用药包
 const D = new URL("../dist/", import.meta.url).href;
 const { Engine, freshState } = await import(D + "campaign.js");
 const { REGIONS } = await import(D + "data.js");
@@ -28,6 +32,18 @@ if (process.env.UPLACE) for (const [k, v] of Object.entries(JSON.parse(process.e
 if (process.env.UBOSS)
   for (const [k, v] of Object.entries(JSON.parse(process.env.UBOSS)))
     for (const [kk, vv] of Object.entries(v)) U.BOSSES[k][kk] = vv && typeof vv === "object" ? { ...U.BOSSES[k][kk], ...vv } : vv;
+// v0.25 长夜调数：LNPATCH='{"base":[8,10,12],"bossHp":0.8}'、LNMIX='[{"slow":6,"runner":4}, …]'
+const LND = await import(D + "longnight-data.js");
+if (process.env.LNPATCH) Object.assign(LND.LN, JSON.parse(process.env.LNPATCH));
+if (process.env.LNMIX) JSON.parse(process.env.LNMIX).forEach((m, i) => (LND.WAVE_MIX[i] = m));
+// 出身调数：ORULES='{"grab":0.9}' 改这个出身的规则（null 表示去掉这一条）
+if (process.env.ORIGIN && process.env.ORULES) {
+  const R = LND.ORIGINS[process.env.ORIGIN].rules || (LND.ORIGINS[process.env.ORIGIN].rules = {});
+  for (const [k, v] of Object.entries(JSON.parse(process.env.ORULES))) {
+    if (v === null) delete R[k];
+    else R[k] = v;
+  }
+}
 if (process.env.DURPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.DURPATCH))) (MELEE[k] || ARMOR[k]).dur = v;
 // 对照实验：RULESPATCH='{"noise":{"step":0}}' 之类
 if (process.env.RULESPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.RULESPATCH))) Object.assign(RULES[k], v);
@@ -54,7 +70,22 @@ const SETS = {
   // 第 8 天以后：图纸、宝贝和袭击掉落的东西，重量刚好压在“中”档
   late: { head: "riotHelmet", body: "riotSuit", hands: "steelBracers", legs: "jeans", feet: "workBoots" },
 };
+// v0.25 出身：开局那一套
+const ORIGIN = process.env.ORIGIN || "";
+// 第一天大家都会用开局的木材做一根矛（和 v0.24 验收里“带对装备”一样），退伍兵也是（WEAPON=pipe 让他拿自己的铁管）
+const START = {
+  farmer: { weapon: "spear", set: { hands: "ragGloves", feet: "clothShoes" } },
+  medic: { weapon: "spear", set: { hands: "leatherBracers", feet: "clothShoes" }, extra: { medkit: 1 } },
+  hunter: { weapon: "spear", set: { hands: "ragGloves", feet: "softShoes" }, stones: 15 },
+  mechanic: { weapon: "spear", set: { head: "headlamp", hands: "ragGloves", feet: "clothShoes" } },
+  veteran: { weapon: process.env.WEAPON || "spear", set: { hands: "ragGloves", feet: "clothShoes" } },
+};
+// 对照实验：STARTSET='{"body":"leatherJacket"}' 换开局身上穿的（null 表示不穿），EXTRA='{"medkit":2}' 换多带的
+if (ORIGIN && process.env.STARTSET) START[ORIGIN].set = Object.fromEntries(Object.entries({ ...START[ORIGIN].set, ...JSON.parse(process.env.STARTSET) }).filter(([, v]) => v));
+if (ORIGIN && process.env.EXTRA) START[ORIGIN].extra = JSON.parse(process.env.EXTRA);
+if (ORIGIN) SETS.start = START[ORIGIN].set;
 const KIT = {
+  start: ORIGIN ? { weapon: START[ORIGIN].weapon, set: "start", bandage: 2, stones: START[ORIGIN].stones || 5, extra: START[ORIGIN].extra } : null,
   none: { weapon: null, set: "none", bandage: 2, stones: 5 },
   club: { weapon: "club", set: "rags", bandage: 2, stones: 5 },
   right: { weapon: "spear", set: "rags", setHosp: "hosp", bandage: 2, bandageHosp: 3, stones: 5, stonesHosp: 6 },
@@ -75,6 +106,10 @@ function trial(region, kitId, seed) {
   const kit = KIT[kitId],
     set = SETS[region !== "residential" && kit.setHosp ? kit.setHosp : kit.set];
   const e = new Engine(freshState(), () => {});
+  if (ORIGIN && e.s.longnight) e.s.longnight.origin = ORIGIN;
+  const LNMODE = region === "longnight",
+    HORDEMODE = region === "horde";
+  if (LNMODE || HORDEMODE) region = "farm";
   let died = false;
   const emit = e.emit.bind(e);
   e.emit = (name, data) => {
@@ -85,6 +120,40 @@ function trial(region, kitId, seed) {
     g = e.gr;
   s.day = DAY;
   s.minute = 600;
+  if (LNMODE) {
+    // 主线打完（第 30 天）；这一天是长夜，21:59
+    e.sc.act = 9;
+    e.sc.claimed = ["act1", "supply", "act2", "act3", "act4", "act5", "act6", "act7", "act8"];
+    e.ln.storyDay = 30;
+    e.ln.held = e.ln.tried = Number(process.env.LNHELD || 0);
+    s.stats.hordes = 6;
+    s.horde = { phase: "won", timer: 0, remaining: 0, spawnTimer: 0, direction: 0 };
+    e.c.nextHordeDay = DAY + 30;
+    if (e.dy) e.dy.pending = null;
+    s.minute = 1319.9;
+    // LNPREP=1：备过战的农场——三个居民吃饱了守两座瞭望塔（仓库里 80 发弹药）、四个路障陷阱、背包里 8 条绷带
+    if (process.env.LNPREP === "1") {
+      for (const id of ["farmer", "medic", "mechanic"]) e.recruit(id);
+      e.residentsCapacity = () => 5;
+      for (const r of e.c.residents) {
+        r.fed = true;
+        r.priorities.guard = 1;
+      }
+      s.buildings.push({ id: "sim-tower-1", type: "tower", x: 640, y: 600, rotation: 0, hp: 240 }, { id: "sim-tower-2", type: "tower", x: 1040, y: 600, rotation: 0, hp: 240 });
+      for (const [i, [x, y]] of [[700, 420], [960, 420], [700, 700], [960, 700]].entries()) s.buildings.push({ id: "sim-trap-" + i, type: "trap", x, y, rotation: 0, hp: 80 });
+      s.storage.ammo = 80;
+      // 武器台在农场：每一波开始时修一下武器和防具（真人会趁两波之间修；仓库里 20 废金属）
+      s.buildings.push({ id: "sim-bench", type: "weaponbench", x: 760, y: 300, rotation: 0, hp: 200 });
+      s.storage.scrap = 20;
+      e.navRevision = (e.navRevision || 0) + 1;
+    }
+  }
+  if (HORDEMODE) {
+    // 对照：普通尸潮（第 8 轮以后 24 只），同样一个人守在农场中间
+    s.stats.hordes = Number(process.env.HORDES || 8);
+    s.horde = { phase: "warning", timer: 0.1, remaining: 24, spawnTimer: 0, direction: 0 };
+    s.minute = 1200;
+  }
   // 装备
   for (const k of ["head", "body", "hands", "legs", "feet", "melee", "ranged"]) g.slots[k] = null;
   delete s.inventory.club;
@@ -97,7 +166,15 @@ function trial(region, kitId, seed) {
     s.inventory[kit.weapon] = 1;
     g.slots.melee = kit.weapon;
   }
+  // 对照实验：STARTCOND='{"leatherJacket":0.3}' 开局那件只剩几成耐久
+  if (process.env.STARTCOND)
+    for (const [id, f] of Object.entries(JSON.parse(process.env.STARTCOND))) {
+      const c = e.cond(id);
+      if (c) c.d = Math.round(c.m * f);
+    }
   s.inventory.bandage = region !== "residential" && kit.bandageHosp ? kit.bandageHosp : kit.bandage;
+  for (const [id, n] of Object.entries(kit.extra || {})) s.inventory[id] = (s.inventory[id] || 0) + n;
+  if (LNMODE && process.env.LNPREP === "1") s.inventory.bandage = 8;
   s.inventory.stone = region !== "residential" && kit.stonesHosp ? kit.stonesHosp : kit.stones;
   g.slots.throw = "stone";
   s.slot = 3;
@@ -125,7 +202,11 @@ function trial(region, kitId, seed) {
     stats.cause = opts.eff === RULES.grab.bite || opts.eff === RULES.crawl.bite ? "bite" : opts.down ? (z?.type === "armor" ? "charge" : "lunge") : z ? "hit:" + z.type : e.fx?.lastHitBy || "other";
     return realDamage(n, opts);
   };
-  const goals = [...LOOT[region].map(([x, y]) => ({ x, y })), { ...REGIONS[region].exit, exit: true }];
+  // 长夜：一直守在农场中间（不出门、不去出口）
+  const goals = LNMODE || HORDEMODE ? [{ x: 830, y: 480, hold: true }] : [...LOOT[region].map(([x, y]) => ({ x, y })), { ...REGIONS[region].exit, exit: true }];
+  let lnStarted = false,
+    lnWaveSeen = 0,
+    lnBossSeen = false;
   let gi = 0,
     waitAt = 0,
     t = 0,
@@ -165,8 +246,24 @@ function trial(region, kitId, seed) {
   };
   // 翻滚：往某个方向滚一下（滚不了就返回 false，照原来的办法躲）
   const roll = (a) => (ROLL && e.dodge && !e.dodgeReason() ? e.dodge({ x: Math.cos(a), y: Math.sin(a) }) : false);
-  while (t < 420 && !died) {
+  while (t < (LNMODE || HORDEMODE ? 900 : 420) && !died) {
     if (s.region !== region) break;
+    if (LNMODE) {
+      if (e.ln.night) lnStarted = true;
+      else if (lnStarted) break;
+      if (process.env.LNTRACE && e.ln.night && (e.ln.night.wave !== lnWaveSeen || (e.ln.night.boss === 1 && !lnBossSeen))) {
+        if (e.ln.night.boss === 1) lnBossSeen = true;
+        console.error("seed", seed, "t", Math.round(t), "wave", e.ln.night.wave, e.ln.night.boss === 1 ? "BOSS" : "", "hp", Math.round(p.hp), "band", s.inventory.bandage || 0, "alive", e.hordeAlive().length, "kills", e.ln.night.kills, "weapon", kit.weapon ? e.cond(kit.weapon).d : 0);
+      }
+      if (process.env.LNPREP === "1" && e.ln.night && e.ln.night.wave !== lnWaveSeen) {
+        lnWaveSeen = e.ln.night.wave;
+        if (lnWaveSeen > 1) for (const id of [kit.weapon, ...Object.values(set)]) if (id && e.repairReason?.(id) === "") e.repairGear(id);
+      }
+    }
+    if (HORDEMODE) {
+      if (s.horde.phase === "active") lnStarted = true;
+      else if (lnStarted) break;
+    }
     act = Math.max(0, act - DT);
     const foes = e.enemies.filter((z) => !z.dead && !z.nest);
     const close = foes.filter((z) => (z.state === "chase" || z.lunge || z.charge) && dist(z, p) < 420).sort((a, b) => dist(a, p) - dist(b, p));
@@ -182,6 +279,9 @@ function trial(region, kitId, seed) {
     // 绷带：流血或血少（被抓住时腾不出手）
     if ((gx.bleed > 0 || p.hp < 50) && !gx.heal && (s.inventory.bandage || 0) > 0 && !gx.grab && !(gx.down > 0)) {
       if (e.consume("bandage")) stats.bandages++;
+    } else if (p.hp < 45 && !gx.heal && !(s.inventory.bandage > 0) && (s.inventory.medkit || 0) > 0 && !gx.grab && !(gx.down > 0)) {
+      // v0.25：绷带用完了用药包（卫生员开局带 2 个）
+      if (e.consume("medkit")) stats.bandages++;
     }
     let goal = goals[gi];
     if (!fleeing && p.hp < 30 && !(s.inventory.bandage > 0) && !gx.heal) fleeing = true;
@@ -211,7 +311,28 @@ function trial(region, kitId, seed) {
       my = 0,
       run = false,
       acted = false;
-    if (hz && !gx.grab && !(gx.down > 0)) {
+    // 长夜里的头目：和 boss-sim 一样看预兆（砸地的圈、车门的线、挥拳）躲开
+    let bossA = null;
+    if (LNMODE && !gx.grab && !(gx.down > 0)) {
+      const b = foes.find((z) => z.lnBoss && dist(z, p) < 600);
+      if (b) {
+        const d = dist(b, p);
+        if (b.act?.kind === "slam" && d < U.BOSSES.brute.slam.r + 30 && notice(b.act, "seen", crowd)) bossA = Math.atan2(p.y - b.y, p.x - b.x);
+        else if (b.act?.kind === "door" && notice(b.act, "seen", crowd)) {
+          const L = b.act.a,
+            side = Math.sin(Math.atan2(p.y - b.y, p.x - b.x) - L) >= 0 ? 1 : -1;
+          if (Math.abs(Math.sin(Math.atan2(p.y - b.y, p.x - b.x) - L)) * d < 60) bossA = L + side * (Math.PI / 2);
+        } else if (b.act?.kind === "melee" && d < 105 && notice(b.act, "sw", crowd)) bossA = Math.atan2(p.y - b.y, p.x - b.x);
+      }
+    }
+    if (bossA != null && !hz) {
+      if (!roll(bossA)) {
+        mx = Math.cos(bossA);
+        my = Math.sin(bossA);
+        run = p.stamina > 5;
+      }
+      acted = true;
+    } else if (hz && !gx.grab && !(gx.down > 0)) {
       // 往离中心远的方向走；那边是墙就沿着墙换个方向（8 个方向里挑走得通的）
       const a0 = Math.atan2(p.y - hz.y, p.x - hz.x);
       let a = a0;
@@ -373,6 +494,8 @@ function trial(region, kitId, seed) {
         if (!acted && mx === 0 && my === 0 && !bracing && !(W && close.some((z) => dist(z, p) < 300) && !fleeing)) {
           if (dist(p, goal) < (goal.exit ? 40 : 60)) {
             if (goal.exit) break;
+            // 长夜：站在中间守着，不往下一处走
+            if (goal.hold) waitAt = -1e9;
             waitAt += DT;
             if (waitAt >= 2) {
               gi++;
@@ -418,8 +541,9 @@ function trial(region, kitId, seed) {
   }
   if (segStart >= 0) segs.push(lastCombat - segStart);
   const atExit = s.region === region && dist(s.player, goals[goals.length - 1]) < 60;
-  const ok = !died && atExit && gi >= goals.length - 1;
-  const fled = !died && atExit && !ok;
+  // 长夜：守住了算 ok（没有“半路逃回”）
+  const ok = LNMODE ? !died && lnStarted && !e.ln.night && e.ln.last?.held === true : HORDEMODE ? !died && lnStarted && s.horde.phase === "won" : !died && atExit && gi >= goals.length - 1;
+  const fled = !LNMODE && !HORDEMODE && !died && atExit && !ok;
   return {
     died,
     lay: e.ut?.gen?.[region]?.k ?? -1,
@@ -444,6 +568,9 @@ function trial(region, kitId, seed) {
     broken: g.stats.broken - stats.broken0,
     weaponLeft: kit.weapon ? Math.round((e.cond(kit.weapon).d / e.cond(kit.weapon).m) * 100) : 100,
     rolls: (e.feel?.stats.rolls || 0) - stats.rolls0,
+    // 长夜：打到第几波、头目打倒没有
+    lnWave: LNMODE ? e.ln?.last?.waves ?? 0 : 0,
+    lnBoss: LNMODE ? !!e.ln?.last?.boss : false,
   };
 }
 
@@ -486,6 +613,9 @@ for (const region of REGION_LIST)
       byLayout: Object.fromEntries([0, 1, 2].map((k) => [k, rs.filter((r) => r.lay === k && r.died).length + "/" + rs.filter((r) => r.lay === k).length])),
       byEvent: Object.fromEntries([...new Set(rs.map((r) => r.ev || "none"))].map((k) => [k, rs.filter((r) => (r.ev || "none") === k && r.died).length + "/" + rs.filter((r) => (r.ev || "none") === k).length])),
       causes: Object.fromEntries(Object.entries(rs.filter((r) => r.died).reduce((m, r) => ((m[r.cause] = (m[r.cause] || 0) + 1), m), {})).sort((a, b) => b[1] - a[1])),
+      // 长夜：倒在第几波（1/2/3）、头目打倒的趟数
+      lnDiedAt: region === "longnight" ? [1, 2, 3].map((w) => rs.filter((r) => r.died && r.lnWave === w).length).join("/") : undefined,
+      lnBossDown: region === "longnight" ? rs.filter((r) => r.lnBoss).length : undefined,
     };
     console.log(region, kitId, JSON.stringify(row));
   }

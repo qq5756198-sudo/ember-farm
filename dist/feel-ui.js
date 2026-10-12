@@ -131,7 +131,7 @@ const TOUCH_COACH = {
 export function coachHtml(e, touch = false) {
   const c = e?.coach?.();
   if (!c) return "";
-  return `<b>${esc(touch && TOUCH_COACH[c.id] ? TOUCH_COACH[c.id] : c.text)}</b>`;
+  return `<b>${esc(touch ? c.touch || TOUCH_COACH[c.id] || c.text : c.text)}</b>`;
 }
 
 // ================= 声音提示：带方向的一行字 =================

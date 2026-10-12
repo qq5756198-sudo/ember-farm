@@ -43,6 +43,8 @@ import * as DistrictData from '../dist/district-data.js';
 import * as Audio from '../dist/audio.js';
 import * as UData from '../dist/undertow-data.js';
 import * as WinterData from '../dist/winter-data.js';
+import * as LnData from '../dist/longnight-data.js';
+import * as Longnight from '../dist/longnight.js';
 const {createCanvas,Image:NativeImage,loadImage}=createRequire(import.meta.url)('@napi-rs/canvas');
 // 前几段检查的是 v0.13–v0.17 的流程：只在“每日抉择”段打开清晨事件卡，其余段里不让它插进来。
 const realDailyShow=Campaign.Engine.prototype.dailyShouldShow;let dailyOn=false;
@@ -1126,4 +1128,142 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(back.undertow.seed, 20241); assert.deepEqual(back.undertow.trophies, ['trophyBrute', 'trophyNurse', 'trophyGuard']); assert.equal(back.undertow.trophyDone, true);
   assert.equal(back.undertow.boss.brute.wins, 1); assert.equal(back.undertow.pried['residential-u6'], 4);
   console.log('Undertow controller passed: today\'s boss in the alert bar, 废墟里的动静 in the journal (标出位置 opens the map with the pins and sets the gold marker), the boss bar above the scene without a popup (发狂 tag, gone after the win, trophy dropped), a lit toolbox searched with E, the locked cabinet pried through E (loud, progress in the context line, opened when done), the backpacker\'s two goods picked through the chooser, the museum\'s 头目战利品 case (捐 ×3 fills it and pays out), the 成就册 rows, new infected/bosses/telegraphs/gas/acid/airdrop drawn at four sizes by day and by night with colour-safe hues, and save/parse.');
+}
+
+// v0.25.0「长夜」: the new-game origin picker (pick → start → the kit), 带着记忆重新开始 from the settings after the story (gear picked,
+// the old home kept as a checkpoint), a long night through the DOM (red date, the 长夜 banner, the alert, the boss bar on the farm,
+// the dawn report and 睡到早上 8 点), the ending card, the export card and the settings line, the save-failure prompt with its export
+// button, the counterattack's smoke/leader/saboteur marks, the new animals and item icons drawn at four sizes, save/parse.
+{
+  let clock = 17000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  // 主线打完（和单元测试一样把各段都记上，存档检查才过得去）
+  const storyEnd = (e) => {
+    const sc = e.sc;
+    sc.act = 9;
+    sc.claimed = ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8'];
+    sc.choice = 'ration';
+    sc.letters = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8', 'act9'];
+    sc.flags.well = sc.flags.camp = sc.flags.farmerFed = true;
+    sc.camp = { x: 560, y: 735 };
+    e.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((x) => x.id === 'broadcast') + 1).map((x) => x.id);
+    e.o.hospital = 'water'; Object.assign(e.o, { youke: true, lathe: { mode: 'parts', day: 0 } });
+    e.r.radio = true; e.o.toll = 'refuse'; e.o.raid.phase = 'won';
+  };
+  dailyOn = false;
+  // ---------- 开始新游戏：选出身 ----------
+  context.fixture(Campaign.newGameState());
+  click('restart');
+  assert.equal(context.inspect().menu, 'confirmRestart'); clean();
+  assert.equal((html().match(/data-action="pickOrigin"/g) || []).length, 5, 'five origins');
+  assert.match(html(), /aria-pressed="true"[^>]*>|class="origin-card active"/);
+  assert.match(html(), /种地的/); assert.match(html(), /代价：没有木棍，开局干粮少 2/);
+  click('pickOrigin', 'hunter'); clean();
+  assert.match(html(), /class="origin-card active" data-action="pickOrigin" data-id="hunter"/);
+  click('newGame');
+  let e = context.inspect().engine;
+  assert.equal(context.inspect().menu, null);
+  assert.equal(e.ln.origin, 'hunter'); assert.equal(e.s.inventory.club, undefined); assert.equal(e.gr.slots.ranged, 'slingshot');
+  assert.ok(storage.get(Session.CHECKPOINTS?.new || 'ember-farm-before-new-v1'), 'the old home is kept before a new game');
+  // 行囊上写着出身
+  context.open('inventory'); clean(); assert.match(html(), /出身：猎人/); click('close');
+  // ---------- 主线打完：设置里“带着记忆重新开始” ----------
+  const old = Campaign.newGameState();
+  context.fixture(old);
+  e = context.inspect().engine;
+  e.feel.open.phase = 'done';
+  storyEnd(e);
+  e.s.day = 30; e.s.minute = 600; e.s.stats.hordes = 6; e.c.nextHordeDay = 80; e.dy.pending = null; e.paused = false;
+  e.s.inventory.riotHelmet = 1; e.gr.bp.bp_sledge = 3; e.s.money = 4321;
+  run(2);
+  assert.equal(e.ln.storyDay, 30);
+  context.open('pause'); clean();
+  assert.match(html(), /带着记忆重新开始/); assert.match(html(), /这个存档还没导出过/);
+  click('restartPlus'); clean();
+  assert.equal(context.inspect().menu, 'confirmRestart'); assert.match(html(), /<h2 id="modal-title">带着记忆重新开始<\/h2>/);
+  assert.match(html(), /data-action="pickKeep" data-id="riotHelmet"/);
+  click('pickOrigin', 'veteran'); click('pickKeep', 'riotHelmet'); clean();
+  assert.match(html(), /class="keep-item active" data-action="pickKeep" data-id="riotHelmet"/);
+  click('newGame');
+  e = context.inspect().engine;
+  assert.equal(e.s.day, 1); assert.ok(e.s.money < 1000); assert.equal(e.ln.origin, 'veteran'); assert.equal(e.gr.slots.head, 'riotHelmet');
+  assert.ok(e.gr.bp.bp_sledge); assert.equal(e.ln.legacy.ng, 1); assert.equal(e.ln.legacy.fromDay, 30);
+  const kept = JSON.parse(storage.get('ember-farm-before-new-v1'));
+  assert.ok(JSON.stringify(kept).includes('4321'), 'the old home (4321 gold) is in the checkpoint');
+  context.open('outpost', { view: 'collection' }); clean(); click('close');
+  // ---------- 长夜：日期变红、横幅、提醒、血条、天亮的战报、睡到 8 点 ----------
+  context.fixture(Campaign.newGameState());
+  e = context.inspect().engine;
+  e.feel.open.phase = 'done';
+  storyEnd(e);
+  e.s.stats.hordes = 6; e.s.horde = { phase: 'won', timer: 0, remaining: 0, spawnTimer: 0, direction: 0 };
+  e.c.nextHordeDay = 80; e.dy.pending = null; e.s.day = 30; e.s.minute = 600; e.paused = false;
+  run(2);
+  e.ct.step = 4; e.ct.done = true;
+  e.s.day = 38; e.s.minute = 600; run(2);
+  assert.match(document.querySelector('#date').className, /ln-day/, 'the date is red');
+  assert.match(document.querySelector('#alert-bar').innerHTML, /今晚 22:00 长夜/);
+  context.open('journey'); clean(); assert.match(html(), /今晚<\/b>22:00 长夜/); click('close');
+  e.s.minute = 1319.9; e.invulnerable = 999; run(4);
+  assert.ok(e.ln.night, 'the night began');
+  const warn = document.querySelector('#horde-warning');
+  assert.equal(warn.hidden, false); assert.match(warn.textContent, /长夜 · 第 1\/3 波/);
+  assert.match(document.querySelector('#alert-bar').innerHTML, /长夜 · 第 1\/3 波/);
+  // 第三波和头目：血条在农场上方
+  e.ln.night.wave = 2; e.lnWave(3); e.ln.night.left = 0;
+  for (const z of e.enemies) if (z.horde) z.dead = true;
+  e.s.player.hp = 100; e.invulnerable = 999; run(2);
+  assert.equal(e.ln.night.boss, 1);
+  const bar = document.querySelector('#boss-bar');
+  assert.equal(bar.hidden, false); assert.match(bar.innerHTML, /<b>大块头<\/b>/); assert.match(bar.innerHTML, /长夜/);
+  // 画面：红的天、雷、头目，四种大小
+  for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+  context.inspect().renderer.resize(1366, 600, 1);
+  // 天亮：战报、睡到早上 8 点
+  e.s.day = 39; e.s.minute = 239.9; run(3);
+  assert.equal(e.ln.night, null); assert.equal(e.ln.held, 1);
+  assert.equal(context.inspect().menu, 'outpost'); clean();
+  assert.match(html(), /第 1 个长夜 · 守住了/); assert.match(html(), /长夜的铁哨/);
+  click('lnNap');
+  assert.equal(context.inspect().menu, null); assert.equal(e.s.minute, 480);
+  // 结局卡
+  context.open('outpost', { view: 'lnEnd' }); clean(); assert.match(html(), /余烬地区，收复了/); click('close');
+  // 导出提醒：卡片上的“导出存档”真的导出并清零
+  e.ln.exportDay = 0; e.ln.remindDay = 0; e.s.day = 50;
+  context.open('outpost', { view: 'lnExport' }); clean();
+  assert.match(html(), /data-action="export"/);
+  click('export');
+  assert.equal(e.ln.exportDay, 50); assert.equal(context.inspect().menu, null, 'exporting closes the card');
+  context.open('pause'); clean(); assert.match(html(), /上次导出：第 50 天（今天）/); click('close');
+  // 浏览器存不进去：提示里有导出按钮
+  failSave = true; click('save');
+  assert.equal(context.inspect().menu, 'saveFail'); clean(); assert.match(html(), /存不进去了/); assert.match(html(), /data-action="export"/);
+  failSave = false; click('close');
+  // ---------- 灰隼团反扑的画面、动物 ----------
+  e.ct.step = 3; e.ct.done = false; e.ct.leader = 0;
+  Object.assign(e.ct.raid, { phase: 'active', day: e.s.day, total: 9, spawned: 0, killed: 0, retreated: 0, spawnTimer: 0, clock: 0 });
+  const leader = e.spawnLeader(); Object.assign(leader, { x: 1150, y: 600, aim: 0.5, aimX: 900, aimY: 560 });
+  e.lx.smoke.push({ x: 1000, y: 600, r: 120, t: 5, max: 8 }); e.lx.grenades.push({ x0: 1150, y0: 570, x: 1050, y: 600, t: 0.2, fly: 0.6 }); e.lx.smokeRegion = 'farm';
+  const sab = e.enemy('raider', 900, 420, false); Object.assign(sab, { saboteur: true, plant: 6, aim: 0, cooldown: 9 }); e.enemies.push(sab);
+  e.ct.target = 't-x';
+  e.s.buildings.push({ id: 'coop-x', type: 'coop', x: 640, y: 760, rotation: 0, hp: 100 });
+  e.c.animals.chicken = true; e.c.animals.goat = true;
+  e.f.dog.rescued = true; Object.assign(e.f.dog, { x: 860, y: 520 }); e.assignRegion();
+  for (const [night] of [[false], [true]]) {
+    e.s.minute = night ? 1380 : 600;
+    for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+  }
+  context.inspect().renderer.resize(1366, 600, 1);
+  e.ct.raid.phase = 'scheduled'; e.ct.leader = 0;
+  e.enemies = e.s.enemies.farm = e.enemies.filter((z) => z.type !== 'raider');
+  e.lx.smoke = []; e.lx.grenades = [];
+  // 物品小图：每样都换成新画的
+  const icons = Object.keys(Data.ITEMS).filter((id) => !/^g\d+$/.test(String(Data.ITEMS[id].icon)));
+  assert.deepEqual(icons, [], 'every item has a new icon');
+  context.open('inventory'); clean(); click('close');
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.longnight.held, 1); assert.equal(back.longnight.exportDay, 50); assert.equal(back.longnight.origin, 'farmer');
+  console.log('Longnight controller passed: the new-game origin picker (pick → start → the kit, the bag says the origin), 带着记忆重新开始 from the settings after the story (origin and gear picked, blueprints carried, the old home kept as a checkpoint), a long night through the DOM (red date, the 长夜 banner and alert, the boss bar on the farm, the dawn report and 睡到早上 8 点), the ending card, the export card that really exports and the settings line, the save-failure prompt with its export button, smoke/leader/saboteur marks and the new animals drawn at four sizes by day and night, every item on a new icon, and save/parse.');
 }

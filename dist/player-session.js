@@ -11,15 +11,18 @@ export function preserveBeforeUpgrade(storage,needsUpgrade){
 export const isStandalone=s=>!!(s?.frontier?.demo||s?.frontier?.echoDemo||s?.districts?.demo);
 export function readCampaign(storage,parse){
  let raw=null,backup=null;try{raw=storage.getItem(CAMPAIGN_SAVE);backup=storage.getItem(CAMPAIGN_BACKUP);}catch{return {state:null,hasData:false,issue:'无法访问浏览器存档。请检查浏览器权限，或导入已导出的备份。'};}
- for(const [text,recovered]of [[raw,false],[backup,true]]){if(!text)continue;try{const state=parse(text);if(isStandalone(state))continue;return {state,hasData:true,recovered,issue:recovered?'已读取备用存档；进入游戏后将继续保存这座家园。':''};}catch{}}
+ for(const [text,recovered]of [[raw,false],[backup,true]]){if(!text)continue;try{const state=parse(text);if(isStandalone(state))continue;if(!recovered)lastWritten={text,parse};return {state,hasData:true,recovered,issue:recovered?'已读取备用存档；进入游戏后将继续保存这座家园。':''};}catch{}}
  return {state:null,hasData:!!(raw||backup),issue:raw||backup?'存档暂时无法读取。可在设置中导出原文件，或导入可用备份。':''};
 }
+// v0.25：上一次写进去的那份已经验过了，下次存档时它就是“上一份”，不用再整份验一遍（存档时少卡一半）
+let lastWritten=null;
 export function writeCampaign(storage,text,parse){
  if(isStandalone(parse(text)))throw new Error('旧版独立存档不能覆盖当前家园。');
  const previous=storage.getItem(CAMPAIGN_SAVE);let valid=false;
- if(previous)try{valid=!isStandalone(parse(previous));}catch{}
+ if(previous){if(lastWritten&&lastWritten.parse===parse&&lastWritten.text===previous)valid=true;else try{valid=!isStandalone(parse(previous));}catch{}}
  if(valid)storage.setItem(CAMPAIGN_BACKUP,previous);
  storage.setItem(CAMPAIGN_SAVE,text);
+ lastWritten={text,parse};
 }
 export function replaceCampaign(storage,text,parse,kind,currentText=null){
  if(!['new','import'].includes(kind)||isStandalone(parse(text)))throw new Error('这份文件不是家园存档，当前进度未更改。');

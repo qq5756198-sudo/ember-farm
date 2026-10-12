@@ -435,6 +435,24 @@ export function soundFor(ev) {
       return { sfx: "plane", ui: true };
     case "radio":
       return { sfx: "radioStatic", ui: true };
+    // ---------- v0.25「长夜」 ----------
+    case "lnThunder":
+      return { sfx: "thunder", ui: true };
+    case "lnScream":
+      return { sfx: "scream", stinger: "hordeWarn", ui: true };
+    case "lnWave":
+      return { sfx: "alarm", stinger: "hordeWarn", ui: true };
+    case "lnBoss":
+    case "lnLeader":
+      return { stinger: "boss", ui: true };
+    case "smokeCue":
+      return { sfx: "click", voice: true, duck: true };
+    case "smoke":
+      return { sfx: "gas" };
+    case "sabPlant":
+      return { sfx: "clank", voice: true, duck: true };
+    case "sabBoom":
+      return { sfx: "bang", range: 1400 };
     default:
       return null;
   }
@@ -443,6 +461,7 @@ export function soundFor(ev) {
 export const SOUND_EVENTS = ["swing", "shot", "hit", "hitFlesh", "hitMetal", "spot", "windup", "scream", "hiss", "stomp", "inhale", "grabCue", "reach", "quest", "victory", "alarm", "wave", "level", "travel", "sleep", "trade", "kill", "reload", "loaded", "loot", "eat", "trap", "bite", "shove", "rescue", "roll", "hoe", "plant", "water", "harvest", "craft"];
 // v0.24「暗涌」新加的引擎事件
 export const U_SOUND_EVENTS = ["fuse", "gas", "breath", "fakerGrab", "spitCue", "spit", "acid", "click", "stalkerCue", "slamCue", "slam", "doorCue", "doorThrow", "doorHit", "bruteStep", "bossRage", "nurseCue", "nurseScream", "pulseCue", "pulse", "armorOff", "rareLoot", "preciousLoot", "pryStart", "pryTick", "pryDone", "plane", "airdropLand", "talkie", "survivorHurt", "dogGrowl", "bossIntro", "bossDown", "radio"];
+export const LN_SOUND_EVENTS = ["lnThunder", "lnScream", "lnWave", "lnBoss", "lnLeader", "smokeCue", "smoke", "sabPlant", "sabBoom"];
 
 // 混音：各条线的基础音量（再乘设置里的四个音量）
 export const MIX = { music: 0.36, ambience: 0.5, sfx: 0.9, ui: 0.55, voice: 0.85 };

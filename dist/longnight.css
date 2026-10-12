@@ -1,0 +1,138 @@
+/* v0.25.0「长夜」：顶栏日期变红、手记里的“长夜”一栏、长夜战报、结局卡、档案馆第七个展柜。
+   颜色只用调色板：深色木头、锈铁边、余烬橙，危险用暗红。 */
+
+/* ---------- 顶栏日期：长夜那天 08:00 起变红 ---------- */
+.hud-date.ln-day,
+body.vis-on .hud-date.ln-day {
+  color: #ff7a5c;
+  border-color: #8e3a20;
+  background: #2a1510;
+  text-shadow: 0 0 1px #140f0b;
+}
+.a11y-color .hud-date.ln-day {
+  color: #ffe066;
+  border-color: #b08a2a;
+}
+
+/* ---------- 手记：长夜 ---------- */
+.ln-strip .far-row.danger p b {
+  color: #ff8a6a;
+}
+.ln-strip .far-row button {
+  margin-top: 4px;
+}
+
+/* ---------- 长夜战报 ---------- */
+.ln-report h3::before {
+  content: "☾ ";
+  color: #bf5a28;
+}
+.ln-report .gold {
+  color: #e9c05a;
+}
+
+/* ---------- 结局卡 ---------- */
+.ln-ending {
+  padding: 4px 2px;
+}
+.ln-ending h3 {
+  margin: 0 0 12px;
+  font-size: 1.4em;
+  color: #ffdb8c;
+  letter-spacing: 0.08em;
+}
+.ln-ending p {
+  margin: 0 0 10px;
+  line-height: 1.7;
+  color: #f1e3c2;
+}
+.ln-ending p:nth-of-type(3) {
+  color: #ffdb8c;
+  font-size: 1.15em;
+}
+
+/* ---------- 档案馆：长夜纪念 ---------- */
+.ln-case h3::before {
+  content: "☾ ";
+  color: #bf5a28;
+}
+@media (max-width: 700px) {
+  .ln-ending h3 {
+    font-size: 1.2em;
+  }
+}
+
+/* ---------- 开始新游戏：选出身、二周目挑一件装备 ---------- */
+.origin-pick h4,
+.modal h4.keep-title {
+  margin: 10px 0 6px;
+}
+.origin-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.origin-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 0;
+  padding: 8px 10px;
+  text-align: left;
+  line-height: 1.4;
+  white-space: normal;
+}
+.origin-card b {
+  font-size: 1.05em;
+  color: #ffdb8c;
+}
+.origin-card small {
+  color: #cfc6a8;
+}
+.origin-card span {
+  font-size: 0.86em;
+}
+.origin-card .good {
+  color: #aab258;
+}
+.origin-card .cost {
+  color: #f1a28a;
+}
+.origin-card.active {
+  border-color: #e9c05a;
+  box-shadow: inset 0 0 0 2px #bf5a28;
+}
+.keep-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.keep-item.active {
+  border-color: #e9c05a;
+  box-shadow: inset 0 0 0 2px #bf5a28;
+}
+.origin-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0 0 6px;
+}
+.origin-line b {
+  color: #ffdb8c;
+  font-weight: normal;
+}
+.origin-line small {
+  color: #cfc6a8;
+}
+.collection li.legacy small {
+  white-space: normal;
+}
+@media (max-width: 700px) {
+  .origin-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}

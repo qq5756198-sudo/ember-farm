@@ -372,6 +372,11 @@ const BP_DRAW = {
     P.vline(12, 6, 10, c);
   },
 };
+// v0.25：别的物品的小图也挂进来（item-sprites.js），和装备小图拼在同一张图集里
+export function registerIcons(map) {
+  for (const [id, draw] of Object.entries(map || {})) ICONS[id] ??= draw;
+  sheet = null;
+}
 export function gearIcon(id) {
   return cached("gicon:" + id, () => {
     const P = P16(),

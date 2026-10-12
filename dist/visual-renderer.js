@@ -7,6 +7,7 @@ import { PAL, makeCanvas, nearestPal, Pix, cached } from "./pixel-kit.js";
 import { RAMP, pine } from "./pixel-build.js";
 import { boat } from "./pixel-things.js";
 import { bakeMap, hasMapArt } from "./pixel-maps.js";
+import { farmQueries } from "./pixel-farm.js";
 import { pixelSheets } from "./pixel-sheets.js";
 import { personSprite, lookFor, PLAYER_LOOK, dirFromAngle, cropSprite, soilSprite, iconSprite, debrisSprite, shadowSprite, gardenSprite, zombieSprite } from "./pixel-sprites.js";
 import { buildingArt, objectArt, flameArt, carryArt } from "./pixel-props.js";
@@ -121,10 +122,105 @@ function installPalette(r) {
   }
 }
 
+const SHEET_KEYS = ["sprites", "expansion", "frontier"];
+
+// ---------- 后台画底图（v0.25）：全局一个 Worker，载入页一开就能先画当前这张，进游戏后再一张张画去得了的 ----------
+// 浏览器不支持（没有 Worker 或 OffscreenCanvas）就返回 null，由调用的地方在主线程画。
+// 页面一开（index.html 里那一小段）就已经让后台开始画当前那张了：接过来接着用。
+let bakeW; // undefined：还没试过；null：用不了
+const bakeWaiting = new Map(),
+  bakeReady = new Map(); // 已经画好、还没人来拿的
+function bakeWorker() {
+  if (bakeW !== undefined) return bakeW;
+  bakeW = null;
+  const early = globalThis.__emberEarlyBake;
+  if (early) globalThis.__emberEarlyBake = undefined;
+  try {
+    if (typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined" || typeof document === "undefined" || early?.failed) {
+      early?.worker?.terminate?.();
+      return null;
+    }
+    const w = early?.worker || new Worker(new URL("./bake-worker.js", import.meta.url), { type: "module" });
+    // 页面一开就交给它的那张已经在画了，不用再发一次
+    if (early?.worker && early.region) bakeWaiting.set(early.region, []);
+    w.onmessage = (ev) => bakeFinish(ev.data?.region, ev.data);
+    w.onerror = () => {
+      // 这台浏览器跑不了：以后都在主线程画
+      w.terminate?.();
+      bakeW = null;
+      for (const region of [...bakeWaiting.keys()]) bakeFinish(region, null);
+    };
+    bakeW = w;
+    for (const msg of early?.msgs || []) bakeFinish(msg?.region, msg);
+  } catch {
+    early?.worker?.terminate?.();
+    bakeW = null;
+  }
+  return bakeW;
+}
+function bakeFinish(region, msg) {
+  const list = bakeWaiting.get(region);
+  bakeWaiting.delete(region);
+  if (list?.length) for (const done of list) done(msg);
+  else if (msg?.ok && region) bakeReady.set(region, msg);
+  else msg?.bitmap?.close?.();
+}
+// 这台浏览器能不能在后台画
+export function canBakeAway() {
+  return !!(VIS.on && bakeWorker());
+}
+// 让后台画一张；返回 Promise（画好的消息，失败是 null），用不了 Worker 时返回 null
+export function bakeAway(region) {
+  if (!VIS.on || !hasMapArt(region)) return null;
+  const w = bakeWorker();
+  if (!w) return null;
+  if (bakeReady.has(region)) {
+    const msg = bakeReady.get(region);
+    bakeReady.delete(region);
+    return Promise.resolve(msg);
+  }
+  return new Promise((done) => {
+    const list = bakeWaiting.get(region);
+    if (list) return list.push(done);
+    bakeWaiting.set(region, [done]);
+    try {
+      w.postMessage({ region });
+    } catch {
+      bakeFinish(region, null);
+    }
+  });
+}
+// 后台一直不回话（浏览器卡住了 Worker）时不能一直等：过了这么久就当画不了，在主线程画
+const patience = (job, ms) => Promise.race([job, new Promise((done) => setTimeout(() => done(null), ms))]);
+// 后台画好的消息变回底图：图片画进一张画布，农场的“是不是水面”“地面种类”按地面种类表重新接上
+function artFromMsg(region, msg) {
+  const bitmap = msg?.bitmap;
+  if (!msg?.ok || !bitmap) {
+    bitmap?.close?.();
+    return null;
+  }
+  let art = null;
+  try {
+    const cv = makeCanvas(bitmap.width, bitmap.height),
+      c = cv?.getContext("2d");
+    if (c) {
+      c.drawImage(bitmap, 0, 0);
+      art = { ...msg.art, canvas: cv };
+      if (region === "farm") Object.assign(art, farmQueries(art.map));
+    }
+  } catch {
+    art = null;
+  }
+  bitmap.close?.();
+  return art;
+}
+
 export class Renderer extends GardenRenderer {
   constructor(canvas, assets) {
     super(canvas, assets);
-    this.orig = assets ? { ...assets } : {};
+    // 照原样记下（旧画法的地区底图是用到时才画的，这里不能把它们都叫出来）
+    this.orig = assets ? Object.defineProperties({}, Object.getOwnPropertyDescriptors(assets)) : {};
+    this.swapped = null;
     this.arts = new Map();
     this.sheets = null;
     this.lightMap = new LightMap();
@@ -155,9 +251,78 @@ export class Renderer extends GardenRenderer {
     }
     return this.arts.get(region) || null;
   }
-  // 载入页还没关的时候先把当前地图画好，进游戏时不再卡一下
-  prepare(region) {
-    if (VIS.on && region) this.artFor(region);
+  // 载入页还没关的时候先把当前地图画好，进游戏时不再卡一下。
+  // 给了 job（载入一开始就交给后台画的那张）就等它画好；后台画不了再在这里画。
+  prepare(region, job = null) {
+    if (!VIS.on || !region) return;
+    if (!job) return void this.artFor(region);
+    return patience(job, 6000).then((msg) => {
+      if (this.arts.has(region)) return;
+      const art = artFromMsg(region, msg);
+      if (art) this.arts.set(region, art);
+      else this.artFor(region);
+    });
+  }
+  // v0.25：别的地图在后台先画好（Worker + OffscreenCanvas），进图时不再卡；浏览器不支持就在空闲时一张张画
+  prebake(regions = []) {
+    if (!VIS.on) return;
+    const want = regions.filter((r) => hasMapArt(r) && !this.arts.has(r));
+    this.bakeQueue = [...new Set([...(this.bakeQueue || []), ...want])].filter((r) => !this.arts.has(r));
+    this.pumpBake();
+  }
+  pumpBake() {
+    if (this.baking || !this.bakeQueue?.length) return;
+    const region = this.bakeQueue.shift();
+    if (this.arts.has(region)) return this.pumpBake();
+    this.baking = region;
+    const job = bakeAway(region);
+    if (job) {
+      patience(job, 15000).then((msg) => {
+        if (!this.arts.has(region)) {
+          const art = artFromMsg(region, msg);
+          // 后台画不了这张：留给空闲时在主线程画
+          if (!art) return this.idleBake(region);
+          this.arts.set(region, art);
+        } else msg?.bitmap?.close?.();
+        this.baking = null;
+        this.pumpBake();
+      });
+      return;
+    }
+    this.idleBake(region);
+  }
+  waitBake(region) {
+    if (!hasMapArt(region) || this.arts.has(region) || !canBakeAway()) {
+      this._wait = null;
+      return false;
+    }
+    const now = globalThis.performance?.now?.() ?? Date.now();
+    if (this._wait?.region !== region) {
+      this._wait = { region, since: now };
+      // 插到最前面
+      this.bakeQueue = [region, ...(this.bakeQueue || []).filter((r) => r !== region)];
+      this.pumpBake();
+    }
+    return now - this._wait.since < 1500;
+  }
+  drawVeil(dt) {
+    this.time += dt;
+    const c = this.ctx,
+      dpr = this.dpr || 1;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.fillStyle = "#0e0c0a";
+    c.fillRect(0, 0, this.w, this.h);
+  }
+  idleBake(region) {
+    const idle = globalThis.requestIdleCallback ? (fn) => globalThis.requestIdleCallback(fn, { timeout: 4000 }) : (fn) => setTimeout(fn, 300);
+    idle(() => {
+      try {
+        this.artFor(region);
+      } finally {
+        this.baking = null;
+        this.pumpBake();
+      }
+    });
   }
   // 感染者用新画法时，旧画法加在身上的护甲片、腿的线条就不画了
   get newEnemyArt() {
@@ -184,18 +349,31 @@ export class Renderer extends GardenRenderer {
         }
       }
     }
-    for (const k of Object.keys(this.orig)) {
-      const sheet = on && this.sheets && (k === "sprites" || k === "expansion" || k === "frontier") ? this.sheets[k] : null;
+    for (const k of SHEET_KEYS) {
+      if (!(k in this.orig)) continue;
+      const sheet = on && this.sheets ? this.sheets[k] : null;
       a[k] = sheet || this.orig[k];
     }
-    const key = REGIONS[region]?.asset;
-    if (on && this.art && key) a[key] = this.mapCanvas();
+    // 当前地图的底图换成新画的；离开时把上一张换回原来的（原来的是按需画的就还是按需画）
+    const key = REGIONS[region]?.asset,
+      want = on && this.art && key ? key : null;
+    if (this.swapped && this.swapped !== want) {
+      const d = Object.getOwnPropertyDescriptor(this.orig, this.swapped);
+      if (d) Object.defineProperty(a, this.swapped, d);
+      this.swapped = null;
+    }
+    if (want) {
+      Object.defineProperty(a, want, { value: this.mapCanvas(), writable: true, enumerable: true, configurable: true });
+      this.swapped = want;
+    }
   }
   // ---------- 每帧 ----------
   draw(engine, mouse, dt = 0.016) {
     const s = engine.s,
-      region = s.region,
-      art = VIS.on ? this.artFor(region) : null;
+      region = s.region;
+    // 刚走进一张后台还没画好的地图：先暗一下等它（最多 1.5 秒），不在这一帧里整张画、卡住
+    if (VIS.on && this.waitBake(region)) return this.drawVeil(dt);
+    const art = VIS.on ? this.artFor(region) : null;
     this.lastRegion = region;
     this.v = !!art;
     this.art = art;
@@ -1067,6 +1245,8 @@ export class Renderer extends GardenRenderer {
     let amb = this.indoor ? [146, 152, 168] : ambientFor(this.vMinute, weather);
     // 夜里在外面探索：四周更黑，手电筒照到的地方才看得清
     if (!this.indoor && night > 0.3 && !["farm", "market"].includes(s.region)) amb = amb.map((v) => Math.round(v * (1 - 0.25 * night)));
+    // 后面的层可以给天色上一层颜色（v0.25 长夜那天天边发红）
+    if (!this.indoor && this.tintAmbient) amb = this.tintAmbient(amb, e) || amb;
     if (this.wx.flash > 0 && !this.indoor) amb = amb.map((v) => Math.round(v + (255 - v) * this.wx.flash * 0.45));
     const lit = this.lightMap.render(view, amb, this.collectLights(e, night));
     if (lit) {

@@ -46,12 +46,14 @@ export function distSeg(px, py, ax, ay, bx, by) {
   const dx = bx - ax,
     dy = by - ay,
     t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
-  return Math.hypot(px - ax - t * dx, py - ay - t * dy);
+  const ex = px - ax - t * dx,
+    ey = py - ay - t * dy;
+  return Math.sqrt(ex * ex + ey * ey);
 }
 function streamDist(x, y) {
   let d = Infinity;
   const s = LAYOUT.stream;
-  for (let i = 0; i + 1 < s.length; i++) d = Math.min(d, distSeg(x, y, ...s[i], ...s[i + 1]));
+  for (let i = 0; i + 1 < s.length; i++) d = Math.min(d, distSeg(x, y, s[i][0], s[i][1], s[i + 1][0], s[i + 1][1]));
   return d;
 }
 const near = (x, y, r) => KEEP.some(([kx, ky]) => Math.hypot(kx - x, ky - y) < r);
@@ -67,7 +69,11 @@ const SB = boxOf(LAYOUT.stream);
 const segNear = (x, y, ax, ay, bx, by, reach) => (boxFar(x, y, Math.min(ax, bx), Math.min(ay, by), Math.max(ax, bx), Math.max(ay, by), reach) ? Infinity : distSeg(x, y, ax, ay, bx, by));
 const inRect = (x, y, r, pad = 0) => x >= r.x0 - pad && x < r.x1 + pad && y >= r.y0 - pad && y < r.y1 + pad;
 
+// 被踩出来的小路边缘：离路线够近，或者稍远一点但随机踩到
+const wornAt = (d, w, n, x, y) => d < w + n || (d < w + 3 + n * 2 && hash2(x, y, 51) > 0.5);
+
 // ---------- 地形 ----------
+// v0.25：每个像素都要算一遍，所以这里不用 Math.hypot、不在里面新建函数（农场底图少画三成时间，画出来一样）
 function terrainType(x, y) {
   const L = LAYOUT,
     n = vnoise(x * 0.21, y * 0.21, 3);
@@ -100,19 +106,22 @@ function terrainType(x, y) {
   // 小路：农舍门前、谷仓门前、通往溪谷入口和池塘边
   if (x >= 154 && x <= 174 && y >= 140 && y <= 152) return T.path;
   if (x >= 376 && x <= 396 && y >= 120 && y <= 152) return T.path;
-  const worn = (d, w) => d < w + n || (d < w + 3 + n * 2 && hash2(x, y, 51) > 0.5);
-  if (worn(segNear(x, y, 466, 436, 500, 438, 10), 4)) return T.path;
-  if (worn(segNear(x, y, 466, 300, 490, 352, 7), 1.6) || worn(segNear(x, y, 490, 352, 516, 400, 7), 1.6)) return T.path;
-  if (worn(segNear(x, y, 354, 290, 400, 284, 7), 1.4) || worn(segNear(x, y, 400, 284, 438, 286, 7), 1.4)) return T.path;
+  if (wornAt(segNear(x, y, 466, 436, 500, 438, 10), 4, n, x, y)) return T.path;
+  if (wornAt(segNear(x, y, 466, 300, 490, 352, 7), 1.6, n, x, y) || wornAt(segNear(x, y, 490, 352, 516, 400, 7), 1.6, n, x, y)) return T.path;
+  if (wornAt(segNear(x, y, 354, 290, 400, 284, 7), 1.4, n, x, y) || wornAt(segNear(x, y, 400, 284, 438, 286, 7), 1.4, n, x, y)) return T.path;
   // 农田（休耕的土）
   const f = L.field,
     edge = (vnoise(x * 0.3, y * 0.3, 8) - 0.5) * 3;
   if (x > f.x0 + edge && x < f.x1 + edge && y > f.y0 + edge && y < f.y1 + edge) return T.field;
   // 烧过的地
-  for (const [ax, ay, ar] of ASH) {
-    const base = Math.hypot(x - ax, (y - ay) * 1.3);
-    if (base >= ar + 7) continue;
-    const d = base + (fbm(x * 0.09, y * 0.09, 31, 3) - 0.5) * 14;
+  for (let i = 0; i < ASH.length; i++) {
+    const a = ASH[i],
+      ar = a[2],
+      dx = x - a[0],
+      dy = (y - a[1]) * 1.3,
+      d2 = dx * dx + dy * dy;
+    if (d2 >= (ar + 7) * (ar + 7)) continue;
+    const d = Math.sqrt(d2) + (fbm(x * 0.09, y * 0.09, 31, 3) - 0.5) * 14;
     if (d < ar * 0.62) return T.ash;
     if (d < ar) return T.scorch;
   }
@@ -936,13 +945,14 @@ export function bakeFarm() {
     embers,
     chimney: houseInfo.chimney,
     windmill: barnInfo.windmill,
-    water: (x, y) => {
-      const t = map[Math.max(0, Math.min(FARM_H - 1, Math.floor(y))) * FARM_W + Math.max(0, Math.min(FARM_W - 1, Math.floor(x)))];
-      return t === T.water;
-    },
-    surface: (x, y) => map[Math.max(0, Math.min(FARM_H - 1, Math.floor(y))) * FARM_W + Math.max(0, Math.min(FARM_W - 1, Math.floor(x)))],
+    ...farmQueries(map),
     T,
   };
+}
+// 农场底图上的两个查询（是不是水面、地面种类）：只靠地面种类表，后台画好传回来时在主线程重新接上
+export function farmQueries(map) {
+  const at = (x, y) => map[Math.max(0, Math.min(FARM_H - 1, Math.floor(y))) * FARM_W + Math.max(0, Math.min(FARM_W - 1, Math.floor(x)))];
+  return { water: (x, y) => at(x, y) === T.water, surface: at };
 }
 
 // 下雨时路面会积水：只在公路、土路、小路上，返回水洼位置（美术像素）

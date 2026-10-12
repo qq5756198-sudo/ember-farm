@@ -166,6 +166,9 @@ function drawRegion(id){
  paving(72,478,135,62,'#a4a087');rect(82,491,6,34,'#516c56');rect(90,495,5,26,'#687f5c');
  return canvas;
 }
+// v0.25：旧画法的底图只在新底图画不出来时才用得上，一张张按需画
+export const DISTRICT_ART_IDS=Object.keys(themes);
+export function districtAsset(id){return themes[id]?drawRegion(id):null;}
 export function createDistrictAssets(){
  const result={};for(const id of Object.keys(themes))result[id]=drawRegion(id);return result;
 }
