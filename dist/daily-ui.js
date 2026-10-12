@@ -331,7 +331,8 @@ export function dailyLocked(e, ui) {
 
 // “需要处理的事”：卡在等你，但现在不方便弹（打仗、钓鱼、摆建筑）
 ALERT_HOOKS.push((e, add) => {
-  if (e.dailyCard?.() && e.s.minute >= 360 && !e.dailySafe()) add(0, "今日抉择等你决定", "gold", null);
+  // v0.23：放着的卡（稍后再选）由手感层自己挂一条“12:00 前要选”，这里不再重复
+  if (e.dailyCard?.() && e.s.minute >= 360 && !e.dailySafe() && !e.dailyDeferred?.()) add(0, "今日抉择等你决定", "gold", null);
 });
 
 const ACTIONS = ["dView", "dPick", "dStart", "dMark"];

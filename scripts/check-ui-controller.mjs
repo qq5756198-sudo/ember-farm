@@ -40,6 +40,7 @@ import * as Clarity from '../dist/clarity-ui.js';
 import * as DistrictArt from '../dist/district-art.js';
 import * as DistrictUI from '../dist/district-ui.js';
 import * as DistrictData from '../dist/district-data.js';
+import * as Audio from '../dist/audio.js';
 const {createCanvas,Image:NativeImage,loadImage}=createRequire(import.meta.url)('@napi-rs/canvas');
 // 前几段检查的是 v0.13–v0.17 的流程：只在“每日抉择”段打开清晨事件卡，其余段里不让它插进来。
 const realDailyShow=Campaign.Engine.prototype.dailyShouldShow;let dailyOn=false;
@@ -80,9 +81,9 @@ for(const key of Session.HISTORY_KEYS.slice(0,8))storage.set(key,'historic '+key
 class Image{set src(path){this.path=path;loadImage(dir+'/'+path).then(img=>{this.native=img;this.width=img.width;this.height=img.height;this.complete=true;this.onload?.();}).catch(e=>this.onerror?.(e));}get src(){return this.path;}}
 globalThis.document=document;
 let raf;
-const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
+const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
-script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo});globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
+script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
 for(let i=0;i<150&&!document.querySelector('#loading').hidden;i++)await new Promise(resolve=>setTimeout(resolve,20));
 if(!document.querySelector('#loading').hidden)console.log('Loading details:',document.querySelector('#loading').innerHTML);assert.equal(document.querySelector('#loading').hidden,true,'all game assets should finish loading');
@@ -598,13 +599,12 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   context.open('journey'); clean(); assert.match(html(), /class="daily-strip"/); assert.match(html(), /今日抉择/);
   click('dView', 'dlog'); clean(); assert.match(html(), /已经做过 1 次抉择/); assert.match(html(), /种子换口粮|连贯事件/); click('close');
   assert.equal(context.inspect().menu, null);
-  // 睡一觉：先出日终总结，关掉后卡片弹出
+  // 睡一觉：平安的早上不弹日终总结（一行提示，全文在消息记录里），卡片直接弹出（v0.23）
   goRegion('farm'); e.s.player.hunger = 80; e.s.storage.bread = 20;
   context.open('home'); click('sleep'); run(2);
-  assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /日终总结|第 \d+ 天结束/);
   assert.equal(e.s.day, 3); assert.ok(e.dailyCard(), 'a fresh card for day three');
-  click('oClose'); run(2);
-  assert.equal(context.inspect().menu, 'outpost', 'after the summary the card shows'); clean(); assert.match(html(), /class="daily-card/);
+  assert.equal(context.inspect().menu, 'outpost', 'a quiet night: the card shows without the summary page'); clean(); assert.match(html(), /class="daily-card/);
+  assert.ok(e.o.log.some((l) => /第2天平安过去/.test(l.text)), 'the quiet-night line is kept in the message log');
   // 买不起的选项点了没反应，只提示原因
   const blocked = [0, 1, 2].find((i) => e.optionReason(i));
   if (blocked !== undefined) { const before = JSON.stringify(e.s.storage) + e.s.money; click('dPick', String(blocked)); assert.equal(e.dy.pending.choice, null); assert.equal(JSON.stringify(e.s.storage) + e.s.money, before); }
@@ -654,7 +654,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.ok(back.daily.chains.C4); assert.equal(back.daily.chains.C4.due, 22); assert.equal(back.daily.stats.cards, 4);
   assert.ok(back.daily.history.length >= 4);
   dailyOn = false;
-  console.log('Daily controller passed: no card on day one, the day-two card pops up by itself at 06:00, Esc and close cannot dismiss it, number keys pick and the result starts the day once, journal strip and record page, sleep → summary → card, refused options change nothing, ×2 rewards in late acts, today\'s supply point and a chain marker via E (once each), marker routing on the map, HUD buff chip, Canvas at four sizes and save/parse.');
+  console.log('Daily controller passed: no card on day one, the day-two card pops up by itself at 06:00, Esc and close cannot dismiss it, number keys pick and the result starts the day once, journal strip and record page, a quiet night → no summary page, the card shows, refused options change nothing, ×2 rewards in late acts, today\'s supply point and a chain marker via E (once each), marker routing on the map, HUD buff chip, Canvas at four sizes and save/parse.');
 }
 // v0.19.0「妙手」: skills page (K) learns a talent, crouch (V) behind a person shows 下手 in the context bar, E opens the preview, 1 starts, number keys pick, space takes, Esc stops, a failed first gate locks the caught card until a choice, journal strip → thief book, the dummy via E, Canvas marks at four sizes and save/parse.
 {
@@ -739,7 +739,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // 稻草人：站着按 E 练手
   e.f.crouch = false;
   const dummy = e.objects.find((o) => o.type === 'thiefDummy'); assert.ok(dummy);
-  Object.assign(e.s.player, { x: dummy.x, y: dummy.y + 24 }); run(2);
+  // 顶上的提示每 0.12 秒刷新一次：多走一帧，保证刷新过
+  Object.assign(e.s.player, { x: dummy.x, y: dummy.y + 24 }); run(3);
   assert.match(document.querySelector('#context').innerHTML, /稻草人/);
   Object.assign(e.s.player, { x: dummy.x, y: dummy.y + 24 }); press('e'); run(1);
   assert.equal(context.inspect().menu, 'outpost'); assert.ok(e.steal?.practice); clean();
@@ -835,7 +836,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   press('4'); run(4); assert.equal(e.currentItem(), 'club'); assert.match(document.querySelector('#selected-label').innerHTML, /左键挥/);
   // 行囊：装备栏
   e.add({ leatherJacket: 1, tireArmor: 1, spear: 1 });
-  press('Tab'); assert.equal(context.inspect().menu, 'inventory'); clean();
+  press('Tab');
+  assert.equal(context.inspect().menu, 'inventory'); clean();
   assert.match(html(), /class="gear-panel"/); assert.equal((html().match(/data-action="gSlot"/g) || []).length, 9);
   assert.match(html(), /data-doll="1"/);
   click('gSlot', 'body'); assert.match(html(), /废胎护甲/); assert.match(html(), /▲|▼/); clean();
@@ -905,4 +907,97 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
   assert.equal(back.gear.slots.melee, 'spear'); assert.equal(back.gear.slots.body, 'leatherJacket'); assert.equal(back.gear.cond.spear.r, 1); assert.ok(back.gear.cond.spear.mods.wrap);
   console.log('Gear controller passed: Tab bag with the gear panel (nine slot buttons, doll), equip/swap/take off through buttons and the item detail, hotbar 4–7 with an empty ranged slot and its label, X shove and three E presses out of a grab, the touch 推开 button, the status strip (bleeding, infection), telegraphs/crawler/trap/fire/knockdown/headlamp on Canvas at four sizes, 修理与改装 on the existing 武器与潜行 page reached from the weapon bench (repair, mod, dismantle; the repaired cap, missing materials and a pistol suppressor written next to the buttons), the gear card closed for good by Esc or the close button, and save/parse.');
+}
+
+// v0.23.0「回响」: Space rolls (it no longer attacks); a short Tab opens the bag, a held Tab opens the radial (a number and releasing Tab opens 制作);
+// the touch 翻滚 button; settings has four volumes saved in the preferences key and the 声音提示 switch, help puts the rest under 更多按键;
+// a new game's opening wave shows the coach strip step by step and the road fence marker; cues write a direction line;
+// the daily card's 稍后再选 (the alert reopens it and it can be closed), the journal's 今天, the career table in the 成就册,
+// 拍照 in the quick menu; bodies, blood and the roll drawn at four sizes; save/parse.
+{
+  let clock = 14000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const keydown = (key) => listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false });
+  const keyup = (key) => listeners.keyup({ key });
+  const press = (key) => { keydown(key); keyup(key); };
+  dailyOn = false;
+  context.fixture(Campaign.newGameState());
+  const e = context.inspect().engine;
+  e.paused = false;
+  e.s.minute = 600;
+  run(2);
+  // 空格是翻滚，不再是攻击
+  Object.assign(e.s.player, { x: 700, y: 640 }); e.s.slot = 3; e.s.player.facing = Math.PI; run(1);
+  const x0 = e.s.player.x, y0 = e.s.player.y, st0 = e.s.player.stamina;
+  press(' '); run(9);
+  // 没按方向键时朝面对（瞄准）的方向滚
+  assert.equal(e.feel.stats.rolls, 1, 'space rolls'); assert.ok(Math.hypot(e.s.player.x - x0, e.s.player.y - y0) > 100, 'the roll carried you');
+  assert.ok(st0 - e.s.player.stamina >= 12, 'a roll costs stamina (15, minus what came back while rolling)');
+  run(10);
+  // 触屏的翻滚按钮
+  click('touchRoll'); run(9); assert.equal(e.feel.stats.rolls, 2, 'the touch 翻滚 button rolls');
+  assert.ok(document.querySelector('#touch-roll'), 'the touch 翻滚 button'); assert.match(readFileSync(dir + '/index.html', 'utf8'), /<div class="touch-actions"><button id="touch-roll" data-action="touchRoll"[^>]*>翻滚<\/button><button id="touch-use">/, 'the touch 翻滚 sits next to 使用, not among the extras');
+  // 轻按 Tab 是背包；按住 Tab 是轮盘，按数字选一格，松开打开
+  press('Tab'); assert.equal(context.inspect().menu, 'inventory'); click('close'); run(1);
+  keydown('Tab'); context.openRadial();
+  assert.ok(context.radialState(), 'held Tab opens the radial'); assert.equal(e.paused, true, 'the world waits');
+  // 轮盘开在鼠标所在的地方（不出画面）；往右一甩就选右边那一格
+  assert.match(document.querySelector('#radial').innerHTML, /class="radial-ring" style="left:\d+px;top:\d+px"/);
+  { const r = context.radialState(); listeners.pointermove({ clientX: r.cx + 100, clientY: r.cy, target: { closest: () => null } }); assert.equal(context.radialState().sel, 2, 'a flick to the right picks the right-hand entry'); listeners.pointermove({ clientX: r.cx + 3, clientY: r.cy, target: { closest: () => null } }); assert.equal(context.radialState().sel, -1, 'back in the middle picks nothing'); }
+  assert.equal(document.querySelector('#radial').hidden, false); assert.equal((document.querySelector('#radial').innerHTML.match(/data-radial=/g) || []).length, 8);
+  assert.doesNotMatch(document.querySelector('#radial').innerHTML, /机制参考|试玩|待验证|undefined|NaN/);
+  keydown('1'); assert.match(document.querySelector('#radial').innerHTML, /radial-item selected[^>]*>[^<]*<span[^>]*>⚒/);
+  keyup('Tab'); assert.equal(context.radialState(), null); assert.equal(context.inspect().menu, 'craft', 'releasing Tab opens the picked entry'); click('close');
+  keydown('Tab'); context.openRadial(); keyup('Tab'); assert.equal(context.inspect().menu, null, 'releasing with nothing picked just closes'); assert.equal(e.paused, false);
+  // 设置：四个音量和声音提示，都存进偏好键
+  context.open('pause'); clean();
+  for (const id of ['volume', 'vol-music', 'vol-ambience', 'vol-sfx']) assert.match(html(), new RegExp('id="' + id + '"'));
+  assert.match(html(), /声音提示/); assert.match(html(), /更多按键/); assert.match(html(), /空格<\/kbd>翻滚/); assert.match(html(), /<kbd>B<\/kbd>翻滚/);
+  listeners.input({ target: { id: 'vol-music', value: '0.25', matches: () => false } });
+  assert.equal(JSON.parse(storage.get(Session.PREFERENCES)).audio.music, 0.25, 'the music volume is saved');
+  click('feelCues'); assert.equal(JSON.parse(storage.get(Session.PREFERENCES)).audio.cues, true); assert.match(html(), /已开启/);
+  click('close');
+  assert.ok(!storage.get(Session.CAMPAIGN_SAVE).includes('"cues"'), 'audio settings never go into the save');
+  // 新开的家园：13:00 左右路那头来一拨，开局提示条一步一步
+  e.s.minute = 779.9; e.s.slot = 0; run(3);
+  assert.equal(e.feel.open.phase, 'fight'); assert.equal(e.enemies.filter((z) => z.tut && !z.dead).length, 4);
+  assert.equal(document.querySelector('#coach').hidden, false); assert.match(document.querySelector('#coach').innerHTML, /按 4 拿起木棍/);
+  press('4'); run(3); assert.match(document.querySelector('#coach').innerHTML, /左键/);
+  // 声音提示：带方向的一行字
+  e.events.push({ type: 'hiss', x: e.s.player.x - 220, y: e.s.player.y, z: 'runner', id: 1 }); run(3);
+  assert.equal(document.querySelector('#cues').hidden, false); assert.match(document.querySelector('#cues').innerHTML, /← 奔跑者在嘶叫/);
+  // 打退了：路口放围栏；手记最上面“今天”带路
+  for (const z of e.enemies) if (z.tut) z.dead = true;
+  run(4); assert.equal(e.feel.open.phase, 'fence'); assert.match(document.querySelector('#coach').innerHTML, /围栏/);
+  context.open('journey'); clean(); assert.match(html(), /class="journal-today"/); assert.match(html(), /把东边路口堵上/);
+  click('feelBuild', 'fence'); assert.equal(context.inspect().menu, 'build'); assert.match(html(), /围栏/); click('close');
+  // 走到路口，用真的建造流程放一段围栏
+  Object.assign(e.s.player, { x: 1260, y: 400 }); e.add({ wood: 6 }); e.buildMode = 'fence'; assert.equal(e.placeBuilding(1330, 400), true); e.buildMode = null; run(3);
+  assert.equal(e.feel.open.phase, 'done'); assert.equal(document.querySelector('#coach').hidden, true);
+  // 每日抉择：稍后再选
+  dailyOn = true;
+  e.s.day = 2; e.s.minute = 359; e.dailyGenerate(2); e.s.minute = 361; run(3);
+  assert.equal(context.inspect().menu, 'outpost', 'the card pops up'); clean(); assert.match(html(), /稍后再选（12:00 前）/);
+  click('feelLater'); assert.equal(context.inspect().menu, null, 'put off'); run(5); assert.equal(context.inspect().menu, null, 'it does not pop again');
+  const alert = document.querySelector('#alert-bar').innerHTML; assert.match(alert, /今日抉择 · 12:00 前要选/);
+  const ids = [...alert.matchAll(/data-id="(\d+)"[^>]*>([^<]*)</g)]; const at = ids.find((m) => /今日抉择/.test(m[2]))[1];
+  click('wAlert', at); assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /12:00 前选好/); clean();
+  click('close'); assert.equal(context.inspect().menu, null, 'a put-off card can be closed');
+  e.s.minute = 719.9; run(3); assert.equal(e.dailyCard(), null, 'at noon the free option is taken'); dailyOn = false;
+  // 成就册：生涯记录
+  e.travel('residential'); e.paused = false; run(3); e.travel('farm'); e.paused = false; run(3);
+  click('wView', 'collection'); assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /生涯记录/); assert.match(html(), /废弃居民区/); clean(); click('close');
+  // 窄屏菜单里的拍照
+  click('xView', 'phone'); assert.match(html(), /data-action="fPhoto"/); clean(); click('close');
+  // 画面：尸体、血迹、翻滚，四种大小
+  e.travel('residential'); e.paused = false; run(2);
+  const p = e.s.player; e.addCorpse({ type: 'slow', x: p.x + 60, y: p.y, facing: 0, id: 1 }); e.addCorpse({ type: 'armor', x: p.x - 60, y: p.y, facing: 3, id: 2 });
+  e.addBlood({ type: 'slow', x: p.x + 60, y: p.y }, 'pool'); e.addBlood({ type: 'armor', x: p.x - 60, y: p.y }, 'drop');
+  e.fx.rollCd = 0; e.dodge({ x: 1, y: 0 });
+  for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+  context.inspect().renderer.resize(1366, 600, 1);
+  // 存档
+  click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.feel.open.phase, 'done'); assert.ok(back.feel.career.trips.length >= 1); assert.equal(back.feel.stats.rolls, e.feel.stats.rolls);
+  console.log('Echo controller passed: Space rolls instead of attacking, the touch 翻滚 button next to 使用, a short Tab opens the bag and a held Tab the radial where the cursor is (a flick picks by direction, number + release opens 制作; release with nothing picked closes), four volumes and 声音提示 saved in the preferences key (never in the save), help with 更多按键 and pad B = roll, a new game\'s opening wave with the step-by-step coach strip and the road fence marker (finished by a fence placed through the real build flow), a direction cue line, 稍后再选 on the daily card (alert reopens it, closable, noon takes the free option), the journal\'s 今天 routing to the fence, the 生涯记录 table in the 成就册, 拍照 in the quick menu, bodies/blood/roll drawn at four sizes and save/parse.');
 }

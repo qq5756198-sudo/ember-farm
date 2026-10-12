@@ -1,15 +1,16 @@
 // 当前主线的界面入口。game.js 只从这里取前哨相关的界面；每一轮新加的层在这里串起来。
-// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22)
+// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23)
 import { outpostHud, hungerDeathNote } from "./outpost-ui.js";
 import { winterHud, alertBar, winterTitle, renderWinterView, handleWinterAction } from "./winter-ui.js";
 import { handleOutpostAction } from "./outpost-ui.js";
 import { renderManualSeasons, stationExtras as seasonsStationExtras, itemLinks, seasonsHud } from "./seasons-ui.js";
 import { dailyHud, dailyLocked } from "./daily-ui.js";
-import { renderSkillPage, menuLock, menuKey, thiefFrame } from "./thief-ui.js";
+import { renderSkillPage, menuLock as thiefMenuLock, menuKey, thiefFrame } from "./thief-ui.js";
 import { renderGardenJournal, gardenTitle, renderGardenView, handleGardenAction, renderGardenBoard, placeTitle, gardenStationExtras } from "./garden-ui.js";
 import { gearTitle, renderGearView, handleGearAction, gearStationExtras, gearStatusHtml, renderGearPanel, gearUI, renderGearBench, gearDetailHtml } from "./gear-ui.js";
 import { paintDoll, paintGearIcon } from "./gear-sprites.js";
 import { slotOf } from "./gear-data.js";
+import { soundRows, helpHtml, patchPadHelp, radialItems, radialHtml, radialPick, coachHtml, CueQueue, patchDailyCard, patchJournal, patchCollection, patchPhone, careerHtml, todayHtml, handleFeelAction } from "./feel-ui.js";
 import {
   renderFarMap,
   buildCardExtras,
@@ -24,14 +25,30 @@ import {
   readPad,
 } from "./farlands-ui.js";
 
-export { dailyLocked, renderSkillPage, menuLock, menuKey, thiefFrame, placeTitle };
+export { dailyLocked, renderSkillPage, menuKey, thiefFrame, placeTitle };
+// v0.23：设置里的四个音量、按键说明、轮盘、开局提示条、声音提示、生涯记录
+export { soundRows, helpHtml, patchPadHelp, radialItems, radialHtml, radialPick, coachHtml, CueQueue, careerHtml, todayHtml };
+// 放着的每日抉择卡从手记里打开时可以关上
+export function menuLock(e, ui) {
+  if (ui?.view === "daily" && e.dailyDeferred?.()) return "";
+  return thiefMenuLock(e, ui);
+}
 // v0.22：行囊里的装备栏、场景里的状态小条、物品格子里的装备小图
 export { renderGearPanel, gearUI, gearStatusHtml, paintDoll, paintGearIcon, slotOf, gearDetailHtml };
 export { hungerDeathNote, itemLinks, buildCardExtras, settingsExtras, applyAccess, mapKey, keyLabel, keyCaptureActive, cancelKeyCapture, captureKey, helpRows, readPad };
 export const stationExtras = (e, b) => seasonsStationExtras(e, b) + gardenStationExtras(e, b) + gearStationExtras(e, b);
 export const campaignTitle = (ui) => gearTitle(ui, (u) => gardenTitle(u, winterTitle));
-export const renderCampaignView = (e, ui) => renderGearView(e, ui, (e2, u2) => renderGardenView(e2, u2, renderWinterView));
-export const renderCampaignJournal = (e, ui) => renderGardenJournal(e, ui);
+export const renderCampaignView = (e, ui) => {
+  const html = renderGearView(e, ui, (e2, u2) => renderGardenView(e2, u2, renderWinterView));
+  if (ui?.view === "daily") return patchDailyCard(e, html);
+  if (ui?.view === "collection") return patchCollection(e, html);
+  if (ui?.view === "phone") return patchPhone(html);
+  return html;
+};
+export const renderCampaignJournal = (e, ui) => {
+  const html = renderGardenJournal(e, ui);
+  return ui?.catalog ? html : patchJournal(e, html);
+};
 export const renderMapPlus = (e, ui) => renderFarMap(e, ui);
 // 去掉营地手册后，“农业”这一页就是菜地告示牌；其余每页只放那一处的内容
 // v0.22：武器台的“武器与潜行”这一页下面接着修理与改装
@@ -50,7 +67,7 @@ export function campaignHud(e) {
   if (!base) return null;
   return { ...base, season: winterHud(e), alerts: alertBar(e), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e) };
 }
-// 动作：装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
+// 动作：手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
-  return handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
+  return handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
 }

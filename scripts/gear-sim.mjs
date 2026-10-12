@@ -5,6 +5,8 @@
 //   打法：none 空手布鞋；club 木棍+破布护手；right 木矛（医院、仓库再加一套旧装备）；old 木矛+旧装备；mid 铁头矛+中期装备；late 铁头矛+后期装备；lateBlade 砍刀+后期装备
 //   例：node scripts/gear-sim.mjs 100 1 residential,hospital none,club,right
 // 对照实验：RULESPATCH='{"noise":{"step":0}}'、DURPATCH='{"spear":999}'、SKILL=0.7（看到预兆的几率）
+// v0.23 翻滚：ROLL=telegraph（看到扑人、冲撞、出手的预兆就滚）、ROLL=crowd（另外被三只以上围住也往人少的方向滚）；不设就不滚
+// v0.23 开始，引擎里有命中停顿：停顿时世界不动，机器人的时间照走（和真人看到的一样）
 const D = new URL("../dist/", import.meta.url).href;
 const { Engine, freshState } = await import(D + "campaign.js");
 const { REGIONS } = await import(D + "data.js");
@@ -19,6 +21,7 @@ const KITS = (process.argv[5] || "none,club,right").split(",");
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const DT = 0.05;
 const SKILL = Number(process.env.SKILL || 0.85);
+const ROLL = process.env.ROLL || "";
 const LOOT = { residential: [[408, 454], [680, 760], [1180, 480]], hospital: [[825, 332], [1260, 460], [500, 750]], warehouse: [[435, 454], [725, 770], [1390, 560]] };
 const SETS = {
   none: { feet: "clothShoes" },
@@ -83,7 +86,7 @@ function trial(region, kitId, seed) {
   e.paused = false;
   const p = s.player,
     gx = e.gx;
-  const stats = { broken0: g.stats.broken, bites0: g.stats.bites, grabs0: g.stats.grabs, lunges0: g.stats.lunges, counters0: g.stats.counters, interrupts0: g.stats.interrupts, summons0: g.stats.summons, bandages: 0, cause: null };
+  const stats = { rolls0: e.feel?.stats.rolls || 0, broken0: g.stats.broken, bites0: g.stats.bites, grabs0: g.stats.grabs, lunges0: g.stats.lunges, counters0: g.stats.counters, interrupts0: g.stats.interrupts, summons0: g.stats.summons, bandages: 0, cause: null };
   // 记下最后一下是谁打的（死因）
   const realDamage = e.damagePlayer.bind(e);
   e.damagePlayer = (n, opts = {}) => {
@@ -124,6 +127,8 @@ function trial(region, kitId, seed) {
     z["_" + key] = null;
   };
   const W = kit.weapon ? e.meleeStats(kit.weapon) : null;
+  // 翻滚：往某个方向滚一下（滚不了就返回 false，照原来的办法躲）
+  const roll = (a) => (ROLL && e.dodge && !e.dodgeReason() ? e.dodge({ x: Math.cos(a), y: Math.sin(a) }) : false);
   while (t < 420 && !died) {
     if (s.region !== region) break;
     act = Math.max(0, act - DT);
@@ -189,18 +194,24 @@ function trial(region, kitId, seed) {
           if (W?.brace) bracing = lunger;
           else {
             const a = Math.atan2(lunger.y - p.y, lunger.x - p.x) + (Math.PI / 2) * (R() < 0.5 ? 1 : -1);
-            mx = Math.cos(a);
-            my = Math.sin(a);
-            run = p.stamina > 10;
+            if (roll(a)) acted = true;
+            else {
+              mx = Math.cos(a);
+              my = Math.sin(a);
+              run = p.stamina > 10;
+            }
           }
         } else if (bracing) {
           p.facing = Math.atan2(bracing.y - p.y, bracing.x - p.x);
           acted = true;
         } else if (charger) {
           const a = Math.atan2(charger.y - p.y, charger.x - p.x) + Math.PI / 2;
-          mx = Math.cos(a);
-          my = Math.sin(a);
-          run = p.stamina > 10;
+          if (roll(a)) acted = true;
+          else {
+            mx = Math.cos(a);
+            my = Math.sin(a);
+            run = p.stamina > 10;
+          }
         } else if (W && !fleeing && close.length) {
           const z = close[0],
             d = dist(z, p);
@@ -211,8 +222,21 @@ function trial(region, kitId, seed) {
             acted = true;
           } else if (threat) {
             const a = Math.atan2(p.y - threat.y, p.x - threat.x);
-            mx = Math.cos(a);
-            my = Math.sin(a);
+            if (roll(a)) acted = true;
+            else {
+              mx = Math.cos(a);
+              my = Math.sin(a);
+            }
+          } else if (ROLL === "crowd" && adj >= 3 && !e.dodgeReason()) {
+            let ax = 0,
+              ay = 0;
+            for (const o of close)
+              if (dist(o, p) < 120) {
+                ax += p.x - o.x;
+                ay += p.y - o.y;
+              }
+            roll(Math.atan2(ay, ax));
+            acted = true;
           } else if (d < W.range - 6) {
             if (e.cooldown <= 0) e.use({ x: z.x, y: z.y - 20 });
             acted = true;
@@ -323,6 +347,7 @@ function trial(region, kitId, seed) {
     summons: g.stats.summons - stats.summons0,
     broken: g.stats.broken - stats.broken0,
     weaponLeft: kit.weapon ? Math.round((e.cond(kit.weapon).d / e.cond(kit.weapon).m) * 100) : 100,
+    rolls: (e.feel?.stats.rolls || 0) - stats.rolls0,
   };
 }
 
@@ -356,6 +381,7 @@ for (const region of REGION_LIST)
       summons: +mean(rs.map((r) => r.summons)).toFixed(1),
       broken: +mean(rs.map((r) => r.broken)).toFixed(2),
       weaponLeft: Math.round(mean(rs.map((r) => r.weaponLeft))),
+      rolls: +mean(rs.map((r) => r.rolls)).toFixed(1),
       ms: Date.now() - t0,
       causes: Object.fromEntries(Object.entries(rs.filter((r) => r.died).reduce((m, r) => ((m[r.cause] = (m[r.cause] || 0) + 1), m), {})).sort((a, b) => b[1] - a[1])),
     };
