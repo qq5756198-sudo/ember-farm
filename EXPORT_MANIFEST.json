@@ -1,9 +1,9 @@
 {
   "game": "余烬农场",
-  "version": "v0.23.0",
-  "edition": "回响",
+  "version": "v0.24.0",
+  "edition": "暗涌",
   "exported_date": "2026-10-12",
-  "source_file_count": 209,
+  "source_file_count": 220,
   "source_files": [
     ".gitignore",
     ".openai/hosting.json",
@@ -132,6 +132,12 @@
     "dist/thief-ui.js",
     "dist/thief.css",
     "dist/thief.js",
+    "dist/undertow-data.js",
+    "dist/undertow-renderer.js",
+    "dist/undertow-sprites.js",
+    "dist/undertow-ui.js",
+    "dist/undertow.css",
+    "dist/undertow.js",
     "dist/version.js",
     "dist/visual-auto.css",
     "dist/visual-renderer.js",
@@ -164,6 +170,7 @@
     "docs/development/v0.20.0-ledger.md",
     "docs/development/v0.21.0-ledger.md",
     "docs/development/v0.22.0-ledger.md",
+    "docs/development/v0.23.0-ledger.md",
     "docs/releases/v0.10.0.md",
     "docs/releases/v0.11.0.md",
     "docs/releases/v0.12.0.md",
@@ -178,16 +185,19 @@
     "docs/releases/v0.21.0.md",
     "docs/releases/v0.22.0.md",
     "docs/releases/v0.23.0.md",
+    "docs/releases/v0.24.0.md",
     "docs/releases/v0.6.0.md",
     "docs/releases/v0.7.0.md",
     "docs/releases/v0.8.0.md",
     "docs/releases/v0.9.0.md",
     "handoff/联盟前哨_大改造设计方案.txt",
     "package.json",
+    "scripts/boss-sim.mjs",
     "scripts/build-visual-css.py",
     "scripts/check-beyond-art.mjs",
     "scripts/check-ui-controller.mjs",
     "scripts/gear-sim.mjs",
+    "scripts/loot-sim.mjs",
     "scripts/render-progress.py",
     "tests/alliance.test.mjs",
     "tests/audio.test.mjs",
@@ -212,21 +222,24 @@
     "tests/seasons.test.mjs",
     "tests/supply.test.mjs",
     "tests/thief.test.mjs",
+    "tests/undertow.test.mjs",
     "tests/visual.test.mjs",
     "tests/winter.test.mjs"
   ],
-  "source_bytes": 16572846,
-  "source_copy": "modified from the v0.12.0 handoff through v0.23.0; see docs/releases/v0.13.0.md to v0.23.0.md",
+  "source_bytes": 16869442,
+  "source_copy": "modified from the v0.12.0 handoff through v0.24.0; see docs/releases/v0.13.0.md to v0.24.0.md",
   "checks": {
     "automated_tests": {
-      "passed": 665,
+      "passed": 702,
       "failed": 0
     },
-    "ui_controller": "passed, DOM substitute + native Canvas, including alliance, outpost, winter, seasons, farlands, daily, thief, garden, gear and echo sections",
-    "real_browser_layout": "headless Chromium: v0.23 sound start and rendering, opening wave and coach strip (below the alert bar), dodge roll, bodies and blood, fence marker, held-Tab radial at the cursor, four volumes and sound cues, daily card put off with its alert, journal today box, career table, quick menu photo, night storm frame times at 1366x768, 1920x1080, 390x844 touch and 844x390 touch (button layout also at 1024x768 touch); earlier checks still apply; real devices, Firefox and Safari not verified",
-    "independent_review": "v0.15 to v0.23 each: code review + randomized play or rendering probes; v0.23 one round plus browser checks (truly free noon option, quiet-night conditions, duplicate daily alert, opening tips/fence/floor, held attack after a roll, Tab after the radial, radial direction and tenth key, cue texts, sliced audio rendering and no second sample copy, volume calls, voice table, touch roll placement, coach vs alert bar, fence label, blood drawing, help and career wording, stomp/throw swing sounds), all fixed with regression tests",
+    "ui_controller": "passed, DOM substitute + native Canvas, including alliance, outpost, winter, seasons, farlands, daily, thief, garden, gear, echo and undertow sections",
+    "real_browser_layout": "headless Chromium: v0.24 boss bar, telegraphs by day/night/colour-safe/calm, containers and prying, seven ruin events, map pins, journal strip, museum trophy case and achievements rows, save parse after every step, boss-fight frame times at 1366x768, 1920x1080, 390x844 touch and 844x390 touch; JS heap steady over a minute on day 4 in the residential ruin; earlier checks still apply; real devices, Firefox and Safari not verified",
+    "independent_review": "v0.15 to v0.23 each: code review + randomized play or rendering probes; v0.24 self-review with a 45-day soak over three seeds (all ruins daily, every lit container and event object, prying, bosses, farm nights, save and reload each day) and save round-trips through raider party, escort, crew join, intel/mask, prowl and mid boss fight; fixes: faint start of ring telegraphs, small airdrop canopy, gas/acid hues on grass, E stomping a lying faker instead of the nearer box, the guard never swinging under spear interrupts, bosses pushed by shoves and knockback, plus the balance changes from the sims",
     "relative_js_imports_and_html_files": "resolved",
-    "gear_acceptance_sim": "scripts/gear-sim.mjs on the real code, 100 trips per cell (v0.23, no rolls): days 1-3 unarmed 47/62/63% deaths (residential/hospital/warehouse), right gear 0/4/7%; days 4-7 mid gear 0/9/3%; day 8+ late gear 2/9/8% (hospital 10% over 300 trips); with ROLL=telegraph day 1-3 unarmed residential 39%, other cells within noise (day 8+ hospital late 11% over 300 trips); no combat numbers changed in v0.23"
+    "gear_acceptance_sim": "scripts/gear-sim.mjs on the real code, 100 trips per cell, no rolls; v0.24 bot follows the in-game hints (flanks the warehouse guard and backs off its swings, interrupts and rushes spitters, walks out of gas/acid along open ground; FLANK/SMART/FEEL=0 switch them off): days 1-3 unarmed 41/55/70% deaths (residential/hospital/warehouse), right gear 1/0/5%; days 4-7 mid gear 0/4/3%, day 1-3 kit 7/12/18%; day 8+ late gear 1/9/8%, mid gear 1/14/13%; warehouse completion 59% at days 4-7 mid and day 8+ late (v0.23 65%)",
+    "boss_sim": "scripts/boss-sim.mjs, 100 fights per cell: brute mid/late 87/96% wins 70/71 s, nurse 100/100% 60/61 s, guard day 5 89/96% 59 s, guard day 9 90/95% 61/64 s, no deaths with the right gear; the day 1-3 kit mostly retreats from the brute and the nurse",
+    "loot_sim": "scripts/loot-sim.mjs, 1000 days: value per trip +3.7% (day 1-3 odds) to +5.9% (day 8+) against v0.23 boxes and kill scrap; hospital +8.9 to +14.1%; per-draw tiers match the tables; same roll after reload; the design table as written would give +60%"
   },
   "personal_player_save_included": false,
   "based_on": {
@@ -244,5 +257,6 @@
   "garden_change": "the camp manual hub is gone: E at a place opens only that place's page, titled with the place name; former manual-only pages moved to the cook fire, workbench, weapon bench, shipping box, farmhouse and the farm board; farming: seed picker at the plot (bag and storage seeds), readable plots (fertility strip, weeds, caterpillars, crow footprints, cover cloth, swaying ripe crops, growth ring and care score over the head), companion buffs (water/yield/quality/weed) for different neighbouring crops, rotation and feeding/heavy soils, liked and hated weather with cover cloth, tending (helper 阿禾 from day 5), weeds to fodder, caterpillars to bait, crows and a scarecrow, a care score deciding fine quality (daily cap 65, 80+ always fine), hand-harvest combo, first three days grow 1.5x; farm board with stats, 3-day forecast and crop table; new garden save field, 2 items and the scarecrow; old saves load as is",
   "visual_change": "new code-drawn original pixel art for all 15 maps (1 art pixel = 2x2 map units; layout, colliders, exits and interaction points unchanged; the four ruin maps no longer share one picture), pixel people with 4-frame walks and job outfits, five infected types, buildings, objects, crops and plot markers; item icons, animals and the nest pixelized from the original sheets; four-part day light with window/lamp/neon/fire lights, visible rain with puddles, storms with lightning, snow at the frost station, fog in the pine forest, an indoor shelter, heat haze and particles; wood-and-rust UI with a pixel font (Fusion Pixel, SIL OFL 1.1) for titles, numbers and buttons and a generated colour layer that keeps every state colour; a new/old visual switch in v0.21.0 only (removed in v0.22.0; ember-farm-visual-v1 is no longer read or written)",
   "gear_change": "v0.22.0: infected in three phases (days 1-3, 4-7, 8+) outside the farm with packs guarding the loot (day 8+ hospital and warehouse keep the day 4-7 counts); grabs, runner lunges, screams that call new infected, armoured charges, hearing, harder nights and crawlers, all telegraphed; shove (X/LT/touch), heavy-hit interrupts, swing stamina, 0.45 s i-frames, heal over time, bleeding, infection bar and fever; five armour slots, three weapon slots and a trap, 19 armour pieces and 20 weapons with durability, bench repairs (5 max), spares, dismantling, nine mods and seven blueprints; gear panel in the bag, repairs on the weapon bench page, status chips, upgrade card; worn gear and telegraphs drawn; old saves load as is with gear equipped, a 3-day grace and a starter outfit past day 3; new gear save field; the new/old visual switch is removed",
-  "feel_change": "v0.23.0: sound made in code (92 effects, 11 instruments, 13 ambience beds; six music pieces following tension, six stingers, ten ambience sets on all fifteen maps with rain, thunder and snow; infected voices and telegraph sounds with distance, panning and wall muffling; four volumes and a sound-cue line in the preferences key; sliced rendering after load, nothing rendered without Web Audio); hitstop by weapon class, lean and stagger, bodies and blood marks, heavy-hit shake; dodge roll on Space / pad B / a touch button (110 in 0.35 s, first 0.25 s safe, 15 stamina, heavier gear rolls shorter and costs more); daily card can be put off until noon (a truly free option is taken, otherwise it comes back), quiet nights give a one-line note, a today box at the top of the journal; a teaching wave on new games at 13:00 that cannot kill, then fence the east road for a rag hood; help lists eleven keys, a held Tab opens a radial at the cursor; career record (last 200 trips) in the achievements book; new feel save field, no new save keys; old saves get a one-time Space note"
+  "feel_change": "v0.23.0: sound made in code (92 effects, 11 instruments, 13 ambience beds; six music pieces following tension, six stingers, ten ambience sets on all fifteen maps with rain, thunder and snow; infected voices and telegraph sounds with distance, panning and wall muffling; four volumes and a sound-cue line in the preferences key; sliced rendering after load, nothing rendered without Web Audio); hitstop by weapon class, lean and stagger, bodies and blood marks, heavy-hit shake; dodge roll on Space / pad B / a touch button (110 in 0.35 s, first 0.25 s safe, 15 stamina, heavier gear rolls shorter and costs more); daily card can be put off until noon (a truly free option is taken, otherwise it comes back), quiet nights give a one-line note, a today box at the top of the journal; a teaching wave on new games at 13:00 that cannot kill, then fence the east road for a rag hood; help lists eleven keys, a held Tab opens a radial at the cursor; career record (last 200 trips) in the achievements book; new feel save field, no new save keys; old saves get a one-time Space note",
+  "undertow_change": "v0.24.0: 9 candidate containers per ruin with 4-5 lit a day by save seed, seven kinds and four tiers by phase (30% second draw), locked cabinets pried with a crowbar (8 s, loud) or the lockpick talent (4 s, quiet), rare/precious flash and sound, kill drops by kind; three enemy layouts per ruin and phase; seven ruin events from day 2 (trapped survivor escort with crew join, airdrop, corpse pile, storeroom, raider search party, backpacker, walkie-talkie); bloater and faker from day 4, spitter and stalker from day 8, replacing walkers one for one; brute and nurse every 7 days in their ruins (announced the day before), the warehouse guard strengthened from day 4 (front armour, slow turn, uninterruptible swings at 0.7 damage, phase-two charges, keeps to its post); boss bar without popups, doubled first win and trophies for a sixth museum case; radio at 07:00, curfew keeps prowling stalkers off the farm, three daily cards (116 total), the dog growls at fakers; 45 new sound effects; new undertow save field with strict validation, old saves get their own seed, no new save keys"
 }
