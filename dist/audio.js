@@ -312,12 +312,12 @@ export class AudioDirector {
     }
   }
   // 远近、左右：按离镜头中心的位置；700 以外听不到；墙后面的闷一点
-  spatial(ev, eng, view) {
+  spatial(ev, eng, view, range = SPACE.range) {
     if (!Number.isFinite(ev?.x) || !eng) return { vol: 1, pan: 0, muffle: false };
     const p = eng.s.player,
       d = Math.hypot(ev.x - p.x, ev.y - p.y);
-    if (d > SPACE.range) return null;
-    const vol = d < 40 ? 1 : Math.pow(1 - d / SPACE.range, 1.5),
+    if (d > range) return null;
+    const vol = d < 40 ? 1 : Math.pow(1 - d / range, 1.5),
       cx = view?.cx ?? p.x,
       hw = Math.max(240, view?.hw ?? 480),
       pan = clamp((ev.x - cx) / hw, -1, 1) * 0.85;
@@ -344,7 +344,7 @@ export class AudioDirector {
       this.play(m.sfx, { bus: this.buses.ui });
       return;
     }
-    const sp = this.spatial(ev, eng, view);
+    const sp = this.spatial(ev, eng, view, m.range || SPACE.range);
     if (!sp) return;
     if (m.voice) {
       if (this.voices >= SPACE.voices) return;
@@ -353,7 +353,7 @@ export class AudioDirector {
       if (!m.duck && now - (this.voiceAt.get(key) ?? -99) < SPACE.voiceGap) return;
       this.voiceAt.set(key, now);
     }
-    const steady = ["shot_pistol", "shot_shotgun", "shot_rifle", "stomp", "inhale", "hiss"].includes(m.sfx);
+    const steady = ["shot_pistol", "shot_shotgun", "shot_rifle", "stomp", "inhale", "hiss", "fuse", "slamCue", "doorCue", "spitCue", "pulseCue", "breath", "click", "stalkerCue"].includes(m.sfx);
     this.play(m.sfx, { vol: sp.vol, pan: sp.pan, muffle: sp.muffle, voice: m.voice, bus: m.voice ? this.buses.voice : this.buses.sfx, rate: steady ? 1 : 0.94 + this.rand() * 0.12 });
     if (m.duck) this.duckUntil = this.ctx.currentTime + MUSIC.duckTime;
   }
@@ -643,7 +643,8 @@ export class AudioDirector {
     c.chase -= dt;
     c.heavy -= dt;
     if (c.idle > 0 && c.chase > 0 && c.heavy > 0) return;
-    const list = (eng.enemies || []).filter((z) => !z.dead && !z.nest && z.type !== "raider" && Math.hypot(z.x - p.x, z.y - p.y) < 600);
+    // 躺着装死的不出声（只有它自己抽一下时那声喘气）
+    const list = (eng.enemies || []).filter((z) => !z.dead && !z.nest && !z.lying && z.type !== "raider" && Math.hypot(z.x - p.x, z.y - p.y) < 600);
     if (c.idle <= 0) {
       c.idle = 1.2 + this.rand() * 2;
       const calm = list.filter((z) => z.state !== "chase");
@@ -658,7 +659,7 @@ export class AudioDirector {
     }
     if (c.heavy <= 0) {
       c.heavy = 0.55;
-      const big = list.filter((z) => ["armor", "elite"].includes(z.type) && z.state === "chase" && Math.hypot(z.x - p.x, z.y - p.y) < 420).slice(0, 2);
+      const big = list.filter((z) => ["armor", "elite", "nurse"].includes(z.type) && z.state === "chase" && Math.hypot(z.x - p.x, z.y - p.y) < 420).slice(0, 2);
       for (const z of big) {
         const sp = this.spatial(z, eng, view);
         if (sp) this.play("step_heavy", { vol: sp.vol * 0.9, pan: sp.pan, muffle: sp.muffle });

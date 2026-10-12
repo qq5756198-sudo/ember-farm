@@ -153,7 +153,8 @@ test("ruins are guarded by packs: residential, hospital and warehouse follow the
     e.s.day = day;
     for (const id of ["residential", "hospital", "warehouse"]) {
       go(e, id);
-      const live = e.enemies.filter((z) => !z.nest && !z.nightWander);
+      // v0.24 起：废墟小事件（尸堆里的装死者、灰隼团的搜索队）和头目不算在摆法里
+      const live = e.enemies.filter((z) => !z.nest && !z.nightWander && !z.pile && !z.uParty && !z.boss && !z.escort);
       assert.equal(live.length, RUIN_PACKS[id][ph].length, id + " day " + day);
       const packs = new Set(live.filter((z) => z.pack).map((z) => z.pack));
       assert.ok(packs.size >= 2, id + " has several packs");

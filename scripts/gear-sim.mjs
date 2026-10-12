@@ -7,10 +7,27 @@
 // 对照实验：RULESPATCH='{"noise":{"step":0}}'、DURPATCH='{"spear":999}'、SKILL=0.7（看到预兆的几率）
 // v0.23 翻滚：ROLL=telegraph（看到扑人、冲撞、出手的预兆就滚）、ROLL=crowd（另外被三只以上围住也往人少的方向滚）；不设就不滚
 // v0.23 开始，引擎里有命中停顿：停顿时世界不动，机器人的时间照走（和真人看到的一样）
+// v0.24：看到要炸的膨胀者、毒雾、酸液落点和酸液一滩，也有同样的反应时间，然后往外走（ROLL 设了就滚出去）；
+//   地上装死的认不出来（和真人第一次一样），被抓住照常推开、挣开
+// v0.24 机器人照着游戏里的提示打（都可以关掉，看不照做时差多少）：
+//   FLANK=0 关掉“仓库守卫甲还在时先绕到背后、它出手时退开”；SMART=0 关掉“吐酸者仰头时扔石头打断、身边没别的就先打它”；
+//   FEEL=0 关掉“站在毒雾、酸液里会察觉（九成，0.3–0.8 秒），往走得通的方向走开（不往墙上撞）”
+// 调数用：NOSWAP=bloater,faker,spitter（不放这几种）、UPATCH='{"spitter":{"cd":8}}'、UPLACE='{"spitter":{"warehouse":1}}'
+// 查个别的：SEEDS=1 列出死掉的那几趟、OFF=种子偏移、TRACE=1 每秒打一行
 const D = new URL("../dist/", import.meta.url).href;
 const { Engine, freshState } = await import(D + "campaign.js");
 const { REGIONS } = await import(D + "data.js");
 const { RULES, MELEE, ARMOR } = await import(D + "gear-data.js");
+// v0.24：NOSWAP=bloater,faker,spitter 不放这几种（看各自让一趟难了多少）
+const U = await import(D + "undertow-data.js");
+if (process.env.NOSWAP) for (const t of process.env.NOSWAP.split(",")) U.PLACE[t].phase = 99;
+// 调数用：UPATCH='{"spitter":{"cd":8}}'、UPLACE='{"spitter":{"warehouse":1}}'
+if (process.env.UPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.UPATCH))) Object.assign(U.NEW_RULES[k], v);
+if (process.env.UPLACE) for (const [k, v] of Object.entries(JSON.parse(process.env.UPLACE))) Object.assign(U.PLACE[k], v);
+// UBOSS='{"guard":{"charge":{"damage":24}}}'：头目的数（第二层合并）
+if (process.env.UBOSS)
+  for (const [k, v] of Object.entries(JSON.parse(process.env.UBOSS)))
+    for (const [kk, vv] of Object.entries(v)) U.BOSSES[k][kk] = vv && typeof vv === "object" ? { ...U.BOSSES[k][kk], ...vv } : vv;
 if (process.env.DURPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.DURPATCH))) (MELEE[k] || ARMOR[k]).dur = v;
 // 对照实验：RULESPATCH='{"noise":{"step":0}}' 之类
 if (process.env.RULESPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.RULESPATCH))) Object.assign(RULES[k], v);
@@ -22,6 +39,12 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const DT = 0.05;
 const SKILL = Number(process.env.SKILL || 0.85);
 const ROLL = process.env.ROLL || "";
+// v0.24：仓库守卫甲还在时，先绕到背后再打（血条上写着“正面有甲 · 绕到背后”）；FLANK=0 关掉，看正面硬打的样子
+const FLANK = process.env.FLANK !== "0";
+// v0.24：照着提示打吐酸者（它仰头时扔石头打断、身边没别的就先去打它）；SMART=0 关掉
+const SMART = process.env.SMART !== "0";
+// v0.24：站在毒雾、酸液里会察觉（九成，0.3–0.8 秒）；FEEL=0 关掉
+const FEEL = process.env.FEEL !== "0";
 const LOOT = { residential: [[408, 454], [680, 760], [1180, 480]], hospital: [[825, 332], [1260, 460], [500, 750]], warehouse: [[435, 454], [725, 770], [1390, 560]] };
 const SETS = {
   none: { feet: "clothShoes" },
@@ -88,10 +111,18 @@ function trial(region, kitId, seed) {
     gx = e.gx;
   const stats = { rolls0: e.feel?.stats.rolls || 0, broken0: g.stats.broken, bites0: g.stats.bites, grabs0: g.stats.grabs, lunges0: g.stats.lunges, counters0: g.stats.counters, interrupts0: g.stats.interrupts, summons0: g.stats.summons, bandages: 0, cause: null };
   // 记下最后一下是谁打的（死因）
+  const envBy = { acid: 0, gas: 0 };
+  if (e.envHurt) {
+    const realEnv = e.envHurt.bind(e);
+    e.envHurt = (n, by) => {
+      if (n > 0 && !e.paused) envBy[by] = (envBy[by] || 0) + Math.min(n, s.player.hp);
+      return realEnv(n, by);
+    };
+  }
   const realDamage = e.damagePlayer.bind(e);
   e.damagePlayer = (n, opts = {}) => {
     const z = opts.from || e._zAtk;
-    stats.cause = opts.eff === RULES.grab.bite || opts.eff === RULES.crawl.bite ? "bite" : opts.down ? (z?.type === "armor" ? "charge" : "lunge") : z ? "hit:" + z.type : "other";
+    stats.cause = opts.eff === RULES.grab.bite || opts.eff === RULES.crawl.bite ? "bite" : opts.down ? (z?.type === "armor" ? "charge" : "lunge") : z ? "hit:" + z.type : e.fx?.lastHitBy || "other";
     return realDamage(n, opts);
   };
   const goals = [...LOOT[region].map(([x, y]) => ({ x, y })), { ...REGIONS[region].exit, exit: true }];
@@ -113,7 +144,8 @@ function trial(region, kitId, seed) {
     grabOk = true,
     mashClock = 0,
     act = 0,
-    bracing = null;
+    bracing = null,
+    circleT = 0;
   const segs = [];
   const notice = (z, key, crowd) => {
     if (z["_" + key] == null) {
@@ -127,6 +159,10 @@ function trial(region, kitId, seed) {
     z["_" + key] = null;
   };
   const W = kit.weapon ? e.meleeStats(kit.weapon) : null;
+  const inFront = (z) => {
+    const a = Math.atan2(p.y - z.y, p.x - z.x) - (z.facing ?? 0);
+    return Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < 1.1;
+  };
   // 翻滚：往某个方向滚一下（滚不了就返回 false，照原来的办法躲）
   const roll = (a) => (ROLL && e.dodge && !e.dodgeReason() ? e.dodge({ x: Math.cos(a), y: Math.sin(a) }) : false);
   while (t < 420 && !died) {
@@ -149,12 +185,52 @@ function trial(region, kitId, seed) {
     }
     let goal = goals[gi];
     if (!fleeing && p.hp < 30 && !(s.inventory.bandage > 0) && !gx.heal) fleeing = true;
+    // v0.24：躲开毒雾、酸液（先看见，再走开）
+    const ux = e.ux;
+    const hazards = ux
+      ? [
+          ...ux.fuses.map((f) => ({ key: f, x: f.x, y: f.y, r: 112 })),
+          ...ux.clouds.map((c) => ({ key: c, x: c.x, y: c.y, r: c.r * Math.min(1, 0.6 + c.t / c.max) + 8, ground: true })),
+          ...ux.puddles.map((q) => ({ key: q, x: q.x, y: q.y, r: q.r + 10, ground: true })),
+          ...ux.acid.map((a) => ({ key: a, x: a.x, y: a.y, r: 62 })),
+          ...e.enemies.filter((z) => z.spit && !z.dead).map((z) => ({ key: z.spit, x: z.spit.x, y: z.spit.y, r: 62 })),
+        ]
+      : [];
+    // 已经站在毒雾、酸液里（掉血、冒字）：人很少察觉不到，晚一点也会走开；还在空中的落点圈照“被围时容易漏看”算
+    const feel = (h) => {
+      if (h.key["_hzIn"] == null) {
+        h.key["_hzIn"] = t;
+        h.key["_rhzIn"] = 0.3 + R() * 0.5;
+        h.key["_nhzIn"] = R() < 0.9;
+      }
+      return h.key["_nhzIn"] && t - h.key["_hzIn"] >= h.key["_rhzIn"];
+    };
+    const hz = hazards.find((h) => dist(p, h) < h.r && (notice(h.key, "hz", crowd) || (FEEL && h.ground && feel(h))));
     if (fleeing) goal = goals[goals.length - 1];
     let mx = 0,
       my = 0,
       run = false,
       acted = false;
-    if (gx.grab) {
+    if (hz && !gx.grab && !(gx.down > 0)) {
+      // 往离中心远的方向走；那边是墙就沿着墙换个方向（8 个方向里挑走得通的）
+      const a0 = Math.atan2(p.y - hz.y, p.x - hz.x);
+      let a = a0;
+      if (FEEL)
+        for (const k of [0, 1, -1, 2, -2, 3, -3, 4]) {
+          const b = a0 + (k * Math.PI) / 4,
+            q = { x: p.x + Math.cos(b) * 70, y: p.y + Math.sin(b) * 70 };
+          if (!e.blocked(q.x, q.y, false, 12) && e.lineClear(p, q)) {
+            a = b;
+            break;
+          }
+        }
+      if (!roll(a)) {
+        mx = Math.cos(a);
+        my = Math.sin(a);
+        run = p.stamina > 8;
+      }
+      acted = true;
+    } else if (gx.grab) {
       if (grabSeen == null) {
         grabSeen = t + 0.15 + R() * 0.2;
         grabOk = R() < 0.97;
@@ -178,10 +254,11 @@ function trial(region, kitId, seed) {
           if (!(z.lunge?.phase === "crouch")) forget(z, "lunge");
           if (!(z.charge?.phase === "stomp")) forget(z, "charge");
         }
-        const threat = close.find((z) => z.windup > 0 && z.type !== "screamer" && dist(z, p) < 72 && notice(z, "wind", crowd));
+        // 头目（仓库守卫）出手打不断、够得远：离 105 以内就退（和 boss-sim 一样）
+        const threat = close.find((z) => z.windup > 0 && z.type !== "screamer" && dist(z, p) < (FLANK && e.bossKind?.(z) ? 105 : 72) && notice(z, "wind", crowd));
         const lunger = close.find((z) => z.lunge?.phase === "crouch" && notice(z, "lunge", crowd));
         const charger = close.find((z) => z.charge?.phase === "stomp" && notice(z, "charge", crowd));
-        const screamer = close.find((z) => z.type === "screamer" && z.windup > 0 && dist(z, p) < 250 && notice(z, "scream", crowd));
+        const screamer = close.find((z) => ((z.type === "screamer" && z.windup > 0) || (SMART && z.type === "spitter" && z.spit)) && dist(z, p) < 250 && notice(z.spit || z, "scream", crowd));
         if (bracing && !(bracing.lunge && bracing.lunge.phase !== "stumble")) bracing = null;
         if (screamer && e.qty("stone") > 0 && act <= 0 && e.cooldown <= 0 && e.lineClear(p, screamer)) {
           s.slot = 5;
@@ -213,7 +290,9 @@ function trial(region, kitId, seed) {
             run = p.stamina > 10;
           }
         } else if (W && !fleeing && close.length) {
-          const z = close[0],
+          // 吐酸者血少、站得远：身边没别的贴着时先去打它（提示里就是这么说的）
+          const spitter = SMART && close.find((o) => o.type === "spitter" && dist(o, p) < 300);
+          const z = spitter && !close.some((o) => o !== spitter && dist(o, p) < 100) ? spitter : close[0],
             d = dist(z, p);
           const adj = close.filter((o) => dist(o, p) < 75).length;
           if (adj >= 2 && gx.shoveCd <= 0 && p.stamina >= RULES.shove.cost + 5) {
@@ -226,6 +305,7 @@ function trial(region, kitId, seed) {
             else {
               mx = Math.cos(a);
               my = Math.sin(a);
+              run = FLANK && !!e.bossKind?.(threat) && p.stamina > 8;
             }
           } else if (ROLL === "crowd" && adj >= 3 && !e.dodgeReason()) {
             let ax = 0,
@@ -237,8 +317,16 @@ function trial(region, kitId, seed) {
               }
             roll(Math.atan2(ay, ax));
             acted = true;
+          } else if (FLANK && e.bossKind?.(z) === "guard" && !z.g2 && !z.charge && d < 160 && inFront(z) && (circleT += DT) < 3) {
+            // 绕到背后（绕 3 秒还绕不过去，就正面打 2 秒再试）
+            const back = (z.facing ?? 0) + Math.PI,
+              a = Math.atan2(z.y + Math.sin(back) * 60 - p.y, z.x + Math.cos(back) * 60 - p.x);
+            mx = Math.cos(a);
+            my = Math.sin(a);
+            run = p.stamina > 20;
           } else if (d < W.range - 6) {
             if (e.cooldown <= 0) e.use({ x: z.x, y: z.y - 20 });
+            if (circleT >= 3 && (circleT += DT) > 5) circleT = 0;
             acted = true;
           } else if (adj >= 3 || (close.filter((o) => dist(o, p) < 160).length >= 3 && p.hp < 60)) {
             let ax = 0,
@@ -252,7 +340,7 @@ function trial(region, kitId, seed) {
             mx = Math.cos(a);
             my = Math.sin(a);
             run = p.stamina > 25;
-          } else if (d < 300) {
+          } else if (d < (z.type === "spitter" ? 320 : 300)) {
             if (W.brace && d < W.range + 50) p.facing = Math.atan2(z.y - p.y, z.x - p.x);
             else {
               const a = Math.atan2(z.y - p.y, z.x - p.x);
@@ -310,6 +398,10 @@ function trial(region, kitId, seed) {
       }
     }
     e.update(DT, { x: mx, y: my, run });
+    if (process.env.TRACE && Math.floor(t + DT) !== Math.floor(t)) {
+      const gd = e.enemies.find((z) => e.bossKind?.(z) === "guard");
+      console.error(Math.floor(t + DT), "hp", Math.round(p.hp), "band", s.inventory.bandage || 0, "goal", gi, fleeing ? "FLEE" : "", "guard", gd ? [Math.round(gd.hp), gd.dead ? "dead" : gd.state, Math.round(dist(gd, p)), inFront(gd) ? "front" : "back", gd.g2 ? "g2" : "", gd.charge?.phase || ""].join(" ") : "-", "close", close.map((z) => z.type + Math.round(dist(z, p))).join(","), "hz", hz ? "Y" : "", "pud", ux?.puddles.length || 0, "acidIn", e.inAcid?.() ? "IN" : "", "gas", e.inGas?.() ? "IN" : "");
+    }
     if (p.hp < lastHp) dmg += lastHp - p.hp;
     lastHp = p.hp;
     t += DT;
@@ -330,6 +422,10 @@ function trial(region, kitId, seed) {
   const fled = !died && atExit && !ok;
   return {
     died,
+    lay: e.ut?.gen?.[region]?.k ?? -1,
+    acid: envBy.acid,
+    gas: envBy.gas,
+    ev: e.ut?.ev?.region === region ? e.ut.ev.id : "",
     cause: died ? stats.cause : null,
     ok,
     fled,
@@ -357,7 +453,8 @@ for (const region of REGION_LIST)
   for (const kitId of KITS) {
     const rs = [];
     const t0 = Date.now();
-    for (let i = 0; i < N; i++) rs.push(trial(region, kitId, i + 1));
+    const OFF = Number(process.env.OFF || 0);
+    for (let i = 0; i < N; i++) rs.push({ ...trial(region, kitId, i + 1 + OFF), seed: i + 1 + OFF });
     const segs = rs.flatMap((r) => r.segs).filter((x) => x > 1).sort((a, b) => a - b);
     const row = {
       day: DAY,
@@ -371,6 +468,8 @@ for (const region of REGION_LIST)
       fightMed: segs.length ? +segs[Math.floor(segs.length / 2)].toFixed(1) : 0,
       fightP75: segs.length ? +segs[Math.floor(segs.length * 0.75)].toFixed(1) : 0,
       dmg: Math.round(mean(rs.map((r) => r.dmg))),
+      acidDmg: Math.round(mean(rs.map((r) => r.acid || 0))),
+      gasDmg: Math.round(mean(rs.map((r) => r.gas || 0))),
       kills: +mean(rs.map((r) => r.kills)).toFixed(1),
       bandages: +mean(rs.map((r) => r.bandages)).toFixed(1),
       grabs: +mean(rs.map((r) => r.grabs)).toFixed(1),
@@ -383,6 +482,9 @@ for (const region of REGION_LIST)
       weaponLeft: Math.round(mean(rs.map((r) => r.weaponLeft))),
       rolls: +mean(rs.map((r) => r.rolls)).toFixed(1),
       ms: Date.now() - t0,
+      deadSeeds: process.env.SEEDS ? rs.filter((r) => r.died).map((r) => r.seed) : undefined,
+      byLayout: Object.fromEntries([0, 1, 2].map((k) => [k, rs.filter((r) => r.lay === k && r.died).length + "/" + rs.filter((r) => r.lay === k).length])),
+      byEvent: Object.fromEntries([...new Set(rs.map((r) => r.ev || "none"))].map((k) => [k, rs.filter((r) => (r.ev || "none") === k && r.died).length + "/" + rs.filter((r) => (r.ev || "none") === k).length])),
       causes: Object.fromEntries(Object.entries(rs.filter((r) => r.died).reduce((m, r) => ((m[r.cause] = (m[r.cause] || 0) + 1), m), {})).sort((a, b) => b[1] - a[1])),
     };
     console.log(region, kitId, JSON.stringify(row));

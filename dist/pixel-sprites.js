@@ -776,6 +776,11 @@ const ZLOOK = {
 };
 export const ZOMBIE_W = PERSON_W,
   ZOMBIE_H = PERSON_H;
+// v0.24：新种类的感染者沿用同一副骨架；拿到像素缓冲，在上面再添东西（肚子、帽子、酸液）
+export const ZOMBIE_LOOKS = ZLOOK;
+export function zombiePix(look, dir, frame, pose = "reach") {
+  return drawPerson(look, dir, frame, dir === "up" ? "walk" : pose);
+}
 export function zombieSprite(type, dir, frame) {
   if (type === "elite") return bruteSprite(dir, frame);
   const look = ZLOOK[type] || ZLOOK.slow;

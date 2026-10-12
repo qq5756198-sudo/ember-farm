@@ -1,4 +1,5 @@
 // v0.23.0「回响」的声音：音效、乐器、6 段音乐、6 句短乐句、10 套环境声。全部是数，用 audio-synth.js 算成采样。
+// v0.24.0「暗涌」加了新感染者、头目、柜子、撬锁、空投、对讲机、麦穗低吼的声音。
 // 一层的写法见 audio-synth.js：w 波形、f 频率（[起, 止] 是滑音）、t 长度、d 延后、a 起音、h 保持、c 衰减、v 音量、
 // lp/hp 低通高通（[起, 止] 是扫频）、bp [中心, Q] 带通、vib/am [速度, 深度]、j 音高抖动。
 
@@ -85,6 +86,52 @@ export const SFX = {
   inhale: { layers: [{ w: "noise", t: 1.05, a: 0.95, c: 0.3, lp: [600, 3500], hp: 300, v: 1 }, { w: "saw", f: [300, 900], t: 1.05, a: 0.85, c: 0.4, bp: [1800, 3], v: 0.25 }], peak: 0.6, sr: 22050 },
   grabCue: { layers: [{ w: "saw", f: [130, 110], t: 0.45, a: 0.05, c: 0.8, bp: [500, 3], v: 1, j: 0.15 }, { w: "noise", t: 0.4, a: 0.05, bp: [700, 2], c: 1, v: 0.3 }], peak: 0.6 },
   reach: { layers: [{ w: "noise", t: 0.45, a: 0.03, c: 1, bp: [1100, 3], v: 1, am: [14, 0.6] }, { w: "saw", f: [160, 120], t: 0.4, bp: [700, 3], c: 1, v: 0.4, j: 0.2 }], peak: 0.55 },
+  // ---------- v0.24「暗涌」：新感染者和头目 ----------
+  bloater_idle: { layers: [{ w: "brown", t: 1.1, a: 0.2, c: 1, lp: 500, v: 1, am: [4, 0.7] }, { w: "saw", f: [80, 70], t: 1, a: 0.2, bp: [300, 4], c: 1, v: 0.4, j: 0.1 }], peak: 0.4, sr: 22050 },
+  bloater_spot: { layers: [{ w: "saw", f: [120, 95], t: 0.7, a: 0.04, c: 1.1, bp: [420, 3], v: 1, j: 0.15 }, { w: "brown", t: 0.6, lp: 600, c: 1.2, v: 0.6, am: [9, 0.6] }], peak: 0.6, sr: 22050 },
+  bloater_attack: { layers: [{ w: "saw", f: [160, 100], t: 0.35, a: 0.01, c: 1.5, bp: [600, 2], v: 1, j: 0.2 }, { w: "brown", t: 0.3, lp: 500, c: 1.6, v: 0.5 }], peak: 0.55 },
+  spitter_idle: { layers: [{ w: "noise", t: 0.9, a: 0.15, c: 1, bp: [1600, 3], v: 0.8, am: [7, 0.8] }, { w: "saw", f: [240, 210], t: 0.8, bp: [900, 6], c: 1, v: 0.25, j: 0.2 }], peak: 0.35, sr: 22050 },
+  spitter_spot: { layers: [{ w: "saw", f: [260, 380], t: 0.55, a: 0.03, c: 1.2, bp: [1200, 3], v: 1, j: 0.2, vib: [12, 0.04] }, { w: "noise", t: 0.5, bp: [2000, 2], c: 1.3, v: 0.3, am: [18, 0.6] }], peak: 0.55, sr: 22050 },
+  spitter_attack: { layers: [{ w: "saw", f: [300, 180], t: 0.28, a: 0.01, c: 1.5, bp: [1300, 2], v: 1, j: 0.25 }], peak: 0.5 },
+  stalker_idle: { layers: [0, 0.11, 0.19, 0.42].map((d) => ({ w: "square", d, f: [2400, 2100], t: 0.025, bp: [2600, 6], c: 3, v: 0.7 })), peak: 0.3 },
+  stalker_spot: { layers: [0, 0.07, 0.13, 0.2, 0.26].map((d) => ({ w: "square", d, f: [2800, 2300], t: 0.025, bp: [2900, 6], c: 3, v: 0.8 })), peak: 0.4 },
+  stalker_attack: { layers: [{ w: "saw", f: [700, 360], t: 0.25, a: 0.01, c: 1.6, bp: [1700, 2], v: 1, j: 0.3 }, { w: "noise", t: 0.2, hp: 2500, c: 2, v: 0.4 }], peak: 0.55 },
+  brute_idle: { layers: [{ w: "saw", f: [48, 42], t: 1.6, a: 0.3, c: 1, bp: [220, 3], v: 1, j: 0.05 }, { w: "brown", t: 1.4, a: 0.3, lp: 250, c: 1, v: 0.5 }], peak: 0.6, sr: 22050 },
+  brute_spot: { layers: [{ w: "saw", f: [70, 50], t: 1.4, a: 0.06, c: 1, bp: [300, 2], v: 1, j: 0.1 }, { w: "brown", t: 1.2, c: 1.1, v: 0.7 }, { w: "noise", t: 0.8, lp: 700, c: 1.3, v: 0.3 }], peak: 0.9, sr: 22050 },
+  brute_attack: { layers: [{ w: "saw", f: [85, 50], t: 0.6, a: 0.02, c: 1.3, bp: [360, 2], v: 1, j: 0.15 }, { w: "sine", f: [55, 30], t: 0.5, c: 1.4, v: 0.7 }], peak: 0.85, sr: 22050 },
+  nurse_idle: { layers: [{ w: "sine", f: [520, 470], t: 1.1, a: 0.2, c: 1, vib: [5, 0.05], v: 0.7 }, { w: "noise", t: 1, a: 0.2, bp: [1500, 4], c: 1, v: 0.2, am: [3, 0.8] }], peak: 0.35, sr: 22050 },
+  nurse_spot: { layers: [{ w: "saw", f: [600, 900], t: 0.7, a: 0.04, c: 1, bp: [1900, 3], v: 1, vib: [8, 0.05] }], peak: 0.6, sr: 22050 },
+  nurse_attack: { layers: [{ w: "saw", f: [700, 420], t: 0.3, a: 0.01, c: 1.5, bp: [1800, 2], v: 1, j: 0.2 }], peak: 0.55 },
+  fuse: { layers: [{ w: "brown", t: 1, a: 0.1, c: 0.6, lp: [300, 1200], v: 1, am: [9, 0.7] }, { w: "sine", f: [500, 1400], t: 1, a: 0.6, c: 0.5, v: 0.35 }], peak: 0.6, sr: 22050 },
+  gas: { layers: [{ w: "noise", t: 0.12, a: 0.002, c: 2, lp: [1800, 400], v: 1 }, { w: "brown", t: 0.5, c: 1.4, v: 0.8 }, { w: "noise", d: 0.08, t: 1.4, a: 0.1, c: 1, bp: [2600, 1], v: 0.4 }], peak: 0.8, sr: 22050 },
+  breath: { layers: [0, 1.1].map((d) => ({ w: "noise", d, t: 0.8, a: 0.35, c: 1, bp: [800, 2], v: 0.6 })), peak: 0.16, sr: 22050 },
+  fakerGrab: { layers: [{ w: "saw", f: [140, 100], t: 0.45, a: 0.01, c: 1.2, bp: [500, 3], v: 1, j: 0.25 }, { w: "noise", t: 0.12, a: 0.002, bp: [2400, 2], c: 2, v: 0.6 }], peak: 0.7 },
+  spitCue: { layers: [{ w: "brown", t: 0.7, a: 0.4, c: 0.6, lp: [300, 1500], v: 0.9, am: [16, 0.7] }, { w: "saw", f: [200, 500], t: 0.7, a: 0.5, bp: [1200, 3], c: 0.6, v: 0.3 }], peak: 0.6, sr: 22050 },
+  spit: { layers: [{ w: "noise", t: 0.18, a: 0.005, c: 2, bp: [1800, 1.5], v: 1 }, { w: "sine", f: [400, 180], t: 0.12, c: 2, v: 0.4 }], peak: 0.55 },
+  acid: { layers: [{ w: "noise", t: 1.2, a: 0.02, c: 1.4, hp: 2500, v: 0.7, am: [30, 0.6] }, { w: "noise", t: 0.08, lp: 900, c: 2, v: 0.6 }], peak: 0.45, sr: 22050 },
+  click: { layers: [0, 0.09, 0.16].map((d) => ({ w: "square", d, f: [2600, 2200], t: 0.025, bp: [2800, 6], c: 3, v: 0.8 })), peak: 0.35 },
+  stalkerCue: { layers: [{ w: "square", f: [3000, 2400], t: 0.03, bp: [3000, 6], c: 3, v: 0.9 }, { w: "noise", d: 0.04, t: 0.28, a: 0.02, hp: 3000, c: 1.2, v: 0.8 }], peak: 0.6 },
+  slamCue: { layers: [{ w: "saw", f: [60, 90], t: 1.2, a: 0.6, c: 0.6, bp: [260, 3], v: 1, j: 0.08 }, { w: "brown", t: 1.2, a: 0.8, c: 0.5, lp: 300, v: 0.5 }], peak: 0.75, sr: 22050 },
+  slam: { layers: [{ w: "sine", f: [70, 28], t: 0.7, a: 0.002, c: 1.2, v: 1 }, { w: "brown", t: 0.9, c: 1.3, v: 0.9 }, { w: "noise", t: 0.25, lp: [1200, 200], c: 2, v: 0.8 }], peak: 1, sr: 22050 },
+  doorCue: { layers: [{ w: "noise", t: 0.9, a: 0.2, c: 0.8, bp: [900, 2], v: 0.8, am: [3, 0.9] }, { w: "square", f: [380, 300], t: 0.8, bp: [1400, 8], c: 1, v: 0.25, j: 0.2 }], peak: 0.55, sr: 22050 },
+  doorThrow: { layers: [{ w: "noise", t: 0.45, a: 0.02, c: 1.2, bp: [700, 1.2], v: 1 }], peak: 0.55 },
+  doorHit: { layers: [{ w: "square", f: [520, 470], t: 0.5, bp: [1500, 6], c: 2.5, v: 0.6 }, { w: "noise", t: 0.2, lp: 2500, c: 2, v: 0.9 }, { w: "sine", f: [90, 50], t: 0.3, c: 2, v: 0.6 }], peak: 0.85 },
+  bruteStep: { layers: [{ w: "sine", f: [48, 32], t: 0.32, a: 0.002, c: 1.6, v: 1 }, { w: "brown", t: 0.25, lp: 220, c: 2, v: 0.8 }], peak: 0.75, sr: 22050 },
+  pulseCue: { layers: [{ w: "sine", f: [220, 660], t: 0.6, a: 0.4, c: 0.6, v: 0.7, vib: [9, 0.03] }, { w: "noise", t: 0.6, a: 0.4, bp: [1400, 3], c: 0.6, v: 0.3 }], peak: 0.45 },
+  pulse: { layers: [{ w: "sine", f: [660, 330], t: 0.8, a: 0.01, c: 1.4, v: 0.6 }, { w: "noise", t: 0.5, bp: [900, 2], c: 1.5, v: 0.4 }], peak: 0.45 },
+  armorOff: { layers: [0, 0.12, 0.3].flatMap((d) => [{ w: "square", d, f: [900 - d * 500, 820 - d * 500], t: 0.25, bp: [2200, 7], c: 3, v: 0.5 }, { w: "noise", d, t: 0.05, hp: 2500, c: 3, v: 0.6 }]), peak: 0.6 },
+  rareLoot: { layers: [988, 1319, 1568].map((f, i) => ({ w: "sine", d: i * 0.06, f, t: 0.5, c: 2.5, v: 0.45 })), peak: 0.4 },
+  preciousLoot: { layers: [784, 988, 1175, 1568, 1976].map((f, i) => ({ w: "sine", d: i * 0.07, f, t: 0.7, c: 2.2, v: 0.45 })), peak: 0.45 },
+  pryStart: { layers: [{ w: "square", f: [600, 560], t: 0.15, bp: [1800, 8], c: 2.5, v: 0.5 }, { w: "noise", t: 0.05, hp: 2000, c: 3, v: 0.5 }], peak: 0.4 },
+  pryTick: { layers: [{ w: "saw", f: [260, 200], t: 0.5, bp: [1100, 7], c: 1, v: 0.5, j: 0.3 }, { w: "noise", t: 0.3, bp: [2500, 3], c: 1.5, v: 0.3 }], peak: 0.4 },
+  pickTick: { layers: [0, 0.08].map((d) => ({ w: "square", d, f: [3200, 3000], t: 0.015, bp: [3400, 8], c: 3, v: 0.5 })), peak: 0.15 },
+  pryDone: { layers: [{ w: "square", f: [700, 640], t: 0.4, bp: [1600, 6], c: 2.5, v: 0.6 }, { w: "noise", t: 0.06, hp: 1500, c: 3, v: 0.7 }, { w: "sine", d: 0.08, f: [160, 90], t: 0.2, c: 2, v: 0.5 }], peak: 0.6 },
+  plane: { layers: [{ w: "saw", f: [92, 88], t: 3.5, a: 1.2, h: 0.8, c: 1, lp: 400, v: 0.8, vib: [0.6, 0.02] }, { w: "brown", t: 3.5, a: 1.2, h: 0.8, c: 1, lp: 300, v: 0.6 }], peak: 0.35, sr: 22050 },
+  airdropLand: { layers: [{ w: "sine", f: [80, 35], t: 0.5, a: 0.002, c: 1.4, v: 1 }, { w: "noise", t: 0.3, lp: [2000, 300], c: 1.8, v: 0.8 }, { w: "square", d: 0.05, f: [420, 400], t: 0.4, bp: [1300, 6], c: 2.5, v: 0.3 }], peak: 0.85, sr: 22050 },
+  talkie: { layers: [{ w: "sine", f: 1760, t: 0.12, c: 3, v: 0.6 }, { w: "noise", d: 0.14, t: 0.9, a: 0.02, c: 1.2, bp: [1800, 1.5], v: 0.5, am: [13, 0.5] }], peak: 0.4 },
+  survivorHurt: { layers: [{ w: "saw", f: [330, 240], t: 0.2, bp: [1100, 3], a: 0.01, c: 1.5, v: 0.7, j: 0.05 }], peak: 0.55 },
+  dogGrowl: { layers: [{ w: "saw", f: [140, 120], t: 0.7, a: 0.08, c: 1, bp: [500, 3], v: 0.8, am: [22, 0.5] }, { w: "saw", d: 0.75, f: [520, 380], t: 0.14, bp: [1400, 2], c: 2, v: 0.9 }, { w: "saw", d: 0.95, f: [500, 360], t: 0.14, bp: [1400, 2], c: 2, v: 0.8 }], peak: 0.55 },
+  radioStatic: { layers: [{ w: "noise", t: 0.7, a: 0.02, c: 1.2, bp: [2200, 1.5], v: 0.6, am: [9, 0.5] }, { w: "sine", d: 0.1, f: 1046, t: 0.15, c: 3, v: 0.4 }], peak: 0.3 },
   // ---------- 环境里的零碎声 ----------
   bird: { layers: [{ w: "sine", f: [2800, 3600], t: 0.08, c: 2, v: 0.6, vib: [30, 0.08] }, { w: "sine", d: 0.12, f: [3200, 4000], t: 0.07, c: 2, v: 0.5 }], peak: 0.3 },
   bird2: { layers: [{ w: "sine", f: [1800, 2600], t: 0.25, a: 0.02, c: 1.5, v: 0.6, vib: [8, 0.05] }, { w: "sine", d: 0.3, f: [2600, 2000], t: 0.2, c: 1.5, v: 0.5 }], peak: 0.28 },
@@ -278,7 +325,7 @@ export const SURFACE = {
 
 // ================= 事件 → 声音 =================
 const SWING = { blunt: "swing_blunt", blade: "swing_blade", pole: "swing_pole", heavy: "swing_heavy", throw: "swing_throw", slingshot: "swing_slingshot", crossbow: "swing_crossbow", trap: "swing_trap", tool: "swing_tool", gun: "swing_tool" };
-const VOICE_TYPES = ["slow", "runner", "screamer", "armor", "elite"];
+const VOICE_TYPES = ["slow", "runner", "screamer", "armor", "elite", "bloater", "spitter", "stalker", "brute", "nurse"];
 export const voiceFor = (type, kind) => {
   const t = VOICE_TYPES.includes(type) ? type : "slow";
   const id = t + "_" + kind;
@@ -338,12 +385,64 @@ export function soundFor(ev) {
     case "harvest":
     case "craft":
       return { sfx: ev.type };
+    // ---------- v0.24「暗涌」 ----------
+    case "fuse":
+    case "spitCue":
+    case "stalkerCue":
+    case "slamCue":
+    case "doorCue":
+    case "pulseCue":
+    case "fakerGrab":
+      return { sfx: ev.type, voice: true, duck: true };
+    case "nurseCue":
+      return { sfx: "inhale", voice: true, duck: true };
+    case "nurseScream":
+      return { sfx: "scream", voice: true, duck: true };
+    case "breath":
+    case "click":
+      return { sfx: ev.type, voice: true };
+    case "bossRage":
+      return { sfx: "brute_spot", voice: true, duck: true, range: 1200 };
+    case "slam":
+      return { sfx: "slam", range: 1200 };
+    case "bruteStep":
+      return { sfx: "bruteStep", range: 1400 };
+    case "gas":
+    case "spit":
+    case "acid":
+    case "doorThrow":
+    case "doorHit":
+    case "pulse":
+    case "armorOff":
+    case "pryStart":
+    case "pryDone":
+    case "airdropLand":
+    case "talkie":
+    case "survivorHurt":
+    case "dogGrowl":
+      return { sfx: ev.type };
+    case "pryTick":
+      return { sfx: ev.silent ? "pickTick" : "pryTick" };
+    case "rareLoot":
+      return { sfx: "rareLoot" };
+    case "preciousLoot":
+      return { sfx: "preciousLoot", stinger: "discover" };
+    case "bossIntro":
+      return { stinger: "boss", ui: true };
+    case "bossDown":
+      return { stinger: "victory", ui: true };
+    case "plane":
+      return { sfx: "plane", ui: true };
+    case "radio":
+      return { sfx: "radioStatic", ui: true };
     default:
       return null;
   }
 }
 // 每一种会响的事件（测试用：都要有声音）
 export const SOUND_EVENTS = ["swing", "shot", "hit", "hitFlesh", "hitMetal", "spot", "windup", "scream", "hiss", "stomp", "inhale", "grabCue", "reach", "quest", "victory", "alarm", "wave", "level", "travel", "sleep", "trade", "kill", "reload", "loaded", "loot", "eat", "trap", "bite", "shove", "rescue", "roll", "hoe", "plant", "water", "harvest", "craft"];
+// v0.24「暗涌」新加的引擎事件
+export const U_SOUND_EVENTS = ["fuse", "gas", "breath", "fakerGrab", "spitCue", "spit", "acid", "click", "stalkerCue", "slamCue", "slam", "doorCue", "doorThrow", "doorHit", "bruteStep", "bossRage", "nurseCue", "nurseScream", "pulseCue", "pulse", "armorOff", "rareLoot", "preciousLoot", "pryStart", "pryTick", "pryDone", "plane", "airdropLand", "talkie", "survivorHurt", "dogGrowl", "bossIntro", "bossDown", "radio"];
 
 // 混音：各条线的基础音量（再乘设置里的四个音量）
 export const MIX = { music: 0.36, ambience: 0.5, sfx: 0.9, ui: 0.55, voice: 0.85 };

@@ -41,6 +41,8 @@ import * as DistrictArt from '../dist/district-art.js';
 import * as DistrictUI from '../dist/district-ui.js';
 import * as DistrictData from '../dist/district-data.js';
 import * as Audio from '../dist/audio.js';
+import * as UData from '../dist/undertow-data.js';
+import * as WinterData from '../dist/winter-data.js';
 const {createCanvas,Image:NativeImage,loadImage}=createRequire(import.meta.url)('@napi-rs/canvas');
 // 前几段检查的是 v0.13–v0.17 的流程：只在“每日抉择”段打开清晨事件卡，其余段里不让它插进来。
 const realDailyShow=Campaign.Engine.prototype.dailyShouldShow;let dailyOn=false;
@@ -1000,4 +1002,128 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
   assert.equal(back.feel.open.phase, 'done'); assert.ok(back.feel.career.trips.length >= 1); assert.equal(back.feel.stats.rolls, e.feel.stats.rolls);
   console.log('Echo controller passed: Space rolls instead of attacking, the touch 翻滚 button next to 使用, a short Tab opens the bag and a held Tab the radial where the cursor is (a flick picks by direction, number + release opens 制作; release with nothing picked closes), four volumes and 声音提示 saved in the preferences key (never in the save), help with 更多按键 and pad B = roll, a new game\'s opening wave with the step-by-step coach strip and the road fence marker (finished by a fence placed through the real build flow), a direction cue line, 稍后再选 on the daily card (alert reopens it, closable, noon takes the free option), the journal\'s 今天 routing to the fence, the 生涯记录 table in the 成就册, 拍照 in the quick menu, bodies/blood/roll drawn at four sizes and save/parse.');
+}
+
+// v0.24.0「暗涌」: today's boss in the alert bar, the journal's 废墟里的动静 (标出位置 opens the map with the pins and sets the gold marker),
+// the boss bar above the scene (no popup; 发狂 tag; gone after the win), lit containers searched with E, the locked one pried through E
+// (8 s, loud, a progress line in the context), the backpacker's two goods picked through the chooser, the museum's 头目战利品 case
+// (捐 buttons; filling it pays out), the 成就册 rows, new infected / bosses / telegraphs / airdrop drawn at four sizes, save/parse.
+{
+  let clock = 16000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const keydown = (key) => listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false });
+  const keyup = (key) => listeners.keyup({ key });
+  const press = (key) => { keydown(key); keyup(key); };
+  dailyOn = false;
+  context.fixture(Campaign.newGameState());
+  const e = context.inspect().engine;
+  e.feel.open.phase = 'done';
+  e.ut.seed = 20241; e.ut.lit = {}; e.ut.evDay = 0;
+  e.s.day = 4; e.s.minute = 600; e.paused = false;
+  run(3);
+  // 用 E 打开一样东西；挨着好几样时走选择菜单
+  const use = (o) => {
+    Object.assign(e.s.player, { x: o.x, y: o.y + 30 }); run(1);
+    press('e'); run(1);
+    if (context.inspect().menu === 'outpost' && /pick-list/.test(html())) {
+      clean(); const i = e._pickList.indexOf(o); assert.ok(i >= 0, 'the chooser lists ' + o.name); click('sPick', String(i)); run(1);
+    }
+  };
+  // 顶上的提醒
+  assert.match(document.querySelector('#alert-bar').innerHTML, /大块头今天在废弃居民区/);
+  // 手记：废墟里的动静 → 标出位置 → 世界地图上的牌子
+  context.open('journey'); clean();
+  assert.match(html(), /class="far-strip u-strip"/); assert.match(html(), /废弃居民区有大块头（只待今天）/);
+  click('uMark', 'boss:brute');
+  assert.equal(context.inspect().menu, 'map', 'away from the ruin it opens the map'); clean();
+  assert.match(html(), /far-pin u-pin danger/); assert.match(html(), /今天 · 大块头/);
+  assert.equal(e.guidance.target.label, '大块头', 'the gold marker points at the lair');
+  click('close');
+  // 进居民区：大块头在等；血条在场景上方，不弹窗
+  e.ut.lit.residential = { day: e.s.day, ids: ['road', 'garden', 'garage', 'u5', 'u6'] };
+  e.travel('residential'); e.paused = false; run(2);
+  const b = e.enemies.find((z) => z.boss === 'brute'); assert.ok(b, 'the brute waits in the residential district');
+  for (const z of e.enemies) if (!z.boss) z.dead = true;
+  Object.assign(e.s.player, { x: b.x + 140, y: b.y + 10, hp: 100 }); e.invulnerable = 999; b.state = 'chase'; run(3);
+  const bar = document.querySelector('#boss-bar');
+  assert.equal(bar.hidden, false, 'the boss bar shows'); assert.match(bar.innerHTML, /<b>大块头<\/b>/); assert.match(bar.innerHTML, /role="progressbar"/);
+  assert.doesNotMatch(bar.innerHTML, /undefined|NaN/);
+  assert.equal(context.inspect().menu, null, 'no popup for the boss');
+  b.hp = b.maxHp * 0.4; run(3); assert.match(bar.innerHTML, /发狂/);
+  e.hurtEnemy(b, b.hp + 1, 0); run(3);
+  assert.equal(e.ut.boss.brute.wins, 1); assert.ok(e.qty('trophyBrute', true) >= 1, 'the trophy');
+  assert.equal(bar.hidden, true, 'the bar goes away after the win');
+  // 柜子：搜一个亮着的；锁着的用撬棍撬（E 开始，8 秒，很响）
+  for (const z of e.enemies) z.dead = true;
+  e.invulnerable = 999;
+  const box = e.objects.find((o) => o.type === 'crate' && o.id === 'residential-u5');
+  assert.ok(box && box.ukind === 'toolbox', 'the toolbox is lit today');
+  const opened0 = e.ut.stats.opened;
+  use(box);
+  assert.equal(e.ut.stats.opened, opened0 + 1, 'searched with E'); assert.equal(e.s.opened[box.id].day, e.s.day);
+  const lock = e.objects.find((o) => o.id === 'residential-u6');
+  assert.ok(lock?.locked, 'the locked cabinet is lit today');
+  e.s.inventory.crowbar = 1;
+  use(lock);
+  assert.ok(e.ux.pry && !e.ux.pry.silent, 'prying with the crowbar'); run(1);
+  assert.match(document.querySelector('#context').innerHTML, /撬锁中 · \d+%/);
+  assert.ok(e.noise.some((n) => n.r >= UData.PRY.noise), 'prying is loud');
+  // 撬完要 8 秒：只走游戏逻辑，不每帧画（这个替身环境里画布内存回收很慢）
+  for (let i = 0; i < Math.ceil(UData.PRY.time / 0.05) + 4; i++) e.update(0.05, {});
+  run(1);
+  assert.equal(e.ux.pry, null); assert.equal(e.ut.pried[lock.id], e.s.day); assert.equal(e.s.opened[lock.id]?.day, e.s.day, 'pried open and searched');
+  // 背包客：两样货，挨着站用选择菜单挑
+  e.travel('farm'); e.paused = false; run(1);
+  e.s.day = 5; e.ut.evDay = 5; e.ut.ev = { day: 5, id: 'merchant', region: 'hospital', spot: 0, st: 'wait', bits: 0, spawned: false };
+  e.travel('hospital'); e.paused = false; run(2);
+  for (const z of e.enemies) z.dead = true;
+  const goods = e.objects.filter((o) => o.type === 'uGood'); assert.equal(goods.length, 2, 'two goods');
+  e.s.inventory.bread = 6; e.s.inventory.bandage = 3;
+  const before = Object.fromEntries(Object.keys(goods[0].bundle).map((k) => [k, e.qty(k, true)]));
+  Object.assign(e.s.player, { x: (goods[0].x + goods[1].x) / 2, y: goods[0].y }); run(1);
+  press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /pick-list/); clean();
+  click('sPick', String(e._pickList.indexOf(goods[0]))); run(1);
+  assert.equal(e.ut.ev.bits & 1, 1, 'bought the first good');
+  for (const [k, n] of Object.entries(goods[0].bundle)) assert.ok(e.qty(k, true) - before[k] >= Math.min(1, n), 'got ' + k);
+  // 档案馆：第六个展柜（头目战利品）
+  e.travel('farm'); e.paused = false; run(1);
+  e.w.museum.built = true; Object.assign(e.s.player, { x: WinterData.WSPOTS.museum.x, y: WinterData.WSPOTS.museum.y + 40 });
+  e.s.inventory.trophyNurse = 1; e.s.inventory.trophyGuard = 1;
+  context.open('outpost', { view: 'museum' }); clean();
+  assert.match(html(), /头目战利品/); assert.match(html(), /data-action="uDonate" data-id="trophyBrute"/);
+  click('uDonate', 'trophyBrute'); assert.deepEqual(e.ut.trophies, ['trophyBrute']); assert.match(html(), /<span class="exhibit">大块头的铁指虎<\/span>/);
+  click('uDonate', 'trophyNurse'); click('uDonate', 'trophyGuard');
+  assert.equal(e.ut.trophyDone, true, 'the case is full'); assert.match(html(), /加成已生效/); clean();
+  click('close');
+  // 成就册
+  context.open('outpost', { view: 'collection' }); clean();
+  assert.match(html(), /头目战利品/); assert.match(html(), /大块头 ✓ 1 次（第一次在第 4 天）/);
+  click('close');
+  // 画面：新感染者、头目、预兆、毒雾、酸液、空投、撬锁，四种大小（白天、夜里、色弱）
+  e.s.day = 20; e.ut.evDay = 20; e.ut.ev = null; e.travel('residential'); e.paused = false; run(1);
+  for (const z of e.enemies) z.dead = true;
+  e.enemies = e.s.enemies.residential = []; e.invulnerable = 999;
+  const p = e.s.player; Object.assign(p, { x: 800, y: 700 });
+  const mk = (type, x, y, extra = {}) => { const q = e.freePoint(x, y), z = e.enemy(type, q.x, q.y); Object.assign(z, { state: 'chase', alert: 8 }, extra); e.enemies.push(z); return z; };
+  mk('spitter', 1010, 700, { scd: 99, spit: { t: 0.4, x: 800, y: 700 } });
+  mk('stalker', 640, 700, { dash: { phase: 'wind', t: 9 } });
+  mk('bloater', 700, 760); mk('faker', 900, 820);
+  mk('brute', 1100, 520, { boss: 'brute', bossDay: e.s.day, act: { kind: 'slam', t: 0.6, max: 1.2 } });
+  mk('nurse', 520, 520, { boss: 'nurse', bossDay: e.s.day, act: { kind: 'scream', t: 0.7, max: 1.4 } });
+  const lie = e.makeFaker(700, 820); lie.twitch = 0.5; e.enemies.push(lie);
+  e.ux.puddles.push({ x: 880, y: 780, r: 50, t: 5, max: 5 }); e.ux.fuses.push({ x: 720, y: 600, t: 0.8, max: 1, facing: 0 }); e.ux.clouds.push({ x: 980, y: 590, r: 90, t: 6, max: 6 });
+  e.ux.acid.push({ x0: 1010, y0: 660, x: 860, y: 720, t: 0.2, fly: 0.5 });
+  e.ux.drop = { x: 760, y: 560, t: 20, max: 60 };
+  for (const [night, color] of [[false, false], [true, true]]) {
+    e.s.minute = night ? 1380 : 600; e.s.settings.access = { ...(e.s.settings.access || {}), color };
+    for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+  }
+  e.s.settings.access.color = false; e.s.minute = 600; e.ux.drop = null;
+  context.inspect().renderer.resize(1366, 600, 1);
+  // 存档
+  click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.undertow.seed, 20241); assert.deepEqual(back.undertow.trophies, ['trophyBrute', 'trophyNurse', 'trophyGuard']); assert.equal(back.undertow.trophyDone, true);
+  assert.equal(back.undertow.boss.brute.wins, 1); assert.equal(back.undertow.pried['residential-u6'], 4);
+  console.log('Undertow controller passed: today\'s boss in the alert bar, 废墟里的动静 in the journal (标出位置 opens the map with the pins and sets the gold marker), the boss bar above the scene without a popup (发狂 tag, gone after the win, trophy dropped), a lit toolbox searched with E, the locked cabinet pried through E (loud, progress in the context line, opened when done), the backpacker\'s two goods picked through the chooser, the museum\'s 头目战利品 case (捐 ×3 fills it and pays out), the 成就册 rows, new infected/bosses/telegraphs/gas/acid/airdrop drawn at four sizes by day and by night with colour-safe hues, and save/parse.');
 }

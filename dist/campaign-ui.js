@@ -1,5 +1,5 @@
 // 当前主线的界面入口。game.js 只从这里取前哨相关的界面；每一轮新加的层在这里串起来。
-// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23)
+// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24)
 import { outpostHud, hungerDeathNote } from "./outpost-ui.js";
 import { winterHud, alertBar, winterTitle, renderWinterView, handleWinterAction } from "./winter-ui.js";
 import { handleOutpostAction } from "./outpost-ui.js";
@@ -11,6 +11,7 @@ import { gearTitle, renderGearView, handleGearAction, gearStationExtras, gearSta
 import { paintDoll, paintGearIcon } from "./gear-sprites.js";
 import { slotOf } from "./gear-data.js";
 import { soundRows, helpHtml, patchPadHelp, radialItems, radialHtml, radialPick, coachHtml, CueQueue, patchDailyCard, patchJournal, patchCollection, patchPhone, careerHtml, todayHtml, handleFeelAction } from "./feel-ui.js";
+import { bossBarHtml, patchUnderMap, patchUnderJournal, patchMuseum, patchUnderCollection, handleUnderAction } from "./undertow-ui.js";
 import {
   renderFarMap,
   buildCardExtras,
@@ -28,6 +29,8 @@ import {
 export { dailyLocked, renderSkillPage, menuKey, thiefFrame, placeTitle };
 // v0.23：设置里的四个音量、按键说明、轮盘、开局提示条、声音提示、生涯记录
 export { soundRows, helpHtml, patchPadHelp, radialItems, radialHtml, radialPick, coachHtml, CueQueue, careerHtml, todayHtml };
+// v0.24：屏幕上方的头目血条
+export { bossBarHtml };
 // 放着的每日抉择卡从手记里打开时可以关上
 export function menuLock(e, ui) {
   if (ui?.view === "daily" && e.dailyDeferred?.()) return "";
@@ -41,15 +44,16 @@ export const campaignTitle = (ui) => gearTitle(ui, (u) => gardenTitle(u, winterT
 export const renderCampaignView = (e, ui) => {
   const html = renderGearView(e, ui, (e2, u2) => renderGardenView(e2, u2, renderWinterView));
   if (ui?.view === "daily") return patchDailyCard(e, html);
-  if (ui?.view === "collection") return patchCollection(e, html);
+  if (ui?.view === "collection") return patchUnderCollection(e, patchCollection(e, html));
+  if (ui?.view === "museum") return patchMuseum(e, html);
   if (ui?.view === "phone") return patchPhone(html);
   return html;
 };
 export const renderCampaignJournal = (e, ui) => {
   const html = renderGardenJournal(e, ui);
-  return ui?.catalog ? html : patchJournal(e, html);
+  return ui?.catalog ? html : patchUnderJournal(e, patchJournal(e, html));
 };
-export const renderMapPlus = (e, ui) => renderFarMap(e, ui);
+export const renderMapPlus = (e, ui) => patchUnderMap(e, ui, renderFarMap(e, ui));
 // 去掉营地手册后，“农业”这一页就是菜地告示牌；其余每页只放那一处的内容
 // v0.22：武器台的“武器与潜行”这一页下面接着修理与改装
 // 放进同一个滚动区里（.frontier-body 的最后），整页一起上下滚
@@ -67,7 +71,7 @@ export function campaignHud(e) {
   if (!base) return null;
   return { ...base, season: winterHud(e), alerts: alertBar(e), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e) };
 }
-// 动作：手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
+// 动作：暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
-  return handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
+  return handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
 }

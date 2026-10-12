@@ -5,6 +5,8 @@
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "test:ui": "node scripts/check-ui-controller.mjs",
-    "sim:gear": "node scripts/gear-sim.mjs 40 1 residential,hospital none,club,right"
+    "sim:gear": "node scripts/gear-sim.mjs 40 1 residential,hospital none,club,right",
+    "sim:loot": "node scripts/loot-sim.mjs 1000",
+    "sim:boss": "node scripts/boss-sim.mjs 30 brute,nurse,guard mid"
   }
 }
