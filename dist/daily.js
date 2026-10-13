@@ -782,7 +782,8 @@ export class Engine extends FarEngine {
     const d = this.dy,
       day = this.s.day;
     if (this.buffActive("rain")) for (const p of this.s.plots) if ((p.region || "farm") === "farm" && p.crop && !this.plotWatered(p)) this.waterPlot(p);
-    if (this.hasPerk("cistern")) {
+    // v0.27：蓄水池并进水网（每天出 6 份水、能存 30 份），这里不再另外浇
+    if (this.hasPerk("cistern") && !this.waterNetOn?.()) {
       let n = 0;
       for (const p of this.s.plots)
         if ((p.region || "farm") === "farm" && p.crop && !this.plotWatered(p) && n < 6) {

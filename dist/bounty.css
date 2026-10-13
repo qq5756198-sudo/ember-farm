@@ -1,0 +1,237 @@
+/* v0.27.0「丰年」：水网、堆肥桶、订单板三页，这块田卡片上的新东西，选种页的神秘种子包，告示牌上的水、要留意的事和图鉴。
+   颜色跟着菜地那几页：深绿底、浅绿字；水用水蓝，好事金色，坏事暗红。 */
+
+.bt-page section {
+  margin: 12px 0 0;
+}
+.bt-page h3 {
+  margin: 0 0 6px;
+  color: #f6e3b4;
+}
+.bt-head h3 {
+  margin: 2px 0 4px;
+  color: #f6e3b4;
+}
+.bt-head small {
+  color: #bfe6da;
+}
+.bt-head p {
+  margin: 4px 0;
+}
+
+/* ---------- 水网：先浇哪一路 ---------- */
+.bt-routes {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bt-routes li {
+  display: grid;
+  grid-template-columns: 2em minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid #46554c;
+  border-radius: 8px;
+}
+.bt-routes li.off {
+  opacity: 0.6;
+}
+.bt-no {
+  color: #a9cfbd;
+  font-weight: bold;
+  text-align: center;
+}
+.bt-route {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.bt-route small,
+.bt-list small {
+  color: #cfd8c2;
+  font-size: 12px;
+}
+.bt-move {
+  display: flex;
+  gap: 4px;
+}
+.bt-move button {
+  min-width: 44px;
+  min-height: 40px;
+}
+
+/* ---------- 喷灌头、堆肥桶里能丢的东西 ---------- */
+.bt-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bt-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border: 1px solid #46554c;
+  border-radius: 8px;
+}
+.bt-list li > span:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.bt-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bt-ferts {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+/* ---------- 订单板 ---------- */
+.bt-orders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.bt-order {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 10px 12px;
+  border: 2px solid #4a3c30;
+  background: #2a2119;
+}
+.bt-order.due {
+  border-color: #b8664f;
+}
+.bt-order header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bt-order header small {
+  color: #cfd8c2;
+}
+.bt-order.due header small {
+  color: #ffc9bd;
+}
+.bt-order p {
+  margin: 2px 0;
+}
+.bt-pay {
+  color: #e9c05a;
+  font-size: 13px;
+}
+.bt-order small.story-lack {
+  display: block;
+}
+
+/* ---------- 这块田、选种页 ---------- */
+.bt-plot {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+.bt-plot .muted {
+  margin: 0;
+  font-size: 12px;
+}
+.bt-mystery {
+  margin: 10px 0;
+  padding: 8px 10px;
+  border: 1px dashed #6f9a5c;
+  border-radius: 8px;
+}
+.bt-mystery small {
+  display: block;
+  margin-top: 4px;
+  color: #cfd8c2;
+}
+
+/* ---------- 告示牌：今天的水、要留意的事、图鉴 ---------- */
+.bt-water {
+  padding: 10px 12px;
+  border: 1px solid #46807a;
+  border-radius: 8px;
+  background: #18272a;
+}
+.bt-water h3 {
+  color: #a9cfbd;
+}
+.bt-warn {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.bt-warn li {
+  padding: 4px 8px;
+  border-left: 3px solid #85857a;
+}
+.bt-warn li.bad {
+  border-left-color: #d2654c;
+  color: #ffc9bd;
+}
+.bt-warn li.warn {
+  border-left-color: #e5823a;
+}
+.bt-warn li.good {
+  border-left-color: #e9c05a;
+  color: #ffe6a0;
+}
+.a11y-color .bt-warn li.bad {
+  border-left-color: #ffe066;
+}
+.a11y-color .bt-warn li.good {
+  border-left-color: #4aa3ff;
+}
+.bt-dex td {
+  color: #85857a;
+  text-align: center;
+  white-space: nowrap;
+}
+.bt-dex td.on {
+  color: #b8e0a0;
+}
+.bt-dex td.muted {
+  text-align: left;
+  white-space: normal;
+  font-size: 12px;
+}
+.bt-dex tr.full th {
+  color: #ffd76a;
+}
+
+/* ---------- 设施卡、居民卡 ---------- */
+.bt-card .button-row {
+  align-items: center;
+}
+.bt-res {
+  margin: 6px 0;
+  color: #cfe7a6;
+  font-size: 0.92em;
+}
+
+@media (max-width: 640px) {
+  .bt-routes li {
+    grid-template-columns: 1.6em minmax(0, 1fr);
+  }
+  .bt-move {
+    grid-column: 2;
+  }
+  .bt-dex tr > :nth-child(5) {
+    display: none;
+  }
+}

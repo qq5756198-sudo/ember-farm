@@ -697,6 +697,12 @@ export function objectArt(type) {
   });
 }
 export const hasBuildingArt = (type) => !!BUILD[type];
+// v0.27：后面的层把新设施、新物件的图挂到这里（堆肥桶、订单板、林姨的菜园）
+export function registerArt(kind, key, fn) {
+  if (kind === "build") BUILD[key] ??= fn;
+  else OBJ[key] ??= fn;
+}
+export const artDone = done;
 export const hasObjectArt = (type) => !!OBJ[ALIAS[type] || type];
 
 // 火苗：三帧

@@ -139,8 +139,8 @@ def sheets():
     """index.html 里的样式表，按引用的先后顺序（不含新画面自己的三份）"""
     html = (DIST / 'index.html').read_text(encoding='utf-8')
     names = re.findall(r'<link[^>]+rel="stylesheet"[^>]+href="([^"]+\.css)"', html)
-    # gear.css（v0.22）、feel.css（v0.23）、undertow.css（v0.24）、longnight.css（v0.25）、tidy.css（v0.26）本来就是按新画面写的，不用再抄一层
-    return [n for n in names if n not in ('visual.css', 'visual-auto.css', 'gear.css', 'feel.css', 'undertow.css', 'longnight.css', 'tidy.css') and (DIST / n).exists()]
+    # gear.css（v0.22）、feel.css（v0.23）、undertow.css（v0.24）、longnight.css（v0.25）、tidy.css（v0.26）、bounty.css（v0.27）本来就是按新画面写的，不用再抄一层
+    return [n for n in names if n not in ('visual.css', 'visual-auto.css', 'gear.css', 'feel.css', 'undertow.css', 'longnight.css', 'tidy.css', 'bounty.css') and (DIST / n).exists()]
 
 
 def main():

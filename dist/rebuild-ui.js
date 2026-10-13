@@ -36,7 +36,7 @@ export function renderRebuild(e,tab='overview',h,ui={},frontierUI={}){
     const demand=q?.cost||{},newFields=s.plots.filter(p=>p.rebuildNew),dry=newFields.filter(p=>p.crop&&!e.plotWatered(p));
     body=note('先确定今天想完成的目标，再决定种什么。种子、收成和料理都显示下一步用途。');
     body+=`<div class="rebuild-grid">${card('当前需要的农场产物',`<p>${q?esc(q.title)+'：'+esc(q.desc):'为前哨合同与居民愿望准备收成。'}</p>${Object.keys(demand).length?costBlock(demand):'<p>当前章节中，干粮供应居民，棉花纺织绷带，药草用于医院和研究。</p>'}${r.contract?costBlock(r.contract.cost):''}${button('rTab','查看完整目标','overview')}`)}${card('供水与新土地',`<p>农舍前的田地：${e.projectDone('water')?'水塔每天自动浇灌':'先浇水，之后修复水塔'}。<br>扩建田地：${newFields.length}块，当前${dry.length}株缺水。</p><p>扩建田地接雨桶、灌溉站或连通水渠。净水过滤研究会让新田成长加快15%。</p>${open('camp','projects','水塔工程')}${open('frontier','water','水渠布局')}${open('camp','research','灌溉蓝图')}`)}</div>`;
-    body+=`<div class="rebuild-crops">${Object.entries(CROPS).map(([id,c])=>`<article>${itemIcon(id)}<div><b>${c.name}</b><p>${e.itemPurpose(id)}</p><small>背包与仓库 ${e.quantityForCost(id,true)}份 · 种子${e.qty(c.seed,true)}颗</small></div>${button('rSeed','选择种植',c.seed,!e.qty(c.seed))}</article>`).join('')}</div>`;
+    body+=`<div class="rebuild-crops">${Object.entries(CROPS).filter(([,c])=>!c.hybrid).map(([id,c])=>`<article>${itemIcon(id)}<div><b>${c.name}</b><p>${e.itemPurpose(id)}</p><small>背包与仓库 ${e.quantityForCost(id,true)}份 · 种子${e.qty(c.seed,true)}颗</small></div>${button('rSeed','选择种植',c.seed,!e.qty(c.seed))}</article>`).join('')}</div>`;
   }
   if(tab==='production'){
     const ready=e.c.production.filter(j=>j.ready).length;

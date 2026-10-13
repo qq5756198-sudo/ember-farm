@@ -1,5 +1,4 @@
-// v0.25：其余物品的小图重画（接在装备小图后面）
-import "./item-sprites.js";
 // 当前主线的场景绘制入口。
 // v0.26：警钟、头上的心情、有人守的塔亮灯、信标、机床
-export { Renderer } from "./tidy-renderer.js";
+// v0.27：巨型作物、田里的鸡、夜光豆、喷灌头的水花、田上的脚印和田鼠洞、订单板、堆肥桶、林姨的菜园
+export { Renderer } from "./bounty-renderer.js";

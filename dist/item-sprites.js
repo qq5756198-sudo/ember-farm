@@ -19,7 +19,7 @@ const A = PAL.ash,
   Cl = PAL.cloth;
 
 // ================= 作物（整张图） =================
-const CROP = {
+export const CROP = {
   radish(P, x = 0, y = 0) {
     P.poly([[x + 5, y + 6], [x + 3, y + 1], [x + 7, y + 4]], L[3]);
     P.poly([[x + 8, y + 6], [x + 8, y + 0], [x + 10, y + 5]], L[4]);
@@ -101,7 +101,7 @@ const CROP = {
   },
 };
 // 种子包上画的小图（6×6 左右）
-const MINI = {
+export const MINI = {
   radish: (P, x, y) => {
     P.ellipse(x + 3, y + 4, 2, 2, Cl[1]);
     P.vline(x + 3, y + 0, y + 2, L[4]);
@@ -152,7 +152,7 @@ const MINI = {
   },
 };
 // ================= 角标 =================
-const BADGE = {
+export const BADGE = {
   // 优质：金色的星
   fine(P) {
     P.hline(11, 15, 12, E[5]);
@@ -184,8 +184,8 @@ const BADGE = {
   },
 };
 // 种子包：纸袋、折起来的口、中间一张小图、口上一道作物的颜色
-const SEED_BAND = { radish: Cl[1], potato: So[3], tomato: Cl[2], bean: L[4], corn: E[4], pumpkin: E[3], herb: L[3], cotton: Sn[3], rye: St[2] };
-function packet(P, crop) {
+export const SEED_BAND = { radish: Cl[1], potato: So[3], tomato: Cl[2], bean: L[4], corn: E[4], pumpkin: E[3], herb: L[3], cotton: Sn[3], rye: St[2] };
+export function packet(P, crop) {
   P.rect(3, 3, 10, 12, St[3]);
   P.rect(3, 3, 10, 2, St[2]);
   P.hline(3, 12, 5, SEED_BAND[crop] || St[1]);
@@ -278,7 +278,8 @@ function crate(P, wood = So[3]) {
   P.vline(13, 6, 13, So[1]);
 }
 
-const DRAW = {
+// v0.27：新物品的画法从 bounty-data.js 加进来（再调一次 assignItemIcons）
+export const DRAW = {
   // ---- 工具和武器 ----
   hoe(P) {
     P.line(3, 14, 11, 4, So[3]);

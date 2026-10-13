@@ -70,7 +70,8 @@ const withOdds = (obj, patch, fn) => {
 
 // ================= 数据 =================
 test("data: every crop has a buff, soil, liked and feared weather; new items and the scarecrow are real", () => {
-  for (const id of Object.keys(CROPS)) {
+  // v0.27：杂交苗不是种下去的作物，没有搭配和土性
+  for (const id of Object.keys(CROPS).filter((c) => !CROPS[c].hybrid)) {
     const i = CROP_INFO[id];
     assert.ok(i, id);
     assert.ok(BUFFS[i.buff], id + " buff");
@@ -555,7 +556,9 @@ test("UI: the plot card, the farm board, the journal strip, place pages and ever
   ripen(p);
   e.paused = true; // 菜单开着时世界暂停，页面上的按钮照样管用
   handleCampaignAction("gHarvest", btn("gHarvest", p.id), ctx(e));
-  assert.equal(p.crop, null);
+  // v0.27：番茄收完不用重种，从四成长起再收两茬
+  assert.equal(p.crop, "tomato");
+  assert.equal(p.growth, Math.round(CROPS.tomato.grow * 0.4));
   const empty = clean(e, 8);
   e.s.inventory.seedRadish = 2;
   handleCampaignAction("gPlant", btn("gPlant", empty.id + "|seedRadish"), ctx(e));

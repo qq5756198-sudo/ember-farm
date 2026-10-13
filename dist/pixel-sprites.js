@@ -506,13 +506,13 @@ export function soilSprite(wet, variant = 0) {
 
 // ---------- 作物 ----------
 // stage 0 刚冒芽、1 小苗、2 长大、3 成熟
-function leafBlob(P, x, y, w, h, light = 0) {
+export function leafBlob(P, x, y, w, h, light = 0) {
   const lt = [PAL.leaf[3], PAL.leaf[4], PAL.leaf[5]];
   P.ellipse(x, y, w, h, PAL.leaf[2]);
   P.ellipse(x - 0.5, y - 0.6, Math.max(0.5, w - 1), Math.max(0.5, h - 1), lt[Math.min(2, 1 + light)]);
   P.set(x - Math.round(w / 2), y - Math.round(h / 2), lt[2]);
 }
-function sprout(P, cx, base) {
+export function sprout(P, cx, base) {
   P.vline(cx, base - 4, base, PAL.leaf[2]);
   P.set(cx - 1, base - 4, PAL.leaf[4]);
   P.set(cx - 2, base - 5, PAL.leaf[4]);
@@ -521,7 +521,8 @@ function sprout(P, cx, base) {
   P.set(cx - 1, base, PAL.soil[2]);
   P.set(cx + 1, base, PAL.soil[2]);
 }
-const CROP_DRAW = {
+// v0.27：新品种的画法从 bounty-data.js 加进来
+export const CROP_DRAW = {
   radish(P, cx, b, s) {
     const n = s === 1 ? 3 : 5,
       h = s === 1 ? 5 : 8;

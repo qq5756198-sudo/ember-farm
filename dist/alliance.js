@@ -711,7 +711,7 @@ export class Engine extends GuidanceEngine {
   onNewDay() {
     super.onNewDay();
     const sc = this.s.storyCampaign;
-    if (!sc?.flags.well || sc.wellDay === this.s.day) return;
+    if (!sc?.flags.well || sc.wellDay === this.s.day || this.waterNetOn?.()) return;
     const n = this.troughWater();
     if (n && this.s.region === "farm") this.toast("清晨水槽放水：第一排" + n + "株作物已浇透。");
   }

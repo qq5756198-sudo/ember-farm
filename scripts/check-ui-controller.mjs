@@ -46,6 +46,8 @@ import * as UData from '../dist/undertow-data.js';
 import * as WinterData from '../dist/winter-data.js';
 import * as LnData from '../dist/longnight-data.js';
 import * as Longnight from '../dist/longnight.js';
+import * as Tidy from '../dist/tidy.js';
+import * as BountyData from '../dist/bounty-data.js';
 const {createCanvas,Image:NativeImage,loadImage}=createRequire(import.meta.url)('@napi-rs/canvas');
 // 前几段检查的是 v0.13–v0.17 的流程：只在“每日抉择”段打开清晨事件卡，其余段里不让它插进来。
 const realDailyShow=Campaign.Engine.prototype.dailyShouldShow;let dailyOn=false;
@@ -805,7 +807,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const cook = e.s.buildings.find((b) => b.type === 'cook');
   context.open('station', { buildingId: cook.id }); clean(); assert.match(html(), /掌勺料理/);
   click('rOpen', 'frontier:kitchen'); assert.match(html(), /<h2 id="modal-title">料理<\/h2>/); click('close');
-  context.open('outpost', { view: 'shipping' }); clean(); assert.match(html(), /每日订单/); click('rOpen', 'camp:orders'); assert.match(html(), /<h2 id="modal-title">订单<\/h2>/); click('close');
+  // v0.27：出货箱上的“每日订单”换成出货箱旁边的订单板
+  context.open('outpost', { view: 'shipping' }); clean(); assert.doesNotMatch(html(), /每日订单/); click('bView', 'bOrders'); assert.match(html(), /<h2 id="modal-title">订单板<\/h2>/); click('close');
   context.open('home'); assert.match(html(), /房间与家具/); click('rOpen', 'frontier:rooms'); assert.match(html(), /<h2 id="modal-title">房间与家具<\/h2>/); click('close');
   // 池塘按 E：只开钓鱼与养殖那一页
   const pond = e.objects.find((o) => o.type === 'pond');
@@ -1367,4 +1370,100 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
   assert.equal(back.tidy.listing.length, e.td.listing.length); assert.equal(back.tidy.lathe.rush, e.td.lathe.rush); assert.equal(back.tidy.converted.told, true);
   console.log('Tidy controller passed: a v0.25 save restored from a file (retired buildings down with materials back, stall goods on the shipping box, overtime as a decree, the lathe off ammo, the 营地整顿 toast on the first frame), the build list without the retired three, E opening the solar card, the lure page that sounds it and a broken trap mended with a kit, the kit\'s own button in the bag, 明天 and the listing that sells by day, the mood card, decree costs and the missing ladder step, the lodger alert, the lathe rush, the bell/lure/mood marks drawn at four sizes by day and night, and save/parse.');
+}
+
+// v0.27.0「丰年」: a v0.26 save restored from a file (the canal's water level becomes stored water, the 丰年 notice on the first frame),
+// the build list with the compost bin, E on the compost bin opens its page (pick the fertiliser, throw in fodder), E on the order board
+// opens it (hand in an order, tear one), the farm board's water line and collection book, the water page (move a route up),
+// the sprinkler's card switches it off and on, the coop card lets the chickens out, the seed picker's mystery pack, the plot card's
+// fertiliser and early-harvest buttons, a giant radish hoed from its card, the night-raid alert, the giant crop, chickens in the field,
+// the order board, compost bin and Lin's garden drawn at four sizes by day and night, save/parse.
+{
+  let clock = 19000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  dailyOn = false;
+  // ---------- 一份 v0.26 的旧档，从文件恢复 ----------
+  const old = new Tidy.Engine(Tidy.newGameState(), () => {});
+  const sc = old.sc;
+  sc.act = 7; sc.claimed = ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6']; sc.choice = 'ration';
+  sc.letters = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7']; sc.flags.well = sc.flags.camp = sc.flags.farmerFed = true; sc.camp = { x: 560, y: 735 };
+  old.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((t) => t.id === 'network') + 1).map((t) => t.id); old.r.radio = true;
+  old.o.hospital = 'water'; old.o.youke = true; old.o.lathe = { mode: 'parts', day: 0 };
+  old.s.day = 9; old.s.minute = 600; if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();
+  old.f.canals.dug = [0, 1, 5, 9, 13, 14, 15]; old.f.canals.open = true; old.f.canals.level = 2;
+  context.open('restoreArchive', { files: { old: old.serialize() } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  let e = context.inspect().engine;
+  assert.equal(context.inspect().menu, null);
+  assert.equal(e.bt.net.pool, 10, 'two levels of canal water became 10 stored');
+  e.paused = false; if (e.dy) e.dy.pending = null; run(3);
+  assert.ok(e.bt.intro.told, 'told on the first frame');
+  context.open('outpost', { view: 'log' }); clean(); assert.match(html(), /丰年：水井、雨水桶/); click('close');
+  context.open('build'); clean(); assert.ok(html().includes('<h3>堆肥桶</h3>'), 'the compost bin can be built'); click('close');
+  e.s.region = 'farm'; e.assignRegion();
+  const B = (type, x, y) => { const b = { id: 'bt-' + type + '-' + e.s.idCounter++, type, x, y, rotation: 0, hp: Data.BUILDINGS[type].hp }; e.s.buildings.push(b); e.navRevision++; return b; };
+  // ---------- 堆肥桶：按 E ----------
+  const bin = B('compost', 720, 640); e.s.storage.fodder = 7;
+  Object.assign(e.s.player, { x: bin.x, y: bin.y + 30 }); run(2);
+  assert.match(document.querySelector('#context').innerHTML, /堆肥桶/);
+  press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /<h2 id="modal-title">堆肥桶<\/h2>/);
+  click('btCompKind', bin.id + '|care'); assert.equal(e.bt.compost[bin.id].kind, 'care');
+  click('btCompAdd', bin.id + '|fodder|5'); assert.equal(e.bt.compost[bin.id].n, 5); assert.match(html(), /明早 06:00 出 1 袋提质肥/); click('close');
+  // ---------- 订单板：按 E ----------
+  Object.assign(e.s.player, { x: BountyData.ORDERS.spot.x, y: BountyData.ORDERS.spot.y + 24 }); run(2); press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /<h2 id="modal-title">订单板<\/h2>/);
+  const o = e.bt.orders.list[0]; assert.ok(o, 'three orders on the board');
+  e.s.storage[o.item] = (e.s.storage[o.item] || 0) + o.n;
+  click('close'); press('e'); run(1);
+  click('btOrderGive', o.id); assert.ok(!e.bt.orders.list.includes(o)); assert.equal(e.bt.stats.orders, 1);
+  click('btOrderTear', e.bt.orders.list[0].id); assert.equal(e.bt.orders.list.length, 1); click('close');
+  // ---------- 告示牌：今天的水、图鉴；水网那一页 ----------
+  context.open('outpost', { view: 'gBoard' }); clean(); assert.match(html(), /今天的水够浇/); assert.match(html(), /菜地图鉴/);
+  click('bView', 'bWater'); clean(); assert.match(html(), /<h2 id="modal-title">水网<\/h2>/);
+  const before = e.bt.net.order.join(','); click('btNet', 'tower:-1'); assert.notEqual(e.bt.net.order.join(','), before); click('close');
+  // ---------- 设施卡：喷灌头开关、放鸡 ----------
+  const spr = B('irrigation', 455, 520);
+  context.open('building', { buildingId: spr.id }); clean(); assert.match(html(), /喷灌头/);
+  click('btSprinkler', spr.id); assert.ok(e.bt.net.off.includes(spr.id)); click('btSprinkler', spr.id); assert.ok(!e.bt.net.off.includes(spr.id)); click('close');
+  const coop = B('coop', 640, 760); e.c.animals.chicken = true; e.s.minute = 600;
+  context.open('building', { buildingId: coop.id }); clean(); click('btChickens', 'out'); assert.ok(e.bt.chickens.out); assert.match(html(), /赶回窝里/); click('close');
+  // ---------- 选种页：神秘种子包；这块田：肥、抢收 ----------
+  const q = e.s.plots[40]; e.s.debris = e.s.debris.filter((d) => Math.hypot(d.x - q.x, d.y - q.y) >= 15); q.tilled = true; if (e.g.plots[q.id]) e.g.plots[q.id].w = 0;
+  e.s.storage.seedMystery = 2;
+  Object.assign(e.s.player, { x: q.x + 2, y: q.y + 6 }); run(2); press('e'); run(1);
+  clean(); assert.match(html(), /种一包神秘种子（有 2 包）/); click('btMystery', String(q.id)); assert.ok(q.crop); assert.equal(context.inspect().menu, null);
+  q.growth = Math.round(Data.CROPS[q.crop].grow * 0.8); e.s.storage.fertGrow = 1;
+  context.open('outpost', { view: 'gPlot', id: String(q.id) }); clean(); assert.match(html(), /现在抢收/);
+  click('btFert', q.id + '|grow'); assert.equal(e.bt.plots[q.id].fz, 'grow');
+  click('btRush', String(q.id)); assert.equal(q.crop, null); assert.equal(context.inspect().menu, null);
+  // ---------- 巨型萝卜：卡片上锄三下 ----------
+  const four = [12, 13, 21, 22].map((i) => e.s.plots[i]);
+  for (const p of four) { e.s.debris = e.s.debris.filter((d) => Math.hypot(d.x - p.x, d.y - p.y) >= 15); Object.assign(p, { tilled: true, crop: 'radish', growth: Data.CROPS.radish.grow, wateredDay: e.s.day, waterUnits: 1 }); e.bt.plots[p.id] = { gi: 'g1' }; }
+  e.bt.giants.g1 = { crop: 'radish', ids: four.map((p) => p.id), day: e.s.day, hits: 0, lost: 0 };
+  context.open('outpost', { view: 'gPlot', id: String(four[0].id) }); clean(); assert.match(html(), /锄一下（还要 3 下）/);
+  // ---------- 画面：巨型作物、田里的鸡、订单板、堆肥桶，四种大小，白天和夜里；集市的菜园 ----------
+  click('close');
+  e.bt.compost[bin.id].out = 1;
+  for (const night of [false, true]) {
+    e.s.minute = night ? 1380 : 600;
+    for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+  }
+  e.s.minute = 600;
+  for (let k = 0; k < 3; k++) click('btGiant', String(four[k].id));
+  assert.ok(!e.bt.giants.g1, 'three strokes and the giant is in'); assert.equal(e.s.storage.giant_radish || e.s.inventory.giant_radish, 1);
+  // ---------- 警报栏：夜袭 ----------
+  e.bt.raid = { day: e.s.day, n: 3, state: 'warned', report: '' }; run(4);
+  assert.match(document.querySelector('#alert-bar').innerHTML, /菜地夜袭/);
+  e.bt.raid.state = '';
+  e.s.region = 'market'; e.enemies = e.s.enemies.market ||= []; e.assignRegion(); Object.assign(e.s.player, { x: BountyData.MARKET_GARDEN.x, y: BountyData.MARKET_GARDEN.y + 40 });
+  for (const [w, hh] of [[1366, 600], [390, 480]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+  context.inspect().renderer.resize(1366, 600, 1);
+  e.s.region = 'farm'; e.enemies = e.s.enemies.farm ||= []; e.assignRegion();
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.bounty.stats.orders, 1); assert.equal(back.bounty.compost[bin.id].kind, 'care'); assert.equal(back.bounty.intro.told, true);
+  console.log('Bounty controller passed: a v0.26 save restored from a file (canal water became stored water, the 丰年 notice on the first frame), the compost bin in the build list and its page on E (fertiliser picked, fodder thrown in), the order board on E (an order handed in, one torn), the farm board\'s water line and collection book, the water page (a route moved up), the sprinkler card switching it off and on, chickens let out from the coop card, the mystery pack in the seed picker, fertiliser and early harvest on the plot card, a giant radish hoed from its card, the night-raid alert, giant crop/chickens/order board/compost bin/Lin\'s garden drawn at four sizes by day and night, and save/parse.');
 }
