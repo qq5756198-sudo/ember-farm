@@ -1,0 +1,116 @@
+/* v0.28.0「热闹」：顶栏的动静格，电台指令，红薯的跑商页，设施卡上的改良，舒适度和伤员，广场上的食堂和节庆供品，档案馆的「往事」一柜。
+   颜色跟着前几版：好事金色，坏事暗红，提醒橙色。 */
+
+/* ---------- 顶栏：动静格 ---------- */
+.noise-chip {
+  cursor: help;
+}
+.noise-chip.warn {
+  color: #ffd08a;
+  border-color: #e5823a;
+}
+.noise-chip.danger {
+  color: #ffc9bd;
+  border-color: #d2654c;
+}
+.a11y-color .noise-chip.danger {
+  border-color: #ffe066;
+}
+@media (max-width: 640px) {
+  .noise-chip:not(.warn):not(.danger) {
+    display: none;
+  }
+}
+
+/* ---------- 电台指令 ---------- */
+.hn-radio {
+  margin-top: 14px;
+}
+.hn-radio h3 {
+  margin: 0 0 6px;
+  color: #f6e3b4;
+}
+.hn-meter,
+.hn-scout {
+  margin: 4px 0;
+}
+.hn-cmd small {
+  color: #cfd8c2;
+}
+
+/* ---------- 红薯：跑商 ---------- */
+.hn-mule h3 {
+  margin: 12px 0 6px;
+  color: #f6e3b4;
+}
+.hn-mule li.on {
+  border-color: #e9c05a;
+}
+.hn-qty {
+  white-space: nowrap;
+}
+.hn-qty b {
+  display: inline-block;
+  min-width: 2em;
+  text-align: center;
+}
+.hn-qty button {
+  min-width: 36px;
+  min-height: 34px;
+}
+.hn-sum {
+  margin: 8px 0;
+  padding: 6px 10px;
+  border-left: 3px solid #e9c05a;
+}
+td.gold {
+  color: #ffd76a;
+}
+
+/* ---------- 设施卡：改良、舒适度、伤员 ---------- */
+.hn-card h4 {
+  margin: 8px 0 4px;
+  color: #f6e3b4;
+}
+.hn-paths article {
+  min-width: 0;
+}
+.hn-comfort {
+  margin: 6px 0 2px;
+}
+.hn-hurt {
+  margin: 6px 0;
+}
+
+/* ---------- 广场：食堂、节庆供品 ---------- */
+.hn-fest {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px dashed #b8935a;
+}
+.hn-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hn-picks button {
+  min-height: 36px;
+}
+
+/* ---------- 档案馆：往事 ---------- */
+.hn-past .hn-shelf {
+  margin: 6px 0;
+  padding: 6px 8px;
+  border-left: 3px solid #6f5a3e;
+}
+.hn-past .hn-shelf small {
+  color: #cfd8c2;
+}
+
+@media (max-width: 640px) {
+  .hn-qty button {
+    min-width: 32px;
+  }
+}

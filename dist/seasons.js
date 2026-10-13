@@ -18,6 +18,7 @@ import {
   CANTEEN_DAYS,
   CANTEEN_HOURS,
   CANTEEN_GUESTS,
+  CANTEEN_MAX,
   CANTEEN_GAP,
   CANTEEN_PATIENCE,
   TASTES,
@@ -1390,8 +1391,8 @@ function validateSeasons(x) {
     if (!object(c) || !num(c.rep ?? 0, 0, 100) || !int(c.nights ?? 0) || !int(c.lastDay ?? 0)) bad();
     const n = c.night;
     if (n !== undefined && n !== null) {
-      if (!object(n) || !int(n.day) || !int(n.spawned, CANTEEN_GUESTS) || !num(n.nextIn) || !int(n.income) || !num(n.score, 0) || ["served", "wrong", "missed"].some((k) => !int(n[k], 20))) bad();
-      if (!Array.isArray(n.customers) || n.customers.length > CANTEEN_GUESTS) bad();
+      if (!object(n) || !int(n.day) || !int(n.spawned, CANTEEN_MAX) || !num(n.nextIn) || !int(n.income) || !num(n.score, 0) || ["served", "wrong", "missed"].some((k) => !int(n[k], 20))) bad();
+      if (!Array.isArray(n.customers) || n.customers.length > CANTEEN_MAX) bad();
       for (const g of n.customers)
         if (!object(g) || !str(g.id, 8) || !str(g.name, 20) || !TASTES[g.taste] || !GUEST_STATES.includes(g.state) || !num(g.patience, 1, 1000) || !num(g.waited, 0, 1000) || !(int(g.look, 99) || str(g.look, 20))) bad();
     }

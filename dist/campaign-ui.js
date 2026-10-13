@@ -1,5 +1,5 @@
 // 当前主线的界面入口。game.js 只从这里取前哨相关的界面；每一轮新加的层在这里串起来。
-// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27)
+// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28)
 // v0.25：其余物品的小图重画（接在装备小图后面）；各层的物品都登记好以后再挂一次
 import { assignItemIcons } from "./item-sprites.js";
 import { outpostHud, hungerDeathNote } from "./outpost-ui.js";
@@ -18,7 +18,9 @@ import { patchAlerts, patchLnJournal, longNightTitle, renderLongNightView, patch
 // v0.26：设施卡、心情三档、挂牌、机床加急、警钟、整顿清单、队员卡带徒
 import { tidyLnHud, patchTidyView, handleTidyAction } from "./tidy-ui.js";
 // v0.27：水网、堆肥桶、订单板，这块田卡片上的肥和抢收，告示牌上的水和图鉴，照看机、喷灌头、温室、鸡舍的设施卡
-import { buildingExtras, renderBountyView, bountyTitle, handleBountyAction, patchBoard, patchOrderLinks } from "./bounty-ui.js";
+import { renderBountyView, bountyTitle, handleBountyAction, patchBoard, patchOrderLinks } from "./bounty-ui.js";
+// v0.28：动静格、电台指令、红薯跑商、设施改良、伤员、舒适度、广场上的食堂和节庆供品、往事一柜、江伯的鱼汛
+import { buildingExtras, stationExtras as bustleStationExtras, renderBustleView, bustleTitle, handleBustleAction, noiseHud } from "./bustle-ui.js";
 export { buildingExtras };
 // v0.25：开始新游戏选出身、二周目、设置里的“带着记忆重新开始”
 export { restartTitle, restartText, restartPicker, restartState, ngPlusRow, exportLine } from "./longnight-ui.js";
@@ -55,10 +57,10 @@ export const renderGearPanel = (e, helpers) => {
 };
 export { hungerDeathNote, itemLinks, buildCardExtras, settingsExtras, applyAccess, mapKey, keyLabel, keyCaptureActive, cancelKeyCapture, captureKey, helpRows, readPad };
 export const stationExtras = (e, b) => {
-  const html = seasonsStationExtras(e, b) + gardenStationExtras(e, b) + gearStationExtras(e, b);
+  const html = seasonsStationExtras(e, b) + gardenStationExtras(e, b) + gearStationExtras(e, b) + bustleStationExtras(e, b);
   return e?.bt ? patchOrderLinks(html) : html;
 };
-export const campaignTitle = (ui) => bountyTitle(ui, (u1) => longNightTitle(u1, (u0) => gearTitle(u0, (u) => gardenTitle(u, winterTitle))));
+export const campaignTitle = (ui) => bustleTitle(ui, (u2) => bountyTitle(u2, (u1) => longNightTitle(u1, (u0) => gearTitle(u0, (u) => gardenTitle(u, winterTitle)))));
 const renderViewBase = (e, ui) => {
   const html = renderLongNightView(e, ui, (e1, u1) => renderGearView(e1, u1, (e2, u2) => renderGardenView(e2, u2, renderWinterView)));
   if (ui?.view === "daily") return patchDailyCard(e, html);
@@ -69,7 +71,7 @@ const renderViewBase = (e, ui) => {
   if (ui?.view === "phone") return patchPhone(html);
   return html;
 };
-export const renderCampaignView = (e, ui) => patchTidyView(e, ui, renderBountyView(e, ui, renderViewBase));
+export const renderCampaignView = (e, ui) => patchTidyView(e, ui, renderBustleView(e, ui, (e1, u1) => renderBountyView(e1, u1, renderViewBase)));
 export const renderCampaignJournal = (e, ui) => {
   const html = renderGardenJournal(e, ui);
   return ui?.catalog ? html : patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html)));
@@ -91,11 +93,11 @@ export function campaignHud(e) {
   const base = outpostHud(e);
   if (!base) return null;
   const ln = tidyLnHud(e);
-  return { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchAlerts(e, alertBar(e)), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e) };
+  return { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchAlerts(e, alertBar(e)), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e) };
 }
-// 动作：丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
+// 动作：热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
-  return handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
+  return handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
 }
 
 // v0.25：到这里所有层的物品都登记过了，把还没挂上的新小图挂上

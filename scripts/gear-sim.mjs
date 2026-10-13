@@ -24,12 +24,16 @@
 //   结果多几列：陷阱、瞭望塔、你各打倒几只（killTrap、killTower、killPlayer），设施掉了多少耐久、用了几发弹药几块木头。
 // v0.25 出身：ORIGIN=medic 打法写 start（例：ORIGIN=hunter node scripts/gear-sim.mjs 100 1 residential,hospital,warehouse start）——
 //   开局那一套：大家都用开局的木材做一根矛（退伍兵也是，WEAPON=pipe 让他拿自己的铁管）；身上穿出身给的，出身的规则照算；绷带用完会用药包
+// v0.28 改良：HNUP=tower:light,trap:spike,fence:iron（每类选一条路线，LNSET 摆出来的这类设施全部改好；双人哨要守卫比塔多）
+//   对照：HNPATCH='{"INJURY":{"chance":0}}'（守塔的人被摸到不受伤）
 const D = new URL("../dist/", import.meta.url).href;
 const { Engine, freshState } = await import(D + "campaign.js");
 const { REGIONS, BUILDINGS: BUILD } = await import(D + "data.js");
 const { RULES, MELEE, ARMOR } = await import(D + "gear-data.js");
 // v0.24：NOSWAP=bloater,faker,spitter 不放这几种（看各自让一趟难了多少）
 const U = await import(D + "undertow-data.js");
+const HNU = await import(D + "bustle-data.js");
+if (process.env.HNPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.HNPATCH))) Object.assign(HNU[k], v);
 if (process.env.NOSWAP) for (const t of process.env.NOSWAP.split(",")) U.PLACE[t].phase = 99;
 // 调数用：UPATCH='{"spitter":{"cd":8}}'、UPLACE='{"spitter":{"warehouse":1}}'
 if (process.env.UPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.UPATCH))) Object.assign(U.NEW_RULES[k], v);
@@ -152,6 +156,18 @@ function placeDefenses(e, s) {
   return SET;
 }
 
+function applyUpgrades(e, s) {
+  if (!process.env.HNUP || !e.hn) return;
+  for (const pair of process.env.HNUP.split(",")) {
+    const [cls, path] = pair.split(":");
+    if (!HNU.UPGRADES[cls]?.paths[path]) throw new Error("HNUP: no such upgrade " + pair);
+    e.hn.up[cls] = path;
+    for (const b of s.buildings) if (HNU.upClassOf(b.type) === cls) b.hnUp = path;
+  }
+  // 双人哨：18:00 的晚饭已经给多出来的守卫留了干粮（模拟从 21:59 开始，晚饭在前面）
+  for (const b of s.buildings) if (b.hnUp === "twin") b.hnFed = e.absNow() + 1440;
+}
+
 function trial(region, kitId, seed) {
   Math.random = seeded(seed * 7919 + 13);
   const R = seeded(seed * 104729 + 7);
@@ -185,9 +201,11 @@ function trial(region, kitId, seed) {
     if (e.dy) e.dy.pending = null;
     s.minute = 1319.9;
     SET = placeDefenses(e, s);
+    applyUpgrades(e, s);
   }
   if (HORDEMODE) {
     SET = placeDefenses(e, s);
+    applyUpgrades(e, s);
     // 对照：普通尸潮（第 8 轮以后 24 只），同样一个人守在农场中间
     s.stats.hordes = Number(process.env.HORDES || 8);
     s.horde = { phase: "warning", timer: 0.1, remaining: 24, spawnTimer: 0, direction: 0 };
@@ -227,18 +245,22 @@ function trial(region, kitId, seed) {
     gx = e.gx;
   // 守夜台：谁打倒的（陷阱、瞭望塔、你），设施掉了多少耐久
   const killBy = { trap: 0, tower: 0, weapon: 0 };
+  let barbDmg = 0;
   {
     const realHurt = e.hurtEnemy.bind(e);
     e.hurtEnemy = (z, n, a, meta) => {
       const live = !z.dead,
         src = e._damageSource || "weapon";
+      if (meta?.barb && live) barbDmg += n;
       const out = realHurt(z, n, a, meta);
       if (live && z.dead && z.horde) killBy[src in killBy ? src : "weapon"]++;
       return out;
     };
   }
   const bhp = () => s.buildings.filter((b) => b.type !== "weaponbench").reduce((a, b) => a + b.hp, 0),
+    fhp = () => s.buildings.filter((b) => ["fence", "gate"].includes(b.type)).reduce((a, b) => a + b.hp, 0),
     hpStart = bhp(),
+    fenceStart = fhp(),
     ammo0 = s.storage.ammo || 0,
     wood0 = s.storage.wood || 0;
   let pulls = 0,
@@ -648,6 +670,9 @@ function trial(region, kitId, seed) {
     lnBoss: LNMODE ? !!e.ln?.last?.boss : false,
     killBy,
     bldLost: hpStart - bhp(),
+    hnHurt: e.hn ? Object.keys(e.hn.hurt).length : 0,
+    fenceLost: fenceStart - fhp(),
+    barbDmg,
     ammoUsed: ammo0 - (s.storage.ammo || 0),
     woodUsed: wood0 - (s.storage.wood || 0),
     pulls,
@@ -704,6 +729,9 @@ for (const region of REGION_LIST)
       killPlayer: +mean(rs.map((r) => r.killBy.weapon)).toFixed(1),
       defenseShare: pct(rs.reduce((a, r) => a + r.killBy.trap + r.killBy.tower, 0), rs.reduce((a, r) => a + r.killBy.trap + r.killBy.tower + r.killBy.weapon, 0)),
       bldLost: Math.round(mean(rs.map((r) => r.bldLost))),
+      hurt: +mean(rs.map((r) => r.hnHurt)).toFixed(2),
+      fenceLost: Math.round(mean(rs.map((r) => r.fenceLost))),
+      barbDmg: Math.round(mean(rs.map((r) => r.barbDmg))),
       ammoUsed: Math.round(mean(rs.map((r) => r.ammoUsed))),
       woodUsed: Math.round(mean(rs.map((r) => r.woodUsed))),
       pulls: +mean(rs.map((r) => r.pulls)).toFixed(1),

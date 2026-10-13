@@ -308,6 +308,9 @@ test("living standard climbs rung by rung and each rung speeds production by 5%"
     { id: "bc", type: "chair", x: 620, y: 600, rotation: 0, hp: BUILDINGS.chair.hp, open: false },
     { id: "bl", type: "lamp", x: 580, y: 610, rotation: 0, hp: BUILDINGS.lamp.hp, open: false },
   );
+  // v0.28：第 3 级要一间舒适度 3 以上的房间——椅子、灯只有 2 分，再摆一张餐桌
+  assert.equal(e.ladderChecks()[2], false, "a bare room (comfort 2) is not enough since v0.28");
+  e.s.buildings.push({ id: "bt", type: "table", x: 600, y: 640, rotation: 0, hp: BUILDINGS.table.hp, open: false });
   assert.equal(e.ladderChecks()[2], true);
   e.w.radio.day = e.s.day;
   assert.equal(e.ladderLevel(), 4);
@@ -326,19 +329,24 @@ test("radio programs air once at 21:00, cost noise and can draw infected to the 
   hour(e, 21);
   assert.equal(e.w.radio.aired, 1);
   assert.equal(e.c.residents[0].morale, 55);
-  assert.equal(e.w.radio.noise, PROGRAMS.songs.noise);
+  // v0.28：节目的动静记在营地的动静表上（电台自己的计数不再用），0 点结算
+  assert.equal(e.w.radio.noise, 0);
+  assert.equal(e.hn.noise.v, PROGRAMS.songs.noise);
   assert.match(e.programReason("lesson"), /播完|已过/);
   nextDay(e);
-  assert.equal(e.w.radio.noise, PROGRAMS.songs.noise - 1, "noise fades by one a day");
-  e.w.radio.noise = NOISE_LIMIT - 1;
+  assert.equal(e.hn.noise.v, PROGRAMS.songs.noise / 2, "below 4 the noise halves at midnight");
+  e.hn.noise.v = NOISE_LIMIT - 1;
   home(e);
   const before = e.enemies.length;
   e.chooseProgram("missing");
   hour(e, 21);
-  assert.equal(e.enemies.length, before + 5, "too much noise brings a pack");
-  assert.ok(toasts.some((t) => /循着信号/.test(t.text)));
+  assert.equal(e.enemies.length, before, "nothing comes at 21:00 any more");
   assert.equal(e.o.visitors.next, e.s.day + 1);
   assert.equal(e.w.radio.forceHonest, true);
+  nextDay(e);
+  assert.equal(e.enemies.filter((z) => z.hnNoise && !z.dead).length, 3, "noise 4+ brings 3 infected at midnight");
+  assert.ok(toasts.some((t) => /动静把感染者引来了/.test(t.text)));
+  assert.equal(e.hn.noise.v, 0, "an attack clears the meter");
 });
 
 test("radio silence halves both noise and effect", () => {
@@ -348,7 +356,7 @@ test("radio silence halves both noise and effect", () => {
   const xp = e.s.skills?.agriculture?.xp ?? null;
   e.chooseProgram("lesson");
   hour(e, 21);
-  assert.equal(e.w.radio.noise, PROGRAMS.lesson.noise * 0.5);
+  assert.equal(e.hn.noise.v, PROGRAMS.lesson.noise * 0.5);
   if (xp !== null) assert.ok(e.s.skills.agriculture.xp > xp);
 });
 
@@ -716,8 +724,9 @@ test("museum donations fill showcases once each and grant their permanent bonus"
   for (const id of SHOWCASES.relics.items) assert.equal(e.donate("relics", id), true);
   assert.equal(e.donate("relics", "seedArchive"), false, "no duplicates");
   assert.ok(e.showcaseDone("relics"));
-  if (rep !== undefined) assert.equal(e.c.reputation >= rep + 10, true);
-  assert.ok(toasts.some((t) => /展柜「遗物」填满了/.test(t.text)));
+  // v0.28：日志、照片、遗物并成「往事」一柜，一层摆满不再单给奖励
+  if (rep !== undefined) assert.equal(e.c.reputation, rep);
+  assert.ok(toasts.some((t) => /「往事」一柜的「遗物」一层摆满了/.test(t.text)));
   // 鱼：要真有鱼
   assert.equal(e.donate("fish", "fish"), false);
   stock(e, { fish: 1, riverFish: 1, nightFish: 1 });
@@ -728,7 +737,7 @@ test("museum donations fill showcases once each and grant their permanent bonus"
   e.f.clues = ["residential", "hospital", "warehouse"];
   const credits = e.c.researchCredits || 0;
   for (const id of e.f.clues) e.donate("logs", id);
-  assert.equal(e.c.researchCredits, credits + 1);
+  assert.equal(e.c.researchCredits, credits, "the logs shelf alone gives nothing since v0.28");
   // 药草：要鉴定过，还要 1 份药草
   e.f.samples = [0, 1, 2, 3];
   e.f.identified = [0, 1, 2, 3];

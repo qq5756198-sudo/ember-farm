@@ -4,6 +4,7 @@ import { Renderer as WinterRenderer } from "./winter-renderer.js";
 import { pixelPainter } from "./beyond-art.js";
 import { SEASON_OBJECTS } from "./seasons.js";
 import { SSPOTS, TASTES } from "./seasons-data.js";
+import { ITEMS } from "./data.js";
 
 const MURAL_COLORS = [
   ["#9fd38a", "#5a7a3a", "#f3d27a"],
@@ -160,13 +161,17 @@ export class Renderer extends WinterRenderer {
     if (n)
       n.customers.forEach((g, i) => {
         if (g.state === "left") return;
-        const gx = x - 60 + i * 40,
-          gy = y + 36;
-        this.personSimple(gx, gy, g.look, -Math.PI / 2);
+        // v0.28：最多 6 位（桌子北边也坐人）；头上写着要的那道菜
+        const seat = e.guestSeat?.(i) || { x: x - 60 + i * 40, y: y + 36 },
+          gx = seat.x,
+          gy = seat.y;
+        this.personSimple(gx, gy, g.look, gy < y ? Math.PI / 2 : -Math.PI / 2);
         if (g.state === "waiting") {
-          const left = Math.max(0, 1 - g.waited / g.patience);
-          rect(gx - 22, gy - 100, 44, 18, "#f6f2e8");
-          this.text(TASTES[g.taste].name.slice(0, 2), gx, gy - 91, "#5b4a33", 11);
+          const left = Math.max(0, 1 - g.waited / g.patience),
+            want = g.dish && ITEMS[g.dish] ? ITEMS[g.dish].name.slice(0, 4) : TASTES[g.taste].name.slice(0, 2),
+            w = 14 + want.length * 11;
+          rect(gx - w / 2, gy - 100, w, 18, "#f6f2e8");
+          this.text(want, gx, gy - 91, "#5b4a33", 11);
           rect(gx - 18, gy - 78, 36, 4, "#3a3530");
           rect(gx - 18, gy - 78, 36 * left, 4, left > 0.4 ? "#9fd38a" : "#d06a58");
         } else rect(gx - 6, y - 12, 12, 6, "#f3d27a");

@@ -3,7 +3,9 @@
 // 不加新面板：战报和结局卡放在原来的“前哨”页里（和灰隼团的战报一样）。
 import { ITEMS, REGIONS, BUILDINGS } from "./data.js";
 import { ALERT_HOOKS, collectionRows } from "./winter-ui.js";
-import { newGameState, newGamePlusState, legacyGear } from "./longnight.js";
+import { legacyGear } from "./longnight.js";
+// v0.28：开局用最上面那一层的新档（v0.27 起新开的档会多说一句“丰年”的旧档提示）
+import { newGameState, newGamePlusState } from "./campaign.js";
 import { consequence } from "./alliance-ui.js";
 import { BOSSES, EVENT_SPOTS } from "./undertow-data.js";
 import { LN, ENDING, COUNTER, LEADER, COUNTER_STEPS, ORIGINS, ORIGIN_IDS } from "./longnight-data.js";

@@ -136,6 +136,8 @@ export const ADJ = [
 export const CANTEEN_DAYS = [2, 5]; // 每周第几天（day % 7）
 export const CANTEEN_HOURS = [19 * 60, 21 * 60 + 30];
 export const CANTEEN_GUESTS = 4;
+// v0.28：口碑高了一晚最多 6 位（存档检查用这个上限）
+export const CANTEEN_MAX = 6;
 export const CANTEEN_GAP = 20; // 游戏分钟
 export const CANTEEN_PATIENCE = 50;
 const has = (ids) => ids.filter((id) => ITEMS[id]);

@@ -196,7 +196,8 @@ export class Engine extends TidyEngine {
       rain = this.rainy();
     if (this.sc?.flags.well) out.push({ kind: "well", name: "旧水井", made: WATER.well, store: 0 });
     const barrels = this.s.buildings.filter((b) => b.type === "rain" && b.hp > 0);
-    if (barrels.length) out.push({ kind: "barrel", name: "雨水桶 ×" + barrels.length, made: barrels.length * (rain ? WATER.barrel.rain : heat ? WATER.barrel.heat : WATER.barrel.base), store: barrels.length * WATER.barrel.store });
+    if (barrels.length)
+      out.push({ kind: "barrel", name: "雨水桶 ×" + barrels.length, made: barrels.reduce((a, b) => a + this.barrelMade(b, rain, heat), 0), store: barrels.reduce((a, b) => a + this.barrelStore(b), 0) });
     if (this.projectDone?.("water")) out.push({ kind: "tower", name: "水塔", made: heat ? WATER.tower.heat : WATER.tower.base, store: 0 });
     if (this.canalReady()) {
       const egret = this.f.species?.includes("egret") ? ECO_HELP.egret : 0;
@@ -204,6 +205,19 @@ export class Engine extends TidyEngine {
     }
     if (this.hasPerk?.("cistern")) out.push({ kind: "cistern", name: "蓄水池", made: WATER.cistern.base, store: WATER.cistern.store });
     return out;
+  }
+  // 一个雨水桶今天出多少、能存多少；一个喷灌头管多远；这一路浇一块田用几份水（v0.28 的改良改这几个数）
+  barrelMade(b, rain, heat) {
+    return rain ? WATER.barrel.rain : heat ? WATER.barrel.heat : WATER.barrel.base;
+  }
+  barrelStore(b) {
+    return WATER.barrel.store;
+  }
+  sprinklerR(b) {
+    return WATER.sprinkler.r;
+  }
+  routeCostMult(route) {
+    return 1;
   }
   netCap() {
     return this.netSources().reduce((a, x) => a + x.store, 0);
@@ -220,7 +234,7 @@ export class Engine extends TidyEngine {
       }
       if (kind === "sprinkler")
         for (const b of this.s.buildings.filter((x) => x.type === "irrigation" && x.hp > 0 && !this.bt.net.off.includes(x.id)))
-          out.push({ kind, id: b.id, name: WATER.names.sprinkler, plots: farm.filter((p) => dist(p, b) < WATER.sprinkler.r) });
+          out.push({ kind, id: b.id, name: WATER.names.sprinkler, plots: farm.filter((p) => dist(p, b) < this.sprinklerR(b)) });
       if (kind === "barrel")
         for (const b of this.s.buildings.filter((x) => x.type === "rain" && x.hp > 0)) out.push({ kind, id: b.id, name: WATER.names.barrel, plots: farm.filter((p) => dist(p, b) < WATER.barrel.r) });
       if (kind === "tower" && this.projectDone?.("water")) out.push({ kind, name: WATER.names.tower, plots: farm.filter((p) => !p.rebuildNew) });
@@ -250,10 +264,10 @@ export class Engine extends TidyEngine {
       for (const p of route.plots) {
         // 熟了的不再长，不浇（留着水给还在长的）
         if (!p.crop || ripeOf(p) || this.plotWatered(p)) continue;
-        const cost = this.waterCost(p);
-        if (n.pool >= cost) {
-          n.pool -= cost;
-          n.used += cost;
+        const cost = this.waterCost(p) * this.routeCostMult(route);
+        if (n.pool >= cost - 1e-9) {
+          n.pool = Math.max(0, Math.round((n.pool - cost) * 100) / 100);
+          n.used = Math.round((n.used + cost) * 100) / 100;
           this._netWater = true;
           try {
             this.waterPlot(p);
@@ -277,7 +291,7 @@ export class Engine extends TidyEngine {
       covered = new Set(this.netRoutes().flatMap((r) => r.plots.filter((p) => p.crop).map((p) => p.id))),
       // 今天一共有多少水：已经用掉的 + 还剩的；今天还没出水时按水源估
       can = n.day === this.s.day ? n.used + n.pool : this.netSources().reduce((a, x) => a + x.made, 0) + Math.min(n.pool || 0, this.netCap());
-    return { can, planted, covered: covered.size, pool: n.pool, made: n.made, used: n.used, missed: n.missed, cap: this.netCap(), rain: this.rainy() };
+    return { can: Math.floor(can + 1e-6), planted, covered: covered.size, pool: Math.floor(n.pool + 1e-6), made: n.made, used: Math.round(n.used * 10) / 10, missed: n.missed, cap: this.netCap(), rain: this.rainy() };
   }
   netMove(kind, dir) {
     const order = this.bt.net.order,

@@ -48,6 +48,8 @@ import * as LnData from '../dist/longnight-data.js';
 import * as Longnight from '../dist/longnight.js';
 import * as Tidy from '../dist/tidy.js';
 import * as BountyData from '../dist/bounty-data.js';
+import * as Bounty from '../dist/bounty.js';
+import * as BustleData from '../dist/bustle-data.js';
 const {createCanvas,Image:NativeImage,loadImage}=createRequire(import.meta.url)('@napi-rs/canvas');
 // 前几段检查的是 v0.13–v0.17 的流程：只在“每日抉择”段打开清晨事件卡，其余段里不让它插进来。
 const realDailyShow=Campaign.Engine.prototype.dailyShouldShow;let dailyOn=false;
@@ -1466,4 +1468,145 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
   assert.equal(back.bounty.stats.orders, 1); assert.equal(back.bounty.compost[bin.id].kind, 'care'); assert.equal(back.bounty.intro.told, true);
   console.log('Bounty controller passed: a v0.26 save restored from a file (canal water became stored water, the 丰年 notice on the first frame), the compost bin in the build list and its page on E (fertiliser picked, fodder thrown in), the order board on E (an order handed in, one torn), the farm board\'s water line and collection book, the water page (a route moved up), the sprinkler card switching it off and on, chickens let out from the coop card, the mystery pack in the seed picker, fertiliser and early harvest on the plot card, a giant radish hoed from its card, the night-raid alert, giant crop/chickens/order board/compost bin/Lin\'s garden drawn at four sizes by day and night, and save/parse.');
+}
+
+// v0.28.0「热闹」: a v0.27 save restored from a file (the radio's own noise moves onto the meter, the 热闹 notice on the first frame),
+// the noise chip on the bar, the build list with the medicine cabinet, E at the radio station (a scout command sent), E at Hong Shu
+// (a run loaded and sent, the page while it is away), a tower card picking a path and upgrading, the fence card's nearby segments,
+// a hurt resident's card treated with a medkit, the rooms page's comfort card, the plaza canteen served on foot (E at the stove,
+// E at the guest), the harvest offering picked on the plaza page, the museum's 往事 case, Jiang Bo via E, the noise attack in the
+// alert bar, neighbours, the airdrop, upgraded towers/fences/traps, guests and a carried dish drawn at four sizes by day and night,
+// save/parse.
+{
+  let clock = 20000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  dailyOn = false;
+  const SD = await import('../dist/seasons-data.js');
+  // ---------- 一份 v0.27 的旧档，从文件恢复 ----------
+  const old = new Bounty.Engine(Bounty.newGameState(), () => {});
+  const sc = old.sc;
+  sc.act = 7; sc.claimed = ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6']; sc.choice = 'ration';
+  sc.letters = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7']; sc.flags.well = sc.flags.camp = sc.flags.farmerFed = true; sc.camp = { x: 560, y: 735 };
+  old.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((t) => t.id === 'network') + 1).map((t) => t.id); old.r.radio = true;
+  old.o.hospital = 'water'; old.o.youke = true; old.o.lathe = { mode: 'parts', day: 0 };
+  old.o.cargo = 'food'; old.o.convoy = { departs: 0, arrives: 0, escorted: true, spawned: false, foes: [], done: true, lost: false };
+  old.s.day = 9; old.s.minute = 600; if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();
+  old.w.radio.noise = 3;
+  context.open('restoreArchive', { files: { old: old.serialize() } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  let e = context.inspect().engine;
+  assert.equal(context.inspect().menu, null);
+  assert.equal(e.hn.noise.v, 3, "the radio's own noise moved onto the meter");
+  assert.equal(e.w.radio.noise, 0);
+  e.paused = false; if (e.dy) e.dy.pending = null; run(3);
+  assert.ok(e.hn.intro.told, 'told on the first frame');
+  context.open('outpost', { view: 'log' }); clean(); assert.match(html(), /热闹：营地里吵的事会攒「动静」/); click('close');
+  // ---------- 顶栏的动静格 ----------
+  const chip = document.querySelector('#noise-chip');
+  assert.equal(chip.hidden, false); assert.equal(chip.textContent, '动静 3'); assert.match(chip.title, /0 点结算/);
+  // ---------- 建造菜单：药柜（往事陈列柜要挑过才有） ----------
+  context.open('build'); clean(); assert.ok(html().includes('<h3>药柜</h3>'), 'the medicine cabinet can be built'); assert.ok(!html().includes('<h3>往事陈列柜</h3>')); click('close');
+  // ---------- 通信站：按 E，发电台指令 ----------
+  e.s.region = 'farm'; e.assignRegion();
+  e.c.energy = 30;
+  Object.assign(e.s.player, { x: 1220, y: 420 }); run(4);
+  assert.match(document.querySelector('#context').innerHTML, /通信站 · 电台节目和电台指令/);
+  press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /电台指令/); assert.doesNotMatch(html(), /满了会引来尸群/);
+  click('hnCmd', 'scout'); assert.equal(e.c.energy, 30 - BustleData.RADIO_CMDS.scout.power); assert.match(html(), /今天的侦察/);
+  click('hnCmd', 'scout'); assert.equal(e.c.energy, 30 - BustleData.RADIO_CMDS.scout.power, 'a second click waits for the cooldown');
+  click('close'); run(4);
+  assert.equal(chip.textContent, '动静 4'); assert.match(chip.className, /warn/);
+  // ---------- 红薯：按 E，装车出发 ----------
+  e.s.storage.potato = 14; e.s.storage.radish = 3;
+  Object.assign(e.s.player, { x: 800, y: 760 }); run(4);
+  assert.match(document.querySelector('#context').innerHTML, /红薯 · 跑商/);
+  press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /<h2 id="modal-title">红薯 · 跑商<\/h2>/); assert.match(html(), /去哪卖/);
+  click('hnMuleLoad', 'potato:5'); click('hnMuleLoad', 'potato:5'); assert.equal(e.hn.mule.plan.load.potato, 10); assert.match(html(), /车上 <b>10\/20<\/b> 件/);
+  click('hnMuleBack', 'parts'); assert.equal(e.hn.mule.plan.back, 'parts');
+  click('hnMuleGo'); assert.ok(e.hn.mule.trip, 'Hong Shu is on the road'); assert.equal(context.inspect().menu, null);
+  assert.equal(e.s.storage.potato, 4); assert.equal(e.s.storage.radish, 2);
+  run(1); press('e'); run(1); clean(); assert.match(html(), /在路上/); assert.match(html(), /想跟车/); click('close');
+  // ---------- 设施卡：瞭望塔选路线、改；围栏一起改 ----------
+  const B = (type, x, y) => { const b = { id: 'hn-' + type + '-' + e.s.idCounter++, type, x, y, rotation: 0, hp: Data.BUILDINGS[type].hp }; e.s.buildings.push(b); e.navRevision++; return b; };
+  const tower = B('tower', 1180, 300);
+  e.c.researchCredits = 2; e.s.storage.parts = (e.s.storage.parts || 0) + 3;
+  context.open('building', { buildingId: tower.id }); clean(); assert.match(html(), /改良（二选一）/);
+  click('hnUpPath', 'tower:light'); assert.equal(e.upPath('tower'), 'light'); assert.match(html(), /改成「探照灯」/);
+  click('hnUpBuild', tower.id); assert.equal(tower.hnUp, 'light'); assert.match(html(), /这座已经改成「探照灯」/); click('close');
+  const fences = [0, 1, 2, 3].map((i) => B('fence', 940 + i * 40, 250));
+  e.unlockPath('fence', 'barb'); e.s.storage.scrap = (e.s.storage.scrap || 0) + 10;
+  context.open('building', { buildingId: fences[0].id }); clean(); assert.match(html(), /附近还没改的 4 段一起改/);
+  click('hnUpFences', fences[0].id); assert.ok(fences.every((f) => f.hnUp === 'barb')); click('close');
+  const trap = B('trap', 1320, 520); trap.hnUp = 'net'; e.hn.up.trap = 'net';
+  // ---------- 伤员：居民卡上用药包 ----------
+  for (const id of ['farmer', 'medic']) e.recruit(id);
+  B('bed', 700, 330);
+  e.injure('r:farmer', '阿禾', '守夜时被感染者摸到'); e.s.storage.medkit = 1; run(4);
+  assert.match(document.querySelector('#alert-bar').innerHTML, /1 人受伤/);
+  context.open('rebuild', { tab: 'residents' }); clean(); assert.match(html(), /受伤了：还要养 48 个钟点/);
+  click('hnTreat', 'r:farmer|medkit'); assert.equal(e.hn.hurt['r:farmer'].care, 'medkit'); assert.ok(!e.s.storage.medkit); click('close');
+  // ---------- 农舍「房间与家具」：舒适度 ----------
+  const floor = B('floor', 420, 360); B('chair', 440, 360); B('lamp', 400, 340); B('table', 440, 390); B('bed', 400, 395);
+  context.open('frontier', { tab: 'rooms' }); clean(); assert.match(html(), /舒适度和「休息好」/); assert.match(html(), /舒适度 4\/8/);
+  assert.match(html(), /data-action="build" data-id="medCabinet"/); click('close');
+  void floor;
+  // ---------- 广场：节庆挑供品；食堂走着端菜上菜 ----------
+  e.ss.he.stage = 4; e.s.day = 21; e.s.minute = 16 * 60 + 10; e.c.workClock = 10;
+  Object.assign(e.s.storage, { fine_pumpkin: 2, fine_herb: 2, fine_cotton: 2, potato: 4, radish: 4 });
+  Object.assign(e.s.player, { x: SD.SSPOTS.plaza.x, y: SD.SSPOTS.plaza.y + 20 }); run(2);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /挑三样菜去评比/);
+  for (const id of ['fine_pumpkin', 'fine_herb', 'fine_cotton']) click('hnFestPick', id);
+  assert.match(html(), /满堂彩/);
+  click('sHost'); assert.ok(e.festivalHosted(21)); assert.ok(!e.s.storage.fine_pumpkin, 'the picked offering was paid'); click('close');
+  e.s.day = 23; e.s.minute = 19 * 60 + 2; e.c.workClock = 2;
+  Object.assign(e.s.storage, { stew: 4, bread: 6, jam: 2, beanMeal: 2, herbTea: 2 });
+  run(2); press('e'); run(1); clean(); click('sCanteen'); assert.ok(e.ss.canteen.night); assert.match(html(), /不开菜单/); click('close');
+  const stove = e.objects.find((o) => o.type === 'hnStove');
+  Object.assign(e.s.player, { x: stove.x, y: stove.y + 16 }); run(4);
+  assert.match(document.querySelector('#context').innerHTML, /何大勺的灶台 · 按 E 端菜/);
+  press('e'); run(1); assert.ok(e.hn.carry, 'a dish in hand'); assert.equal(context.inspect().menu, null);
+  const g = e.ss.canteen.night.customers.find((x) => x.id === e.hn.carry.guest), gi = e.ss.canteen.night.customers.indexOf(g), seat = e.guestSeat(gi);
+  Object.assign(e.s.player, { x: seat.x, y: seat.y + 12 }); run(2);
+  const money = e.s.money; press('e'); run(1);
+  assert.equal(g.state, 'served'); assert.ok(e.s.money > money); assert.equal(e.hn.carry, null);
+  // ---------- 档案馆：往事一柜 ----------
+  e.w.museum.built = true;
+  context.open('outpost', { view: 'museum' }); clean(); assert.match(html(), /<h3>往事<\/h3>/); assert.doesNotMatch(html(), /<h3>旧日志<\/h3>|<h3>老照片<\/h3>/); click('close');
+  // ---------- 江伯：按 E ----------
+  e.ss.jiang.phase = 'done'; e.fishSince(); e.ss.canteen.night = null; e.assignRegion();
+  Object.assign(e.s.player, { x: BustleData.FISH_RUN.spot.x, y: BustleData.FISH_RUN.spot.y + 20 }); run(4);
+  assert.match(document.querySelector('#context').innerHTML, /江伯 · /);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /<h2 id="modal-title">江伯 · 鱼汛<\/h2>/); click('close');
+  // ---------- 循声来的感染者：警报；邻居、空投、探照灯、端着的菜，四种大小，白天和夜里 ----------
+  e.hn.noise.v = 6.5; e.s.minute = 19 * 60; run(4);
+  assert.match(document.querySelector('#alert-bar').innerHTML, /今夜 0 点会有 6 只循声摸来/);
+  e.hn.help = { armed: false, day: e.s.day, live: true, allies: BustleData.ALLY.names.map((name, i) => ({ id: 'a' + i, name, look: BustleData.ALLY.looks[i], x: 1240 + i * 30, y: 470, hp: BustleData.ALLY.hp - 30 * i, down: false, cd: 0, facing: 0 })) };
+  e.hn.carry = { dish: 'stew', guest: 'g0' };
+  e.ss.canteen.night = { day: e.s.day, customers: [], spawned: 0, nextIn: 20, income: 0, score: 0, served: 0, wrong: 0, missed: 0, max: 4 };
+  e.ln.night = null;
+  for (const night of [false, true]) {
+    e.s.minute = night ? 1380 : 600;
+    for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+  }
+  context.inspect().renderer.resize(1366, 600, 1);
+  e.ss.canteen.night = null; e.hn.carry = null; e.hn.help = { armed: false, day: 0, live: false, allies: [] };
+  // 空投箱在废墟里
+  e.c.energy = 20; e.s.minute = 600;
+  const reg = e.dropRegions()[0];
+  if (reg) {
+    e.radioCmd('drop'); const d = e.hn.drop;
+    e.s.region = d.region; e.enemies = e.s.enemies[d.region] ||= []; e.assignRegion(); Object.assign(e.s.player, { x: d.x, y: d.y + 40 });
+    for (const [w, hh] of [[1366, 600], [390, 480]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+    context.inspect().renderer.resize(1366, 600, 1);
+    e.s.region = 'farm'; e.enemies = e.s.enemies.farm ||= []; e.assignRegion();
+  }
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.bustle.up.tower, 'light'); assert.equal(back.bustle.mule.trip.load.potato, 10); assert.equal(back.bustle.intro.told, true);
+  assert.equal(back.bustle.hurt['r:farmer'].care, 'medkit');
+  console.log('Bustle controller passed: a v0.27 save restored from a file (the radio noise on the meter, the 热闹 notice on the first frame), the noise chip, the medicine cabinet in the build list, E at the radio station sending a scout command (the cooldown holds a second click), E at Hong Shu loading and sending a run and showing it on the road, a tower card picking the searchlight and upgrading, four fence segments barbed in one go, a hurt resident treated from the residents page, the comfort card on the rooms page, the harvest offering picked and paid on the plaza, the canteen served on foot (E at the stove, E at the guest), the museum\'s 往事 case, Jiang Bo via E, the noise warning in the alert bar, neighbours, the airdrop, upgraded towers/fences/traps and a carried dish drawn at four sizes by day and night, and save/parse.');
 }

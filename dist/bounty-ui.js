@@ -70,12 +70,12 @@ function viewWater(e) {
     ? `<section><h3>喷灌头</h3><ul class="bt-list">${sprinklers
         .map((b, i) => {
           const on = !n.off.includes(b.id),
-            near = e.s.plots.filter((q) => e.isFarmPlot(q) && dist(q, b) < WATER.sprinkler.r);
+            near = e.s.plots.filter((q) => e.isFarmPlot(q) && dist(q, b) < (e.sprinklerR?.(b) ?? WATER.sprinkler.r));
           return `<li><span><b>喷灌头 ${i + 1}</b><small>${on ? "开着" : "关着"} · 管 ${near.length} 块（种着 ${near.filter((q) => q.crop).length} 块）</small></span>${button("btSprinkler", b.id, on ? "关上" : "打开")}</li>`;
         })
         .join("")}</ul><p class="muted">喷灌头 06:00–20:00 每个钟点都看一眼：管着的田没浇就从水网取水浇上，所以白天新种下的也能当天喝到水。别的几路只在 00:00 浇一次。</p></section>`
     : "";
-  const log = (n.log || []).length ? `<section><h3>前几天</h3><ul class="ledger">${n.log.map((r) => `<li>第 ${r.d} 天：出水 ${r.made} 份，用掉 ${r.used} 份${r.missed ? "，" + r.missed + " 块没浇上" : ""}</li>`).join("")}</ul></section>` : "";
+  const log = (n.log || []).length ? `<section><h3>前几天</h3><ul class="ledger">${n.log.map((r) => `<li>第 ${r.d} 天：出水 ${r.made} 份，用掉 ${Math.round(r.used * 10) / 10} 份${r.missed ? "，" + r.missed + " 块没浇上" : ""}</li>`).join("")}</ul></section>` : "";
   return `${head}${notes.join("")}<section><h3>水源</h3>${srcTable || '<p class="muted">—</p>'}</section><section><h3>先浇哪一路</h3><p class="muted">水不够时，排在前面的先浇。一块田一份水，丰产作物两份；已经喝到水的不再浇。</p><ol class="bt-routes">${order}</ol></section>${sprRows}${log}<p class="muted">水壶在旧水井、雨水桶边补满不花水网的水；居民浇水也不花。照看机浇水从水网取。</p>`;
 }
 
@@ -265,13 +265,13 @@ export function buildingExtras(e, b) {
     const near = e.s.plots.filter((q) => e.isFarmPlot(q) && q.crop && dist(q, b) < DRONE.r);
     return card([
       P("现在：" + (e.automationStatus?.(b) || "") + "。"),
-      P("范围里种着 " + near.length + " 块。营地的电 " + Math.floor(e.c.energy || 0) + "/100，水网里还有 " + e.bt.net.pool + " 份水。你在农场时它只照看、浇水、捉虫、拔草，熟了的菜留给你收。", "muted"),
+      P("范围里种着 " + near.length + " 块。营地的电 " + Math.floor(e.c.energy || 0) + "/100，水网里还有 " + Math.floor(e.bt.net.pool + 1e-6) + " 份水。你在农场时它只照看、浇水、捉虫、拔草，熟了的菜留给你收。", "muted"),
       `<div class="button-row">${act("serviceAutomation", b.id, "保养（零件 1）", !farm ? "回到农场再保养" : !b.wear ? "刚保养过" : stock(e, "parts") < 1 ? "没有零件" : "")}</div>`,
     ]);
   }
   if (t === "irrigation") {
     const on = !e.bt.net.off.includes(b.id),
-      near = e.s.plots.filter((q) => e.isFarmPlot(q) && q.crop && dist(q, b) < WATER.sprinkler.r);
+      near = e.s.plots.filter((q) => e.isFarmPlot(q) && q.crop && dist(q, b) < (e.sprinklerR?.(b) ?? WATER.sprinkler.r));
     return card([
       P("现在：" + (e.automationStatus?.(b) || "") + "。", on ? "" : "story-lack"),
       P("06:00–20:00 每个钟点看一眼。范围里种着 " + near.length + " 块，还没喝到水的 " + near.filter((q) => !e.plotWatered(q)).length + " 块。", "muted"),

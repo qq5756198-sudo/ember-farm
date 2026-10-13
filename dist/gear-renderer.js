@@ -382,7 +382,7 @@ export class Renderer extends VisualRenderer {
           dot(z.x + Math.cos(aa) * 12 - 1, z.y - 62 + Math.sin(aa) * 4 - 1, 2, 2);
         }
       }
-      if (z.trapHeld > 0) this._pixelText("夹住了", z.x, z.y - 70, "#ffdb8c", 12);
+      if (z.trapHeld > 0) this._pixelText(z.netHeld ? "网住了" : "夹住了", z.x, z.y - 70, "#ffdb8c", 12);
     }
     // 自己：被抓住时的挣脱圈和按键提示；流血滴血；倒地
     const p = e.s.player,
