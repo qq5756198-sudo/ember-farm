@@ -43,6 +43,15 @@ test("index.html preloads exactly the modules game.js imports, so the browser fe
   assert.equal(html.split("<!-- modulepreload:start -->").length, 2);
 });
 
+// v0.27.0：载入页上的版本号在脚本载完以前就看得到，v0.26.0 那一版忘了改，一直写着 v0.25.0。
+test("the page title and the loading screen show the current version before any script runs", async () => {
+  const v = await import("../dist/version.js");
+  assert.ok(html.includes(`<title>余烬农场 ${v.GAME_VERSION} · ${v.GAME_EDITION}</title>`), "the title in index.html matches version.js");
+  const m = html.match(/<p class="release-label" data-release>([^<]*)<\/p>/);
+  assert.ok(m, "the loading screen has a release label");
+  assert.equal(m[1], v.GAME_RELEASE, "the loading screen label matches version.js");
+});
+
 test("the early bake in index.html only reads the save key, starts the worker and never writes storage", () => {
   const m = html.match(/<script>(\/\* v0\.25：载入页一开[\s\S]*?)<\/script>/);
   assert.ok(m, "inline early-bake script is in the head");

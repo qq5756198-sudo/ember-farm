@@ -28,7 +28,7 @@
 
 ## 验证
 
-- `npm test`：791 项游戏、存档、迁移、故事、前哨、寒潮、四季、远方、每日抉择、妙手、种菜、画面、装备、手感、声音、暗涌、长夜、载入、整顿与丰年检查（画面检查要 `@napi-rs/canvas`，没装时自动跳过）。
+- `npm test`：792 项游戏、存档、迁移、故事、前哨、寒潮、四季、远方、每日抉择、妙手、种菜、画面、装备、手感、声音、暗涌、长夜、载入、整顿与丰年检查（画面检查要 `@napi-rs/canvas`，没装时自动跳过）。
 - `npm run test:ui`：实际 game.js 控制器 + DOM 替身 + 原生 Canvas（需先 `npm install --no-save @napi-rs/canvas@0.1.100`）。不等同浏览器 CSS 验收。
 - `npm run sim:gear`：用正式代码让机器人出门搜刮，看死亡率和一场仗多久；`node scripts/gear-sim.mjs 次数 天数 地图 打法` 跑别的组合，加 `ROLL=telegraph` 或 `ROLL=crowd` 让机器人翻滚；地图写 `longnight` 守长夜（`LNPREP=1` 备过战的农场、`LNHELD=4` 之前守住过几个），`ORIGIN=medic` 加打法 `start` 看各个出身的前三天；v0.26.0 起 `LNSET=bench,guards,towers,traps,fix` 这样摆防线（长夜和尸潮都认），`BELL=late` 让机器人敲警钟（用法写在脚本开头）。
 - `npm run sim:loot`：搜东西随机以后每趟平均拿到的和以前比；`npm run sim:boss`：头目战的胜率、死亡率和一场多久（用法都写在脚本开头）。
