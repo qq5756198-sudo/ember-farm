@@ -373,7 +373,7 @@ export class Renderer extends AllianceRenderer {
   }
   drawDefense(e) {
     const c = this.ctx;
-    const guards = e.c.residents.filter((r) => r.priorities?.guard > 0 || r.role === "guard").length;
+    const guards = e.readyGuards?.() ?? e.c.residents.filter((r) => r.priorities?.guard > 0 || r.role === "guard").length;
     e.s.buildings
       .filter((b) => b.type === "tower" && b.hp > 0)
       .forEach((b, i) => {

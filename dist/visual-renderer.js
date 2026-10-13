@@ -1370,7 +1370,7 @@ export class Renderer extends GardenRenderer {
         left = b.x - bart.w;
       if (bart.fire) this.px(flameArt(this.calm ? 0 : Math.floor(t * 9) % 3, true), left + bart.fire.x * 2, top + bart.fire.y * 2 + 2);
       if (bart.stove) this.px(flameArt(this.calm ? 1 : (Math.floor(t * 7) + 1) % 3, false), left + bart.stove.x * 2, top + bart.stove.y * 2 + 6, { alpha: 0.9 });
-      if (bart.lamp && (b.type !== "lamp" || (e.c?.energy || 0) > 0) && night > 0.2) {
+      if (bart.lamp && (b.type !== "lamp" || (e.c?.energy || 0) > 0) && (b.type !== "tower" || (this.towerLit?.(b, e) ?? true)) && night > 0.2) {
         c.fillStyle = "#ffe7a8";
         c.fillRect(left + bart.lamp.x * 2 - 2, top + bart.lamp.y * 2 - 4, 6, 8);
       }

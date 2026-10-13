@@ -40,7 +40,6 @@ export const PEOPLE_TRAITS = {
   scared: { name: "怕黑", desc: "天黑后和袭击时不干活" },
   diligent: { name: "勤快", desc: "早上 6 点就开工，多干一个钟点" },
 };
-export const RESIDENT_TRAITS = { farmer: "diligent", medic: "nightowl", mechanic: "handy", cartographer: "chatty" };
 export const HELPER_ROLES = {
   carry: "搬运",
   build: "工程",

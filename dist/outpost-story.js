@@ -175,7 +175,9 @@ function detail(e, step) {
       gain: "每天 18:00 自动加工一批，材料从仓库扣。",
       kind: "choose",
       target: null,
-      choices: Object.entries(LATHE_MODES).map(([id, m]) => ({
+      choices: Object.entries(LATHE_MODES)
+        .filter(([, m]) => !m.retired)
+        .map(([id, m]) => ({
         id,
         pick: m.pick,
         name: m.name,

@@ -402,7 +402,8 @@ test("campfire talks happen once a night after dinner and build trust or morale"
   e.resident("medic").morale = 30;
   assert.ok(e.talkPeople().find((p) => p.id === "medic").sad);
   assert.equal(e.talk("comfort:medic"), true);
-  assert.equal(e.resident("medic").morale, 42);
+  // v0.26：低落的人聊完当晚回到平常（士气至少 45）
+  assert.equal(e.resident("medic").morale, 45);
   e.s.day++;
   e.c.nextHordeDay = e.s.day + 3;
   assert.equal(e.talk("today"), true);

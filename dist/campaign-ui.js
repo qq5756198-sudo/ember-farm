@@ -1,5 +1,5 @@
 // 当前主线的界面入口。game.js 只从这里取前哨相关的界面；每一轮新加的层在这里串起来。
-// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25)
+// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26)
 // v0.25：其余物品的小图重画（接在装备小图后面）；各层的物品都登记好以后再挂一次
 import { assignItemIcons } from "./item-sprites.js";
 import { outpostHud, hungerDeathNote } from "./outpost-ui.js";
@@ -14,7 +14,10 @@ import { paintDoll, paintGearIcon } from "./gear-sprites.js";
 import { slotOf } from "./gear-data.js";
 import { soundRows, helpHtml, patchPadHelp, radialItems, radialHtml, radialPick, coachHtml, CueQueue, patchDailyCard, patchJournal, patchCollection, patchPhone, careerHtml, todayHtml, handleFeelAction } from "./feel-ui.js";
 import { bossBarHtml, patchUnderMap, patchUnderJournal, patchMuseum, patchUnderCollection, handleUnderAction } from "./undertow-ui.js";
-import { lnHud, patchAlerts, patchLnJournal, longNightTitle, renderLongNightView, patchLnMuseum, patchLnCollection, patchLnCalendar, handleLongNightAction, originLine, patchLegacyBook, patchSummaryExport } from "./longnight-ui.js";
+import { patchAlerts, patchLnJournal, longNightTitle, renderLongNightView, patchLnMuseum, patchLnCollection, patchLnCalendar, handleLongNightAction, originLine, patchLegacyBook, patchSummaryExport } from "./longnight-ui.js";
+// v0.26：设施卡、心情三档、挂牌、机床加急、警钟、整顿清单、队员卡带徒
+import { buildingExtras, tidyLnHud, patchTidyView, handleTidyAction } from "./tidy-ui.js";
+export { buildingExtras };
 // v0.25：开始新游戏选出身、二周目、设置里的“带着记忆重新开始”
 export { restartTitle, restartText, restartPicker, restartState, ngPlusRow, exportLine } from "./longnight-ui.js";
 import {
@@ -51,7 +54,7 @@ export const renderGearPanel = (e, helpers) => {
 export { hungerDeathNote, itemLinks, buildCardExtras, settingsExtras, applyAccess, mapKey, keyLabel, keyCaptureActive, cancelKeyCapture, captureKey, helpRows, readPad };
 export const stationExtras = (e, b) => seasonsStationExtras(e, b) + gardenStationExtras(e, b) + gearStationExtras(e, b);
 export const campaignTitle = (ui) => longNightTitle(ui, (u0) => gearTitle(u0, (u) => gardenTitle(u, winterTitle)));
-export const renderCampaignView = (e, ui) => {
+const renderViewBase = (e, ui) => {
   const html = renderLongNightView(e, ui, (e1, u1) => renderGearView(e1, u1, (e2, u2) => renderGardenView(e2, u2, renderWinterView)));
   if (ui?.view === "daily") return patchDailyCard(e, html);
   if (ui?.view === "collection") return patchLegacyBook(e, patchLnCollection(e, patchUnderCollection(e, patchCollection(e, html))));
@@ -61,6 +64,7 @@ export const renderCampaignView = (e, ui) => {
   if (ui?.view === "phone") return patchPhone(html);
   return html;
 };
+export const renderCampaignView = (e, ui) => patchTidyView(e, ui, renderViewBase(e, ui));
 export const renderCampaignJournal = (e, ui) => {
   const html = renderGardenJournal(e, ui);
   return ui?.catalog ? html : patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html)));
@@ -81,12 +85,12 @@ export const renderManualPlus = (e, tab, h, ui, fui) => {
 export function campaignHud(e) {
   const base = outpostHud(e);
   if (!base) return null;
-  const ln = lnHud(e);
+  const ln = tidyLnHud(e);
   return { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchAlerts(e, alertBar(e)), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e) };
 }
-// 动作：长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
+// 动作：整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
-  return handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
+  return handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
 }
 
 // v0.25：到这里所有层的物品都登记过了，把还没挂上的新小图挂上

@@ -16,11 +16,17 @@
 // 查个别的：SEEDS=1 列出死掉的那几趟、OFF=种子偏移、TRACE=1 每秒打一行
 // v0.25 长夜：地图写 longnight（例：node scripts/gear-sim.mjs 100 38 longnight late,mid）——主线打完、第 38 天 21:59 站在农场中间，
 //   一个人守（不算居民、瞭望塔、陷阱），守到 04:00 天亮或三波打完算守住；LNHELD=4 表示之前守住过几个（下一个按这个变大）
+// v0.26 守夜台：LNSET=bench,guards,towers,towers4,traps,traps8,fences,lure,lureIdle,repair,fix 自由组合（长夜和 horde 尸潮都认）：
+//   guards 三个居民吃饱了排守卫岗；towers 两座塔，towers4 四座；traps 四个陷阱，traps8 八个；fences 四面各一道半截墙；
+//   lure 东边一个信标、旁边四个陷阱，打着的时候机器人去拉响（v0.26 起信标要拉响才引怪），lureIdle 同样摆着但不拉；
+//   repair 维修点；fix 两波之间机器人把破了的陷阱、塔、围栏、信标修好（照正常维修花木材和废金属，一个空档最多修 4 处；不算走过去的路）；
+//   BELL=1 两波之间能敲警钟就敲；BELL=boss 只在第三波打完时敲，把头目叫来；BELL=late 第二波打完叫第三波、第三波打完叫头目（留出时间打头目）。
+//   结果多几列：陷阱、瞭望塔、你各打倒几只（killTrap、killTower、killPlayer），设施掉了多少耐久、用了几发弹药几块木头。
 // v0.25 出身：ORIGIN=medic 打法写 start（例：ORIGIN=hunter node scripts/gear-sim.mjs 100 1 residential,hospital,warehouse start）——
 //   开局那一套：大家都用开局的木材做一根矛（退伍兵也是，WEAPON=pipe 让他拿自己的铁管）；身上穿出身给的，出身的规则照算；绷带用完会用药包
 const D = new URL("../dist/", import.meta.url).href;
 const { Engine, freshState } = await import(D + "campaign.js");
-const { REGIONS } = await import(D + "data.js");
+const { REGIONS, BUILDINGS: BUILD } = await import(D + "data.js");
 const { RULES, MELEE, ARMOR } = await import(D + "gear-data.js");
 // v0.24：NOSWAP=bloater,faker,spitter 不放这几种（看各自让一趟难了多少）
 const U = await import(D + "undertow-data.js");
@@ -34,6 +40,9 @@ if (process.env.UBOSS)
     for (const [kk, vv] of Object.entries(v)) U.BOSSES[k][kk] = vv && typeof vv === "object" ? { ...U.BOSSES[k][kk], ...vv } : vv;
 // v0.25 长夜调数：LNPATCH='{"base":[8,10,12],"bossHp":0.8}'、LNMIX='[{"slow":6,"runner":4}, …]'
 const LND = await import(D + "longnight-data.js");
+// v0.26 调数：TDPATCH='{"TRAP_ALL":{"mult":1.25}}'
+const TDD = await import(D + "tidy-data.js");
+if (process.env.TDPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.TDPATCH))) Object.assign(TDD[k], v);
 if (process.env.LNPATCH) Object.assign(LND.LN, JSON.parse(process.env.LNPATCH));
 if (process.env.LNMIX) JSON.parse(process.env.LNMIX).forEach((m, i) => (LND.WAVE_MIX[i] = m));
 // 出身调数：ORULES='{"grab":0.9}' 改这个出身的规则（null 表示去掉这一条）
@@ -100,6 +109,49 @@ function seeded(seed) {
   return () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
 }
 
+function placeDefenses(e, s) {
+  // LNPREP=1 等于 bench,guards,towers,traps（v0.25 的“备过战的农场”）
+  const SET = new Set((process.env.LNSET || (process.env.LNPREP === "1" ? "bench,guards,towers,traps" : "")).split(",").filter(Boolean));
+  const B = (type, x, y, rot = 0) => s.buildings.push({ id: "sim-" + type + "-" + s.buildings.length, type, x, y, rotation: rot, hp: BUILD[type].hp });
+  if (SET.has("guards")) {
+    for (const id of ["farmer", "medic", "mechanic"]) e.recruit(id);
+    e.residentsCapacity = () => 5;
+    for (const r of e.c.residents) {
+      r.fed = true;
+      r.priorities.guard = 1;
+    }
+  }
+  if (SET.has("towers")) for (const [x, y] of [[640, 600], [1040, 600]]) B("tower", x, y);
+  if (SET.has("towers4")) for (const [x, y] of [[640, 600], [1040, 600], [640, 360], [1040, 360]]) B("tower", x, y);
+  if (SET.has("traps")) for (const [x, y] of [[700, 420], [960, 420], [700, 700], [960, 700]]) B("trap", x, y);
+  if (SET.has("traps8")) for (const [x, y] of [[700, 420], [960, 420], [700, 700], [960, 700], [1180, 430], [1180, 560], [820, 820], [480, 520]]) B("trap", x, y);
+  if (SET.has("fences")) {
+    // 四个方向各一道 5 段的半截墙（中间不封死，留绕行的路），离农场中间 300 左右
+    for (let i = 0; i < 5; i++) B("fence", 1150, 380 + i * 72, 1);
+    for (let i = 0; i < 5; i++) B("fence", 650 + i * 72, 860);
+    for (let i = 0; i < 5; i++) B("fence", 300, 380 + i * 72, 1);
+    for (let i = 0; i < 5; i++) B("fence", 800 + i * 72, 200);
+  }
+  if (SET.has("lure") || SET.has("lureIdle")) {
+    B("lure", 1180, 495);
+    for (const [x, y] of [[1150, 470], [1150, 520], [1210, 470], [1210, 520]]) B("trap", x, y);
+    e.c.energy = 100;
+    s.storage.parts = (s.storage.parts || 0) + 20;
+  }
+  if (SET.has("repair")) B("repairpost", 830, 560);
+  if (SET.size) {
+    s.storage.ammo = 80;
+    s.storage.wood = 40;
+    if (SET.has("bench")) {
+      s.buildings.push({ id: "sim-bench", type: "weaponbench", x: 760, y: 300, rotation: 0, hp: 200 });
+      s.storage.scrap = 20;
+    }
+    if (SET.has("fix")) s.storage.scrap = (s.storage.scrap || 0) + 20;
+    e.navRevision = (e.navRevision || 0) + 1;
+  }
+  return SET;
+}
+
 function trial(region, kitId, seed) {
   Math.random = seeded(seed * 7919 + 13);
   const R = seeded(seed * 104729 + 7);
@@ -110,7 +162,8 @@ function trial(region, kitId, seed) {
   const LNMODE = region === "longnight",
     HORDEMODE = region === "horde";
   if (LNMODE || HORDEMODE) region = "farm";
-  let died = false;
+  let died = false,
+    SET = new Set();
   const emit = e.emit.bind(e);
   e.emit = (name, data) => {
     if (name === "menu" && data?.menu === "death") died = true;
@@ -131,24 +184,10 @@ function trial(region, kitId, seed) {
     e.c.nextHordeDay = DAY + 30;
     if (e.dy) e.dy.pending = null;
     s.minute = 1319.9;
-    // LNPREP=1：备过战的农场——三个居民吃饱了守两座瞭望塔（仓库里 80 发弹药）、四个路障陷阱、背包里 8 条绷带
-    if (process.env.LNPREP === "1") {
-      for (const id of ["farmer", "medic", "mechanic"]) e.recruit(id);
-      e.residentsCapacity = () => 5;
-      for (const r of e.c.residents) {
-        r.fed = true;
-        r.priorities.guard = 1;
-      }
-      s.buildings.push({ id: "sim-tower-1", type: "tower", x: 640, y: 600, rotation: 0, hp: 240 }, { id: "sim-tower-2", type: "tower", x: 1040, y: 600, rotation: 0, hp: 240 });
-      for (const [i, [x, y]] of [[700, 420], [960, 420], [700, 700], [960, 700]].entries()) s.buildings.push({ id: "sim-trap-" + i, type: "trap", x, y, rotation: 0, hp: 80 });
-      s.storage.ammo = 80;
-      // 武器台在农场：每一波开始时修一下武器和防具（真人会趁两波之间修；仓库里 20 废金属）
-      s.buildings.push({ id: "sim-bench", type: "weaponbench", x: 760, y: 300, rotation: 0, hp: 200 });
-      s.storage.scrap = 20;
-      e.navRevision = (e.navRevision || 0) + 1;
-    }
+    SET = placeDefenses(e, s);
   }
   if (HORDEMODE) {
+    SET = placeDefenses(e, s);
     // 对照：普通尸潮（第 8 轮以后 24 只），同样一个人守在农场中间
     s.stats.hordes = Number(process.env.HORDES || 8);
     s.horde = { phase: "warning", timer: 0.1, remaining: 24, spawnTimer: 0, direction: 0 };
@@ -174,7 +213,7 @@ function trial(region, kitId, seed) {
     }
   s.inventory.bandage = region !== "residential" && kit.bandageHosp ? kit.bandageHosp : kit.bandage;
   for (const [id, n] of Object.entries(kit.extra || {})) s.inventory[id] = (s.inventory[id] || 0) + n;
-  if (LNMODE && process.env.LNPREP === "1") s.inventory.bandage = 8;
+  if ((LNMODE || HORDEMODE) && SET.size) s.inventory.bandage = 8;
   s.inventory.stone = region !== "residential" && kit.stonesHosp ? kit.stonesHosp : kit.stones;
   g.slots.throw = "stone";
   s.slot = 3;
@@ -186,6 +225,26 @@ function trial(region, kitId, seed) {
   e.paused = false;
   const p = s.player,
     gx = e.gx;
+  // 守夜台：谁打倒的（陷阱、瞭望塔、你），设施掉了多少耐久
+  const killBy = { trap: 0, tower: 0, weapon: 0 };
+  {
+    const realHurt = e.hurtEnemy.bind(e);
+    e.hurtEnemy = (z, n, a, meta) => {
+      const live = !z.dead,
+        src = e._damageSource || "weapon";
+      const out = realHurt(z, n, a, meta);
+      if (live && z.dead && z.horde) killBy[src in killBy ? src : "weapon"]++;
+      return out;
+    };
+  }
+  const bhp = () => s.buildings.filter((b) => b.type !== "weaponbench").reduce((a, b) => a + b.hp, 0),
+    hpStart = bhp(),
+    ammo0 = s.storage.ammo || 0,
+    wood0 = s.storage.wood || 0;
+  let pulls = 0,
+    bells = 0,
+    kitsUsed = 0,
+    gapSeen = 0;
   const stats = { rolls0: e.feel?.stats.rolls || 0, broken0: g.stats.broken, bites0: g.stats.bites, grabs0: g.stats.grabs, lunges0: g.stats.lunges, counters0: g.stats.counters, interrupts0: g.stats.interrupts, summons0: g.stats.summons, bandages: 0, cause: null };
   // 记下最后一下是谁打的（死因）
   const envBy = { acid: 0, gas: 0 };
@@ -255,7 +314,7 @@ function trial(region, kitId, seed) {
         if (e.ln.night.boss === 1) lnBossSeen = true;
         console.error("seed", seed, "t", Math.round(t), "wave", e.ln.night.wave, e.ln.night.boss === 1 ? "BOSS" : "", "hp", Math.round(p.hp), "band", s.inventory.bandage || 0, "alive", e.hordeAlive().length, "kills", e.ln.night.kills, "weapon", kit.weapon ? e.cond(kit.weapon).d : 0);
       }
-      if (process.env.LNPREP === "1" && e.ln.night && e.ln.night.wave !== lnWaveSeen) {
+      if (SET.has("bench") && e.ln.night && e.ln.night.wave !== lnWaveSeen) {
         lnWaveSeen = e.ln.night.wave;
         if (lnWaveSeen > 1) for (const id of [kit.weapon, ...Object.values(set)]) if (id && e.repairReason?.(id) === "") e.repairGear(id);
       }
@@ -263,6 +322,22 @@ function trial(region, kitId, seed) {
     if (HORDEMODE) {
       if (s.horde.phase === "active") lnStarted = true;
       else if (lnStarted) break;
+    }
+    // v0.26：信标要拉响才引怪——摆了信标（LNSET 里写 lure）就在打着的时候去拉
+    if (SET.has("lure") && e.pullLure && !e.pulledLure() && e.hordeAlive().length > 0) {
+      const b = s.buildings.find((x) => x.type === "lure" && x.hp > 0);
+      if (b && !e.pullLureReason(b.id) && e.pullLure(b.id)) pulls++;
+    }
+    // 两波之间：把破了的防御设施修好（LNSET 里写 fix；一个空档最多 4 处，机器人不走过去，直接修），能敲钟就敲（BELL=1）
+    if (LNMODE && e.ln.night && e.lnBetween?.()) {
+      if (SET.has("fix") && gapSeen !== e.ln.night.wave) {
+        gapSeen = e.ln.night.wave;
+        const broken = s.buildings.filter((x) => ["fence", "gate", "trap", "tower", "lure", "repairpost"].includes(x.type) && x.hp < BUILD[x.type].hp).sort((a, c) => a.hp / BUILD[a.type].hp - c.hp / BUILD[c.type].hp);
+        for (const b of broken.slice(0, 4)) if (e.repair(b.id)) kitsUsed++;
+      }
+      const nx = e.lnNext?.(),
+        want = process.env.BELL === "1" || (process.env.BELL === "boss" && nx?.what === "boss") || (process.env.BELL === "late" && (nx?.what === "boss" || nx?.k === 3));
+      if (want && !e.lnBellReason() && e.lnBell()) bells++;
     }
     act = Math.max(0, act - DT);
     const foes = e.enemies.filter((z) => !z.dead && !z.nest);
@@ -571,6 +646,13 @@ function trial(region, kitId, seed) {
     // 长夜：打到第几波、头目打倒没有
     lnWave: LNMODE ? e.ln?.last?.waves ?? 0 : 0,
     lnBoss: LNMODE ? !!e.ln?.last?.boss : false,
+    killBy,
+    bldLost: hpStart - bhp(),
+    ammoUsed: ammo0 - (s.storage.ammo || 0),
+    woodUsed: wood0 - (s.storage.wood || 0),
+    pulls,
+    bells,
+    kitsUsed,
   };
 }
 
@@ -616,6 +698,18 @@ for (const region of REGION_LIST)
       // 长夜：倒在第几波（1/2/3）、头目打倒的趟数
       lnDiedAt: region === "longnight" ? [1, 2, 3].map((w) => rs.filter((r) => r.died && r.lnWave === w).length).join("/") : undefined,
       lnBossDown: region === "longnight" ? rs.filter((r) => r.lnBoss).length : undefined,
+      // 守夜台
+      killTrap: +mean(rs.map((r) => r.killBy.trap)).toFixed(1),
+      killTower: +mean(rs.map((r) => r.killBy.tower)).toFixed(1),
+      killPlayer: +mean(rs.map((r) => r.killBy.weapon)).toFixed(1),
+      defenseShare: pct(rs.reduce((a, r) => a + r.killBy.trap + r.killBy.tower, 0), rs.reduce((a, r) => a + r.killBy.trap + r.killBy.tower + r.killBy.weapon, 0)),
+      bldLost: Math.round(mean(rs.map((r) => r.bldLost))),
+      ammoUsed: Math.round(mean(rs.map((r) => r.ammoUsed))),
+      woodUsed: Math.round(mean(rs.map((r) => r.woodUsed))),
+      pulls: +mean(rs.map((r) => r.pulls)).toFixed(1),
+      bells: +mean(rs.map((r) => r.bells)).toFixed(1),
+      fixed: +mean(rs.map((r) => r.kitsUsed)).toFixed(1),
+      set: process.env.LNSET || (process.env.LNPREP === "1" ? "LNPREP" : ""),
     };
     console.log(region, kitId, JSON.stringify(row));
   }

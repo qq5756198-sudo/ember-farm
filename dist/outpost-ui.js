@@ -137,7 +137,9 @@ function viewSummary(e) {
 function trendText(e, id) {
   const t = e.shipTrend?.(id);
   if (!Number.isFinite(t)) return "";
-  return Math.abs(t) < 3 ? " · 行情平稳" : ` · 今日行情 ${t > 0 ? "↑" : "↓"}${Math.abs(t)}%`;
+  const n = e.shipTrendTomorrow?.(id),
+    word = (v) => (Math.abs(v) < 3 ? "平稳" : (v > 0 ? "↑" : "↓") + Math.abs(v) + "%");
+  return (Math.abs(t) < 3 ? " · 行情平稳" : ` · 今日行情 ${t > 0 ? "↑" : "↓"}${Math.abs(t)}%`) + (Number.isFinite(n) ? " · 明天" + word(n) : "");
 }
 function viewShipping(e) {
   const o = e.o,
@@ -205,6 +207,7 @@ function viewLathe(e) {
   const o = e.o;
   if (!o.lathe) return "<p>机床还没修好。</p>";
   const modes = Object.entries(LATHE_MODES)
+    .filter(([id, m]) => !m.retired || o.lathe.mode === id)
     .map(
       ([id, m]) =>
         `<article class="${o.lathe.mode === id ? "current" : ""}"><h3>${esc(m.pick)}</h3><p>${esc(m.desc)}</p>${consequence({ cost: bundleText(m.input) + " × " + e.latheSlots() + " 批 / 天", gain: bundleText(m.output) + " × " + e.latheSlots() + " 批 / 天", effect: "每天 18:00 自动开工，缺料停工" })}${o.lathe.mode === id ? "<b>正在做这个</b>" : button("oLathe", id, "改成这个")}</article>`,

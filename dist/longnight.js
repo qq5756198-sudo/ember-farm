@@ -337,9 +337,13 @@ export class Engine extends UndertowEngine {
     this.s.horde.direction = dirs[0];
     if (k === 3) this.lx.bossT = LN.bossAfter;
     if (k > 1) {
-      this.toast("第 " + k + " 波来了（共 3 波）：从" + from + "过来。" + (k === 3 ? "这一波快打完时，" + BOSSES[this.lnBossId(N.n)].name + "会来。" : ""), "warn");
+      this.toast("第 " + k + " 波来了（共 3 波）：从" + from + "过来。" + (k === 3 ? this.lnBossNote(N) : ""), "warn");
       this.events.push({ type: "lnWave", wave: k });
     } else this.toast("第 1 波：从" + from + "过来。", "warn");
+  }
+  // 第三波来时说一句头目什么时候来（v0.26 起头目按时 03:00 来，那一层改这句）
+  lnBossNote(N) {
+    return "这一波快打完时，" + BOSSES[this.lnBossId(N.n)].name + "会来。";
   }
   lnSpawnBoss() {
     const N = this.ln.night,

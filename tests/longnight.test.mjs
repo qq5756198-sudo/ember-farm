@@ -103,11 +103,12 @@ test("the size grows by a fifth per night held and stops at double", () => {
   assert.deepEqual([0, 1, 2].map((k) => e.waveCount(k, 1)), LN.base);
   const sizes = [];
   for (let h = 0; h <= 12; h++) sizes.push(e.nightTotal(e.lnMult(h)));
-  assert.equal(sizes[0], 36);
+  // v0.26：每波 12/15/18（原来 10/12/14）
+  assert.equal(sizes[0], LN.base.reduce((a, b) => a + b, 0));
   for (let h = 1; h <= 12; h++) assert.ok(sizes[h] >= sizes[h - 1], "never shrinks");
   assert.ok(sizes[1] > sizes[0] * 1.15 && sizes[1] < sizes[0] * 1.25);
   assert.equal(e.lnMult(4), 2);
-  assert.equal(sizes[10], 72, "capped at double");
+  assert.equal(sizes[10], 2 * LN.base.reduce((a, b) => a + b, 0), "capped at double");
   assert.equal(sizes[12], sizes[10]);
 });
 
@@ -162,39 +163,43 @@ test("at 22:00 a scream starts three waves from the map edges; new infected come
   assert.equal(e.travel("residential"), false);
   assert.equal(e.s.region, "farm");
   assert.equal(e.sleep(), false);
-  // 第一波：10 只，一只一只从边上来
-  run(e, 20);
-  assert.equal(N.made, 10);
+  // 第一波：一只一只从边上来（v0.26 起 12 只）
+  run(e, 24);
+  assert.equal(N.made, LN.base[0]);
   assert.equal(N.left, 0);
   const kinds = new Set(e.enemies.filter((z) => z.horde).map((z) => z.type));
   for (const k of kinds) assert.ok(WAVE_MIX[0][k], "wave one only has its own kinds: " + k);
   for (const z of e.enemies.filter((q) => q.horde && !["spitter", "stalker"].includes(q.type))) assert.ok(z.homeX < 160 || z.homeX > 1280 || z.homeY < 160 || z.homeY > 860, "came from the edge: " + z.homeX + "," + z.homeY);
-  // 打完 20 秒后第二波提前来
+  // v0.26：打完以后第二波照样 00:00 来（空档用来修补）；等不及就敲警钟提前叫
   killWave(e);
-  assert.equal(N.kills, 10);
+  assert.equal(N.kills, LN.base[0]);
   run(e, 1);
   assert.equal(N.wave, 1);
   assert.ok(toasts.some((t) => t.text.includes("这一波打完了")));
   run(e, LN.gap + 1);
+  assert.equal(N.wave, 1, "no early wave by itself any more");
+  assert.equal(e.lnBell(), true);
   assert.equal(N.wave, 2);
   assert.ok(toasts.some((t) => t.text.includes("第 2 波来了")));
-  run(e, 25);
-  assert.equal(N.made, 22);
+  run(e, 30);
+  assert.equal(N.made, LN.base[0] + LN.base[1]);
   const kinds2 = new Set(e.enemies.filter((z) => z.horde && z.lnWave === 2).map((z) => z.type));
   for (const k of kinds2) assert.ok(WAVE_MIX[1][k], "wave two kinds: " + k);
-  // 第二波没打完，到 02:00（离 22:00 四个小时）第三波照样来；头目一起来，血条在农场上方
+  // 第二波没打完，到 02:00（离 22:00 四个小时）第三波照样来；v0.26：头目按时 03:00 来，血条在农场上方
   clock(e, FIRST + 1, LN.waveAt[2] - 120 + 0);
   e.s.minute = 120;
   run(e, 0.1);
   assert.equal(N.wave, 3);
-  assert.equal(N.boss, 0, "the boss waits till the third wave thins out");
-  assert.ok(toasts.some((t) => t.text.includes("快打完时，大块头会来")));
-  for (let s = 0; s < 60 && !N.boss; s++) {
+  assert.equal(N.boss, 0, "the boss comes at 03:00");
+  assert.ok(toasts.some((t) => t.text.includes("03:00，大块头会来")));
+  for (let s = 0; s < 20; s++) {
     run(e, 1);
-    if (!N.boss) killWave(e);
+    killWave(e);
   }
+  assert.equal(N.boss, 0, "still before 03:00");
+  clock(e, FIRST + 1, 180);
+  run(e, 0.1);
   assert.equal(N.boss, 1);
-  assert.equal(N.left, 0, "all of the third wave came first");
   const boss = e.enemies.find((z) => z.lnBoss && !z.dead);
   // 尸潮里的感染者都多两成五的血（统一高难度）；长夜的头目按 0.8 算回来，和废墟里的差不多
   assert.equal(boss.maxHp, Math.round(e.enemy("brute", 800, 500, true).maxHp * LN.bossHp));
@@ -302,17 +307,23 @@ test("clearing all three waves holds the night early; the boss kill counts as a 
   clock(e, FIRST, 1319.9);
   run(e, 0.2);
   const N = e.ln.night;
+  // v0.26：第二波敲警钟提前叫；第三波照时间 02:00 来；打完再敲一次叫头目（每晚最多提前两次）
   for (let w = 1; w <= 3; w++) {
-    run(e, 26);
+    run(e, 32);
     assert.equal(N.wave, w);
     assert.equal(N.left, 0, "wave " + w + " all out");
     killWave(e);
-    if (w < 3) run(e, LN.gap + 1);
+    run(e, 1);
+    if (w === 1) assert.equal(e.lnBell(), true);
+    if (w === 2) {
+      clock(e, FIRST + 1, LN.waveAt[2] - 120);
+      run(e, 0.2);
+    }
   }
-  // 第三波打完，头目才来
   assert.equal(N.boss, 0);
-  run(e, 0.2);
+  assert.equal(e.lnBell(), true);
   assert.equal(N.boss, 1);
+  assert.equal(e.lnBell(), false, "two early calls a night at most");
   killWave(e);
   const rec = e.ut.boss.brute;
   assert.equal(rec.wins, 1, "boss win recorded");
@@ -322,7 +333,7 @@ test("clearing all three waves holds the night early; the boss kill counts as a 
   assert.equal(e.ln.last.how, "cleared");
   assert.equal(e.ln.last.boss, true);
   // 三波 36 只加头目，每一只都算上（扔车门、尖叫招来的也算）
-  assert.ok(e.ln.last.kills >= 37, "every kill counted: " + e.ln.last.kills);
+  assert.ok(e.ln.last.kills >= LN.base.reduce((a, b) => a + b, 0) + 1, "every kill counted: " + e.ln.last.kills);
 });
 
 // ================= 没守住 =================
@@ -442,7 +453,7 @@ test("ten nights held give the ending card and the archive broadcast; three meme
   assert.ok(e.o.log.some((l) => l.text === ENDING.broadcast));
   for (const id of MEMENTO_IDS) assert.ok(e.qty(id, true) >= 1, id);
   // 之后长夜还来，但不再变大
-  assert.equal(e.nightTotal(), 72);
+  assert.equal(e.nightTotal(), 2 * LN.base.reduce((a, b) => a + b, 0));
   // 展柜：到档案馆捐
   e.w.museum.built = true;
   assert.equal(e.donateMemento(MEMENTO_IDS[0]), false, "must be at the museum");
@@ -538,7 +549,8 @@ test("the journal, alerts, top bar, report, ending card, museum, collection and 
   run(e, 0.2);
   run(e, 3);
   hud = UI.campaignHud(e);
-  assert.match(hud.raid, /长夜 · 第 1\/3 波 · 还剩 \d+ 只 · 天亮还有 5 小时/);
+  // v0.26：横幅上多一段“下一波还有几秒”
+  assert.match(hud.raid, /长夜 · 第 1\/3 波 · 还剩 \d+ 只 · 第 2 波 \d+ 秒后 · 天亮还有 5 小时/);
   assert.match(hud.alerts, /长夜 · 第 1\/3 波/);
   assert.doesNotMatch(hud.alerts, /尸潮来袭/);
   assert.match(journal(), /第 1\/3 波/);

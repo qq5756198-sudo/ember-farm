@@ -41,7 +41,7 @@ import {
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-export const SEASON_OBJECTS = ["seasonPlaza", "seasonFire", "seasonJiang", "seasonAli", "seasonAdou", "seasonLodger", "seasonHe", "seasonSheet"];
+export const SEASON_OBJECTS = ["seasonPlaza", "seasonJiang", "seasonAli", "seasonAdou", "seasonLodger", "seasonHe", "seasonSheet"];
 const SEEDS = ["seedRadish", "seedPotato", "seedTomato", "seedBean", "seedCorn", "seedPumpkin", "seedHerb", "seedCotton"].filter((id) => ITEMS[id]);
 const CROPS = ["radish", "potato", "tomato", "bean", "corn", "pumpkin", "rye", "herb", "cotton"].filter((id) => ITEMS[id]);
 const GUEST_STATES = ["waiting", "served", "left"];
@@ -1250,7 +1250,6 @@ export class Engine extends WinterEngine {
     if (ob?.type === "allianceCamp" && this.ss && !this.talkReason()) return menu("talk");
     if (SEASON_OBJECTS.includes(ob?.type)) {
       if (ob.type === "seasonPlaza") return menu("plaza");
-      if (ob.type === "seasonFire") return menu("talk");
       if (ob.type === "seasonJiang") {
         if (this.ss.jiang.phase === "none") this.jiangTalk();
         return menu("dialog", "jiang");
@@ -1324,7 +1323,7 @@ export class Engine extends WinterEngine {
     if (s.decor.length >= 2) mood += s.decor.length >= 4 ? 2 : 1;
     if (s.ali.murals >= 3) mood++;
     if (s.qin.phase === "left") mood++;
-    for (const r of this.c.residents) r.morale = clamp((r.morale ?? 60) + mood + ((s.trust[r.id] || 0) >= 6 ? 1 : 0), 0, 100);
+    if (this.dailyMood?.() !== false) for (const r of this.c.residents) r.morale = clamp((r.morale ?? 60) + mood + ((s.trust[r.id] || 0) >= 6 ? 1 : 0), 0, 100);
     if (s.apprentice) {
       const m = this.resident(s.apprentice.master);
       if (m) m.fatigue = clamp((m.fatigue || 0) + 6, 0, 100);

@@ -15,6 +15,7 @@ import * as EchoUI from '../dist/echoes-ui.js';
 import * as SupplyUI from '../dist/supply-ui.js';
 import * as RebuildUI from '../dist/rebuild-ui.js';
 import * as RebuildData from '../dist/rebuild-data.js';
+import * as TidyData from '../dist/tidy-data.js';
 import * as CampUI from '../dist/camp-ui.js';
 import * as CampData from '../dist/expansion-data.js';
 import * as FrontierUI from '../dist/frontier-ui.js';
@@ -471,7 +472,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // 物品来源与用途
   e.s.inventory.potato = 2; context.open('inventory'); click('item', 'potato'); clean(); assert.match(html(), /能做：/); assert.match(html(), /种土豆种子/); click('close');
   // 建造预览：相邻加成连线与提示
-  e.buildMode = 'canner'; Object.assign(e.s.player, { x: 1010, y: 560 }); run(3); e.buildMode = null;
+  e.buildMode = 'stove'; Object.assign(e.s.player, { x: 1010, y: 560 }); run(3); e.buildMode = null;
   click('save'); const saved = storage.get(Session.CAMPAIGN_SAVE);
   const back = Campaign.Engine.parse(saved);
   assert.equal(back.seasons.he.stage, 4); assert.ok(back.seasons.fest.held.includes(7)); assert.equal(back.seasons.apprentice.pupil, 'tieqiao');
@@ -805,7 +806,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   context.open('station', { buildingId: cook.id }); clean(); assert.match(html(), /掌勺料理/);
   click('rOpen', 'frontier:kitchen'); assert.match(html(), /<h2 id="modal-title">料理<\/h2>/); click('close');
   context.open('outpost', { view: 'shipping' }); clean(); assert.match(html(), /每日订单/); click('rOpen', 'camp:orders'); assert.match(html(), /<h2 id="modal-title">订单<\/h2>/); click('close');
-  context.open('home'); assert.match(html(), /房间与政策/); click('rOpen', 'frontier:rooms'); assert.match(html(), /<h2 id="modal-title">房间与政策<\/h2>/); click('close');
+  context.open('home'); assert.match(html(), /房间与家具/); click('rOpen', 'frontier:rooms'); assert.match(html(), /<h2 id="modal-title">房间与家具<\/h2>/); click('close');
   // 池塘按 E：只开钓鱼与养殖那一页
   const pond = e.objects.find((o) => o.type === 'pond');
   if (pond) { Object.assign(e.s.player, { x: pond.x, y: pond.y + 30 }); run(1); Object.assign(e.s.player, { x: pond.x, y: pond.y + 30 }); press('e'); run(1); if (context.inspect().menu) { assert.doesNotMatch(html(), /manual-nav|camp-tabs|返回营地手册/); click('close'); } }
@@ -1209,11 +1210,17 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const warn = document.querySelector('#horde-warning');
   assert.equal(warn.hidden, false); assert.match(warn.textContent, /长夜 · 第 1\/3 波/);
   assert.match(document.querySelector('#alert-bar').innerHTML, /长夜 · 第 1\/3 波/);
-  // 第三波和头目：血条在农场上方
+  // 第三波和头目：v0.26 头目 03:00 来；第三波打完，走到菜地北边的警钟按 E 提前叫（横幅上写着还有几秒）；血条在农场上方
   e.ln.night.wave = 2; e.lnWave(3); e.ln.night.left = 0;
   for (const z of e.enemies) if (z.horde) z.dead = true;
   e.s.player.hp = 100; e.invulnerable = 999; run(2);
-  assert.equal(e.ln.night.boss, 1);
+  assert.equal(e.ln.night.boss, 0, 'the boss waits for 03:00');
+  assert.match(document.querySelector('#horde-warning').textContent, /大块头 \d+ 秒后 · 可以敲警钟/);
+  assert.match(document.querySelector('#alert-bar').innerHTML, /可以敲警钟/);
+  Object.assign(e.s.player, { x: TidyData.LN_PACE.bell.x, y: TidyData.LN_PACE.bell.y + 24 }); run(2);
+  assert.match(document.querySelector('#context').innerHTML, /警钟/);
+  listeners.keydown({ key: 'e', target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key: 'e' }); run(4);
+  assert.equal(e.ln.night.boss, 1); assert.equal(e.td.bell.early, 1);
   const bar = document.querySelector('#boss-bar');
   assert.equal(bar.hidden, false); assert.match(bar.innerHTML, /<b>大块头<\/b>/); assert.match(bar.innerHTML, /长夜/);
   // 画面：红的天、雷、头目，四种大小
@@ -1266,4 +1273,98 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
   assert.equal(back.longnight.held, 1); assert.equal(back.longnight.exportDay, 50); assert.equal(back.longnight.origin, 'farmer');
   console.log('Longnight controller passed: the new-game origin picker (pick → start → the kit, the bag says the origin), 带着记忆重新开始 from the settings after the story (origin and gear picked, blueprints carried, the old home kept as a checkpoint), a long night through the DOM (red date, the 长夜 banner and alert, the boss bar on the farm, the dawn report and 睡到早上 8 点), the ending card, the export card that really exports and the settings line, the save-failure prompt with its export button, smoke/leader/saboteur marks and the new animals drawn at four sizes by day and night, every item on a new icon, and save/parse.');
+}
+
+// v0.26.0「整顿」: a v0.25 save restored from a file (the three retired buildings come down with their materials back, the stall goods
+// hang on the shipping box, the farmhouse overtime becomes a decree, the 营地整顿 toast on the first frame and the list in the next
+// morning's summary), the build list without the retired three, E on a facility opens its own page (the solar card; the lure page whose
+// 拉响信标 really sounds it; a broken trap mended with 用修理包修满), the repair kit's own button in the bag, the shipping box's 明天
+// and the listing form that sells by day, the residents' mood card, decree costs and the missing ladder step, the lodger in the alert
+// bar, the lathe rush, the bell, the lure rings and the mood marks drawn at four sizes by day and night, save/parse.
+{
+  let clock = 18000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  dailyOn = false;
+  // ---------- 一份 v0.25 的旧档，从文件恢复 ----------
+  const old = new Longnight.Engine(Longnight.newGameState(), () => {});
+  const sc = old.sc;
+  sc.act = 7; sc.claimed = ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6']; sc.choice = 'ration';
+  sc.letters = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7']; sc.flags.well = sc.flags.camp = sc.flags.farmerFed = true; sc.camp = { x: 560, y: 735 };
+  old.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((t) => t.id === 'network') + 1).map((t) => t.id); old.r.radio = true;
+  old.o.hospital = 'water'; old.o.youke = true; old.o.lathe = { mode: 'ammo', day: 0 };
+  old.s.day = 12; old.s.minute = 600; if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();
+  for (const [type, x, y] of [['canner', 700, 600], ['fishTrap', 1000, 800], ['stall', 760, 600]]) old.s.buildings.push({ id: 'old-' + type, type, x, y, rotation: 0, hp: Data.BUILDINGS[type].hp, fishDay: 12 });
+  old.c.stall = [{ item: 'potato', qty: 7, band: 'fair' }];
+  old.f.policy.work = 'overtime'; old.w.decrees = [];
+  const wood0 = old.s.storage.wood || 0;
+  context.open('restoreArchive', { files: { old: old.serialize() } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  let e = context.inspect().engine;
+  assert.equal(context.inspect().menu, null);
+  assert.ok(!e.s.buildings.some((b) => ['canner', 'fishTrap', 'stall'].includes(b.type)));
+  assert.equal(e.s.storage.wood - wood0, 8 + 6 + 10);
+  assert.deepEqual(e.td.listing.map((l) => [l.item, l.qty]), [['potato', 7]]);
+  assert.deepEqual(e.w.decrees, ['overtime']); assert.equal(e.f.policy.work, 'overtime'); assert.equal(e.o.lathe.mode, 'parts');
+  e.paused = false; run(3);
+  assert.ok(e.td.converted.told, 'told on the first frame');
+  context.open('outpost', { view: 'log' }); clean(); assert.match(html(), /营地整顿/); click('close');
+  // 建造菜单里没有那三样
+  context.open('build'); clean();
+  for (const name of ['罐装机', '鱼篓', '农场摊位']) assert.ok(!html().includes('<h3>' + name + '</h3>'), name + ' is not offered');
+  click('close');
+  // ---------- 设施卡：按 E 打开自己的那一页 ----------
+  e.s.region = 'farm'; e.assignRegion();
+  const B = (type, x, y) => { const b = { id: 'td-' + type + '-' + e.s.idCounter++, type, x, y, rotation: 0, hp: Data.BUILDINGS[type].hp }; e.s.buildings.push(b); e.navRevision++; return b; };
+  const solar = B('solar', 420, 880);
+  Object.assign(e.s.player, { x: solar.x, y: solar.y + 40 }); run(2);
+  assert.match(document.querySelector('#context').innerHTML, /太阳能板 · 看看情况/);
+  press('e'); run(1);
+  assert.equal(context.inspect().menu, 'building'); clean(); assert.match(html(), /营地的电/); click('close');
+  const lure = B('lure', 300, 620); e.c.energy = 40;
+  Object.assign(e.s.player, { x: lure.x, y: lure.y + 40 }); run(2); press('e'); run(1);
+  assert.equal(context.inspect().menu, 'building'); clean(); assert.match(html(), /拉响信标/);
+  click('tdLure', lure.id); assert.ok(e.pulledLure()); assert.equal(e.c.energy, 35); assert.match(html(), /正在响/); click('close');
+  const trap = B('trap', 1000, 240); trap.hp = 20; e.s.storage.repairKit = 1;
+  Object.assign(e.s.player, { x: trap.x, y: trap.y + 40 }); run(2); press('e'); run(1);
+  assert.equal(context.inspect().menu, 'building'); clean(); assert.match(html(), /用修理包修满（有 1 个）/);
+  click('tdKit', trap.id); assert.equal(trap.hp, Data.BUILDINGS.trap.hp); click('close');
+  // 行囊里：修理包自己的按钮
+  e.s.inventory.repairKit = 1; trap.hp = 30;
+  context.open('inventory'); click('item', 'repairKit'); clean(); assert.match(html(), /data-action="useItem" data-id="repairKit"/);
+  click('useItem', 'repairKit'); assert.equal(trap.hp, Data.BUILDINGS.trap.hp); assert.ok(!e.s.inventory.repairKit); click('close');
+  // ---------- 出货箱：明天的行情、挂牌 ----------
+  e.s.inventory.tomato = 6; e.s.storage.bread = 30; e.s.minute = 360;
+  context.open('outpost', { view: 'shipping' }); clean();
+  assert.match(html(), /明天/); assert.match(html(), /挂牌 · 1\/3 格/);
+  document.querySelector('#td-list-item').value = 'bread'; document.querySelector('#td-list-qty').value = '4';
+  click('tdList'); assert.equal(e.td.listing.length, 2); assert.match(html(), /挂牌 · 2\/3 格/); click('close');
+  const money = e.s.money; e.advanceMinutes(6 * 60); assert.ok(e.s.money > money, 'sold by day');
+  // ---------- 居民的心情、法令的代价、生活水准差哪一格 ----------
+  for (const id of ['farmer', 'medic']) e.recruit(id);
+  B('bed', 700, 330);
+  e.w.decrees = ['ration'];
+  context.open('rebuild', { tab: 'residents' }); clean(); assert.match(html(), /心情 /); assert.match(html(), /配给卡/); click('close');
+  context.open('outpost', { view: 'decrees' }); clean(); assert.match(html(), /让谁不高兴：阿禾、许医生，心情 −10/); assert.match(html(), /差「/); click('close');
+  // ---------- 警报栏：借宿 ----------
+  e.ss.lodger = { name: '过路人', look: 0, gift: 'item', stay: false, phase: 'asking', day: e.s.day, qin: false }; run(4);
+  assert.match(document.querySelector('#alert-bar').innerHTML, /想借宿/); e.ss.lodger = null;
+  // ---------- 机床加急 ----------
+  e.s.minute = 600; context.open('outpost', { view: 'lathe' }); clean(); assert.match(html(), /今晚加急/); assert.doesNotMatch(html(), /优先弹药/);
+  click('tdRush'); assert.equal(e.td.lathe.rush, e.s.day); assert.match(html(), /说好了/); click('close');
+  // ---------- 画面：警钟、信标的圈、头上的心情，四种大小，白天和夜里 ----------
+  e.objects.push({ type: 'tdBell', name: '警钟', x: TidyData.LN_PACE.bell.x, y: TidyData.LN_PACE.bell.y, icon: 55 });
+  e.c.residents[0].morale = 90; e.c.residents[1].morale = 10;
+  e.td.mood[e.c.residents[0].id] = { insp: { day: e.s.day, kind: 'farmer' }, last: e.s.day, strike: 0 };
+  e.pullLure(lure.id);
+  for (const night of [false, true]) {
+    e.s.minute = night ? 1380 : 600;
+    for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+  }
+  context.inspect().renderer.resize(1366, 600, 1);
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.tidy.listing.length, e.td.listing.length); assert.equal(back.tidy.lathe.rush, e.td.lathe.rush); assert.equal(back.tidy.converted.told, true);
+  console.log('Tidy controller passed: a v0.25 save restored from a file (retired buildings down with materials back, stall goods on the shipping box, overtime as a decree, the lathe off ammo, the 营地整顿 toast on the first frame), the build list without the retired three, E opening the solar card, the lure page that sounds it and a broken trap mended with a kit, the kit\'s own button in the bag, 明天 and the listing that sells by day, the mood card, decree costs and the missing ladder step, the lodger alert, the lathe rush, the bell/lure/mood marks drawn at four sizes by day and night, and save/parse.');
 }

@@ -106,9 +106,10 @@ export function alertBar(e) {
 function ladderPips(e) {
   const checks = e.ladderChecks(),
     level = e.ladderLevel();
+  const miss = level < LADDER.length ? LADDER[level] : null;
   return `<ol class="ladder" aria-label="生活水准 第${level}级">${LADDER.map(
     (l, i) => `<li class="${i < level ? "on" : checks[i] ? "partial" : ""}" title="${esc(l.need)}"><span>${i < level ? "●" : "○"}</span>${esc(l.name)}</li>`,
-  ).join("")}</ol>`;
+  ).join("")}</ol>${miss ? `<small class="ladder-need">差「${esc(miss.name)}」：${esc(miss.need)}</small>` : '<small class="ladder-need">四格都齐了。</small>'}`;
 }
 function winterStrip(e) {
   const w = e.w,
@@ -144,7 +145,7 @@ export function renderWinterJournal(e, ui = {}) {
 export function renderRebuildPlus(e, tab, h, ui, fui) {
   const html = renderRebuild(e, tab, h, ui, fui);
   if (tab !== "residents" || !e.w) return html;
-  const card = `<section class="rebuild-card winter-card"><h3>前哨法令簿与生活水准</h3>${ladderPips(e)}<p>生活水准每升一级，加工快 5%；第二级起队员不因缺餐变慢，第三级起居民士气每天 +2。现行法令：${e.w.decrees.length ? e.w.decrees.map((d) => DECREES[d].name).join("、") : "无"}（${e.w.decrees.length}/${e.decreeSlots()}）。</p><div class="button-row">${button("wView", "decrees", "翻开法令簿")}</div></section>`;
+  const card = `<section class="rebuild-card winter-card"><h3>前哨法令簿与生活水准</h3>${ladderPips(e)}<p>生活水准每升一级，加工快 5%，居民该有的心情 +2；第二级起队员不因缺餐变慢。现行法令：${e.w.decrees.length ? e.w.decrees.map((d) => DECREES[d].name).join("、") : "无"}（${e.w.decrees.length}/${e.decreeSlots()}）。</p><div class="button-row">${button("wView", "decrees", "翻开法令簿")}</div></section>`;
   const at = html.indexOf('<div class="detail-scroll">');
   return at < 0 ? html + card : html.slice(0, at + 27) + card + html.slice(at + 27);
 }

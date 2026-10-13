@@ -1061,7 +1061,7 @@ export class Engine extends OutpostEngine {
     super.workHour();
     const w = this.s.winter;
     if (!w) return;
-    const mult = (this.decree("rotation") ? 0.6 : 1) * (this.decree("overtime") ? 1.5 : 1);
+    const mult = (this.decree("rotation") ? 0.6 : 1) * (this.decree("overtime") ? (this.overtimeFatigue?.() ?? 1.5) : 1);
     if (mult !== 1)
       for (const r of this.c.residents) {
         if (!fatigue.has(r.id)) continue;
@@ -1104,7 +1104,7 @@ export class Engine extends OutpostEngine {
       ((w.ladder || 0) >= 3 ? 2 : 0) +
       (this.showcaseDone("photos") ? 1 : 0);
     const injured = this.decree("injured") ? -1 : 0;
-    for (const r of this.c.residents) r.morale = clamp((r.morale ?? 60) + morale + (r.id === "medic" ? 0 : injured), 0, 100);
+    if (this.dailyMood?.() !== false) for (const r of this.c.residents) r.morale = clamp((r.morale ?? 60) + morale + (r.id === "medic" ? 0 : injured), 0, 100);
     if (w.meteor.day && w.meteor.day < this.s.day && !w.meteor.claimed) w.meteor.day = 0;
   }
   update(dt, input = {}) {

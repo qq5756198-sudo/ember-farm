@@ -191,7 +191,7 @@ function viewTalk(e) {
     .join("");
   const comfort = people
     .filter((p) => p.sad)
-    .map((p) => `<article><h3>安慰${esc(p.name)}</h3>${consequence({ cost: "一晚只聊一次", gain: (e.resident(p.id) ? "士气 +12、" : "") + "信任 +2", effect: "其他人这晚就没聊上" })}${button("sTalk", "comfort:" + p.id, "坐过去", dis)}</article>`)
+    .map((p) => `<article><h3>安慰${esc(p.name)}</h3>${consequence({ cost: "一晚只聊一次", gain: (e.resident(p.id) ? "士气 +12（低落的当晚回到平常）、" : "") + "信任 +2", effect: "其他人这晚就没聊上" })}${button("sTalk", "comfort:" + p.id, "坐过去", dis)}</article>`)
     .join("");
   return `<p>晚饭后 19:00–23:00，援建营地的营火边。${reason ? `<span class="story-lack">${esc(reason)}。</span>` : at ? "" : '<span class="story-lack">走到营火边再开口。</span>'}</p><ul class="talk-people">${who}</ul><div class="story-choice">${comfort}${topics}</div>`;
 }
@@ -224,7 +224,7 @@ function nextStep(e, id) {
   if (id === "jiang") return JIANG_TASKS[s.jiang.phase]?.name || "池塘归你钓";
   if (s.skills[id]) return "学会了" + SKILL_NAMES[s.skills[id]];
   if (s.apprentice?.pupil === id) return "正在学" + SKILL_NAMES[s.apprentice.skill];
-  return (e.ss.trust[id] || 0) >= 6 ? "信任已满三颗心" : "信任到三颗心：" + (e.resident(id) ? "士气每天 +1" : "缺餐也不赌气");
+  return (e.ss.trust[id] || 0) >= 6 ? "信任已满三颗心" : "信任到三颗心：" + (e.resident(id) ? "该有的心情 +2" : "缺餐也不赌气");
 }
 function viewPeople(e) {
   const rows = e
@@ -242,7 +242,7 @@ function viewPeople(e) {
       return `<li>${portrait(lookFor(e, p.id), p.name)}<div><b>${esc(p.name)}</b><small>${esc(p.title)}${bday ? " · 今天生日" : BIRTHDAYS[p.id] ? " · 生日：每月第" + BIRTHDAYS[p.id] + "天" : ""}</small>${hearts(e.ss.trust[p.id] || 0)}<p>喜欢：${likes.map((x) => esc(ITEMS[x].name)).join("、") || "—"}　下一步：${esc(nextStep(e, p.id))}</p></div><div class="button-row">${given ? "<small>今天送过了</small>" : gifts}</div></li>`;
     })
     .join("");
-  return `<p>信任来自送礼（每人每天一次）、营火夜谈、节庆和故事。居民信任满三颗心士气每天 +1；援建队员满三颗心，缺一顿饭也不会赌气变慢。</p><ul class="people">${rows}</ul>${viewApprentice(e)}`;
+  return `<p>信任来自送礼（每人每天一次）、营火夜谈、节庆和故事。居民信任满三颗心，该有的心情 +2；援建队员满三颗心，缺一顿饭也不会赌气变慢。</p><ul class="people">${rows}</ul>${viewApprentice(e)}`;
 }
 function viewApprentice(e) {
   const a = e.ss.apprentice;

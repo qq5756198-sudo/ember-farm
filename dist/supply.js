@@ -139,7 +139,7 @@ export class Engine extends RebuildEngine {
   goalOptions(){
     return [{id:'auto',name:'跟随当前主线'},...(this.r.contract?[{id:'contract',name:'合同 · '+this.r.contract.name}]:[]),
       ...Object.keys(PROJECTS).filter(id=>!this.projectDone(id)).map(id=>({id:'project:'+id,name:'公共工程 · '+PROJECTS[id].name})),
-      ...['workbench','bed','breeder','canner','irrigation','solar','drone','tower'].map(id=>({id:'building:'+id,name:'设施 · '+BUILDINGS[id].name})),
+      ...['workbench','bed','breeder','canner','irrigation','solar','drone','tower'].filter(id=>!BUILDINGS[id].retired).map(id=>({id:'building:'+id,name:'设施 · '+BUILDINGS[id].name})),
       ...Object.keys(ARCS).filter(id=>this.resident(id)&&this.r.arcs[id]<3).map(id=>({id:'arc:'+id,name:'愿望 · '+RESIDENTS[id].name})),
       ...Object.keys(RESEARCH).filter(id=>!this.r.tech[id]).map(id=>({id:'research:'+id,name:'调查 · '+RESEARCH[id].name})),
       ...Object.keys(OUTPOSTS).map(id=>({id:(this.r.outposts[id]>=2?'cooperation:':'outpost:')+id,name:'地区 · '+OUTPOSTS[id].name}))];

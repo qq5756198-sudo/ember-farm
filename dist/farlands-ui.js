@@ -89,8 +89,9 @@ function farStrip(e) {
   if (peng) rows.push(`<div class="far-row peng ${p.phase === "attacked" ? "danger" : ""}"><p><b>雨巷</b>${esc(peng)}</p>${["asking", "attacked", "offer"].includes(p.phase) ? button("xMark", "peng", "标出位置") : ""}</div>`);
   const hm = f.hemc;
   if (hm.debt) {
-    const pay = e.installment();
-    rows.push(`<div class="far-row hemc"><p><b>垫付</b>欠贺满仓的${esc(BUILDINGS[hm.debt.type]?.name || "设施")}：下一期 ${esc(costLine(e, pay))}</p>${act("xRepay", "", "还这一期", e.repayReason())}</div>`);
+    const pay = e.installment(),
+      due = hemcDueText(e);
+    rows.push(`<div class="far-row hemc ${e.hemcDue?.()?.late ? "danger" : ""}"><p><b>垫付</b>欠贺满仓的${esc(BUILDINGS[hm.debt.type]?.name || "设施")}：下一期 ${esc(costLine(e, pay))}${due ? "（" + esc(due) + "）" : ""}</p>${act("xRepay", "", "还这一期", e.repayReason())}</div>`);
   } else if (e.hemcHere() && hm.phase !== "open") {
     const a = e.hemcAudit();
     rows.push(`<div class="far-row hemc"><p><b>账房</b>贺满仓在看前哨的账：出货记录 ${Math.min(a.ledger, 3)}/3、援建清单 ${Math.min(a.bundles, 2)}/2。</p>${button("xMark", "hemc", "标出位置")}</div>`);
@@ -243,11 +244,19 @@ function viewHemc(e) {
   if (h.debt) {
     const d = h.debt,
       left = Object.fromEntries(Object.entries(d.total).map(([id, n]) => [id, n - (d.paid[id] || 0)]).filter(([, n]) => n > 0));
-    return `${head("hemc", "账要一笔一笔还。")}<div class="story-choice"><article><h3>垫付：${esc(BUILDINGS[d.type]?.name || d.type)}</h3>${consequence({ cost: "这一期 " + costLine(e, e.installment()), gain: "还剩 " + bundleText(left), effect: "分三期还，不收利息" })}${act("xRepay", "", "还这一期", e.repayReason(), true)}</article></div>`;
+    return `${head("hemc", "账要一笔一笔还。")}<div class="story-choice"><article><h3>垫付：${esc(BUILDINGS[d.type]?.name || d.type)}</h3>${consequence({ cost: "这一期 " + costLine(e, e.installment()), gain: "还剩 " + bundleText(left), effect: hemcDueText(e) || "分三期还，不收利息" })}${act("xRepay", "", "还这一期", e.repayReason(), true)}</article></div>`;
   }
-  return `${head("hemc", L.open)}<p>建造菜单里，材料不够的设施会多一个“贺满仓垫付”按钮。先建，再分三期还，不收利息。${h.advances ? "已经还清 " + h.advances + " 笔。" : ""}</p><div class="button-row"><button data-menu="build" class="primary">打开建造</button></div>`;
+  return `${head("hemc", L.open)}<p>建造菜单里，材料不够的设施会多一个“贺满仓垫付”按钮。先建，再分三期还：每期 3 天到期，按时还不收利息；逾期每天多一成（最多三成），逾期过的还清后 7 天不再垫付。${h.advances ? "已经还清 " + h.advances + " 笔。" : ""}</p><div class="button-row"><button data-menu="build" class="primary">打开建造</button></div>`;
 }
 
+// 贺满仓的期限：第几天前还、逾期几天
+function hemcDueText(e) {
+  const d = e.hemcDue?.();
+  if (!d) return "";
+  if (d.late > 0) return "第 " + d.k + " 期逾期 " + d.late + " 天，多还 " + Math.round(d.extra * 100) + "%";
+  const left = d.due - e.s.day;
+  return "第 " + d.k + " 期" + (left <= 0 ? "今天到期" : "第 " + d.due + " 天前还（还有 " + left + " 天）") + "；逾期每天多一成";
+}
 const TITLES = { night: "夜里的抉择", nightlog: "夜里的事", dog: "麦穗", phone: "快捷菜单" };
 export function farlandsTitle(ui, fallback) {
   if (ui.view === "dialog" && (ui.id === "peng" || ui.id === "hemc")) return FNPCS[ui.id].name;

@@ -1,0 +1,142 @@
+/* v0.26.0「整顿」：设施卡、居民卡上的心情三档、出货箱的挂牌、机床加急、队员卡上的带徒、法令上“让谁不高兴”、整顿清单。
+   颜色只用调色板：深色木头、锈铁边、余烬橙；好事用金色，坏事用暗红。 */
+
+/* ---------- 设施卡 ---------- */
+.td-card {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 2px solid #4a3c30;
+  background: #251d17;
+}
+.td-card p {
+  margin: 4px 0;
+}
+.td-card .gold,
+.td-mood .gold,
+.td-rush .gold {
+  color: #e9c05a;
+}
+.td-card .button-row {
+  margin-top: 8px;
+  align-items: center;
+}
+.td-card small.story-lack,
+.td-rush small.story-lack,
+.td-crew small.story-lack {
+  display: block;
+}
+
+/* ---------- 心情三档 ---------- */
+.td-mood {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-left: 4px solid #85857a;
+  background: #1f1914;
+}
+.td-mood.high {
+  border-left-color: #e9c05a;
+}
+.td-mood.low {
+  border-left-color: #a8433a;
+}
+.td-mood p {
+  margin: 3px 0;
+}
+.td-why {
+  margin: 4px 0;
+  padding-left: 18px;
+  font-size: 0.92em;
+}
+.td-why li.up {
+  color: #c4d48a;
+}
+.td-why li.down {
+  color: #e9a08a;
+}
+.a11y-color .td-why li.up {
+  color: #9fd3ff;
+}
+.a11y-color .td-why li.down {
+  color: #ffe066;
+}
+
+/* ---------- 出货箱的挂牌 ---------- */
+.td-listing {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 2px dashed #4a3c30;
+}
+.td-listing h3 {
+  margin: 0 0 4px;
+}
+.td-list-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  margin: 8px 0;
+}
+.td-list-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.td-list-form select {
+  max-width: 100%;
+}
+.td-list-form input {
+  width: 5em;
+}
+
+/* ---------- 机床加急、队员卡、法令、整顿清单 ---------- */
+.td-rush,
+.td-crew,
+.td-converted {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 2px solid #4a3c30;
+  background: #221a14;
+}
+.td-crew-grid article h4 {
+  margin: 0 0 4px;
+}
+.td-bar {
+  height: 8px;
+  margin: 6px 0 2px;
+  background: #352a21;
+  border: 1px solid #140f0b;
+}
+.td-bar span {
+  display: block;
+  height: 100%;
+  background: #e5823a;
+}
+.td-who {
+  margin: 2px 0 6px;
+  color: #e9a08a;
+  font-size: 0.92em;
+}
+.td-converted h4 {
+  margin: 0 0 6px;
+  color: #e9c05a;
+}
+.td-converted ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.td-defense {
+  margin: 6px 0;
+  color: #e9c05a;
+}
+.ladder-need {
+  display: block;
+  margin: 4px 0 8px;
+  color: #c9c2a8;
+}
+@media (max-width: 640px) {
+  .td-list-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -38,14 +38,6 @@ export class Renderer extends WinterRenderer {
       t = this.time,
       s = e.ss;
     if (o.type === "seasonPlaza") return this.drawPlaza(o, e);
-    if (o.type === "seasonFire") {
-      if (!e.talkReason()) {
-        for (let k = 0; k < 4; k++) rect(x - 8 + k * 5, y - 28 - ((t * 20 + k * 9) % 24), 3, 3, k % 2 ? "#f3a24a" : "#f3d27a");
-        this.label(o, e, "#f3d27a", true);
-        this.text("营火 · 夜谈", x, y - 46, "#f3d27a", 11);
-      }
-      return;
-    }
     if (o.type === "seasonJiang") {
       this.personSimple(x, y, "jiang", 0);
       rect(x + 14, y - 40, 3, 34, "#7a5a36");
