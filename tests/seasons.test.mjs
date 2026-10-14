@@ -410,16 +410,23 @@ test("campfire talks happen once a night after dinner and build trust or morale"
   assert.ok(toasts.some((t) => /尸潮大概第/.test(t.text)), "every third talk brings news");
 });
 
-test("gifts: only liked items, once a day per person, doubled on birthdays; trust has real effects", () => {
+// v0.30「人情」改了送礼：喜好要猜（什么都能送，送的是一般就不长信任）、每人 7 天最多 2 次、要走到他跟前；生日照旧翻倍
+test("gifts: likes are guessed, two a week per person, given in person, doubled on birthdays; trust has real effects", () => {
   const { e, toasts } = make();
   camp(e);
   stock(e, { jam: 3, herb: 2 });
-  assert.match(e.giftReason("farmer", "herb"), /不是他喜欢/);
+  const r = e.resident("farmer");
+  Object.assign(e.s.player, { x: r.x, y: r.y });
+  assert.equal(e.giftReason("farmer", "herb"), "", "anything giftable can be tried");
   assert.equal(e.giveGift("farmer", "jam"), true);
   assert.equal(e.ss.trust.farmer, 1);
-  assert.equal(e.giveGift("farmer", "jam"), false, "once a day");
-  e.s.day = BIRTHDAYS.farmer;
+  assert.equal(e.giveGift("farmer", "herb"), true, "a plain gift is taken politely");
+  assert.equal(e.ss.trust.farmer, 1);
+  assert.match(e.giftReason("farmer", "jam"), /7 天送过 2 次/);
+  assert.equal(e.giveGift("farmer", "jam"), false, "twice a week");
+  e.s.day = BIRTHDAYS.farmer + 28;
   assert.equal(e.birthday("farmer"), true);
+  Object.assign(e.s.player, { x: r.x, y: r.y });
   assert.equal(e.giveGift("farmer", "jam"), true);
   assert.equal(e.ss.trust.farmer, 3);
   assert.ok(toasts.some((t) => /生日/.test(t.text)));
@@ -742,6 +749,7 @@ test("plaza, gift, apprentice, lodger and link buttons change real state through
 });
 
 // ---------- 审查发现的回归 ----------
+// v0.30「人情」：咬钩后按 E 不再直接钓上来，而是开始收线；收满了才上来
 test("a bite next to 江伯 is hooked by E instead of opening his dialog", () => {
   const { e } = make();
   camp(e);
@@ -755,11 +763,17 @@ test("a bite next to 江伯 is hooked by E instead of opening his dialog", () =>
   assert.equal(e.startFishing(), true);
   e.c.fishing.phase = "bite";
   assert.doesNotMatch(e.context(e.nearestObject()) || "", /江伯/);
-  const fish = e.quantityForCost("fish", true) + e.quantityForCost("riverFish", true) + e.quantityForCost("nightFish", true);
+  // 池塘里钓上来的可能是原来那几种，也可能是回暖、秋收白天的鲫鱼：数一数图鉴里记下的条数
+  const caught = () => Object.values(e.kin.fish).reduce((a, b) => a + b, 0);
+  const fish = caught();
   e.interact();
   assert.equal(menu, null, "no dialog opened");
   assert.equal(e.c.fishing, null);
-  assert.ok(e.quantityForCost("fish", true) + e.quantityForCost("riverFish", true) + e.quantityForCost("nightFish", true) > fish);
+  assert.ok(e.reeling(), "the reel starts");
+  e._reel.prog = 0.99;
+  e.reelTick(0.1, true);
+  assert.ok(!e.reeling());
+  assert.equal(caught(), fish + 1);
 });
 
 test("the chooser never hides the object older rules would pick (backpack, terminal, plots)", () => {

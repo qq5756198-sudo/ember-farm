@@ -457,8 +457,9 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   context.open('outpost', { view: 'talk' }); clean(); assert.match(html(), /说说以前/);
   click('sTalk', 'past'); assert.ok((e.ss.trust.farmer || 0) >= 1); assert.equal(context.inspect().menu, null);
   // 人物关系：送礼、带徒
-  e.s.storage.jam = 2; click('sView', 'people'); clean(); assert.match(html(), /人物关系|喜欢/);
-  click('sGift', 'farmer:jam'); assert.ok(e.ss.trust.farmer >= 2);
+  // v0.30：送礼要走到他跟前（人物关系页上的送礼按钮只在跟前出现）
+  e.s.storage.jam = 2; { const rf = e.resident('farmer'); Object.assign(e.s.player, { x: rf.x, y: rf.y }); } click('sView', 'people'); clean(); assert.match(html(), /人物关系|喜欢/); assert.match(html(), /data-action="kinGift" data-id="farmer\|jam"/);
+  click('kinGift', 'farmer|jam'); assert.ok(e.ss.trust.farmer >= 2);
   click('sApprentice', 'farmer:tieqiao'); assert.equal(e.ss.apprentice?.pupil, 'tieqiao'); clean(); click('close');
   // 同处多对象选择
   e.ss.lodger = { name: '赶路的木匠老韩', look: 1, gift: 'item', stay: false, phase: 'staying', day: e.s.day, qin: false }; e.ss.qin.phase = 'left';
@@ -1721,11 +1722,18 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   Object.assign(e.s.player, { x: parcel.x, y: parcel.y + 4 }); run(3);
   const band = e.qty('bandage', true); press('e'); run(1); assert.equal(e.qty('bandage', true), band + 2); assert.ok(e.al.good.taken);
   // ---------- 睡醒的账本：开着页面就等着，关了再出来，点一下收起 ----------
-  e.s.storage.bread = (e.s.storage.bread || 0) + 80; e.s.minute = 21 * 60; e.c.workClock = 0;
-  context.open('home'); click('sleep'); run(2);
+  // 夜里偶尔出事（随机的偷菜、夜袭……）的早上照规矩弹日终总结、不出账本：那就再睡一晚，直到一个平安的早上
   const led = document.querySelector('#ledger');
-  for (let i = 0; i < 6 && context.inspect().menu; i++) { if (e.dailyCard?.()) e.dailyLater?.(); click('close'); run(1); }
-  run(2);
+  let summaryMorning = true;
+  for (let night = 0; night < 4 && summaryMorning; night++) {
+    e.s.storage.bread = (e.s.storage.bread || 0) + 80; e.s.minute = 21 * 60; e.c.workClock = 0;
+    context.open('home'); click('sleep'); run(2);
+    summaryMorning = false;
+    for (let i = 0; i < 6 && context.inspect().menu; i++) { if (/日终总结/.test(html())) summaryMorning = true; if (e.dailyCard?.()) e.dailyLater?.(); click('close'); run(1); }
+    run(2);
+    if (summaryMorning) assert.equal(led.hidden, true, 'no ledger on a summary morning');
+  }
+  assert.equal(summaryMorning, false, 'a calm morning within four nights');
   assert.equal(context.inspect().menu, null);
   assert.equal(led.hidden, false, 'the ledger shows once the pages are closed');
   assert.match(led.innerHTML, /第 \d+ 天的账/); assert.match(led.innerHTML, /夜里：/); assert.match(led.innerHTML, /今天：/);
@@ -1753,4 +1761,179 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(back.almanac.intro.told, true); assert.ok(back.almanac.trees[tree.id]); assert.equal(back.almanac.herd.flock.pts, AL.HERD.pet);
   assert.equal(back.buildings.find((b) => b.id === deco.id)?.decor, 'globe');
   console.log('Almanac controller passed: a v0.28 save restored from a file (the cold snap moved onto the cold season, the 四时 notice on the first frame), the HUD date with the season, the date button opening the calendar with the four seasons, the farm board\'s season section, the seed picker\'s in-season tag, the radio page with today\'s luck, the build list with the jars and trees (the decor only once owned), a pickle jar placed, filled with E and taken, the coop card petting the flock, an old peach tree cut with E and a peach grafted through the build flow, a decor picked from its build card and placed, forage picked with E, mushrooms sorted from 许医生\'s card, a parcel at the door opened with E, the morning ledger after sleeping (held behind pages, shown after, a click hides it), jars/trees/decor/forage/old trees/debris drawn at four sizes by day and night in all four seasons, and save/parse.');
+}
+
+// v0.30.0「人情」: a v0.29 save restored from a file (the old likes stay known, the 人情 notice on the first frame), the people page
+// saying where everyone is with a marker button, a gift given in person from the people page, 阿禾 waiting at the field on a calm
+// evening and the heart talk opened with E, the second talk sending you to a marked cupboard in the residential ruin (E takes it),
+// the lantern night's lamps lit with E, a mother at the farmhouse door answered with E and the child taken in, fishing at the
+// valley river (E casts, E on the bite starts the reel, holding E reels in, the reel card and the 收线 label, the touch button
+// reeling the same way), 许医生 testing the water sample from the residents page, the fish book, the ring given and said at the
+// fire with E, the feast paid on the plaza, lamps/the child/the waiting mother/the water stakes/the marked cupboard/the partner at
+// your side/the fishing line/the "…" over someone with something to say/the sandbags drawn at four sizes by day and night, and save/parse.
+{
+  let clock = 23000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const keydown = (key) => listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false });
+  const press = (key) => { keydown(key); listeners.keyup({ key }); };
+  const ctxLine = () => document.querySelector('#context').innerHTML;
+  const goTo = (e, region, x, y) => { e.s.visited = { ...(e.s.visited || {}), [region]: true }; e.s.region = region; e.enemies = e.s.enemies[region] = (e.s.enemies[region] || []).filter((z) => !z.dead && false); e.assignRegion(); if (x != null) Object.assign(e.s.player, { x, y }); };
+  dailyOn = false;
+  const KD = await import('../dist/kin-data.js');
+  const KS = await import('../dist/kin-story.js');
+  const Almanac = await import('../dist/almanac.js');
+  // ---------- 一份 v0.29 的旧档，从文件恢复 ----------
+  const old = new Almanac.Engine(Almanac.newGameState(), () => {});
+  const sc = old.sc;
+  sc.act = 8; sc.claimed = ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7']; sc.choice = 'ration';
+  sc.letters = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8']; sc.flags.well = sc.flags.camp = sc.flags.farmerFed = true; sc.camp = { x: 560, y: 735 };
+  old.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((t) => t.id === 'broadcast') + 1).map((t) => t.id); old.r.radio = true;
+  old.o.hospital = 'water'; old.o.youke = true; old.o.lathe = { mode: 'parts', day: 0 }; old.o.toll = 'refuse'; old.o.raid.phase = 'won';
+  old.assignRegion();
+  for (const id of ['farmer', 'medic', 'mechanic']) old.recruit(id);
+  old.addHelper('tieqiao');
+  old.addCrew({ id: 'youke', name: '尤可', trait: 'nightowl', role: 'build', look: 'youke' });
+  Object.assign(old.ss.he, { stage: 4 }); Object.assign(old.ss.jiang, { phase: 'done', rod: 2 }); Object.assign(old.ss.laoqin, { met: true, quest: true });
+  for (let i = 0; i < 3; i++) old.s.buildings.push({ id: 'kb' + i, type: 'bed', x: 240 + i * 56, y: 980, rotation: 0, hp: 90, open: false });
+  old.s.day = 20; old.s.minute = 600; old.s.weather = '晴朗'; if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();
+  old.s.visited = { ...(old.s.visited || {}), residential: true, valley: true };
+  old.s.storage.bread = 60; old.s.storage.jam = 3;
+  context.open('restoreArchive', { files: { old: old.serialize() } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  let e = context.inspect().engine;
+  assert.equal(context.inspect().menu, null);
+  assert.ok(e.kin && e.kin.intro, 'the 人情 record was added to the old save');
+  assert.equal(e.kin.know.farmer.jam, 'like', 'what the old page showed is still known');
+  e.paused = false; if (e.dy) e.dy.pending = null; run(3);
+  assert.ok(e.kin.intro.told, 'told on the first frame');
+  context.open('outpost', { view: 'log' }); clean(); assert.match(html(), /人情：送礼要猜/); click('close');
+  // ---------- 人物关系：这会儿在哪、标出位置 ----------
+  goTo(e, 'farm', 300, 900);
+  context.open('outpost', { view: 'people' }); clean();
+  assert.match(html(), /这会儿：/); assert.match(html(), /data-action="kinMark" data-id="he"/);
+  assert.doesNotMatch(html(), /data-action="kinGift" data-id="farmer\|/, 'no gift button from across the farm');
+  click('kinMark', 'he'); assert.equal(e.guidance.target.label, '何大勺'); assert.equal(context.inspect().menu, null);
+  // ---------- 送礼：走到跟前，人物页上送 ----------
+  const rf = e.resident('farmer');
+  Object.assign(e.s.player, { x: rf.x, y: rf.y + 24 });
+  context.open('outpost', { view: 'people' }); clean();
+  assert.match(html(), /data-action="kinGift" data-id="farmer\|jam"/);
+  const t0 = e.ss.trust.farmer || 0;
+  click('kinGift', 'farmer|jam'); assert.equal(e.ss.trust.farmer, t0 + 1); assert.equal(e.kin.gifts.farmer.length, 1); click('close');
+  // ---------- 心里话：信任到 3 的平安傍晚，阿禾在田边等，按 E ----------
+  e.ss.trust.farmer = 3; e.s.minute = 19 * 60 - 0.5; e.c.workClock = 59.5; e.advanceMinutes(1);
+  assert.deepEqual(rf.target, { x: KD.HEART_SPOTS.farmer.x, y: KD.HEART_SPOTS.farmer.y }, 'she walks to the field');
+  Object.assign(rf, { x: KD.HEART_SPOTS.farmer.x, y: KD.HEART_SPOTS.farmer.y });
+  run(2);
+  assert.match(document.querySelector('#alert-bar').innerHTML, /阿禾在田边，像是有话想说/);
+  Object.assign(e.s.player, { x: rf.x, y: rf.y + 22 }); run(2);
+  assert.match(ctxLine(), /阿禾 · 像是有话想说（按 E）/);
+  press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); clean(); assert.ok(html().includes(KS.HEARTS.farmer[0].title));
+  click('kinHeartPick', 'farmer:0'); clean(); assert.match(html(), /替我记着/); assert.equal(e.heart('farmer').seg, 1); click('close');
+  e.ss.trust.farmer = 6;
+  context.open('outpost', { view: 'kinHeart', id: 'farmer' }); clean();
+  click('kinHeartPick', 'farmer:1'); assert.equal(e.heart('farmer').req, 1); assert.match(html(), /废弃居民区/); click('close');
+  // ---------- 废墟里那处记号：按 E 翻一翻 ----------
+  goTo(e, 'residential');
+  const cache = e.objects.find((o) => o.type === 'kinCache'); assert.ok(cache, 'the cupboard is marked');
+  Object.assign(e.s.player, { x: cache.x, y: cache.y + 18 }); run(3);
+  assert.match(ctxLine(), /阿禾家的橱柜 · 按 E 翻一翻/);
+  press('e'); run(1); assert.equal(e.qty('kinSeedTin', true), 1);
+  for (const [w, hh] of [[1366, 600], [390, 480]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+  context.inspect().renderer.resize(1366, 600, 1);
+  // ---------- 门口等着答复的过路人：按 E，收留孩子 ----------
+  goTo(e, 'farm');
+  e.s.minute = 10 * 60;
+  e.ss.lodger = { name: '带外孙的刘婶', look: 1, gift: 'seeds', stay: false, phase: 'staying', day: e.s.day, qin: false };
+  e.kin.ask = { name: '石榴', from: '刘婶', day: e.s.day, look: 1 };
+  e.assignRegion();
+  const ask = e.objects.find((o) => o.type === 'kinKidAsk'); assert.ok(ask);
+  Object.assign(e.s.player, { x: ask.x, y: ask.y + 22 }); run(3);
+  assert.match(ctxLine(), /刘婶和孩子 · 按 E 答复/);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /留下他/);
+  click('kinKid', 'yes'); assert.equal(e.kin.kids.length, 1); assert.equal(e.kin.kids[0].name, '石榴'); assert.equal(context.inspect().menu, null);
+  // ---------- 灯火夜：按 E 点亮路灯 ----------
+  e.s.day = 28 + 14; e.s.minute = 16 * 60 + 30; run(2);
+  const lamp = e.objects.find((o) => o.type === 'kinLamp' && o.lamp === 0); assert.ok(lamp, 'the lamps are up on the lantern night');
+  Object.assign(e.s.player, { x: lamp.x, y: lamp.y + 20 }); run(3);
+  assert.match(ctxLine(), /路灯 · 按 E 点亮（0\/6）/);
+  press('e'); run(1); assert.deepEqual(e.kin.fest.lamps, [0]);
+  // ---------- 收线钓鱼：溪谷的河 ----------
+  e.s.day = 28 + 15; e.s.minute = 9 * 60;
+  goTo(e, 'valley');
+  const stake = e.objects.find((o) => o.type === 'kinWater' && o.water === 'river'); assert.ok(stake);
+  Object.assign(e.s.player, { x: stake.x, y: stake.y + 16 }); run(3);
+  assert.match(ctxLine(), /溪谷的河 · 按 E 抛竿/);
+  press('e'); run(1); assert.equal(e.kin.cast?.water, 'river');
+  for (let i = 0; i < 200 && e.c.fishing?.phase !== 'bite'; i++) run(1);
+  assert.equal(e.c.fishing?.phase, 'bite');
+  keydown('e'); run(1);
+  assert.ok(e.reeling(), 'E on the bite starts the reel');
+  const card = document.querySelector('#reel'), ti = document.querySelector('#touch-interact');
+  assert.equal(card.hidden, false); assert.match(card.innerHTML, /鱼线/); assert.match(card.innerHTML, /收回/); assert.equal(ti.textContent, '收线');
+  assert.doesNotMatch(card.innerHTML, /undefined|NaN/);
+  let p0 = e._reel.prog; run(5); assert.ok(e._reel && e._reel.prog > p0, 'holding E reels in');
+  listeners.keyup({ key: 'e' }); run(2);
+  Object.assign(e._reel, { prog: 0.995, pull: 0, tense: 0.2, next: 9 });
+  keydown('e'); run(1); listeners.keyup({ key: 'e' }); run(1);
+  assert.ok(!e.reeling(), 'landed'); assert.equal(card.hidden, true); assert.equal(ti.textContent, '交互');
+  assert.equal(Object.values(e.kin.fish).reduce((a, b) => a + b, 0), 1);
+  assert.equal(e.qty(KD.SAMPLES.river, true), 1, 'a water sample with the first river fish');
+  // 手机：点「交互」提竿，按住「收线」
+  press('e'); run(1); assert.equal(e.kin.cast?.water, 'river');
+  for (let i = 0; i < 200 && e.c.fishing?.phase !== 'bite'; i++) run(1);
+  listeners.click({ target: ti, detail: 1 }); run(1);
+  assert.ok(e.reeling(), 'the touch button lifts the rod');
+  ti.events.pointerdown({ preventDefault() {} }); p0 = e._reel.prog; run(4); assert.ok(e._reel && e._reel.prog > p0, 'holding 收线 reels in');
+  Object.assign(e._reel, { prog: 0.995, pull: 0, tense: 0.2, next: 9 }); run(1); listeners.pointerup(); run(1);
+  assert.ok(!e.reeling()); assert.equal(Object.values(e.kin.fish).reduce((a, b) => a + b, 0), 2);
+  for (const [w, hh] of [[1366, 600], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+  context.inspect().renderer.resize(1366, 600, 1);
+  // ---------- 许医生验水样；图鉴 ----------
+  goTo(e, 'farm', 700, 600);
+  context.open('rebuild', { tab: 'residents' }); clean(); assert.match(html(), /验溪谷的河的水样/);
+  click('kinVerify', 'river'); assert.equal(e.kin.waters.river, true); click('close');
+  context.open('outpost', { view: 'collection' }); clean(); assert.match(html(), /鱼类图鉴 \d+\/24/); click('close');
+  // ---------- 搭伙：人物页上送戒指；营火边按 E 说开；第二天广场上请客 ----------
+  const rm = e.resident('medic');
+  e.ss.trust.medic = 8; e.kin.heart.medic = { seg: 2, pick: [0, 0], req: 1, got: true }; e.s.storage.kinRing = 1;
+  Object.assign(e.s.player, { x: rm.x, y: rm.y + 24 });
+  context.open('outpost', { view: 'people' }); clean();
+  assert.match(html(), /data-action="kinPartnerGive" data-id="medic\|kinRing"/);
+  click('kinPartnerGive', 'medic|kinRing'); assert.equal(e.kin.partner?.stage, 'near'); click('close');
+  e.ss.trust.medic = 10; e.kin.heart.medic.seg = 3; e.s.minute = 19 * 60 + 30;
+  const f = e.fireSpot();
+  Object.assign(rm, { x: f.x + 64, y: f.y + 70, target: { x: f.x + 64, y: f.y + 70 } });
+  Object.assign(e.s.player, { x: f.x + 64, y: f.y + 50 }); run(2);
+  Object.assign(rm, { x: f.x + 64, y: f.y + 70 }); run(1);
+  assert.match(ctxLine(), /许医生 · 按 E 说开/);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /就这么过下去吧/);
+  click('kinConfess', 'medic:yes'); assert.equal(e.kin.partner.stage, 'set'); assert.equal(context.inspect().menu, null);
+  e.s.day++; e.s.minute = 12 * 60; Object.assign(e.s.storage, { stew: 3, bread: 66 });
+  Object.assign(e.s.player, { x: KD.PLAZA.x, y: KD.PLAZA.y + 30 });
+  context.open('outpost', { view: 'plaza' }); clean(); assert.match(html(), /请全营吃一顿/);
+  click('kinFeast'); assert.equal(e.kin.partner.stage, 'home'); click('close');
+  // ---------- 画面：路灯、孩子、门口的人、记号、守在身边的人、鱼线、“…”、沙袋，四种大小，白天和夜里 ----------
+  e.s.day = 28 * 2 + 14; e.kin.fest = { day: e.s.day, chat: [], lamps: [0, 1, 2, 3, 4, 5], swap: false, read: false, table: [] };
+  e.kin.ask = { name: '小苗', from: '梅姐', day: e.s.day, look: 0 };
+  e.ss.trust.jiang = 3; e.c.nextHordeDay = e.s.day + 1;
+  const realAlly = e.allyUpdate; e.allyUpdate = () => {};
+  e._kinAlly = { id: 'medic', x: 760, y: 640, hp: 60, cd: 0, down: false, kills: 2, facing: 0, swing: 0.2, hitAt: { x: 790, y: 650 } };
+  Object.assign(e.s.player, { x: 760, y: 620 });
+  for (const [m, night] of [[15 * 60 + 10, false], [21 * 60 + 40, true]]) {
+    e.s.minute = m; e.assignRegion();
+    if (night) { e.kin.cast = { water: 'pond' }; e._reel = { water: 'pond', sp: 'kinCrucian', tier: 'common', bait: false, biteAt: 2, prog: 0.5, tense: 0.8, t: 1, pull: 0.4, pullT: 0.1, next: 9, warn: false, held: true, r: Math.random }; }
+    for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+    e._reel = null; e.kin.cast = null;
+  }
+  e.allyUpdate = realAlly; e._kinAlly = null;
+  context.inspect().renderer.resize(1366, 600, 1);
+  e.s.minute = 600;
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.kin.heart.farmer.seg, 2); assert.equal(back.kin.heart.farmer.got, true); assert.equal(back.kin.kids.length, 1);
+  assert.equal(back.kin.partner.stage, 'home'); assert.equal(back.kin.waters.river, true); assert.equal(back.kin.intro.told, true);
+  console.log('Kin controller passed: a v0.29 save restored from a file (the old likes still known, the 人情 notice on the first frame), the people page saying where everyone is with a marker, a gift given in person from the people page, 阿禾 waiting at the field and the heart talk opened with E, the second talk marking a cupboard in the residential ruin (E takes the tin), a mother answered with E and her grandson taken in, a lantern-night lamp lit with E, fishing at the valley river (E casts, E on the bite reels, holding E pulls in, the reel card and the 收线 label, the touch button doing the same), 许医生 testing the water sample from the residents page, the fish book, the ring given from the people page and said at the fire with E, the feast on the plaza, lamps/the child/the waiting mother/the partner at your side/the fishing line/the heart bubble/the sandbags drawn at four sizes by day and night, and save/parse.');
 }

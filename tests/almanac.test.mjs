@@ -5,6 +5,8 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { Engine, freshState, newGameState, needsStoryMigration } from "../dist/campaign.js";
 import * as Bustle from "../dist/bustle.js";
+// v0.30：最上面又接了一层（人情）；这里测的是四时这一层，“下面那一层”从四时的 Engine 往下找
+import * as Almanac from "../dist/almanac.js";
 import { ITEMS, BUILDINGS, CROPS, RECIPES } from "../dist/data.js";
 import { TASKS } from "../dist/rebuild-data.js";
 import { WEATHER } from "../dist/expansion-data.js";
@@ -287,7 +289,7 @@ test("seasons: a crop grows 15% faster in its season and 15% slower out of it; u
   const { e } = make();
   const p = e.s.plots[0];
   p.crop = "potato";
-  const base = (q) => Object.getPrototypeOf(Engine.prototype).cropGrowthRate.call(e, q);
+  const base = (q) => Object.getPrototypeOf(Almanac.Engine.prototype).cropGrowthRate.call(e, q);
   e.s.weather = "晴朗";
   e.s.day = 3; // 回暖：土豆当季
   assert.equal(e.seasonKind("potato"), "good");
@@ -516,7 +518,7 @@ test("rain: in the ruins infected hear 20% less far; after a rainy day the camp'
   e.s.weather = "小雨";
   assert.ok(e.rainingOut());
   // 听觉：把基类的 enemySenses 换成记下当时的声音半径
-  const below = Object.getPrototypeOf(Engine.prototype);
+  const below = Object.getPrototypeOf(Almanac.Engine.prototype);
   const orig = below.enemySenses;
   let seen = null;
   below.enemySenses = function () {
@@ -561,8 +563,8 @@ test("rain: in the ruins infected hear 20% less far; after a rainy day the camp'
   e._btSleep = false;
   // 手工：雨天快一成
   let got = 0;
-  const base = Object.getPrototypeOf(Engine.prototype).processProduction;
-  Object.getPrototypeOf(Engine.prototype).processProduction = function (n) {
+  const base = Object.getPrototypeOf(Almanac.Engine.prototype).processProduction;
+  Object.getPrototypeOf(Almanac.Engine.prototype).processProduction = function (n) {
     got = n;
   };
   try {
@@ -573,11 +575,11 @@ test("rain: in the ruins infected hear 20% less far; after a rainy day the camp'
     e.processProduction(10);
     assert.equal(got, 10);
   } finally {
-    Object.getPrototypeOf(Engine.prototype).processProduction = base;
+    Object.getPrototypeOf(Almanac.Engine.prototype).processProduction = base;
   }
   // 雨鳅：雨天池塘里约三成五
-  const fishBase = Object.getPrototypeOf(Engine.prototype).hookFish;
-  Object.getPrototypeOf(Engine.prototype).hookFish = function () {
+  const fishBase = Object.getPrototypeOf(Almanac.Engine.prototype).hookFish;
+  Object.getPrototypeOf(Almanac.Engine.prototype).hookFish = function () {
     this.s.inventory.fish = (this.s.inventory.fish || 0) + 1;
     this.c.metrics.fish = (this.c.metrics.fish || 0) + 1;
     return true;
@@ -593,7 +595,7 @@ test("rain: in the ruins infected hear 20% less far; after a rainy day the camp'
     for (let i = 0; i < 50; i++) e.hookFish();
     assert.equal(e.s.inventory.alLoach, before, "no loaches when it is dry");
   } finally {
-    Object.getPrototypeOf(Engine.prototype).hookFish = fishBase;
+    Object.getPrototypeOf(Almanac.Engine.prototype).hookFish = fishBase;
   }
 });
 

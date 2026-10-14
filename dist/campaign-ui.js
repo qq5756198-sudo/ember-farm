@@ -1,5 +1,5 @@
 // 当前主线的界面入口。game.js 只从这里取前哨相关的界面；每一轮新加的层在这里串起来。
-// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29)
+// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29) → kin (v0.30)
 // v0.25：其余物品的小图重画（接在装备小图后面）；各层的物品都登记好以后再挂一次
 import { assignItemIcons } from "./item-sprites.js";
 import { outpostHud, hungerDeathNote } from "./outpost-ui.js";
@@ -23,6 +23,8 @@ import { renderBountyView, bountyTitle, handleBountyAction, patchBoard, patchOrd
 import { stationExtras as bustleStationExtras, renderBustleView, bustleTitle, handleBustleAction, noiseHud } from "./bustle-ui.js";
 // v0.29：顶栏日期带时节、日历上的四个时节、告示牌和选种的当季反季、电台的手气签，腌缸、土酒坛、果树、摆件、鸡舍、药柜的设施卡
 import { buildingExtras, almanacDate, renderAlmanacView, patchAlmanacBoard, almanacBuildExtras, handleAlmanacAction } from "./almanac-ui.js";
+// v0.30：人物关系页（这会儿在哪、喜好、送礼、心里话、搭伙、收留的孩子）、心里话和说开、广场上节庆的事、鱼类图鉴、许医生验水样
+import { renderKinView, kinTitle, handleKinAction } from "./kin-ui.js";
 export { buildingExtras };
 // v0.25：开始新游戏选出身、二周目、设置里的“带着记忆重新开始”
 export { restartTitle, restartText, restartPicker, restartState, ngPlusRow, exportLine } from "./longnight-ui.js";
@@ -64,7 +66,7 @@ export const stationExtras = (e, b) => {
   const html = seasonsStationExtras(e, b) + gardenStationExtras(e, b) + gearStationExtras(e, b) + bustleStationExtras(e, b);
   return e?.bt ? patchOrderLinks(html) : html;
 };
-export const campaignTitle = (ui) => bustleTitle(ui, (u2) => bountyTitle(u2, (u1) => longNightTitle(u1, (u0) => gearTitle(u0, (u) => gardenTitle(u, winterTitle)))));
+export const campaignTitle = (ui) => kinTitle(ui, (u3) => bustleTitle(u3, (u2) => bountyTitle(u2, (u1) => longNightTitle(u1, (u0) => gearTitle(u0, (u) => gardenTitle(u, winterTitle))))));
 const renderViewBase = (e, ui) => {
   const html = renderLongNightView(e, ui, (e1, u1) => renderGearView(e1, u1, (e2, u2) => renderGardenView(e2, u2, renderWinterView)));
   if (ui?.view === "daily") return patchDailyCard(e, html);
@@ -75,7 +77,7 @@ const renderViewBase = (e, ui) => {
   if (ui?.view === "phone") return patchPhone(html);
   return html;
 };
-export const renderCampaignView = (e, ui) => patchTidyView(e, ui, renderAlmanacView(e, ui, (e0, u0) => renderBustleView(e0, u0, (e1, u1) => renderBountyView(e1, u1, renderViewBase))));
+export const renderCampaignView = (e, ui) => patchTidyView(e, ui, renderKinView(e, ui, (eK, uK) => renderAlmanacView(eK, uK, (e0, u0) => renderBustleView(e0, u0, (e1, u1) => renderBountyView(e1, u1, renderViewBase)))));
 export const renderCampaignJournal = (e, ui) => {
   const html = renderGardenJournal(e, ui);
   return ui?.catalog ? html : patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html)));
@@ -99,9 +101,9 @@ export function campaignHud(e) {
   const ln = tidyLnHud(e);
   return { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchAlerts(e, alertBar(e)), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e), date: almanacDate(e) };
 }
-// 动作：四时 → 热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
+// 动作：人情 → 四时 → 热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
-  return handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
+  return handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
 }
 
 // v0.25：到这里所有层的物品都登记过了，把还没挂上的新小图挂上

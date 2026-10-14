@@ -1,0 +1,273 @@
+/* v0.30.0「人情」：人物关系页（这会儿在哪、喜好的问号、心里话、送礼、搭伙、孩子、纸条），心里话的对话，
+   广场上节庆的事，成就册里的鱼类图鉴，许医生的验水样，收线的那张小卡。
+   颜色跟着前几版：好事金色，坏事暗红，提醒橙色。 */
+
+/* ---------- 人物关系 ---------- */
+.kin-people .people > li {
+  align-items: flex-start;
+}
+.kin-person.focus {
+  outline: 2px solid #f3d27a;
+  outline-offset: 2px;
+}
+.kin-person.talk {
+  background: rgba(90, 74, 32, 0.35);
+}
+.kin-body {
+  min-width: 0;
+  flex: 1;
+}
+.kin-body > b {
+  margin-right: 6px;
+}
+.kin-half {
+  margin-left: 4px;
+  color: #ffd76a;
+}
+.kin-where,
+.kin-prefs,
+.kin-heart,
+.kin-partner p,
+.kin-partner {
+  margin: 3px 0;
+  font-size: 0.92em;
+}
+.kin-where button {
+  min-height: 26px;
+  padding: 2px 8px;
+  margin-left: 4px;
+}
+.kin-prefs b {
+  color: #e9c05a;
+  font-weight: normal;
+}
+.kin-q {
+  font-style: normal;
+  color: #85857a;
+}
+.kin-heart.ready {
+  color: #ffd76a;
+}
+.kin-heart.done {
+  color: #cfe7a6;
+}
+.kin-gift .button-row {
+  flex-wrap: wrap;
+}
+.kin-gift .button-row button {
+  min-height: 32px;
+}
+.kin-partner.gold,
+.kin-partner .gold {
+  color: #ffd76a;
+}
+.kin-kids,
+.kin-notes {
+  margin: 12px 0;
+  padding: 8px 12px;
+  border-left: 3px solid #e9c05a;
+  background: rgba(37, 29, 23, 0.7);
+}
+.kin-kids h3,
+.kin-notes h3 {
+  margin: 0 0 4px;
+  color: #f6e3b4;
+}
+.kin-notes ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.kin-notes li {
+  margin: 4px 0;
+}
+.kin-notes small {
+  color: #a99a7a;
+  margin-right: 4px;
+}
+
+/* ---------- 心里话 ---------- */
+.kin-scene {
+  margin: 10px 0 12px;
+  padding: 10px 14px;
+  border-left: 3px solid #94502c;
+  background: rgba(24, 18, 12, 0.6);
+  line-height: 1.7;
+}
+.kin-scene p {
+  margin: 6px 0;
+}
+
+/* ---------- 广场 ---------- */
+.kin-plaza {
+  margin: 4px 0 12px;
+}
+.kin-plaza article {
+  margin: 6px 0;
+  padding: 8px 12px;
+  border-left: 3px solid #e9c05a;
+  background: rgba(37, 29, 23, 0.7);
+}
+.kin-plaza p {
+  margin: 4px 0;
+}
+
+/* ---------- 鱼类图鉴 ---------- */
+.kin-fishbook {
+  margin: 12px 0;
+}
+.kin-fishbook h3 {
+  margin: 0 0 4px;
+  color: #f6e3b4;
+}
+.kin-fishbook ul {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.kin-fishbook li {
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #3c4d38;
+  border-radius: 5px;
+  background: #1b2c22;
+  opacity: 0.75;
+}
+.kin-fishbook li.on {
+  opacity: 1;
+  border-color: #6fa69a;
+}
+.kin-fishbook li b {
+  display: block;
+  color: #f0e3b5;
+}
+.kin-fishbook li small {
+  display: block;
+  color: #aeba9f;
+  font-size: 0.85em;
+}
+
+/* ---------- 居民卡 ---------- */
+.kin-res {
+  margin: 4px 0;
+  font-size: 0.92em;
+}
+.kin-res button {
+  min-height: 26px;
+  margin-left: 6px;
+  padding: 2px 8px;
+}
+.kin-lab {
+  margin: 6px 0;
+}
+
+/* ---------- 收线：场景下方的一张小卡 ---------- */
+.reel-card {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 8;
+  width: min(92%, 380px);
+  padding: 8px 14px 10px;
+  font-family: var(--px, "Microsoft YaHei", sans-serif);
+  font-size: 14px;
+  line-height: 20px;
+  color: #f3e6c4;
+  background: rgba(24, 18, 12, 0.92);
+  border: 2px solid #140f0b;
+  box-shadow: inset 0 0 0 2px #46807a, 0 4px 0 rgba(20, 15, 11, 0.5);
+  pointer-events: none;
+}
+.reel-card[hidden] {
+  display: none;
+}
+.reel-card b {
+  display: block;
+  color: #bfe3e8;
+  font-weight: normal;
+}
+.reel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+.reel-row small {
+  flex: 0 0 auto;
+  width: 2.6em;
+  color: #a99a7a;
+}
+.reel-bar {
+  position: relative;
+  flex: 1;
+  height: 12px;
+  background: #2a2420;
+  border: 1px solid #140f0b;
+}
+.reel-bar em {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: #9fd38a;
+}
+.reel-bar.tense em {
+  background: #e9c05a;
+}
+.reel-card.tight .reel-bar.tense em {
+  background: #ff7a5a;
+}
+.reel-card.pull {
+  box-shadow: inset 0 0 0 2px #ff7a5a, 0 4px 0 rgba(20, 15, 11, 0.5);
+  animation: kin-shake 0.12s linear infinite;
+}
+.reel-card.warn {
+  box-shadow: inset 0 0 0 2px #9fd3e0, 0 4px 0 rgba(20, 15, 11, 0.5);
+}
+.reel-hint {
+  display: block;
+  margin-top: 2px;
+  color: #d8cfb0;
+  font-size: 12px;
+}
+.reel-card.pull .reel-hint {
+  color: #ffb08a;
+}
+@keyframes kin-shake {
+  0% {
+    transform: translate(-50%, 0);
+  }
+  50% {
+    transform: translate(calc(-50% + 2px), 0);
+  }
+  100% {
+    transform: translate(-50%, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reel-card.pull {
+    animation: none;
+  }
+}
+body.title-screen .reel-card,
+body.modal-open .reel-card {
+  display: none;
+}
+@media (max-width: 760px) {
+  .kin-fishbook ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* 手机竖屏、横屏：收线卡放在场景下边，比账本再往上一点（两张不会同时出现） */
+@media (max-width: 760px), (max-height: 500px) {
+  .reel-card {
+    bottom: 8px;
+    width: min(94%, 360px);
+    padding: 6px 10px 8px;
+    font-size: 13px;
+  }
+}

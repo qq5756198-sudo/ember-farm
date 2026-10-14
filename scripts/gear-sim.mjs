@@ -24,6 +24,7 @@
 //   结果多几列：陷阱、瞭望塔、你各打倒几只（killTrap、killTower、killPlayer），设施掉了多少耐久、用了几发弹药几块木头。
 // v0.25 出身：ORIGIN=medic 打法写 start（例：ORIGIN=hunter node scripts/gear-sim.mjs 100 1 residential,hospital,warehouse start）——
 //   开局那一套：大家都用开局的木材做一根矛（退伍兵也是，WEAPON=pipe 让他拿自己的铁管）；身上穿出身给的，出身的规则照算；绷带用完会用药包
+// v0.30 搭伙：PARTNER=medic（长夜里守在你身边的那个人），RECRUIT=medic（对照：营地里有这个人，但没搭伙）
 // v0.28 改良：HNUP=tower:light,trap:spike,fence:iron（每类选一条路线，LNSET 摆出来的这类设施全部改好；双人哨要守卫比塔多）
 //   对照：HNPATCH='{"INJURY":{"chance":0}}'（守塔的人被摸到不受伤）
 const D = new URL("../dist/", import.meta.url).href;
@@ -202,6 +203,9 @@ function trial(region, kitId, seed) {
     s.minute = 1319.9;
     SET = placeDefenses(e, s);
     applyUpgrades(e, s);
+    // v0.30 搭伙：PARTNER=medic 长夜里那个人守在你身边；RECRUIT=medic 只是营地里有这个人（对照）
+    for (const id of [process.env.PARTNER, process.env.RECRUIT].filter(Boolean)) if (!e.resident(id) && ["farmer", "medic", "mechanic"].includes(id)) e.recruit(id);
+    if (process.env.PARTNER && e.kin) e.kin.partner = { id: process.env.PARTNER, stage: "home", day: DAY - 5, hurt: 0 };
   }
   if (HORDEMODE) {
     SET = placeDefenses(e, s);

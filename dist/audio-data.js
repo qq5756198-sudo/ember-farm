@@ -1,6 +1,7 @@
 // v0.23.0「回响」的声音：音效、乐器、6 段音乐、6 句短乐句、10 套环境声。全部是数，用 audio-synth.js 算成采样。
 // v0.24.0「暗涌」加了新感染者、头目、柜子、撬锁、空投、对讲机、麦穗低吼的声音。
 // v0.29.0「四时」：农场白天的音乐按时节多三段（酷暑、秋收、寒潮）。
+// v0.30.0「人情」：咬钩开始收线、鱼跑了，都是浮漂那儿的一声水响。
 // 一层的写法见 audio-synth.js：w 波形、f 频率（[起, 止] 是滑音）、t 长度、d 延后、a 起音、h 保持、c 衰减、v 音量、
 // lp/hp 低通高通（[起, 止] 是扫频）、bp [中心, Q] 带通、vib/am [速度, 深度]、j 音高抖动。
 
@@ -488,6 +489,10 @@ export function soundFor(ev) {
       return { sfx: "clank", voice: true, duck: true };
     case "sabBoom":
       return { sfx: "bang", range: 1400 };
+    // ---------- v0.30「人情」：咬钩收线、鱼跑了，都是一声水响 ----------
+    case "reel":
+    case "reelLost":
+      return { sfx: "splash" };
     default:
       return null;
   }
@@ -497,6 +502,8 @@ export const SOUND_EVENTS = ["swing", "shot", "hit", "hitFlesh", "hitMetal", "sp
 // v0.24「暗涌」新加的引擎事件
 export const U_SOUND_EVENTS = ["fuse", "gas", "breath", "fakerGrab", "spitCue", "spit", "acid", "click", "stalkerCue", "slamCue", "slam", "doorCue", "doorThrow", "doorHit", "bruteStep", "bossRage", "nurseCue", "nurseScream", "pulseCue", "pulse", "armorOff", "rareLoot", "preciousLoot", "pryStart", "pryTick", "pryDone", "plane", "airdropLand", "talkie", "survivorHurt", "dogGrowl", "bossIntro", "bossDown", "radio"];
 export const LN_SOUND_EVENTS = ["lnThunder", "lnScream", "lnWave", "lnBoss", "lnLeader", "smokeCue", "smoke", "sabPlant", "sabBoom"];
+// v0.30「人情」新加的引擎事件
+export const KIN_SOUND_EVENTS = ["reel", "reelLost"];
 
 // 混音：各条线的基础音量（再乘设置里的四个音量）
 export const MIX = { music: 0.36, ambience: 0.5, sfx: 0.9, ui: 0.55, voice: 0.85 };
