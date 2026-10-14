@@ -516,7 +516,8 @@ export class AudioDirector {
     if (["warning", "active"].includes(s.horde?.phase) || (eng.raidState && ["warning", "active"].includes(eng.raidState().phase))) return "siege";
     if (this.combat) return "fight";
     if (info.scene || (s.region === "farm" && eng.festivalWindow?.())) return "scene";
-    if (SAFE.includes(s.region)) return eng.isNight?.() ? "farmNight" : "farmDay";
+    // v0.29：白天的那段按时节换（酷暑、秋收、寒潮各一段）
+    if (SAFE.includes(s.region)) return eng.isNight?.() ? "farmNight" : PIECES[eng.seasonPiece?.("farmDay")] ? eng.seasonPiece("farmDay") : "farmDay";
     return "explore";
   }
 

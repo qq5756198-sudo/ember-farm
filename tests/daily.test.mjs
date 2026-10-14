@@ -361,7 +361,10 @@ test("buffs change growth, crafting, prices, travel and damage, and wear off", (
   e.s.day = 12;
   const plot = e.s.plots.find((p) => (p.region || "farm") === "farm");
   plot.crop = "radish";
-  const g0 = e.cropGrowthRate(plot);
+  // v0.29：时节也改长势（第 12 天是酷暑，第 15 天是秋收），比的时候把它除掉
+  const season = () => (e.cropSeasonRate ? e.cropSeasonRate(plot) : 1);
+  const g0 = e.cropGrowthRate(plot),
+    s0 = season();
   setCard(e, "J01");
   e.chooseDaily(0);
   assert.ok(Math.abs(e.cropGrowthRate(plot) - g0 * 1.5) < 1e-9);
@@ -387,7 +390,7 @@ test("buffs change growth, crafting, prices, travel and damage, and wear off", (
   nextDay(e);
   assert.ok(!e.dy.buffs.some((b) => b.kind === "guard"), "expired");
   e.s.weather = "晴朗"; // 同样的天气下（萝卜喜欢晴天）才能比
-  assert.ok(Math.abs(e.cropGrowthRate(plot) - g0) < 1e-9);
+  assert.ok(Math.abs(e.cropGrowthRate(plot) / season() - g0 / s0) < 1e-9);
 });
 
 test("later gifts arrive once at 08:00; debts collect; night losses are stopped by a sentry", () => {

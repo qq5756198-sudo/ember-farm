@@ -90,7 +90,7 @@ for(const key of Session.HISTORY_KEYS.slice(0,8))storage.set(key,'historic '+key
 class Image{set src(path){this.path=path;loadImage(dir+'/'+path).then(img=>{this.native=img;this.width=img.width;this.height=img.height;this.complete=true;this.onload?.();}).catch(e=>this.onerror?.(e));}get src(){return this.path;}}
 globalThis.document=document;
 let raf;
-const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
+const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},clearTimeout:()=>{},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
 script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
@@ -1550,7 +1550,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   click('hnTreat', 'r:farmer|medkit'); assert.equal(e.hn.hurt['r:farmer'].care, 'medkit'); assert.ok(!e.s.storage.medkit); click('close');
   // ---------- 农舍「房间与家具」：舒适度 ----------
   const floor = B('floor', 420, 360); B('chair', 440, 360); B('lamp', 400, 340); B('table', 440, 390); B('bed', 400, 395);
-  context.open('frontier', { tab: 'rooms' }); clean(); assert.match(html(), /舒适度和「休息好」/); assert.match(html(), /舒适度 4\/8/);
+  context.open('frontier', { tab: 'rooms' }); clean(); assert.match(html(), /舒适度和「休息好」/); assert.match(html(), /舒适度 4\/9/); // v0.29：旧物摆件也算一类家具，最多 9
   assert.match(html(), /data-action="build" data-id="medCabinet"/); click('close');
   void floor;
   // ---------- 广场：节庆挑供品；食堂走着端菜上菜 ----------
@@ -1609,4 +1609,148 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(back.bustle.up.tower, 'light'); assert.equal(back.bustle.mule.trip.load.potato, 10); assert.equal(back.bustle.intro.told, true);
   assert.equal(back.bustle.hurt['r:farmer'].care, 'medkit');
   console.log('Bustle controller passed: a v0.27 save restored from a file (the radio noise on the meter, the 热闹 notice on the first frame), the noise chip, the medicine cabinet in the build list, E at the radio station sending a scout command (the cooldown holds a second click), E at Hong Shu loading and sending a run and showing it on the road, a tower card picking the searchlight and upgrading, four fence segments barbed in one go, a hurt resident treated from the residents page, the comfort card on the rooms page, the harvest offering picked and paid on the plaza, the canteen served on foot (E at the stove, E at the guest), the museum\'s 往事 case, Jiang Bo via E, the noise warning in the alert bar, neighbours, the airdrop, upgraded towers/fences/traps and a carried dish drawn at four sizes by day and night, and save/parse.');
+}
+
+// v0.29.0「四时」: a v0.28 save restored from a file (the cold snap moved onto the cold season, the 四时 notice on the first frame),
+// the HUD date with the season, the date button opening the calendar with the four seasons, the farm board's season section,
+// the seed picker's in/out of season tags, the radio page with today's luck, the build list with the jars and trees (the decor only
+// once owned), a pickle jar filled and taken through its card, the coop card petting the flock, an old tree in the residential yards
+// cut with E and a peach tree grafted through the build flow, a decor picked from its build card and placed, forage picked with E,
+// mushrooms sorted by 许医生 from her card, a parcel at the door opened with E, the morning ledger after sleeping (held while a
+// page is open, shown after, a click hides it), jars/trees/decor/forage/old trees/debris/parcel drawn at four sizes by day and night
+// in all four seasons, and save/parse.
+{
+  let clock = 21000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  dailyOn = false;
+  const AL = await import('../dist/almanac-data.js');
+  const Bustle = await import('../dist/bustle.js');
+  const B = (e, type, x, y, extra = {}) => { const b = { id: 'al-' + type + '-' + e.s.idCounter++, type, x, y, rotation: 0, hp: Data.BUILDINGS[type].hp, ...extra }; e.s.buildings.push(b); e.navRevision++; return b; };
+  const spotFor = (e, type, cx = 760, cy = 620) => { for (let r = 60; r < 600; r += 16) for (let a = 0; a < 6.28; a += 0.3) { const x = Math.round((cx + Math.cos(a) * r) / 8) * 8, y = Math.round((cy + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x: x + 30, y: y + 30 }); if (!e.buildReason(type, x, y)) return { x, y }; } return null; };
+  // ---------- 一份 v0.28 的旧档，从文件恢复 ----------
+  const old = new Bustle.Engine(Bustle.newGameState(), () => {});
+  const sc = old.sc;
+  sc.act = 7; sc.claimed = ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6']; sc.choice = 'ration';
+  sc.letters = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7']; sc.flags.well = sc.flags.camp = sc.flags.farmerFed = true; sc.camp = { x: 560, y: 735 };
+  old.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((t) => t.id === 'network') + 1).map((t) => t.id); old.r.radio = true;
+  old.o.hospital = 'water'; old.o.youke = true; old.o.lathe = { mode: 'parts', day: 0 };
+  old.o.cargo = 'food'; old.o.convoy = { departs: 0, arrives: 0, escorted: true, spawned: false, foes: [], done: true, lost: false };
+  old.s.day = 18; old.s.minute = 600; if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();
+  old.bt.cold.next = 40;
+  old.s.visited = { ...(old.s.visited || {}), residential: true };
+  context.open('restoreArchive', { files: { old: old.serialize() } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  let e = context.inspect().engine;
+  assert.equal(context.inspect().menu, null);
+  assert.ok(e.al && e.al.intro, 'the 四时 record was added to the old save');
+  assert.equal(e.bt.cold.next, AL.coldStartFrom(40), 'the cold snap waits for the cold season');
+  e.paused = false; if (e.dy) e.dy.pending = null; run(3);
+  assert.ok(e.al.intro.told, 'told on the first frame');
+  context.open('outpost', { view: 'log' }); clean(); assert.match(html(), /四时：一年 28 天/); click('close');
+  // ---------- 顶栏的日期 ----------
+  const date = document.querySelector('#date');
+  assert.equal(date.textContent, '第 18 天 · 秋收'); assert.match(date.title, /第 1 年 · 秋收第 4 天（还有 4 天到寒潮）/);
+  // ---------- 点日期：日历和四个时节 ----------
+  click('sView', 'calendar'); clean(); assert.match(html(), /现在是秋收第 4 天/); assert.match(html(), /当季菜：栗子焖南瓜/); assert.match(html(), /<span class="tag gold">寒潮时节<\/span>/); click('close');
+  // ---------- 告示牌、选种 ----------
+  context.open('outpost', { view: 'gBoard' }); clean(); assert.match(html(), /秋收第 4 天：这一季种什么/); click('close');
+  const q = e.s.plots[41]; e.s.debris = e.s.debris.filter((d) => Math.hypot(d.x - q.x, d.y - q.y) >= 15); q.tilled = true; q.crop = null; if (e.g.plots[q.id]) e.g.plots[q.id].w = 0;
+  e.s.inventory.seedRadish = 2;
+  Object.assign(e.s.player, { x: q.x + 2, y: q.y + 6 }); run(2); press('e'); run(1);
+  clean(); assert.match(html(), /当季 快 15% · 多收 1 份/); click('close');
+  // ---------- 电台：今天的签 ----------
+  context.open('outpost', { view: 'radio' }); clean(); assert.match(html(), /早间广播（每天 07:00）/); assert.match(html(), /今天的手气签：/); click('close');
+  // ---------- 建造菜单：腌缸、土酒坛、四种果树；摆件要有了才出现 ----------
+  context.open('build'); clean();
+  for (const n of ['腌缸', '土酒坛', '嫁接桃树', '嫁接柿子树']) assert.ok(html().includes('<h3>' + n + '</h3>'), n);
+  assert.ok(!html().includes('<h3>旧物摆件</h3>'), 'no decor entry before you own one');
+  assert.match(html(), /枝条去废弃居民区/); click('close');
+  // ---------- 腌缸：放下、按 E 装缸、过几天取 ----------
+  e.s.storage.stone = (e.s.storage.stone || 0) + 8; e.s.storage.wood = (e.s.storage.wood || 0) + 12; e.s.storage.radish = 6;
+  context.open('build'); click('build', 'alPickleJar'); assert.equal(e.buildMode, 'alPickleJar'); assert.equal(context.inspect().menu, null);
+  let spot = spotFor(e, 'alPickleJar'); assert.ok(spot); assert.ok(e.placeBuilding(spot.x, spot.y)); e.buildMode = null;
+  const jar = e.s.buildings.at(-1); assert.equal(jar.type, 'alPickleJar');
+  Object.assign(e.s.player, { x: jar.x, y: jar.y + 26 }); run(4);
+  assert.match(document.querySelector('#context').innerHTML, /腌缸 · 空着/);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'building'); clean();
+  click('alJarFill', jar.id + '|radish'); assert.equal(e.al.jars[jar.id]?.item, 'radish'); assert.match(html(), /还要 3 天能取/); click('close');
+  e.al.jars[jar.id].start -= 3; run(4);
+  assert.match(document.querySelector('#alert-bar').innerHTML, /腌缸能取了/);
+  context.open('building', { buildingId: jar.id }); clean(); click('alJarTake', jar.id); assert.equal(e.qty('alPickle', true), 4); click('close');
+  // ---------- 鸡舍：摸一摸 ----------
+  const coop = B(e, 'coop', 980, 860); e.c.animals.chicken = true;
+  context.open('building', { buildingId: coop.id }); clean(); assert.match(html(), /牲口亲近/);
+  click('alHerdPet', 'flock'); assert.equal(e.al.herd.flock.pts, AL.HERD.pet); assert.match(html(), /今天已经摸过了/); click('close');
+  // ---------- 居民区：老果树按 E 剪枝条；回农场嫁接 ----------
+  e.s.region = 'residential'; e.enemies = e.s.enemies.residential ||= []; for (const z of e.enemies) z.dead = true; e.enemies = e.s.enemies.residential = []; e.assignRegion();
+  const oldPeach = e.objects.find((o) => o.type === 'alOldTree' && o.tree === 'peach'); assert.ok(oldPeach);
+  Object.assign(e.s.player, { x: oldPeach.x, y: oldPeach.y + 20 }); run(4);
+  assert.match(document.querySelector('#context').innerHTML, /老桃树 · 按 E 剪一根枝条/);
+  press('e'); run(1); assert.equal(e.qty(AL.cuttingId('peach'), true), 1);
+  for (const [w, hh] of [[1366, 600], [390, 480]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+  context.inspect().renderer.resize(1366, 600, 1);
+  e.s.region = 'farm'; e.enemies = e.s.enemies.farm ||= []; e.assignRegion();
+  e.s.storage.manure = (e.s.storage.manure || 0) + 2;
+  context.open('build'); clean(); click('build', AL.treeType('peach')); assert.equal(e.buildMode, AL.treeType('peach'));
+  spot = spotFor(e, AL.treeType('peach'), 900, 700); assert.ok(spot); assert.ok(e.placeBuilding(spot.x, spot.y)); e.buildMode = null;
+  const tree = e.s.buildings.at(-1); assert.deepEqual(e.al.trees[tree.id], { planted: e.s.day, fruit: 0, stop: 0, winters: 0 });
+  context.open('building', { buildingId: tree.id }); clean(); assert.match(html(), /还要 14 天长成/); click('close');
+  // ---------- 旧物摆件：有了才出现，在建设页挑一件摆 ----------
+  e.add({ [AL.decorItem('globe')]: 1, [AL.decorItem('phono')]: 1 }); run(1);
+  context.open('build'); clean(); assert.ok(html().includes('<h3>旧物摆件</h3>')); assert.match(html(), /data-action="alDecorPick" data-id="globe"/);
+  click('alDecorPick', 'globe'); assert.equal(e.buildMode, 'alDecor'); assert.equal(context.inspect().menu, null);
+  spot = spotFor(e, 'alDecor', 1100, 700); assert.ok(spot); assert.ok(e.placeBuilding(spot.x, spot.y)); e.buildMode = null;
+  const deco = e.s.buildings.at(-1); assert.equal(deco.decor, 'globe'); assert.equal(e.qty(AL.decorItem('globe'), true), 0);
+  context.open('building', { buildingId: deco.id }); clean(); assert.match(html(), /国名都还在/); click('close');
+  // ---------- 野物：按 E 捡 ----------
+  e.forageSpawn(e.s.day); if (!e.al.forage.spots.some((p) => p.region === 'farm')) Object.assign(e.al.forage.spots[0], { region: 'farm', i: 0 }); e.forageObjects();
+  const fo = e.objects.find((o) => o.type === 'alForage'); assert.ok(fo);
+  Object.assign(e.s.player, { x: fo.x, y: fo.y + 4 }); run(3);
+  assert.match(document.querySelector('#context').innerHTML, /按 E 捡起来/);
+  const had = e.qty(fo.item, true); press('e'); run(1); assert.ok(e.qty(fo.item, true) > had);
+  // ---------- 许医生认蘑菇 ----------
+  e.recruit('medic'); e.add({ [AL.MUSHROOM.raw]: 3 });
+  context.open('rebuild', { tab: 'residents' }); clean(); assert.match(html(), /认蘑菇（3 朵）/);
+  click('alMushroom'); assert.equal(e.qty(AL.MUSHROOM.raw, true), 0); click('close');
+  // ---------- 门口的包裹：按 E 打开 ----------
+  e.al.good = { day: e.s.day, kind: 'parcel', taken: false, items: { bandage: 2, cloth: 2 }, x: AL.NIGHT_GOOD.door.x, y: AL.NIGHT_GOOD.door.y, note: '门口多了个包裹，不知道是谁夜里放下的' };
+  e.goodObjects(); run(4);
+  assert.match(document.querySelector('#alert-bar').innerHTML, /门口有个包裹/);
+  const parcel = e.objects.find((o) => o.type === 'alParcel'); assert.ok(parcel);
+  Object.assign(e.s.player, { x: parcel.x, y: parcel.y + 4 }); run(3);
+  const band = e.qty('bandage', true); press('e'); run(1); assert.equal(e.qty('bandage', true), band + 2); assert.ok(e.al.good.taken);
+  // ---------- 睡醒的账本：开着页面就等着，关了再出来，点一下收起 ----------
+  e.s.storage.bread = (e.s.storage.bread || 0) + 80; e.s.minute = 21 * 60; e.c.workClock = 0;
+  context.open('home'); click('sleep'); run(2);
+  const led = document.querySelector('#ledger');
+  for (let i = 0; i < 6 && context.inspect().menu; i++) { if (e.dailyCard?.()) e.dailyLater?.(); click('close'); run(1); }
+  run(2);
+  assert.equal(context.inspect().menu, null);
+  assert.equal(led.hidden, false, 'the ledger shows once the pages are closed');
+  assert.match(led.innerHTML, /第 \d+ 天的账/); assert.match(led.innerHTML, /夜里：/); assert.match(led.innerHTML, /今天：/);
+  led.events.click(); assert.match(led.className, /out/);
+  // ---------- 画面：四个时节，白天和夜里，四种大小 ----------
+  e.s.region = 'farm'; e.enemies = e.s.enemies.farm ||= []; e.assignRegion();
+  B(e, 'alWineJar', 640, 860); B(e, 'alDecor', 700, 900, { decor: 'neon' }); B(e, 'alDecor', 740, 900, { decor: 'lion' });
+  const t2 = B(e, AL.treeType('apple'), 820, 900); e.al.trees[t2.id] = { planted: 1, fruit: 3, stop: 0, winters: 2 };
+  e.al.jars[e.s.buildings.find((b) => b.type === 'alWineJar').id] = { item: 'rye', n: 4, start: e.s.day - 11 };
+  e.al.good = { day: e.s.day, kind: 'debris', taken: false, x: 900, y: 760, note: '一块卫星残骸' }; e.goodObjects();
+  e.forageSpawn(e.s.day); e.forageObjects();
+  Object.assign(e.s.player, { x: 760, y: 860 });
+  for (const day of [3, 10, 17, 24]) {
+    e.s.day = day;
+    for (const night of [false, true]) {
+      e.s.minute = night ? 1380 : 600;
+      for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
+    }
+  }
+  context.inspect().renderer.resize(1366, 600, 1);
+  e.s.minute = 600;
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.almanac.intro.told, true); assert.ok(back.almanac.trees[tree.id]); assert.equal(back.almanac.herd.flock.pts, AL.HERD.pet);
+  assert.equal(back.buildings.find((b) => b.id === deco.id)?.decor, 'globe');
+  console.log('Almanac controller passed: a v0.28 save restored from a file (the cold snap moved onto the cold season, the 四时 notice on the first frame), the HUD date with the season, the date button opening the calendar with the four seasons, the farm board\'s season section, the seed picker\'s in-season tag, the radio page with today\'s luck, the build list with the jars and trees (the decor only once owned), a pickle jar placed, filled with E and taken, the coop card petting the flock, an old peach tree cut with E and a peach grafted through the build flow, a decor picked from its build card and placed, forage picked with E, mushrooms sorted from 许医生\'s card, a parcel at the door opened with E, the morning ledger after sleeping (held behind pages, shown after, a click hides it), jars/trees/decor/forage/old trees/debris drawn at four sizes by day and night in all four seasons, and save/parse.');
 }

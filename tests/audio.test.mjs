@@ -160,7 +160,9 @@ test("ten ambience sets cover all fifteen maps; music has six pieces and six sho
     }
   }
   assert.deepEqual(INDOOR, ["shelter"]);
-  assert.equal(Object.keys(PIECES).length, 6);
+  // 6 段，加上 v0.29 农场白天按时节换的三段
+  assert.equal(Object.keys(PIECES).length, 9);
+  for (const k of ["heat", "harvest", "cold"]) assert.ok(PIECES["farmDay_" + k], k);
   for (const [id, p] of Object.entries(PIECES)) {
     const secs = (p.chords.length * 4 * 60) / p.bpm;
     assert.ok(secs >= 30 && secs <= 90, id + " loops every " + secs.toFixed(1) + "s");

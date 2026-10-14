@@ -1,5 +1,5 @@
 // 当前主线的界面入口。game.js 只从这里取前哨相关的界面；每一轮新加的层在这里串起来。
-// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28)
+// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29)
 // v0.25：其余物品的小图重画（接在装备小图后面）；各层的物品都登记好以后再挂一次
 import { assignItemIcons } from "./item-sprites.js";
 import { outpostHud, hungerDeathNote } from "./outpost-ui.js";
@@ -20,13 +20,15 @@ import { tidyLnHud, patchTidyView, handleTidyAction } from "./tidy-ui.js";
 // v0.27：水网、堆肥桶、订单板，这块田卡片上的肥和抢收，告示牌上的水和图鉴，照看机、喷灌头、温室、鸡舍的设施卡
 import { renderBountyView, bountyTitle, handleBountyAction, patchBoard, patchOrderLinks } from "./bounty-ui.js";
 // v0.28：动静格、电台指令、红薯跑商、设施改良、伤员、舒适度、广场上的食堂和节庆供品、往事一柜、江伯的鱼汛
-import { buildingExtras, stationExtras as bustleStationExtras, renderBustleView, bustleTitle, handleBustleAction, noiseHud } from "./bustle-ui.js";
+import { stationExtras as bustleStationExtras, renderBustleView, bustleTitle, handleBustleAction, noiseHud } from "./bustle-ui.js";
+// v0.29：顶栏日期带时节、日历上的四个时节、告示牌和选种的当季反季、电台的手气签，腌缸、土酒坛、果树、摆件、鸡舍、药柜的设施卡
+import { buildingExtras, almanacDate, renderAlmanacView, patchAlmanacBoard, almanacBuildExtras, handleAlmanacAction } from "./almanac-ui.js";
 export { buildingExtras };
 // v0.25：开始新游戏选出身、二周目、设置里的“带着记忆重新开始”
 export { restartTitle, restartText, restartPicker, restartState, ngPlusRow, exportLine } from "./longnight-ui.js";
 import {
   renderFarMap,
-  buildCardExtras,
+  buildCardExtras as farBuildCardExtras,
   settingsExtras,
   applyAccess,
   mapKey,
@@ -55,7 +57,9 @@ export const renderGearPanel = (e, helpers) => {
   const html = gearPanel(e, helpers);
   return html ? originLine(e) + html : html;
 };
-export { hungerDeathNote, itemLinks, buildCardExtras, settingsExtras, applyAccess, mapKey, keyLabel, keyCaptureActive, cancelKeyCapture, captureKey, helpRows, readPad };
+// 建设页每一格下面：贺满仓垫付；旧物摆件挑哪一件、果树的枝条去哪剪
+export const buildCardExtras = (e, id) => farBuildCardExtras(e, id) + almanacBuildExtras(e, id);
+export { hungerDeathNote, itemLinks, settingsExtras, applyAccess, mapKey, keyLabel, keyCaptureActive, cancelKeyCapture, captureKey, helpRows, readPad };
 export const stationExtras = (e, b) => {
   const html = seasonsStationExtras(e, b) + gardenStationExtras(e, b) + gearStationExtras(e, b) + bustleStationExtras(e, b);
   return e?.bt ? patchOrderLinks(html) : html;
@@ -71,7 +75,7 @@ const renderViewBase = (e, ui) => {
   if (ui?.view === "phone") return patchPhone(html);
   return html;
 };
-export const renderCampaignView = (e, ui) => patchTidyView(e, ui, renderBustleView(e, ui, (e1, u1) => renderBountyView(e1, u1, renderViewBase)));
+export const renderCampaignView = (e, ui) => patchTidyView(e, ui, renderAlmanacView(e, ui, (e0, u0) => renderBustleView(e0, u0, (e1, u1) => renderBountyView(e1, u1, renderViewBase))));
 export const renderCampaignJournal = (e, ui) => {
   const html = renderGardenJournal(e, ui);
   return ui?.catalog ? html : patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html)));
@@ -82,22 +86,22 @@ export const renderMapPlus = (e, ui) => patchUnderMap(e, ui, renderFarMap(e, ui)
 // 放进同一个滚动区里（.frontier-body 的最后），整页一起上下滚
 const PAGE_TAIL = "</div></div></div></div>";
 export const renderManualPlus = (e, tab, h, ui, fui) => {
-  if (tab === "farm" && !ui?.tool && !ui?.guided && e.g) return `<div class="outpost-page view-gBoard">${patchBoard(e, renderGardenBoard(e))}</div>`;
+  if (tab === "farm" && !ui?.tool && !ui?.guided && e.g) return `<div class="outpost-page view-gBoard">${patchAlmanacBoard(e, patchBoard(e, renderGardenBoard(e)))}</div>`;
   const html = renderManualSeasons(e, tab, h, ui, fui);
   if (!(ui?.tool?.menu === "frontier" && ui.tool.tab === "combat" && e.gr)) return html;
   const bench = renderGearBench(e, h);
   return html.endsWith(PAGE_TAIL) ? html.slice(0, -PAGE_TAIL.length) + bench + PAGE_TAIL : `<div class="place-page"><div class="detail-scroll">${html}${bench}</div></div>`;
 };
-// 顶栏：口粮、袭击横幅（长夜里换成长夜的）、日期变红、季节标签、警报栏、手记上的“新”点。
+// 顶栏：口粮、袭击横幅（长夜里换成长夜的）、日期（带时节）变红、寒潮标签、警报栏、手记上的“新”点。
 export function campaignHud(e) {
   const base = outpostHud(e);
   if (!base) return null;
   const ln = tidyLnHud(e);
-  return { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchAlerts(e, alertBar(e)), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e) };
+  return { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchAlerts(e, alertBar(e)), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e), date: almanacDate(e) };
 }
-// 动作：热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
+// 动作：四时 → 热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
-  return handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
+  return handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
 }
 
 // v0.25：到这里所有层的物品都登记过了，把还没挂上的新小图挂上

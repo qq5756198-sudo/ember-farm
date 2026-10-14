@@ -309,7 +309,7 @@ ROOM_HOOKS.push((e) => {
     .filter((id) => id !== "hnKeepsake" || (e.hn.past.pick === "keepsake" && !e.s.buildings.some((b) => b.type === "hnKeepsake")))
     .map((id) => `<div>${esc(BUILDINGS[id].name)}<small>${esc(itemsText(BUILDINGS[id].cost) || "免费")}</small>${button("build", id, "建造")}</div>`)
     .join("");
-  return `<article class="frontier-card"><h3>舒适度和「休息好」</h3><p>房间里每类家具算 1 分（床、椅子、灯、桌子、书架、火炉、奖杯、往事陈列柜），同类只算一件，最多 ${COMFORT.max} 分。${home ? "你睡觉时边上最好的那间舒适度 " + e.roomComfort(home) + "：睡醒「休息好」" + (COMFORT.rested.base + e.roomComfort(home)) + " 个钟点（体力恢复快五成，经验多一成）。" : "农舍边上还没有布置好的房间：睡醒没有「休息好」。"}${rest}</p>${rows}<p class="muted">舒适度 ${COMFORT.ladder} 以上够生活水准第 3 级；${COMFORT.moodAt} 以上大家该有的心情 +${COMFORT.mood}。阅览室当学习室用：带徒、改学职能快一倍；有餐桌的是食堂，在这里吃的晚饭多算一种菜；地板边摆床和药柜就是医务室。</p><div class="furniture-list">${build}</div></article>`;
+  return `<article class="frontier-card"><h3>舒适度和「休息好」</h3><p>房间里每类家具算 1 分（${esc(Object.values(COMFORT.cats).join("、"))}），同类只算一件，最多 ${COMFORT.max} 分。${home ? "你睡觉时边上最好的那间舒适度 " + e.roomComfort(home) + "：睡醒「休息好」" + (COMFORT.rested.base + e.roomComfort(home)) + " 个钟点（体力恢复快五成，经验多一成）。" : "农舍边上还没有布置好的房间：睡醒没有「休息好」。"}${rest}</p>${rows}<p class="muted">舒适度 ${COMFORT.ladder} 以上够生活水准第 3 级；${COMFORT.moodAt} 以上大家该有的心情 +${COMFORT.mood}。阅览室当学习室用：带徒、改学职能快一倍；有餐桌的是食堂，在这里吃的晚饭多算一种菜；地板边摆床和药柜就是医务室。</p><div class="furniture-list">${build}</div></article>`;
 });
 
 // ================= 广场：食堂和节庆供品 =================

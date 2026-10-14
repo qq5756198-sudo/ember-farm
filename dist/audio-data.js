@@ -1,5 +1,6 @@
 // v0.23.0「回响」的声音：音效、乐器、6 段音乐、6 句短乐句、10 套环境声。全部是数，用 audio-synth.js 算成采样。
 // v0.24.0「暗涌」加了新感染者、头目、柜子、撬锁、空投、对讲机、麦穗低吼的声音。
+// v0.29.0「四时」：农场白天的音乐按时节多三段（酷暑、秋收、寒潮）。
 // 一层的写法见 audio-synth.js：w 波形、f 频率（[起, 止] 是滑音）、t 长度、d 延后、a 起音、h 保持、c 衰减、v 音量、
 // lp/hp 低通高通（[起, 止] 是扫频）、bp [中心, Q] 带通、vib/am [速度, 深度]、j 音高抖动。
 
@@ -242,6 +243,40 @@ export const PIECES = {
     drums: { hat: "..x...x...x...x.", vel: 0.2 },
     lead: { inst: "flute", density: 0.55, oct: 0, vel: 0.38 },
     layers: { drums: 0.5, lead: 0.8 },
+  },
+  // v0.29「四时」：农场白天按时节换（回暖用上面那段）
+  farmDay_heat: {
+    name: "农场白天 · 酷暑",
+    bpm: 92,
+    root: 62,
+    scale: MAJOR,
+    chords: [0, 4, 5, 3, 0, 4, 3, 4, 0, 4, 5, 3, 0, 3, 4, 0],
+    base: { pad: 0.36, bass: "x.....x.x.......", arp: { inst: "pluck", pat: "x.x...x.x.x...x.", vel: 0.4, oct: 0 } },
+    drums: { kick: "x.......x.......", hat: "..x...x...x...x.", vel: 0.33 },
+    lead: { inst: "pluck", density: 0.55, oct: 1, vel: 0.36 },
+    layers: { drums: 0.65, lead: 0.7 },
+  },
+  farmDay_harvest: {
+    name: "农场白天 · 秋收",
+    bpm: 80,
+    root: 57,
+    scale: DORIAN,
+    chords: [0, 3, 4, 0, 0, 6, 3, 4, 0, 3, 4, 0, 6, 3, 4, 0],
+    base: { pad: 0.4, bass: "x.......x...x...", arp: { inst: "pluck", pat: "x...x...x...x...", vel: 0.38, oct: 0 } },
+    drums: { kick: "x.......x.......", tom: "............x...", every: 2, vel: 0.3 },
+    lead: { inst: "string", density: 0.45, oct: 1, vel: 0.32 },
+    layers: { drums: 0.5, lead: 0.7 },
+  },
+  farmDay_cold: {
+    name: "农场白天 · 寒潮",
+    bpm: 66,
+    root: 55,
+    scale: MINOR,
+    chords: [0, 5, 3, 4, 0, 5, 6, 4, 0, 3, 5, 4],
+    base: { pad: 0.42, bass: "x...............", arp: { inst: "bell", pat: "x.......x.......", vel: 0.26, oct: 0 } },
+    drums: null,
+    lead: { inst: "flute", density: 0.25, oct: 1, vel: 0.3 },
+    layers: { drums: 0, lead: 0.6 },
   },
 };
 

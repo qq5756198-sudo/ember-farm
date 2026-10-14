@@ -15,11 +15,16 @@
 //    瞭望塔、陷阱、围栏在守夜台里比：HNUP=… node scripts/gear-sim.mjs 400 38 longnight mid（见 gear-sim 开头）。
 //    方案的线：保留和改造的在它管的那件事上变化 5% 以上。
 //
+// 4) 雨夜（v0.29 四时）：node scripts/bustle-bench.mjs rain [种子,种子] [天数]
+//    平常、热闹两种营地睡着过，下了一天雨的晚上和不下雨的晚上各来了几场；同样的种子再跑一遍「雨声不盖动静」对照。
+//    方案的线：雨夜循声来的场数少 20–40%。
+//
 // 2) 跑商：node scripts/bustle-bench.mjs mule [趟数]
 //    每个去处一车典型的货（集市 20 个土豆、地区 6 个药包 + 14 条绷带、边境 8 块布 + 12 个零件），带回金币；
 //    跟车 / 不跟车（营地安静）/ 不跟车（营地动静 8 以上或灰隼团要来）各跑若干趟，和同一车货直接出货比。
 //    方案的线：跟车不被截；不跟车被截 15%–30%；一趟净赚比直接出货多 10%–30%。
-const D = new URL("../dist/", import.meta.url).href;
+// DIST=别的 dist 目录：拿同一个脚本去跑旧版本对照
+const D = process.env.DIST ? new URL("file://" + process.env.DIST.replace(/\/?$/, "/")).href : new URL("../dist/", import.meta.url).href;
 const { Engine, newGameState } = await import(D + "campaign.js");
 const { BUILDINGS, ITEMS } = await import(D + "data.js");
 const { TASKS } = await import(D + "rebuild-data.js");
@@ -116,7 +121,7 @@ function noiseRun(seed, profile, days, opts) {
     e.c.energy = 100;
   }
   const hp0 = () => e.s.buildings.filter((b) => ["fence", "gate", "tower"].includes(b.type)).reduce((a, b) => a + b.hp, 0);
-  const R = { attacks: 0, zombies: 0, hurt: 0, hurtNames: [], bldLost: 0, peak: 0, byDay: [], hit: 0, towerKills: 0, reached: 0 };
+  const R = { attacks: 0, zombies: 0, hurt: 0, hurtNames: [], bldLost: 0, peak: 0, byDay: [], hit: 0, towerKills: 0, reached: 0, rainNights: 0, rainAttacks: 0, dryNights: 0, dryAttacks: 0 };
   const start = e.s.day;
   for (let d = 0; d < days; d++) {
     const day = e.s.day;
@@ -151,6 +156,7 @@ function noiseRun(seed, profile, days, opts) {
     until(e, 22 * 60);
     atFarm(e, 330, 340);
     R.peak = Math.max(R.peak, e.hn.noise.v);
+    const rainy = ["小雨", "暴雨"].includes(e.s.weather);
     const before = e.hn.stats.attacks || 0,
       hurt0 = Object.keys(e.hn.hurt).length,
       b0 = hp0();
@@ -182,6 +188,13 @@ function noiseRun(seed, profile, days, opts) {
       e.sleep();
     } else e.sleep();
     const n = (e.hn.stats.attacks || 0) - before;
+    if (rainy) {
+      R.rainNights++;
+      if (n) R.rainAttacks++;
+    } else {
+      R.dryNights++;
+      if (n) R.dryAttacks++;
+    }
     if (n) {
       R.attacks += n;
       R.zombies += e.hn.attack.n;
@@ -237,6 +250,36 @@ if (MODE === "noise") {
   const ok2 = lively.every((r) => r.perWeek >= 2 && r.perWeek <= 4);
   const ok3 = rows.filter((r) => r.how.includes("守卫")).filter((r) => r.camp === "热闹").every((r) => r.hurt === 0);
   console.log("安静 0 场：" + (ok1 ? "过" : "没过") + "；热闹每周 2–4 场：" + (ok2 ? "过" : "没过") + "；有守卫和围栏不掉人（热闹）：" + (ok3 ? "过" : "没过"));
+}
+
+// ================= 雨夜 =================
+if (MODE === "rain") {
+  const SEEDS = (process.argv[3] || "1,2,3,4,5,6,7,8").split(",").map(Number);
+  const DAYS = Number(process.argv[4] || 28);
+  let A = null;
+  try {
+    A = await import(D + "almanac-data.js");
+  } catch {
+    A = null;
+  }
+  // RAINMASK=0.4：试别的机会（调数用）
+  if (A && process.env.RAINMASK) A.RAIN.mask = Number(process.env.RAINMASK);
+  const keep = A?.RAIN.mask;
+  const rows = [];
+  for (const profile of ["normal", "lively"])
+    for (const off of A ? [false, true] : [false]) {
+      if (A) A.RAIN.mask = off ? 0 : keep;
+      const rs = SEEDS.map((s) => noiseRun(s, profile, DAYS, { awake: false, defended: false }));
+      const sum = (k) => rs.reduce((a, r) => a + r[k], 0);
+      rows.push({ camp: PROFILES[profile].name, rain: off ? "雨声不盖（对照）" : "雨声盖住", rainNights: sum("rainNights"), rainAttacks: sum("rainAttacks"), perRain: +(sum("rainAttacks") / sum("rainNights")).toFixed(3), dryNights: sum("dryNights"), dryAttacks: sum("dryAttacks"), perDry: +(sum("dryAttacks") / sum("dryNights")).toFixed(3) });
+    }
+  if (A) A.RAIN.mask = keep;
+  console.table(rows);
+  for (const name of ["平常", "热闹"]) {
+    const on = rows.find((r) => r.camp === name && r.rain === "雨声盖住"),
+      off = rows.find((r) => r.camp === name && r.rain !== "雨声盖住");
+    if (on && off && off.rainAttacks) console.log(name + "：雨夜循声来的少了 " + (((off.rainAttacks - on.rainAttacks) / off.rainAttacks) * 100).toFixed(0) + "%（" + off.rainAttacks + " → " + on.rainAttacks + " 场）");
+  }
 }
 
 // ================= 跑商 =================

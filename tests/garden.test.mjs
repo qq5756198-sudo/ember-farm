@@ -6,6 +6,7 @@ import { TASKS } from "../dist/rebuild-data.js";
 import { ITEMS, BUILDINGS, CROPS } from "../dist/data.js";
 import { CROP_INFO, BUFFS, CARE, WEEDS, BUGS, CROWS, COVER, FODDER_SOIL, FODDER_FEED, EARLY, LIKED, GARDEN_ITEMS } from "../dist/garden-data.js";
 import { renderCampaignView, campaignTitle, renderCampaignJournal, handleCampaignAction, renderManualPlus, placeTitle } from "../dist/campaign-ui.js";
+import { WEATHER } from "../dist/expansion-data.js";
 
 const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
 const make = (state = freshState()) => {
@@ -213,7 +214,10 @@ test("rotation and soil: a new crop after another gives +10 care, the same crop 
 // ================= 天气 =================
 test("weather: a crop grows 25% faster on its liked weather; cloth cover stops bad weather and the night penalty", () => {
   const { e, toasts } = make();
-  e.s.day = 8;
+  // v0.29：天气按时节排；挑一天，第二天不下雨（下雨会替田浇水，照料分就多了一项）
+  let d = 8;
+  while (["小雨", "暴雨"].includes(WEATHER[d % WEATHER.length])) d++;
+  e.s.day = d;
   const p = plant(e, 3, "radish"); // 喜欢晴朗，怕高温
   e.s.weather = "晴朗";
   const liked = e.cropGrowthRate(p);

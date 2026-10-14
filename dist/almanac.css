@@ -1,0 +1,223 @@
+/* v0.29.0「四时」：顶栏日期带时节，日历上的四个时节，告示牌上这一季种什么，选种的当季 / 反季，电台的手气签，
+   腌缸、土酒坛、嫁接果树、旧物摆件、鸡舍（亲近）、药柜（认蘑菇）的设施卡，睡醒那本账。
+   颜色跟着前几版：好事金色，坏事暗红，提醒橙色；四个时节各一个淡色。 */
+
+/* ---------- 顶栏日期 ---------- */
+.hud-date {
+  white-space: nowrap;
+}
+
+/* ---------- 日历：四个时节 ---------- */
+.al-seasons {
+  margin: 4px 0 12px;
+}
+.al-seasons h3 {
+  margin: 0 0 4px;
+  color: #f6e3b4;
+}
+.al-season-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.al-season {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #3c4d38;
+  border-left-width: 4px;
+  border-radius: 5px;
+  background: #1b2c22;
+}
+.al-season.now {
+  border-color: #f3d27a;
+  background: #2a3324;
+}
+.al-season h4 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 4px;
+  color: #f0e3b5;
+}
+.al-season h4 small {
+  color: #aeba9f;
+  font-weight: normal;
+}
+.al-season p {
+  margin: 3px 0;
+  font-size: 0.92em;
+}
+.al-season:nth-child(1) {
+  border-left-color: #8fbf6a;
+}
+.al-season:nth-child(2) {
+  border-left-color: #e0a440;
+}
+.al-season:nth-child(3) {
+  border-left-color: #c8743a;
+}
+.al-season:nth-child(4) {
+  border-left-color: #8fb7cf;
+}
+.tag.gold {
+  background: #5a4a20;
+  color: #ffe08a;
+}
+
+/* ---------- 告示牌、这块田、电台 ---------- */
+.al-board,
+.al-radio {
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  border-left: 3px solid #e9c05a;
+  background: rgba(37, 29, 23, 0.7);
+}
+.al-board h3,
+.al-radio h3 {
+  margin: 0 0 4px;
+  color: #f6e3b4;
+}
+.al-board p,
+.al-radio p {
+  margin: 4px 0;
+}
+.al-radio b.gold,
+.al-plot.gold {
+  color: #ffd76a;
+}
+.al-plot {
+  margin: 6px 0;
+}
+
+/* ---------- 设施卡 ---------- */
+.al-card h4 {
+  margin: 4px 0 6px;
+  color: #f6e3b4;
+}
+.al-card .bt-list li small {
+  margin-left: 4px;
+}
+.al-decor-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.al-decor-pick button {
+  min-height: 34px;
+}
+.al-mush {
+  margin: 8px 0;
+}
+
+/* ---------- 睡醒那本账 ---------- */
+.ledger-card {
+  position: absolute;
+  left: 50%;
+  top: 56px;
+  transform: translateX(-50%);
+  z-index: 7;
+  width: min(92%, 520px);
+  padding: 10px 16px 12px;
+  font-family: var(--px, "Microsoft YaHei", sans-serif);
+  font-size: 15px;
+  line-height: 22px;
+  color: #f3e6c4;
+  background: rgba(24, 18, 12, 0.94);
+  border: 2px solid #140f0b;
+  box-shadow: inset 0 0 0 2px #94502c, 0 4px 0 rgba(20, 15, 11, 0.5);
+  cursor: pointer;
+  animation: al-ledger-in 0.35s ease-out;
+}
+.ledger-card[hidden] {
+  display: none;
+}
+.ledger-card h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: #ffd76a;
+}
+.ledger-card.warn h3 {
+  color: #ffb08a;
+}
+.ledger-card ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ledger-card li {
+  margin: 2px 0;
+}
+.ledger-card small {
+  display: block;
+  margin-top: 4px;
+  color: #a99a7a;
+  font-size: 12px;
+}
+.ledger-card.out {
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+body.title-screen .ledger-card,
+body.modal-open .ledger-card {
+  display: none;
+}
+@keyframes al-ledger-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ledger-card {
+    animation: none;
+  }
+  .ledger-card.out {
+    transition: none;
+  }
+}
+.a11y-color .ledger-card {
+  box-shadow: inset 0 0 0 2px #ffe066, 0 4px 0 rgba(20, 15, 11, 0.5);
+}
+
+@media (max-width: 760px) {
+  .al-season-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* 手机竖屏、横屏：账本放到场景下边，不挡左上角的提醒 */
+@media (max-width: 760px), (max-height: 500px) {
+  .ledger-card {
+    top: auto;
+    bottom: 10px;
+    width: min(94%, 460px);
+    padding: 8px 12px 9px;
+    font-size: 13px;
+    line-height: 18px;
+    animation-name: al-ledger-up;
+  }
+  .ledger-card h3 {
+    font-size: 14px;
+  }
+}
+@keyframes al-ledger-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+@media (max-width: 420px) {
+  .al-season-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

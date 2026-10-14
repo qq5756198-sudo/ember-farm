@@ -13,6 +13,13 @@ import { WATER, FERTS, COMPOST, REGROW, GIANT, MYSTERY, DEX, DEX_CROPS, RAID, TH
 import * as UI from "../dist/campaign-ui.js";
 import { residentExtras } from "../dist/people-hooks.js";
 import { MISSING_ICONS } from "../dist/item-sprites.js";
+import { WEATHER } from "../dist/expansion-data.js";
+import { coldStartFrom, seasonOf, seasonDay } from "../dist/almanac-data.js";
+// v0.29：天气按时节排（不再是 8 天一轮）：找一天，它的第二天是要的天气
+const dayBefore = (ok, from = 1) => {
+  for (let d = from; d < from + 400; d++) if (ok(WEATHER[d % WEATHER.length])) return d;
+  throw new Error("no such day");
+};
 
 const DEV = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
 const make = (state = freshState(), seed = 20271) => {
@@ -255,10 +262,10 @@ test("sprinklers: every hour from 06:00 to 20:00 they water what was planted tod
 test("rain waters every crop and keeps the network's water; the canal no longer drains the watering can; the cistern perk is a source; egrets add canal water", () => {
   const { e } = make();
   bare(e);
-  e.s.day = 10;
+  e.s.day = dayBefore((w) => w === "小雨", 10);
   put(e, "rain", 560, 640);
   const p = sow(e, 40, "radish", 0.1);
-  nextDay(e); // 第 11 天小雨
+  nextDay(e); // 第二天小雨
   assert.equal(e.s.weather, "小雨");
   assert.ok(e.plotWatered(p));
   assert.equal(e.bt.net.used, 0);
@@ -550,14 +557,15 @@ test("the collection book: first harvest, first fine and a third cell per crop; 
 test("bad weather is told the evening before; you can harvest early from 70%; acid rain spoils one portion of each uncovered plot over 70%, covered ones are safe", () => {
   const { e, toasts } = make();
   bare(e);
-  e.s.day = 5; // 明天酸雨
+  e.s.day = dayBefore((w) => w === "酸雨", 5); // 明天酸雨
+  const day = e.s.day;
   const p = sow(e, 13, "potato", 0.8),
     q = sow(e, 14, "potato", 0.8),
     young = sow(e, 15, "potato", 0.5),
     early = sow(e, 16, "potato", 0.75);
-  e.gRec(q).cv = 6;
+  e.gRec(q).cv = day + 1;
   hour(e, 18);
-  assert.deepEqual(e.bt.storm, { day: 6, kind: "acid" });
+  assert.deepEqual(e.bt.storm, { day: day + 1, kind: "acid" });
   assert.ok(said(toasts, /明天酸雨/));
   const card = UI.renderCampaignView(e, { view: "gPlot", id: String(early.id) });
   assert.match(card, /data-action="btRush"/);
@@ -656,14 +664,18 @@ test("cold snaps come back every 28 days after the story winter; in a cold snap 
   const wi = e.w.winter;
   Object.assign(wi, { phase: "done", coldDay: 40, endDay: 43, prepDay: 37 });
   e.w.forecast = true;
-  e.s.day = 66;
-  e.bt.cold.next = 68;
-  nextDay(e); // 第 67 天：说
+  // v0.29：寒潮固定落在寒潮时节第 1 天（一年的第 22 天）
+  const cd = coldStartFrom(68);
+  assert.equal(seasonOf(cd).id, "cold");
+  assert.equal(seasonDay(cd), 1);
+  e.s.day = cd - 2;
+  e.bt.cold.next = cd;
+  nextDay(e); // 前一天：说
   assert.equal(wi.phase, "prep");
-  assert.equal(wi.coldDay, 68);
-  assert.equal(wi.endDay, 68 + COLD.first);
+  assert.equal(wi.coldDay, cd);
+  assert.equal(wi.endDay, cd + COLD.first);
   assert.ok(said(toasts, /寒潮又到/));
-  assert.equal(e.bt.cold.next, 68 + COLD.every);
+  assert.equal(e.bt.cold.next, cd + COLD.every);
   const gh = put(e, "greenhouse", 335, 660);
   const out = sow(e, 8, "radish", 0.4),
     inside = sow(e, 36, "radish", 0.4),

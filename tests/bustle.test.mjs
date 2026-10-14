@@ -5,6 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { Engine, freshState, newGameState, needsStoryMigration } from "../dist/campaign.js";
 import * as Bounty from "../dist/bounty.js";
+import { Engine as BustleEngine } from "../dist/bustle.js";
 import { ITEMS, BUILDINGS, CROPS } from "../dist/data.js";
 import { TASKS } from "../dist/rebuild-data.js";
 import { TECH, HORDE_DIRECTIONS } from "../dist/expansion-data.js";
@@ -173,6 +174,7 @@ test("noise: below 4 it halves at midnight; 4+ brings infected that night from o
   ]) {
     clearFoes(e);
     e.hn.noise.v = v;
+    e.s.weather = "晴朗"; // v0.29：下了一天雨，当晚动静少 1（四时那边单独测）
     nextDay(e);
     assert.equal(e.noiseAlive().length, n, "noise " + v);
     assert.equal(e.hn.noise.v, 0);
@@ -186,6 +188,7 @@ test("noise: below 4 it halves at midnight; 4+ brings infected that night from o
   clearFoes(e);
   e.s.day = 12;
   e.hn.noise.v = 8;
+  e.s.weather = "晴朗";
   nextDay(e);
   const z = e.noiseAlive();
   assert.equal(z.length, 10);
@@ -1060,15 +1063,17 @@ test("fish runs: once his tasks are done Jiang Bo stays by the pond and calls a 
   e.s.inventory[kind] -= 1;
   // 直接验证：鱼汛那天多给一条
   const was = { ...e.s.inventory };
-  const orig = Object.getPrototypeOf(Object.getPrototypeOf(e)).hookFish;
-  Object.getPrototypeOf(Object.getPrototypeOf(e)).hookFish = function () {
+  // 热闹下面那一层换成“上了一条要的那种”（v0.29 起热闹上面还有一层四时）
+  const below = Object.getPrototypeOf(BustleEngine.prototype);
+  const orig = below.hookFish;
+  below.hookFish = function () {
     this.s.inventory[kind] = (this.s.inventory[kind] || 0) + 1;
     return true;
   };
   try {
     e.hookFish();
   } finally {
-    Object.getPrototypeOf(Object.getPrototypeOf(e)).hookFish = orig;
+    below.hookFish = orig;
   }
   assert.equal(stock(e, kind) - ((was[kind] || 0) + (e.s.storage[kind] || 0)), 2 - 0, "one hooked plus one extra");
   assert.ok(said(toasts, /鱼汛/));
@@ -1275,7 +1280,7 @@ test("UI: hurt residents and crew show on their cards with the treatment buttons
   put(e, "hnKeepsake", 470, 590);
   assert.doesNotMatch(roomExtras(e), /data-id="hnKeepsake"/, "only one keepsake");
   rooms = roomExtras(e);
-  assert.match(rooms, /舒适度 \d\/8/);
+  assert.match(rooms, new RegExp("舒适度 \\d/" + COMFORT.max));
 });
 
 test("UI: the plaza shows the walking canteen and the offering picker; the museum shows one 「往事」 case; their buttons work", () => {

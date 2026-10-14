@@ -539,7 +539,11 @@ test("a quiet night gives a one-line note and a log entry instead of the summary
   assert.equal(e.sleep(), true);
   assert.ok(!e.events.some((v) => v.type === "menu" && v.view === "summary"), "no summary page");
   assert.ok(e.o.log.some((l) => /平安过去/.test(l.text)));
-  assert.match(e.toasts.at(-1).t, /消息记录/);
+  // v0.29：那一行改成睡醒的账本（在场景上方停一会儿，全文进消息记录）
+  const led = e.events.find((v) => v.type === "ledger");
+  assert.ok(led, "the ledger shows instead of the one-line note");
+  assert.match(led.lines.join(" "), /夜里：平安/);
+  assert.ok(e.o.log.some((l) => /的账：/.test(l.text)));
   const h = make();
   for (const id of Object.keys(h.s.storage)) if (ITEMS[id]?.food) delete h.s.storage[id];
   for (const id of Object.keys(h.s.inventory)) if (ITEMS[id]?.food) delete h.s.inventory[id];
