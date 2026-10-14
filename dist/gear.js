@@ -1314,7 +1314,7 @@ export class Engine extends GardenEngine {
     if (T.tier.speed < 1 && moving) this.moveEntity(p, (p.x - before.x) * (T.tier.speed - 1), (p.y - before.y) * (T.tier.speed - 1));
     const dSt = p.stamina - before.st;
     if (dSt > 0) p.stamina = before.st + dSt * T.tier.regen * (this.gr.fever ? INFECTION.feverRegen : 1);
-    else if (dSt < 0 && inp.run && T.runCost < 1) p.stamina = Math.min(100, before.st + dSt * T.runCost);
+    else if (dSt < 0 && inp.run && T.runCost < 1) p.stamina = Math.min(this.maxSta(), before.st + dSt * T.runCost);
     // 寒潮：按全身保暖值算多饿多少（原来的规则按“多饿 40%”算过一次，这里退回多算的部分）
     if (this.s.winter && this.playerCold?.()) {
       const drop = before.hunger - p.hunger,

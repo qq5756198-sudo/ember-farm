@@ -418,10 +418,10 @@ export class Engine extends FarEngine {
         return a <= -100 ? "居民疲劳清零" : "居民疲劳 " + signed(a);
       case "hp":
         if (a < 0) this.s.player.hp = Math.max(10, this.s.player.hp + a);
-        else this.s.player.hp = Math.min(100, this.s.player.hp + a);
+        else this.s.player.hp = Math.min(this.maxHp(), this.s.player.hp + a);
         return "生命 " + signed(a);
       case "stamina":
-        this.s.player.stamina = clamp(this.s.player.stamina + a, 0, 100);
+        this.s.player.stamina = clamp(this.s.player.stamina + a, 0, Math.max(this.s.player.stamina, this.maxSta()));
         return a >= 100 ? "体力恢复满" : "体力 " + signed(a);
       case "research":
         this.grantResearch?.(a);

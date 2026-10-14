@@ -580,7 +580,7 @@ export class Engine extends AllianceEngine {
     if (this.s.region === "farm" || p.hp >= 35 || o.medicDay === this.s.day) return;
     if (!this.hasBundle("clinic") && o.cargo !== "medicine") return;
     o.medicDay = this.s.day;
-    p.hp = Math.min(100, p.hp + 30);
+    p.hp = Math.min(this.maxHp(), p.hp + 30);
     this.toast("医院巡回队赶到，给你包扎了伤口：生命 +30（每天一次）。", "gold");
   }
   takeFarm(cost) {

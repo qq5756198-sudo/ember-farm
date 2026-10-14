@@ -4,6 +4,9 @@ import { bakeFarm, puddleSpots } from "./pixel-farm.js";
 import { CITY } from "./pixel-city.js";
 import { DISTRICT_ART, FRONTIER_ART } from "./pixel-lands.js";
 import { S, puddlesOn } from "./pixel-build.js";
+// v0.31：地铁隧道每一层按名字（tunnel:种子:层:日子:大吉）临时拼出来
+import { tunnelArt } from "./tunnel-art.js";
+import { parseTunnelKey } from "./tunnel-gen.js";
 
 const TABLE = { ...CITY, ...DISTRICT_ART, ...FRONTIER_ART };
 // 这张图的天气习惯：室内（地下城）没有天气、一直是灯光；霜原的雨落下来是雪；松林常年有雾；雨巷总是湿的
@@ -16,7 +19,7 @@ export const MAP_MOOD = {
   archive: { waterEdge: true },
 };
 export function hasMapArt(region) {
-  return region === "farm" || !!TABLE[region];
+  return region === "farm" || !!TABLE[region] || !!parseTunnelKey(region);
 }
 // 画好后只留画布和地面种类；逐像素的原始数据很大（每张约 1.5 MB），只有测试要看时才留着
 export function bakeMap(region, { keepPix = false } = {}) {
@@ -29,6 +32,10 @@ export function bakeMap(region, { keepPix = false } = {}) {
       puddles: puddleSpots(f.map),
       mood: {},
     };
+  } else if (parseTunnelKey(region)) {
+    const art = tunnelArt(region);
+    if (!art) return null;
+    out = { ...art, puddles: [], mood: { indoor: true, tunnel: art.floor } };
   } else {
     const make = TABLE[region];
     if (!make) return null;

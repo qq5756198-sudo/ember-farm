@@ -1,9 +1,9 @@
 // 当前主线的引擎入口。game.js 只从这里取引擎；每一轮新加的层只需改这一行指向。
-// 链：engine → … → alliance (v0.13) → outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29) → kin (v0.30)
-export { Engine, freshState, newGameState } from "./kin.js";
-// v0.30：v0.29 及更早的存档（没有整顿、菜地、热闹、四时或人情的记录）读进来之前，原样留一份
-export { needsUpgrade as needsStoryMigration } from "./kin.js";
+// 链：engine → … → alliance (v0.13) → outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29) → kin (v0.30) → relight (v0.31)
+export { Engine, freshState, newGameState } from "./relight.js";
+// v0.31：v0.30 及更早的存档（没有整顿、菜地、热闹、四时、人情或重光的记录）读进来之前，原样留一份
+export { needsUpgrade as needsStoryMigration } from "./relight.js";
 // 设置里“开始新游戏”“带着记忆重新开始”也从最上面这一层开局（不然新开的档会把各版的“旧档提示”说一遍）
-export { newGamePlusState } from "./kin.js";
+export { newGamePlusState } from "./relight.js";
 // v0.25：其余物品的小图重画（接在装备小图后面）
 import "./item-sprites.js";

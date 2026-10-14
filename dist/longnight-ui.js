@@ -145,7 +145,7 @@ function viewReport(e) {
   const B = BOSSES[r.bossId],
     next = e.nextLongNight(),
     total = e.nightTotal(),
-    grow = r.held && e.lnMult() < LN.cap ? "多两成" : r.held ? "已经是最大" : "和这一个一样大";
+    grow = r.held && (e.lnHeldMult?.() ?? e.lnMult()) < LN.cap ? "多两成" : r.held ? "已经是最大" : "和这一个一样大";
   const why = r.how === "dawn" ? "天亮了，剩下的感染者退回了林子。" : r.how === "cleared" ? "三波都打完了。" : "你倒下以后，感染者在农场里转了一圈，天亮前散了。家园的东西都在。";
   const loot = itemsText(Object.fromEntries(Object.entries(r.items).filter(([id]) => id !== r.memento)));
   const nap = e.lnNapOk?.() ? button("lnNap", "", "睡到早上 8 点", 'class="primary"') : "";

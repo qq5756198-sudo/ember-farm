@@ -1937,3 +1937,143 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(back.kin.partner.stage, 'home'); assert.equal(back.kin.waters.river, true); assert.equal(back.kin.intro.told, true);
   console.log('Kin controller passed: a v0.29 save restored from a file (the old likes still known, the 人情 notice on the first frame), the people page saying where everyone is with a marker, a gift given in person from the people page, 阿禾 waiting at the field and the heart talk opened with E, the second talk marking a cupboard in the residential ruin (E takes the tin), a mother answered with E and her grandson taken in, a lantern-night lamp lit with E, fishing at the valley river (E casts, E on the bite reels, holding E pulls in, the reel card and the 收线 label, the touch button doing the same), 许医生 testing the water sample from the residents page, the fish book, the ring given from the people page and said at the fire with E, the feast on the plaza, lamps/the child/the waiting mother/the partner at your side/the fishing line/the heart bubble/the sandbags drawn at four sizes by day and night, and save/parse.');
 }
+
+// v0.31.0「重光」: a v0.30 save restored from a file (the 重光 notice on the first frame), the station picked from the build menu,
+// placed and opened with E (an item handed in with its button, a list filled, a wall's card), the archive's 旧世界陈列 (donate with
+// the button, the owner's story), 陈工 opening an iron box from the residents page, the platform by the hospital lift opened with
+// E (down to floor 1 with the button; closed before the main story is done), a tunnel cabinet opened with E, the ladder taken
+// with E to floor 2, the way up taking you back to the shelter, a page shown in the journal and its dig spot dug with E, the year
+// review on the vigil night (the letter in the journal, lamps on the stone), the company signed, a wall bought and up the next
+// morning, the company rule in the decree book, the contract torn up, the collection's 收复度 and cores, the tunnel at two depths,
+// the station, the stone and the platform drawn at four sizes by day and night, and save/parse.
+{
+  let clock = 24000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const keydown = (key) => listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false });
+  const press = (key) => { keydown(key); listeners.keyup({ key }); };
+  const ctxLine = () => document.querySelector('#context').innerHTML;
+  const goTo = (e, region, x, y) => { e.s.visited = { ...(e.s.visited || {}), [region]: true }; e.s.region = region; e.enemies = e.s.enemies[region] = []; e.assignRegion(); if (x != null) Object.assign(e.s.player, { x, y }); };
+  const spotFor = (e, type, cx = 760, cy = 640) => { for (let r = 60; r < 640; r += 16) for (let a = 0; a < 6.28; a += 0.3) { const x = Math.round((cx + Math.cos(a) * r) / 8) * 8, y = Math.round((cy + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x: x + 30, y: y + 46 }); if (!e.buildReason(type, x, y)) return { x, y }; } return null; };
+  const sizes = (list = [[1366, 600], [1920, 900], [390, 480], [844, 240]]) => { for (const [w, hh] of list) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); } context.inspect().renderer.resize(1366, 600, 1); };
+  dailyOn = false;
+  const RD = await import('../dist/relight-data.js');
+  const RS = await import('../dist/relight-story.js');
+  const RL = await import('../dist/relight.js');
+  const Kin = await import('../dist/kin.js');
+  // ---------- 一份 v0.30 的旧档（主线打完、三个居民、档案馆分馆、地底避难城和升降井），从文件恢复 ----------
+  const old = new Kin.Engine(Kin.newGameState(), () => {});
+  const sc = old.sc;
+  sc.act = 9; sc.claimed = ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8']; sc.choice = 'ration';
+  sc.letters = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8', 'act9']; sc.flags.well = sc.flags.camp = sc.flags.farmerFed = true; sc.camp = { x: 560, y: 735 };
+  old.r.claimed = RebuildData.TASKS.map((t) => t.id); old.r.radio = true;
+  old.o.hospital = 'water'; old.o.youke = true; old.o.lathe = { mode: 'parts', day: 0 }; old.o.toll = 'refuse'; old.o.raid.phase = 'won';
+  old.assignRegion();
+  for (const id of ['farmer', 'medic', 'mechanic']) old.recruit(id);
+  for (let i = 0; i < 3; i++) old.s.buildings.push({ id: 'rb' + i, type: 'bed', x: 240 + i * 56, y: 980, rotation: 0, hp: 90, open: false });
+  old.w.museum.built = true;
+  old.b.unlocked.shelter = true; old.b.points.shelter_lift = old.bpoint('shelter_lift'); old.b.points.shelter_lift.flags.repair = true;
+  old.s.day = 40; old.s.minute = 600; old.s.weather = '晴朗'; if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();
+  old.s.visited = { ...(old.s.visited || {}), residential: true, hospital: true, warehouse: true, shelter: true };
+  Object.assign(old.s.storage, { wood: 60, stone: 30, scrap: 60, parts: 20, cloth: 10, fish: 4, bread: 60 });
+  old.s.money = 30000;
+  context.open('restoreArchive', { files: { old: old.serialize() } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  let e = context.inspect().engine;
+  assert.equal(context.inspect().menu, null);
+  assert.ok(e.rl && e.rl.intro && !e.rl.intro.told, 'the 重光 record was added to the old save');
+  e.paused = false; if (e.dy) e.dy.pending = null; run(3);
+  assert.ok(e.rl.intro.told, 'told on the first frame');
+  context.open('outpost', { view: 'log' }); clean(); assert.match(html(), /重光：农场上能建一座重建站/); click('close');
+  // ---------- 重建站：建造页里选、放下，按 E 打开，交东西 ----------
+  goTo(e, 'farm', 760, 640);
+  context.open('build'); clean(); assert.match(html(), /重建站/);
+  click('build', 'rlStation'); assert.equal(e.buildMode, 'rlStation'); assert.equal(context.inspect().menu, null);
+  const sp = spotFor(e, 'rlStation'); assert.ok(sp); assert.ok(e.placeBuilding(sp.x, sp.y)); e.buildMode = null;
+  const st = e.rlStationB(); assert.ok(st);
+  Object.assign(e.s.player, { x: st.x, y: st.y + 40 }); run(3);
+  assert.match(ctxLine(), /重建站 · 按 E 看清单（0\/28）/);
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean();
+  assert.match(html(), /通水/); assert.match(html(), /池塘里的鱼/); assert.match(html(), /data-action="rlGive" data-id="w_pond\|fish"/);
+  click('rlGive', 'w_pond|fish'); assert.equal(e.listGot('w_pond', 'fish'), 3); assert.equal(e.qty('fish', true), 1);
+  Object.assign(e.s.storage, { riverFish: 1, kinCrucian: 2, alLoach: 1 });
+  click('rlGive', 'w_pond|riverFish'); click('rlGive', 'w_pond|kinCrucian'); click('rlGive', 'w_pond|alLoach');
+  assert.ok(e.listDone('w_pond'), 'a list filled with the buttons'); clean(); assert.match(html(), /池塘里的鱼 <small>7\/7 ✓<\/small>/);
+  // 一面墙的其余四份交满，墙就通了
+  for (const id of ['w_thaw', 'w_wild', 'w_pump', 'w_heat']) for (const [k, n] of RD.LISTS[id].need) { e.s.storage[k] = (e.s.storage[k] || 0) + n; click('rlGive', id + '|' + k); }
+  assert.ok(e.wallOn('water'), 'the water wall is up'); clean(); click('close');
+  // ---------- 档案馆：旧世界陈列 ----------
+  Object.assign(e.s.player, { x: WinterData.WSPOTS.museum.x, y: WinterData.WSPOTS.museum.y + 40 });
+  e.s.storage.rlOld_photo = 1;
+  context.open('outpost', { view: 'museum' }); clean();
+  assert.match(html(), /旧世界陈列 0\/48/); assert.match(html(), /data-action="rlDonate" data-id="rlOld_photo"/);
+  click('rlDonate', 'rlOld_photo'); assert.ok(e.oldDonated('rlOld_photo')); assert.ok(html().includes(RS.OLD_STORY.rlOld_photo.slice(0, 8)), 'the owner\'s story is shown'); click('close');
+  // ---------- 陈工撬铁盒：居民页上 ----------
+  e.s.storage.rlIronBox = 1;
+  context.open('rebuild', { tab: 'residents' }); clean(); assert.match(html(), /让陈工撬一个/);
+  click('rlBox'); assert.equal(e.qty('rlIronBox', true), 0); click('close');
+  // ---------- 检修平台：升降井旁边按 E；主线没打完时下不去 ----------
+  goTo(e, 'shelter', RL.SHAFT.x, RL.SHAFT.y + 30); run(3);
+  const shaft = e.objects.find((o) => o.type === 'rlShaft'); assert.ok(shaft, 'the platform is there');
+  assert.match(ctxLine(), /检修平台 · 按 E 往下/);
+  const claimed = [...e.sc.claimed]; e.sc.claimed = claimed.filter((x) => x !== 'act8'); e.sc.act = 8;
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean();
+  assert.match(html(), /主线打完以后，联盟的检修队才来接通检修平台/); click('close');
+  e.sc.claimed = claimed; e.sc.act = 9;
+  press('e'); run(1); clean(); assert.match(html(), /data-action="rlDown" data-id="1"/);
+  click('rlDown', '1'); assert.equal(context.inspect().menu, null); assert.equal(e.s.region, 'tunnel'); assert.equal(e.tunnelFloor(), 1);
+  e.enemies.forEach((z) => (z.dead = true)); run(2);
+  sizes();
+  // 柜子按 E
+  const crate = e.objects.find((o) => o.type === 'crate'); assert.ok(crate);
+  Object.assign(e.s.player, { x: crate.x, y: crate.y + 20 }); run(3);
+  press('e'); run(1); assert.equal(e.s.opened[crate.id]?.day, e.s.day, 'the cabinet opened with E');
+  // 检修梯按 E：往下一层
+  const lad = e.tunnelLayoutNow().ladders[0];
+  Object.assign(e.s.player, { x: lad.x, y: lad.y + 10 }); run(3);
+  assert.match(ctxLine(), /按 E/);
+  press('e'); run(1); assert.equal(e.tunnelFloor(), 2, 'down the ladder with E');
+  e.enemies.forEach((z) => (z.dead = true));
+  // 深一点的样子（第 24 层）
+  e.rl.tunnel.key = { floor: 24, day: e.s.day, luck: false }; e.s.enemies.tunnel = null; e.assignRegion(); e.tunnelArrive();
+  for (const m of [10 * 60, 23 * 60]) { e.s.minute = m; sizes([[1366, 600], [390, 480]]); }
+  e.rl.tunnel.key = { floor: 2, day: e.s.day, luck: false }; e.s.enemies.tunnel = null; e.assignRegion(); e.tunnelArrive(); e.s.minute = 12 * 60;
+  // 往上的梯子按 E：回到避难城
+  const TG = await import('../dist/tunnel-gen.js');
+  Object.assign(e.s.player, { x: TG.UP.x, y: TG.UP.y + 16 }); run(3);
+  press('e'); run(1); assert.equal(e.s.region, 'shelter', 'back up at the shelter');
+  // ---------- 残页：任务手记里看；藏货点按 E 挖 ----------
+  e.readPage('p09');
+  const dig = Object.entries(RD.DIGS).find(([id]) => e.rlDigOpen(id));
+  assert.ok(dig, 'the riddle opened a dig spot');
+  context.open('journey'); clean(); assert.match(html(), /残页 \d+\/24/); assert.ok(html().includes(e.pageTitle('p09'))); click('close');
+  goTo(e, dig[1].region, dig[1].x, dig[1].y + 20); run(3);
+  assert.match(ctxLine(), /这里的土是松的 · 按 E 挖/);
+  press('e'); run(1); assert.ok(e.rl.dug.includes(dig[0]), 'dug with E');
+  // ---------- 年终评定：守夜纪念日 21:00 ----------
+  goTo(e, 'farm', 760, 640);
+  e.s.day = 56; e.s.minute = 21 * 60 - 0.5; e.c.workClock = 59.5; e.advanceMinutes(1);
+  assert.ok(e.lastReview()?.day === 56, 'the review came on the vigil night');
+  context.open('journey'); clean(); assert.match(html(), /评定信/); click('close');
+  context.open('outpost', { view: 'rlReview', id: '0' }); clean(); assert.match(html(), /存粮/); assert.match(html(), /纪念石/); click('close');
+  // ---------- 鼎丰物资：签约、买一面墙（第二天修好）、法令簿、撕合同 ----------
+  Object.assign(e.s.player, { x: st.x, y: st.y + 40 }); e.s.minute = 10 * 60; e.s.money = 30000;
+  context.open('outpost', { view: 'rlStation' }); clean(); assert.match(html(), /鼎丰物资/);
+  click('rlCoSign'); assert.equal(e.rl.co.state, 'signed'); clean();
+  click('rlCoBuy', 'clinic'); assert.equal(e.rl.co.pending.clinic, e.s.day, 'ordered'); click('close');
+  e.s.minute = 1440 - 0.5; e.c.workClock = 0; e.advanceMinutes(1); e.s.minute = 6 * 60 - 0.5; e.c.workClock = 59.5; e.advanceMinutes(1);
+  assert.ok(e.wallOn('clinic'), 'the convoy put the wall up by morning');
+  context.open('outpost', { view: 'decrees' }); clean(); assert.match(html(), /公司规矩/); click('close');
+  context.open('outpost', { view: 'rlStation' }); click('rlCoTear'); assert.equal(e.rl.co.state, 'torn'); clean(); click('close');
+  // ---------- 成就册：收复度、余烬核 ----------
+  context.open('outpost', { view: 'collection' }); clean(); assert.match(html(), /收复度/); assert.match(html(), /余烬核 \d\/7/); click('close');
+  // ---------- 画面：重建站、纪念石、老怀表、检修平台，四种大小，白天和夜里 ----------
+  for (const m of [15 * 60, 22 * 60]) { e.s.minute = m; goTo(e, 'farm', st.x, st.y + 60); sizes(); }
+  goTo(e, 'shelter', RL.SHAFT.x, RL.SHAFT.y + 40); sizes([[1366, 600], [390, 480]]);
+  goTo(e, 'farm', 760, 640); e.s.minute = 600;
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.ok(back.relight.done.includes('w_pond')); assert.ok(back.relight.old.includes('rlOld_photo')); assert.equal(back.relight.co.state, 'torn');
+  assert.ok(back.relight.walls.water && back.relight.walls.clinic); assert.equal(back.relight.intro.told, true);
+  console.log('Relight controller passed: a v0.30 save restored from a file (the 重光 notice on the first frame), the station picked from the build menu and opened with E (items handed in with their buttons, a list filled, the water wall up), the archive\'s 旧世界陈列 (donated with the button, the owner\'s story), 陈工 opening an iron box from the residents page, the platform by the hospital lift opened with E (closed before the main story, down to floor 1 with the button), a tunnel cabinet opened with E, the ladder taken with E, the way up back to the shelter, a page in the journal and its dig spot dug with E, the year review on the vigil night (journal letter and review page), the company signed, a wall bought and up the next morning, the company rule in the decree book, the contract torn up, the collection\'s 收复度 and cores, the tunnel at floors 1 and 24 and the station, the stone and the platform drawn at four sizes by day and night, and save/parse.');
+}

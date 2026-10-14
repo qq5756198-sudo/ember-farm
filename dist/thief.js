@@ -211,7 +211,7 @@ export class Engine extends DailyEngine {
   toolPlot(p, id) {
     const before = this.s.player.stamina,
       ok = super.toolPlot(p, id);
-    if (ok && this.hasTalent("oldHand") && this.s.player.stamina < before) this.s.player.stamina = Math.min(100, this.s.player.stamina + (before - this.s.player.stamina) * 0.3);
+    if (ok && this.hasTalent("oldHand") && this.s.player.stamina < before) this.s.player.stamina = Math.min(this.maxSta(), this.s.player.stamina + (before - this.s.player.stamina) * 0.3);
     return ok;
   }
   harvest(p, worker = false) {
@@ -219,7 +219,7 @@ export class Engine extends DailyEngine {
       before = this.s.player.stamina,
       ok = super.harvest(p, worker);
     if (!ok || worker || !crop || !this.sk) return ok;
-    if (this.hasTalent("oldHand") && this.s.player.stamina < before) this.s.player.stamina = Math.min(100, this.s.player.stamina + (before - this.s.player.stamina) * 0.3);
+    if (this.hasTalent("oldHand") && this.s.player.stamina < before) this.s.player.stamina = Math.min(this.maxSta(), this.s.player.stamina + (before - this.s.player.stamina) * 0.3);
     const extra = {};
     if (this.hasTalent("bumper")) extra[crop] = 1;
     if (this.hasTalent("keepSeed")) {
@@ -1374,7 +1374,7 @@ export class Engine extends DailyEngine {
       }
     if (this.jobHolder("medicJob")) {
       for (const r of this.c.residents) r.fatigue = clamp((r.fatigue || 0) - 15, 0, 100);
-      this.s.player.hp = Math.min(100, this.s.player.hp + 10);
+      this.s.player.hp = Math.min(this.maxHp(), this.s.player.hp + 10);
     }
     if (this.jobHolder("cookJob")) {
       const raw = ["potato", "radish"].find((id) => this.stockOf(id) >= 1);

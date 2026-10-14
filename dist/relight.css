@@ -1,0 +1,292 @@
+/* v0.31.0「重光」：重建站（六面墙、二十八份清单、信号烟花、鼎丰物资、陈工撬铁盒）、升降井的检修平台、
+   档案馆的旧世界陈列、任务手记里的残页和年终评定信、成就册的收复度和余烬核、法令簿里的公司规矩、纪念石。
+   颜色跟着前几版：好事金色，坏事暗红，提醒橙色。手机上一列排，按钮够大。 */
+
+/* ---------- 重建站 ---------- */
+.view-rlStation .rl-head p {
+  margin: 2px 0;
+}
+.view-rlStation .rl-head b {
+  color: #ffd76a;
+}
+.rl-walls {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+.rl-wall {
+  border: 1px solid rgba(233, 192, 90, 0.35);
+  background: rgba(37, 29, 23, 0.72);
+  border-radius: 4px;
+  padding: 0 10px;
+}
+.rl-wall.done {
+  border-color: rgba(207, 231, 166, 0.55);
+}
+.rl-wall > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  min-height: 40px;
+  padding: 8px 0;
+  cursor: pointer;
+  list-style: none;
+}
+.rl-wall > summary::-webkit-details-marker {
+  display: none;
+}
+.rl-wall > summary b {
+  color: #f6e3b4;
+  font-size: 1.05em;
+}
+.rl-wall > summary small {
+  color: #c9bd9a;
+}
+.rl-tag {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #4c632d;
+  color: #eaf5c8;
+  font-size: 0.85em;
+}
+.rl-tag.warn {
+  background: #8e3a20;
+  color: #ffe3c0;
+}
+.rl-effect {
+  margin: 0 0 6px;
+  color: #cfe7a6;
+}
+.rl-lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+  padding-bottom: 10px;
+}
+.rl-list {
+  padding: 6px 8px;
+  background: rgba(24, 19, 15, 0.6);
+  border-left: 3px solid #a28a4e;
+}
+.rl-list.done {
+  border-left-color: #869843;
+  opacity: 0.85;
+}
+.rl-list h4 {
+  margin: 0 0 4px;
+  color: #efe2b4;
+}
+.rl-list h4 small {
+  color: #c9bd9a;
+  font-weight: normal;
+}
+.rl-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rl-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 3px 0;
+  border-bottom: 1px dashed rgba(162, 138, 78, 0.25);
+}
+.rl-list li > span {
+  flex: 1;
+  min-width: 6em;
+}
+.rl-list li small {
+  color: #c9bd9a;
+}
+.rl-list li.full > span {
+  color: #cfe7a6;
+}
+.rl-list li button {
+  min-height: 32px;
+  min-width: 52px;
+}
+.rl-list li .story-lack {
+  flex-basis: 100%;
+}
+.rl-reward {
+  margin: 4px 0 0;
+  font-size: 0.88em;
+  color: #e9c05a;
+}
+.rl-buy {
+  margin: 0 0 8px;
+}
+.rl-fire,
+.rl-co,
+.rl-box {
+  margin: 10px 0;
+  padding: 8px 12px;
+  background: rgba(37, 29, 23, 0.72);
+  border-left: 3px solid #e9c05a;
+}
+.rl-co.signed {
+  border-left-color: #bf5a28;
+}
+.rl-box .button-row,
+.rl-box button {
+  margin-top: 4px;
+}
+
+/* ---------- 检修平台、评定信、收尾 ---------- */
+.view-rlShaft .button-row {
+  flex-wrap: wrap;
+}
+.view-rlShaft .button-row button {
+  min-height: 40px;
+}
+.rl-lamps {
+  display: flex;
+  gap: 10px;
+  margin: 6px 0;
+  padding: 0;
+  list-style: none;
+}
+.rl-lamps li {
+  width: 14px;
+  height: 20px;
+  border-radius: 7px 7px 3px 3px;
+  background: #3a332b;
+  box-shadow: inset 0 -4px 0 #251d17;
+}
+.rl-lamps li.on {
+  background: #ffd76a;
+  box-shadow: 0 0 10px #f6b05a;
+}
+.view-rlReview table td:last-child {
+  color: #ffd76a;
+  white-space: nowrap;
+}
+
+/* ---------- 档案馆：旧世界陈列 ---------- */
+.rl-oldworld {
+  margin: 12px 0;
+}
+.rl-oldworld h3 {
+  color: #f6e3b4;
+}
+.rl-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+}
+.rl-group {
+  padding: 6px 8px;
+  background: rgba(37, 29, 23, 0.72);
+  border-left: 3px solid #a28a4e;
+}
+.rl-group.done {
+  border-left-color: #869843;
+}
+.rl-group h4 {
+  margin: 0 0 4px;
+  color: #efe2b4;
+}
+.rl-old {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rl-old li {
+  padding: 3px 0;
+  border-bottom: 1px dashed rgba(162, 138, 78, 0.22);
+}
+.rl-old li b {
+  color: #85857a;
+  margin-right: 6px;
+}
+.rl-old li.on b {
+  color: #efe2b4;
+}
+.rl-old li.have b {
+  color: #ffd76a;
+}
+.rl-old li small {
+  display: block;
+  color: #c9bd9a;
+  font-size: 0.86em;
+}
+.rl-old li button {
+  min-height: 30px;
+}
+
+/* ---------- 任务手记：残页、评定信 ---------- */
+.rl-strip p {
+  margin: 0 0 4px;
+}
+.rl-page {
+  margin: 8px 0;
+  padding: 6px 10px;
+  background: rgba(233, 220, 192, 0.06);
+  border-left: 3px solid #a28a4e;
+}
+.rl-page.lore {
+  border-left-color: #46807a;
+}
+.rl-page.diary {
+  border-left-color: #d2654c;
+}
+.rl-page > small:first-child {
+  display: block;
+  color: #c9bd9a;
+}
+.rl-page b {
+  color: #efe2b4;
+}
+.rl-page p {
+  margin: 3px 0;
+}
+
+/* ---------- 成就册：收复度、余烬核 ---------- */
+.collection li.rl-pct b {
+  color: #ffd76a;
+  font-size: 1.08em;
+}
+.rl-cores {
+  margin: 12px 0;
+  padding: 8px 12px;
+  border-left: 3px solid #f6b05a;
+  background: rgba(37, 29, 23, 0.7);
+}
+.rl-cores ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 4px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rl-cores li b {
+  color: #85857a;
+}
+.rl-cores li.on b {
+  color: #ffb060;
+}
+.rl-cores li small {
+  display: block;
+  color: #c9bd9a;
+}
+.rl-rule {
+  border-color: #bf5a28 !important;
+}
+.rl-stone {
+  color: #e9c05a;
+}
+
+@media (max-width: 520px) {
+  .rl-lists,
+  .rl-groups {
+    grid-template-columns: 1fr;
+  }
+  .rl-wall {
+    padding: 0 6px;
+  }
+}

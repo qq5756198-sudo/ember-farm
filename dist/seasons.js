@@ -710,7 +710,7 @@ export class Engine extends WinterEngine {
         this.o.sick = 0;
         this.toast("学会包扎的队员用 1 条绷带治好了营地病号。", "gold");
       }
-      if (this.s.region === "farm" && this.s.player.hp < 70) this.s.player.hp = Math.min(100, this.s.player.hp + 15);
+      if (this.s.region === "farm" && this.s.player.hp < 70) this.s.player.hp = Math.min(this.maxHp(), this.s.player.hp + 15);
     }
   }
 

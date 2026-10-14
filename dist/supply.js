@@ -197,7 +197,7 @@ export class Engine extends RebuildEngine {
     for(const [id,n]of Object.entries(shortage))walk(id,n);
     return leaves;
   }
-  outpostHeal(id){if(this.s.player.hp>=100){this.toast('生命已满，本次免费治疗保留。');return false;}const ok=super.outpostHeal(id);if(ok)this.u.visitHealed=true;return ok;}
+  outpostHeal(id){if(this.s.player.hp>=this.maxHp()){this.toast('生命已满，本次免费治疗保留。');return false;}const ok=super.outpostHeal(id);if(ok)this.u.visitHealed=true;return ok;}
   travel(id){const before=this.s.region,ok=super.travel(id);if(ok&&this.s.region!==before){this.u.visitHealed=false;this.u.visitMeal=false;if(this.s.region==='farm'&&this.r.claimed.includes('hospitalDefense')&&this.u.fieldAwarded<6)this.addRebuildFields();}return ok;}
   interact(){const result=super.interact();this.u.visitMeal=!!this._networkMeal;return result;}
   addRebuildFields(){

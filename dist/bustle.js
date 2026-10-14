@@ -407,7 +407,7 @@ export class Engine extends BountyEngine {
       text = "唐九在电台里应了一声：明天 08:00 就到。";
     } else if (id === "help") {
       Object.assign(this.hn.help, { armed: true, day, live: false, allies: [] });
-      text = "雨巷的" + ALLY.names.join("、") + "答应了：下一场长夜或尸潮，他们来帮你守。";
+      text = "雨巷的" + this.allyNames().join("、") + "答应了：下一场长夜或尸潮，他们来帮你守。";
     }
     this.toast(text + "（电 −" + c.power + "，动静 +" + c.noise + "）", "gold");
     if (this.o) this.olog(text, "gold");
@@ -483,20 +483,29 @@ export class Engine extends BountyEngine {
   fightOn() {
     return !!this.ln?.night || ["warning", "active"].includes(this.s.horde.phase);
   }
+  // v0.31：通话那面墙交满以后多来一个人（后面的层改这一处）
+  allyNames() {
+    return [...ALLY.names];
+  }
+  allyLooks() {
+    return [...ALLY.looks];
+  }
   spawnAllies() {
     const h = this.hn.help,
       p = ALLY.post;
     h.live = true;
     h.armed = false;
-    h.allies = ALLY.names.map((name, i) => ({ id: "a" + i, name, look: ALLY.looks[i], x: p.x + i * 34, y: p.y + i * 22, hp: ALLY.hp, cd: 0, down: false, kills: 0 }));
-    const text = "雨巷的" + ALLY.names.join("、") + "赶到了营门：今晚他们帮你守。";
+    const names = this.allyNames(),
+      looks = this.allyLooks();
+    h.allies = names.map((name, i) => ({ id: "a" + i, name, look: looks[i] ?? ALLY.looks[0], x: p.x + i * 34, y: p.y + i * 22, hp: ALLY.hp, cd: 0, down: false, kills: 0 }));
+    const text = "雨巷的" + names.join("、") + "赶到了营门：今晚他们帮你守。";
     this.toast(text, "gold");
     if (this.o) this.olog(text, "gold");
   }
   dismissAllies() {
     const h = this.hn.help,
       kills = h.allies.reduce((a, x) => a + (x.kills || 0), 0);
-    const text = ALLY.names.join("、") + "守完这一场回雨巷了" + (kills ? "（一共打倒 " + kills + " 只）" : "") + "。";
+    const text = (h.allies.length ? h.allies.map((a) => a.name) : this.allyNames()).join("、") + "守完这一场回雨巷了" + (kills ? "（一共打倒 " + kills + " 只）" : "") + "。";
     Object.assign(h, { live: false, armed: false, allies: [] });
     this.toast(text, "gold");
     if (this.o) this.olog(text, "gold");
@@ -1727,7 +1736,7 @@ export class Engine extends BountyEngine {
     // 休息好：体力恢复快五成
     const p = this.s.player;
     if (this.restedNow() && p.stamina > st0) {
-      const cap = Math.min(100, this.originRules?.()?.stamina || 100);
+      const cap = this.maxSta();
       p.stamina = Math.min(Math.max(cap, st0), st0 + (p.stamina - st0) * COMFORT.rested.stamina);
     }
     if (snap?.length) this.fenceAfter(snap);
@@ -1842,7 +1851,7 @@ function validateBustle(s) {
   const d = t.drop;
   if (d !== null && (!obj(d) || !int(d.day) || !CACHE_SPOTS[d.region] || !num(d.x, 0, WORLD.w) || !num(d.y, 0, WORLD.h) || !bundle(d.items) || !num(d.at, 0, 1e12) || !int(d.until) || typeof d.opened !== "boolean")) bad("空投");
   const h = t.help;
-  if (!obj(h) || typeof h.armed !== "boolean" || typeof h.live !== "boolean" || !int(h.day) || !Array.isArray(h.allies) || h.allies.length > ALLY.names.length) bad("求援");
+  if (!obj(h) || typeof h.armed !== "boolean" || typeof h.live !== "boolean" || !int(h.day) || !Array.isArray(h.allies) || h.allies.length > ALLY.names.length + 2) bad("求援");
   for (const x of h.allies) if (!obj(x) || !str(x.id, 4) || !str(x.name, 12) || !num(x.x, 0, WORLD.w) || !num(x.y, 0, WORLD.h) || !num(x.hp, 0, ALLY.hp) || typeof x.down !== "boolean") bad("求援");
   const m = t.mule;
   if (!obj(m) || !int(m.next) || !obj(m.plan) || !MULE.dest[m.plan.dest] || !MULE.backs.includes(m.plan.back) || !(obj(m.plan.load) && Object.entries(m.plan.load).every(([id, n]) => ITEMS[id] && int(n, 1, MULE.max)))) bad("跑商");

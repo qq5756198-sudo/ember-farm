@@ -500,8 +500,8 @@ export class Engine extends LongNightEngine {
       }
       return "";
     }
-    if (role === "medic" && this.s.region === "farm" && this.s.player.hp < 100) {
-      this.s.player.hp = Math.min(100, this.s.player.hp + (r.id === "medic" ? 12 : 8));
+    if (role === "medic" && this.s.region === "farm" && this.s.player.hp < this.maxHp()) {
+      this.s.player.hp = Math.min(this.maxHp(), this.s.player.hp + (r.id === "medic" ? 12 : 8));
       return "又给你包扎了一下";
     }
     return "";

@@ -247,7 +247,7 @@ export class Engine extends UndertowEngine {
       if (drop > 0 && drop < 5) p.hunger = Math.max(0, p.hunger - drop * (R.hunger - 1));
     }
     // 机修工：体力上限少 10
-    if (R.stamina && p.stamina > R.stamina) p.stamina = R.stamina;
+    if (p.stamina > this.maxSta()) p.stamina = this.maxSta();
     if (this.paused || !this.ln) return;
     this.lnTick(clamp(dt, 0, 0.05));
   }
@@ -637,7 +637,7 @@ export class Engine extends UndertowEngine {
       g = this.gr;
     // 卫生员：感染每晚多降 10
     if (R.infection && g && !g.fever && g.inf > 0) g.inf = Math.max(0, g.inf - R.infection);
-    if (R.stamina && this.s.player.stamina > R.stamina) this.s.player.stamina = R.stamina;
+    if (this.s.player.stamina > this.maxSta()) this.s.player.stamina = this.maxSta();
   }
   lnNapOk() {
     const L = this.ln,
@@ -651,7 +651,7 @@ export class Engine extends UndertowEngine {
     this.ln.marks.nap = this.s.day;
     this.advanceMinutes(LN.red - this.s.minute);
     p.hp = Math.min(this.maxHp?.() ?? 100, p.hp + 35);
-    p.stamina = this.originRules().stamina || 100;
+    p.stamina = this.maxSta();
     p.hunger = Math.max(30, p.hunger - 6);
     if (this.gx) this.gx.bleed = 0;
     this.releaseGrab?.(false);
@@ -1199,6 +1199,11 @@ export class Engine extends UndertowEngine {
   // ================= 出身的规则 =================
   originRules() {
     return ORIGINS[this.s.longnight?.origin]?.rules || {};
+  }
+  // 机修工：体力上限少 10（v0.31 起写成上限，后面的层在上面加）
+  maxSta() {
+    const R = this.originRules();
+    return R.stamina ? Math.min(super.maxSta(), R.stamina) : super.maxSta();
   }
   originInfo() {
     const id = this.s.longnight?.origin || "farmer";

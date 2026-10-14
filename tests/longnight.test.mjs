@@ -7,6 +7,7 @@ import { TASKS } from "../dist/rebuild-data.js";
 import { ITEMS, ZOMBIES } from "../dist/data.js";
 import { BOSSES } from "../dist/undertow-data.js";
 import { LN, WAVE_MIX, MEMENTO_AT, MEMENTO_IDS, LN_CASE, ENDING } from "../dist/longnight-data.js";
+import { CORE_BONUS } from "../dist/relight-data.js";
 
 const make = (state = freshState(), seed = 20241) => {
   state.undertow.seed = seed;
@@ -264,7 +265,10 @@ test("holding till dawn: the rest retreat, rewards land, a memento is given and 
   assert.ok(toasts.some((t) => t.text.includes("守住了")));
   assert.ok(e.events.slice(n0).some((ev) => ev.type === "menu" && ev.view === "lnight"));
   assert.ok(e.events.slice(n0).some((ev) => ev.type === "victory"));
-  assert.equal(e.lnMult(), 1.2);
+  // v0.31：守住第一个长夜给一颗余烬核，它的光让以后的长夜每波多来 CORE_BONUS.night（3%）；守住几个变大的那一截照旧
+  assert.equal(e.lnHeldMult(), 1.2);
+  assert.equal(e.lnMult(), 1.2 * (1 + CORE_BONUS.night * e.coreCount()));
+  assert.equal(e.coreCount(), 1);
   assert.equal(e.nextLongNight(), FIRST + 7);
   // 天亮时的分钟带小数：存档照样读得回
   assert.deepEqual(Engine.parse(e.serialize()).longnight.last, e.ln.last);
@@ -373,8 +377,9 @@ test("after the night, sleeping before 08:00 wakes at 08:00 the same day instead
   assert.ok(e.sleep());
   assert.equal(e.s.day, FIRST + 1);
   assert.equal(e.s.minute, 480);
+  // v0.31：守住第一个长夜给一颗余烬核（体力上限 +15、生命上限 +5），睡醒是满的上限
   assert.equal(e.s.player.hp, 75);
-  assert.equal(e.s.player.stamina, 100);
+  assert.equal(e.s.player.stamina, e.maxSta());
   assert.ok(toasts.some((t) => t.text.includes("睡到早上 8 点")));
   assert.equal(e.lnNapOk(), false, "once");
 });
@@ -441,7 +446,7 @@ test("ten nights held give the ending card and the archive broadcast; three meme
     clock(e, day, 1319.9);
     run(e, 0.2);
     assert.ok(e.ln.night, "night " + n);
-    assert.equal(e.ln.night.mult, Math.round(Math.min(2, Math.pow(1.2, n - 1)) * 100));
+    assert.equal(e.ln.night.mult, Math.round(Math.min(2, Math.pow(1.2, n - 1)) * (1 + CORE_BONUS.night * e.coreCount()) * 100));
     clock(e, day + 1, 239.9);
     const n0 = e.events.length;
     run(e, 0.3);
@@ -453,7 +458,9 @@ test("ten nights held give the ending card and the archive broadcast; three meme
   assert.ok(e.o.log.some((l) => l.text === ENDING.broadcast));
   for (const id of MEMENTO_IDS) assert.ok(e.qty(id, true) >= 1, id);
   // 之后长夜还来，但不再变大
-  assert.equal(e.nightTotal(), 2 * LN.base.reduce((a, b) => a + b, 0));
+  // 守住几个变大的那一截停在一倍；余烬核的光另算（v0.31）
+  assert.equal(e.lnHeldMult(), 2);
+  assert.equal(e.nightTotal(), LN.base.reduce((a, b) => a + Math.round(b * 2 * (1 + CORE_BONUS.night * e.coreCount())), 0));
   // 展柜：到档案馆捐
   e.w.museum.built = true;
   assert.equal(e.donateMemento(MEMENTO_IDS[0]), false, "must be at the museum");

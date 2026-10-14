@@ -159,7 +159,8 @@ test("ten ambience sets cover all fifteen maps; music has six pieces and six sho
       assert.ok(lo > 0 && hi >= lo);
     }
   }
-  assert.deepEqual(INDOOR, ["shelter"]);
+  // v0.31：地铁隧道也在地下（没有天气声）
+  assert.deepEqual(INDOOR, ["shelter", "tunnel"]);
   // 6 段，加上 v0.29 农场白天按时节换的三段
   assert.equal(Object.keys(PIECES).length, 9);
   for (const k of ["heat", "harvest", "cold"]) assert.ok(PIECES["farmDay_" + k], k);

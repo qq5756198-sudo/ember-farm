@@ -78,7 +78,7 @@ function radioCmds(e) {
     sc = e.hn.scout;
   const meter = `<p class="hn-meter">营地的电 ${Math.floor(e.c.energy || 0)}/100 · 营地动静 <b>${fmt(z.v)}</b>${t ? "：今夜 0 点会有 " + t.n + " 只循声摸来" : "（4 以上当夜有感染者循声摸来）"}${e.noiseWhy() ? " · 今天：" + esc(e.noiseWhy()) : ""}</p>`;
   const scout = sc.day === e.s.day && sc.text ? `<p class="hn-scout gold">今天的侦察：${esc(sc.text)}</p>` : "";
-  const help = e.hn.help.armed ? `<p class="gold">雨巷的${esc(ALLY.names.join("、"))}答应了：下一场长夜或尸潮来帮你守。</p>` : e.hn.help.live ? `<p class="gold">${esc(ALLY.names.join("、"))}正在营门帮你守。</p>` : "";
+  const help = e.hn.help.armed ? `<p class="gold">雨巷的${esc(e.allyNames().join("、"))}答应了：下一场长夜或尸潮来帮你守。</p>` : e.hn.help.live ? `<p class="gold">${esc(e.hn.help.allies.map((x) => x.name).join("、"))}正在营门帮你守。</p>` : "";
   return `<section class="hn-radio"><h3>电台指令</h3>${meter}${scout}${help}<div class="story-choice">${RADIO_CMD_IDS.map((id) => cmdCard(e, id)).join("")}</div></section>`;
 }
 function patchRadio(e, html) {
@@ -435,7 +435,7 @@ ALERT_HOOKS.push((e, add) => {
   if (a.state === "live") add(1, "循声来的感染者：还有 " + e.noiseAlive().length + " 只", "danger", FARM(1240, 470, "营地"));
   const t = e.noiseTier();
   if (t && m >= 18 * 60 && !e.noiseBlocked()) add(4, "营地动静 " + fmt(e.hn.noise.v) + "：今夜 0 点会有 " + t.n + " 只循声摸来", "warn", null);
-  if (e.hn.help.live) add(3, "雨巷的" + ALLY.names.join("、") + "在营门帮你守", "gold", FARM(ALLY.post.x, ALLY.post.y, "营门"));
+  if (e.hn.help.live) add(3, "雨巷的" + e.hn.help.allies.map((x) => x.name).join("、") + "在营门帮你守", "gold", FARM(ALLY.post.x, ALLY.post.y, "营门"));
   const hurt = Object.keys(e.hn.hurt).length;
   if (hurt) {
     const room = e.infirmary(),

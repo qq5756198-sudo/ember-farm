@@ -335,11 +335,12 @@ export const REGION_AMBIENCE = {
   shipyard: "water",
   archive: "water",
   shelter: "under",
+  tunnel: "under",
   frost: "station",
   pinewood: "forest",
 };
 // 室内的图不叠天气
-export const INDOOR = ["shelter"];
+export const INDOOR = ["shelter", "tunnel"];
 // 脚下是什么
 export const SURFACE = {
   farm: "dirt",
@@ -356,6 +357,7 @@ export const SURFACE = {
   warehouse: "metal",
   railDepot: "metal",
   shelter: "metal",
+  tunnel: "stone",
   frost: "snow",
 };
 
@@ -493,6 +495,11 @@ export function soundFor(ev) {
     case "reel":
     case "reelLost":
       return { sfx: "splash" };
+    // ---------- v0.31「重光」：信号烟花一连串炸响；拿到余烬核是一声金色的响 ----------
+    case "fireworks":
+      return { sfx: "firecracker", range: 1600 };
+    case "rlCore":
+      return { sfx: "uiGold", ui: true };
     default:
       return null;
   }
@@ -504,6 +511,8 @@ export const U_SOUND_EVENTS = ["fuse", "gas", "breath", "fakerGrab", "spitCue", 
 export const LN_SOUND_EVENTS = ["lnThunder", "lnScream", "lnWave", "lnBoss", "lnLeader", "smokeCue", "smoke", "sabPlant", "sabBoom"];
 // v0.30「人情」新加的引擎事件
 export const KIN_SOUND_EVENTS = ["reel", "reelLost"];
+// v0.31「重光」新加的引擎事件
+export const RL_SOUND_EVENTS = ["fireworks", "rlCore"];
 
 // 混音：各条线的基础音量（再乘设置里的四个音量）
 export const MIX = { music: 0.36, ambience: 0.5, sfx: 0.9, ui: 0.55, voice: 0.85 };

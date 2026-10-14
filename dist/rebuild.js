@@ -168,7 +168,7 @@ export class Engine extends FrontierEngine {
     this.toast(d.name+'补给完成','gold');this.emit('loot');return true;
   }
   canReceive(bundle,outing=false){return this.canAdd(bundle)&&(!outing||!this.f.route||!!this.cargoPlan(bundle));}
-  outpostHeal(id){const d=OUTPOSTS[id];if(!d||id!=='hospital'||this.r.outposts[id]<2||this.s.region!==id||dist(this.s.player,d)>110||this._outpostHealed)return false;this._outpostHealed=true;this.s.player.hp=Math.min(100,this.s.player.hp+(this.r.arcs.medic>=3?55:35));this.toast('医疗前哨治疗完成，本次到访仅一次。','gold');return true;}
+  outpostHeal(id){const d=OUTPOSTS[id];if(!d||id!=='hospital'||this.r.outposts[id]<2||this.s.region!==id||dist(this.s.player,d)>110||this._outpostHealed)return false;this._outpostHealed=true;this.s.player.hp=Math.min(this.maxHp(),this.s.player.hp+(this.r.arcs.medic>=3?55:35));this.toast('医疗前哨治疗完成，本次到访仅一次。','gold');return true;}
   contractOffer(id){const pool=CONTRACTS[id];return pool?.[(this.r.contractSerial+this.s.day+regions.indexOf(id))%pool.length];}
   acceptContract(id){
     if(!OUTPOSTS[id]||this.r.outposts[id]<2||!this.r.claimed.includes('hospitalDefense')||this.r.contract||this.r.contractDays[id]===this.s.day)return false;

@@ -252,7 +252,7 @@ export class Engine extends OutpostEngine {
     }
     if (this.decree("kitchen") && !this.takeFarm({ wood: 1 })) this.toast("公共厨房缺柴：今晚没开火。", "warn");
     if (this.decree("injured") && this.s.region === "farm" && this.s.player.hp < 80) {
-      this.s.player.hp = Math.min(100, this.s.player.hp + 8);
+      this.s.player.hp = Math.min(this.maxHp(), this.s.player.hp + 8);
     }
     const before = w.ladder;
     w.ladder = this.ladderLevel();
@@ -834,7 +834,7 @@ export class Engine extends OutpostEngine {
       ok = super.consume(id);
     if (ok && it?.type === "medicine") {
       const bonus = this.medBonus(id);
-      if (bonus) this.s.player.hp = Math.min(100, this.s.player.hp + bonus);
+      if (bonus) this.s.player.hp = Math.min(this.maxHp(), this.s.player.hp + bonus);
       if (id === "remedy" && this.s.region === "farm" && this.o.sick >= this.s.day) {
         this.o.sick = 0;
         this.toast("特效药分给了病号，营地的人都好了。", "gold");

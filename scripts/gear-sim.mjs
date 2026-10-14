@@ -25,6 +25,10 @@
 // v0.25 出身：ORIGIN=medic 打法写 start（例：ORIGIN=hunter node scripts/gear-sim.mjs 100 1 residential,hospital,warehouse start）——
 //   开局那一套：大家都用开局的木材做一根矛（退伍兵也是，WEAPON=pipe 让他拿自己的铁管）；身上穿出身给的，出身的规则照算；绷带用完会用药包
 // v0.30 搭伙：PARTNER=medic（长夜里守在你身边的那个人），RECRUIT=medic（对照：营地里有这个人，但没搭伙）
+// v0.31 地铁隧道：地图写 tunnel（例：TFLOOR=11 TSPAN=5 node scripts/gear-sim.mjs 200 40 tunnel mid,late）——从第 TFLOOR 层下去，
+//   每层先去开一个柜子，再找往下的检修梯，一趟下 TSPAN 层（默认 5）；倒下算这一趟没过；结果多两列：每层几秒（floorSec）、下到第几层（floors）。
+//   TLIGHT=flashlight 身上带手电（默认带），TLIGHT=none 不带；第 30 层走到泵房里的光跟前算到底；TUNE 调一层几只、多厚、多疼（见下）
+//   CORES=3：身上已经有几颗余烬核（长夜、尸潮、出门都认，看余烬核让夜里容易了多少）
 // v0.28 改良：HNUP=tower:light,trap:spike,fence:iron（每类选一条路线，LNSET 摆出来的这类设施全部改好；双人哨要守卫比塔多）
 //   对照：HNPATCH='{"INJURY":{"chance":0}}'（守塔的人被摸到不受伤）
 const D = new URL("../dist/", import.meta.url).href;
@@ -58,6 +62,11 @@ if (process.env.ORIGIN && process.env.ORULES) {
     else R[k] = v;
   }
 }
+// v0.31 隧道调数：TUNE='{"base":5,"step":5,"cap":9,"hpk":0.02,"hitk":0.01}'，TMIX='[{"upto":4,"slow":5,"runner":5}, …]'（四段都要写）
+const TG = await import(D + "tunnel-gen.js");
+const { CORE_IDS } = await import(D + "relight-data.js").catch(() => ({ CORE_IDS: [] }));
+if (process.env.TUNE) Object.assign(TG.FOE_TUNE, JSON.parse(process.env.TUNE));
+if (process.env.TMIX) TG.FOE_TUNE.mix = JSON.parse(process.env.TMIX);
 if (process.env.DURPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.DURPATCH))) (MELEE[k] || ARMOR[k]).dur = v;
 // 对照实验：RULESPATCH='{"noise":{"step":0}}' 之类
 if (process.env.RULESPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.RULESPATCH))) Object.assign(RULES[k], v);
@@ -176,8 +185,15 @@ function trial(region, kitId, seed) {
     set = SETS[region !== "residential" && kit.setHosp ? kit.setHosp : kit.set];
   const e = new Engine(freshState(), () => {});
   if (ORIGIN && e.s.longnight) e.s.longnight.origin = ORIGIN;
+  const TUNNELMODE = region === "tunnel",
+    TFLOOR = Number(process.env.TFLOOR || 1),
+    TSPAN = Number(process.env.TSPAN || 5);
   const LNMODE = region === "longnight",
     HORDEMODE = region === "horde";
+  // v0.31 余烬核：CORES=3 身上已经有几颗（每颗生命上限 +5、体力上限 +15），一开始是满的
+  if (process.env.CORES && e.rl) e.rl.cores = CORE_IDS.slice(0, Number(process.env.CORES));
+  const HP0 = e.maxHp?.() || 100,
+    STA0 = e.maxSta?.() || 100;
   if (LNMODE || HORDEMODE) region = "farm";
   let died = false,
     SET = new Set();
@@ -239,11 +255,35 @@ function trial(region, kitId, seed) {
   s.inventory.stone = region !== "residential" && kit.stonesHosp ? kit.stonesHosp : kit.stones;
   g.slots.throw = "stone";
   s.slot = 3;
-  s.region = region;
-  const sp = REGIONS[region].spawn;
-  Object.assign(s.player, { x: sp.x, y: sp.y, hp: 100, stamina: 100, hunger: 90 });
-  s.enemies[region] = null;
-  e.assignRegion();
+  let tunnelFloors = 0,
+    tunnelT0 = 0;
+  const floorTimes = [];
+  if (TUNNELMODE) {
+    // 主线打完、地底避难城开了、升降井修好了，从检修平台下到第 1 层，再直接换成第 TFLOOR 层
+    e.sc.act = 9;
+    e.sc.claimed = ["act1", "supply", "act2", "act3", "act4", "act5", "act6", "act7", "act8"];
+    e.sc.letters = ["act1", "act2", "act3", "act4", "act5", "act6", "act7", "act8", "act9"];
+    e.b.unlocked.shelter = true;
+    e.b.points.shelter_lift = e.bpoint("shelter_lift");
+    e.b.points.shelter_lift.flags.repair = true;
+    s.region = "shelter";
+    e.assignRegion();
+    Object.assign(s.player, { x: 1240, y: 880, hp: HP0, stamina: STA0, hunger: 90 });
+    if (process.env.TLIGHT !== "none") s.inventory.flashlight = 1;
+    if (!e.tunnelEnter(1)) throw new Error("tunnel: cannot enter");
+    e.rl.tunnel.key = { floor: TFLOOR, day: s.day, luck: false };
+    e.rl.tunnel.floor = TFLOOR;
+    s.enemies.tunnel = null;
+    e.assignRegion();
+    e.tunnelArrive();
+    Object.assign(s.player, { hp: HP0, stamina: STA0, hunger: 90 });
+  } else {
+    s.region = region;
+    const sp = REGIONS[region].spawn;
+    Object.assign(s.player, { x: sp.x, y: sp.y, hp: HP0, stamina: STA0, hunger: 90 });
+    s.enemies[region] = null;
+    e.assignRegion();
+  }
   e.paused = false;
   const p = s.player,
     gx = e.gx;
@@ -288,7 +328,31 @@ function trial(region, kitId, seed) {
     return realDamage(n, opts);
   };
   // 长夜：一直守在农场中间（不出门、不去出口）
-  const goals = LNMODE || HORDEMODE ? [{ x: 830, y: 480, hold: true }] : [...LOOT[region].map(([x, y]) => ({ x, y })), { ...REGIONS[region].exit, exit: true }];
+  // 隧道：不知道检修梯在哪，一间间房找（先去最近的），看见了（灯照得到、中间没挡着）就过去；路过的柜子顺手开
+  const seeR = () => (s.inventory.flashlight || e.armorTotals?.().light ? 230 : 110);
+  let ladderSeen = false;
+  // 这一层要去的地方：检修梯；最后一层是泵房里的光
+  const tunnelTarget = () => {
+    const L = e.tunnelLayoutNow();
+    if (!L) return null;
+    if (L.ladders[0]) return { x: L.ladders[0].x, y: L.ladders[0].y, exit: true, ladder: true };
+    return L.core ? { x: L.core.x, y: L.core.y, exit: true, ladder: true, core: true } : null;
+  };
+  const tunnelGoals = () => {
+    const L = e.tunnelLayoutNow(),
+      lad = tunnelTarget();
+    ladderSeen = false;
+    const rooms = L.rooms.map((q) => ({ x: (q.c0 + q.w / 2) * 64, y: (q.r0 + q.h / 2) * 64 })).filter((q) => !e.blocked(q.x, q.y, false, 12));
+    const order = [];
+    let at = { x: s.player.x, y: s.player.y };
+    while (rooms.length) {
+      rooms.sort((a, b) => dist(a, at) - dist(b, at));
+      at = rooms.shift();
+      order.push(at);
+    }
+    return [...order, lad];
+  };
+  let goals = TUNNELMODE ? tunnelGoals() : LNMODE || HORDEMODE ? [{ x: 830, y: 480, hold: true }] : [...LOOT[region].map(([x, y]) => ({ x, y })), { ...REGIONS[region].exit, exit: true }];
   let lnStarted = false,
     lnWaveSeen = 0,
     lnBossSeen = false;
@@ -302,7 +366,7 @@ function trial(region, kitId, seed) {
     segStart = -1,
     lastCombat = -10,
     dmg = 0,
-    lastHp = 100,
+    lastHp = HP0,
     kills0 = s.stats.kills,
     stuckT = 0,
     lastPos = { x: p.x, y: p.y },
@@ -331,7 +395,7 @@ function trial(region, kitId, seed) {
   };
   // 翻滚：往某个方向滚一下（滚不了就返回 false，照原来的办法躲）
   const roll = (a) => (ROLL && e.dodge && !e.dodgeReason() ? e.dodge({ x: Math.cos(a), y: Math.sin(a) }) : false);
-  while (t < (LNMODE || HORDEMODE ? 900 : 420) && !died) {
+  while (t < (LNMODE || HORDEMODE ? 900 : TUNNELMODE ? 300 * TSPAN : 420) && !died) {
     if (s.region !== region) break;
     if (LNMODE) {
       if (e.ln.night) lnStarted = true;
@@ -366,8 +430,26 @@ function trial(region, kitId, seed) {
       if (want && !e.lnBellReason() && e.lnBell()) bells++;
     }
     act = Math.max(0, act - DT);
+    if (TUNNELMODE && !ladderSeen) {
+      const lad = tunnelTarget();
+      if (lad && dist(s.player, lad) < seeR() && e.lineClear(s.player, lad)) {
+        ladderSeen = true;
+        goals = [lad];
+        gi = 0;
+        path = [];
+      }
+    }
+    if (TUNNELMODE) {
+      const box = e.objects.find((o) => o.type === "crate" && e.s.opened[o.id]?.day !== e.s.day && dist(o, s.player) < 70);
+      if (box) {
+        const at0 = { x: s.player.x, y: s.player.y };
+        Object.assign(s.player, { x: box.x, y: box.y + 20 });
+        e.interact();
+        Object.assign(s.player, at0);
+      }
+    }
     const foes = e.enemies.filter((z) => !z.dead && !z.nest);
-    const close = foes.filter((z) => (z.state === "chase" || z.lunge || z.charge) && dist(z, p) < 420).sort((a, b) => dist(a, p) - dist(b, p));
+    const close = foes.filter((z) => (z.state === "chase" || z.lunge || z.charge) && dist(z, p) < 420 && (!TUNNELMODE || ((dist(z, p) < 80 || e.lineClear(z, p)) && !(z.type === "stalker" && (z.flee > 0 || dist(z, p) > 90))))).sort((a, b) => dist(a, p) - dist(b, p));
     const crowd = close.filter((z) => dist(z, p) < 130).length;
     const inCombat = close.some((z) => dist(z, p) < 300);
     if (inCombat) {
@@ -594,10 +676,41 @@ function trial(region, kitId, seed) {
         }
         if (!acted && mx === 0 && my === 0 && !bracing && !(W && close.some((z) => dist(z, p) < 300) && !fleeing)) {
           if (dist(p, goal) < (goal.exit ? 40 : 60)) {
+            if (goal.ladder) {
+              // 到了检修梯：往下一层；下够了这一趟就算过了
+              Object.assign(p, { x: goal.x, y: goal.y });
+              // 体力不够爬梯子：站着喘口气
+              for (let k = 0; k < 200 && p.stamina < 6 && !died; k++) {
+                e.update(DT, { x: 0, y: 0 });
+                t += DT;
+              }
+              floorTimes.push(t - tunnelT0);
+              tunnelT0 = t;
+              // 泵房：走到光跟前就算到底了
+              if (goal.core) {
+                tunnelFloors++;
+                break;
+              }
+              if (e.tunnelDown()) tunnelFloors++;
+              else {
+                if (process.env.TRACE) console.error("tunnelDown failed", JSON.stringify({ pos: [p.x, p.y], lad: e.tunnelLayoutNow()?.ladders, st: p.stamina, region: s.region, floor: e.tunnelFloor() }));
+                break;
+              }
+              if (tunnelFloors >= TSPAN) break;
+              goals = tunnelGoals();
+              gi = 0;
+              path = [];
+              e.update(DT, { x: 0, y: 0 });
+              continue;
+            }
+            if (goal.crate && e.s.opened[goal.crate.id]?.day !== e.s.day) {
+              Object.assign(p, { x: goal.crate.x, y: goal.crate.y + 20 });
+              e.interact();
+            }
             if (goal.exit) break;
             // 长夜：站在中间守着，不往下一处走
             if (goal.hold) waitAt = -1e9;
-            waitAt += DT;
+            waitAt += TUNNELMODE ? 1 : DT;
             if (waitAt >= 2) {
               gi++;
               waitAt = 0;
@@ -624,7 +737,7 @@ function trial(region, kitId, seed) {
     e.update(DT, { x: mx, y: my, run });
     if (process.env.TRACE && Math.floor(t + DT) !== Math.floor(t)) {
       const gd = e.enemies.find((z) => e.bossKind?.(z) === "guard");
-      console.error(Math.floor(t + DT), "hp", Math.round(p.hp), "band", s.inventory.bandage || 0, "goal", gi, fleeing ? "FLEE" : "", "guard", gd ? [Math.round(gd.hp), gd.dead ? "dead" : gd.state, Math.round(dist(gd, p)), inFront(gd) ? "front" : "back", gd.g2 ? "g2" : "", gd.charge?.phase || ""].join(" ") : "-", "close", close.map((z) => z.type + Math.round(dist(z, p))).join(","), "hz", hz ? "Y" : "", "pud", ux?.puddles.length || 0, "acidIn", e.inAcid?.() ? "IN" : "", "gas", e.inGas?.() ? "IN" : "");
+      console.error(Math.floor(t + DT), "pos", Math.round(p.x), Math.round(p.y), "fl", e.tunnelFloor?.() || 0, "g", goal ? Math.round(goal.x) + "," + Math.round(goal.y) : "-", "hp", Math.round(p.hp), "band", s.inventory.bandage || 0, "goal", gi, fleeing ? "FLEE" : "", "guard", gd ? [Math.round(gd.hp), gd.dead ? "dead" : gd.state, Math.round(dist(gd, p)), inFront(gd) ? "front" : "back", gd.g2 ? "g2" : "", gd.charge?.phase || ""].join(" ") : "-", "close", close.map((z) => z.type + Math.round(dist(z, p))).join(","), "hz", hz ? "Y" : "", "pud", ux?.puddles.length || 0, "acidIn", e.inAcid?.() ? "IN" : "", "gas", e.inGas?.() ? "IN" : "");
     }
     if (p.hp < lastHp) dmg += lastHp - p.hp;
     lastHp = p.hp;
@@ -641,9 +754,9 @@ function trial(region, kitId, seed) {
     }
   }
   if (segStart >= 0) segs.push(lastCombat - segStart);
-  const atExit = s.region === region && dist(s.player, goals[goals.length - 1]) < 60;
+  const atExit = TUNNELMODE ? !died && tunnelFloors >= TSPAN : s.region === region && dist(s.player, goals[goals.length - 1]) < 60;
   // 长夜：守住了算 ok（没有“半路逃回”）
-  const ok = LNMODE ? !died && lnStarted && !e.ln.night && e.ln.last?.held === true : HORDEMODE ? !died && lnStarted && s.horde.phase === "won" : !died && atExit && gi >= goals.length - 1;
+  const ok = TUNNELMODE ? !died && tunnelFloors >= TSPAN : LNMODE ? !died && lnStarted && !e.ln.night && e.ln.last?.held === true : HORDEMODE ? !died && lnStarted && s.horde.phase === "won" : !died && atExit && gi >= goals.length - 1;
   const fled = !LNMODE && !HORDEMODE && !died && atExit && !ok;
   return {
     died,
@@ -682,6 +795,8 @@ function trial(region, kitId, seed) {
     pulls,
     bells,
     kitsUsed,
+    floors: tunnelFloors,
+    floorTimes,
   };
 }
 
@@ -692,7 +807,10 @@ for (const region of REGION_LIST)
     const rs = [];
     const t0 = Date.now();
     const OFF = Number(process.env.OFF || 0);
-    for (let i = 0; i < N; i++) rs.push({ ...trial(region, kitId, i + 1 + OFF), seed: i + 1 + OFF });
+    for (let i = 0; i < N; i++) {
+      rs.push({ ...trial(region, kitId, i + 1 + OFF), seed: i + 1 + OFF });
+      if (process.env.TPRINT) console.error("seed", i + 1 + OFF, "died", rs[i].died, "floors", rs[i].floors, "times", rs[i].floorTimes.map((x) => Math.round(x)).join(","), "t", Math.round(rs[i].t));
+    }
     const segs = rs.flatMap((r) => r.segs).filter((x) => x > 1).sort((a, b) => a - b);
     const row = {
       day: DAY,
@@ -721,6 +839,7 @@ for (const region of REGION_LIST)
       rolls: +mean(rs.map((r) => r.rolls)).toFixed(1),
       ms: Date.now() - t0,
       deadSeeds: process.env.SEEDS ? rs.filter((r) => r.died).map((r) => r.seed) : undefined,
+      stuckSeeds: process.env.SEEDS ? rs.filter((r) => r.timeout).map((r) => r.seed) : undefined,
       byLayout: Object.fromEntries([0, 1, 2].map((k) => [k, rs.filter((r) => r.lay === k && r.died).length + "/" + rs.filter((r) => r.lay === k).length])),
       byEvent: Object.fromEntries([...new Set(rs.map((r) => r.ev || "none"))].map((k) => [k, rs.filter((r) => (r.ev || "none") === k && r.died).length + "/" + rs.filter((r) => (r.ev || "none") === k).length])),
       causes: Object.fromEntries(Object.entries(rs.filter((r) => r.died).reduce((m, r) => ((m[r.cause] = (m[r.cause] || 0) + 1), m), {})).sort((a, b) => b[1] - a[1])),
@@ -742,6 +861,10 @@ for (const region of REGION_LIST)
       bells: +mean(rs.map((r) => r.bells)).toFixed(1),
       fixed: +mean(rs.map((r) => r.kitsUsed)).toFixed(1),
       set: process.env.LNSET || (process.env.LNPREP === "1" ? "LNPREP" : ""),
+      // 隧道：每层几秒（游戏里 1 秒 = 1.6 分钟）、平均下了几层
+      floorSec: region === "tunnel" ? Math.round(mean(rs.flatMap((r) => r.floorTimes))) : undefined,
+      floors: region === "tunnel" ? +mean(rs.map((r) => r.floors)).toFixed(2) : undefined,
+      from: region === "tunnel" ? Number(process.env.TFLOOR || 1) : undefined,
     };
     console.log(region, kitId, JSON.stringify(row));
   }
