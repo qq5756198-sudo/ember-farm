@@ -2344,7 +2344,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   press('k'); run(1);
   assert.equal(context.inspect().menu, 'skills'); assert.match(html(), /gr-master/); assert.match(html(), /战斗<span>Lv\.8<\/span>/); clean(); click('close');
   // ---------- 玩着升一级 ----------
-  closeCards(); e.xp('agriculture', 2000); run(2);
+  closeCards(); e.xp('agriculture', GD.MASTER_XP.agriculture[2] - e.s.xp.agriculture + 20); run(2);
   assert.equal(card().hidden, false); assert.match(card().innerHTML, /农业 Lv\.8/); closeCards();
   // ---------- 重建站：第二年的清单，交一格 ----------
   const st = e.s.buildings.find((b) => b.type === 'rlStation');
