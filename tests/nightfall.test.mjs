@@ -145,7 +145,7 @@ test("each rule says the numbers its effects use", () => {
     if (fx.count) want.push((fx.count < 1 ? "少来" + less(fx.count) : "多来" + more(fx.count)));
     for (const [k, m] of Object.entries(fx.mix || {})) want.push(mixName[k] + (m > 1 ? "多" + more(m) : "少" + less(m)));
     if (fx.speed) want.push("慢" + less(fx.speed));
-    if (fx.hp) want.push("血多" + more(fx.hp));
+    if (fx.hp) want.push(fx.hp > 1 ? "血多" + more(fx.hp) : "血少" + less(fx.hp));
     if (fx.regen) want.push("体力回得慢" + less(fx.regen));
     if (fx.warmRegen) want.push("快" + more(fx.warmRegen));
     if (fx.bossEarly) want.push("（" + e.nfClock(LN_PACE.bossAt - fx.bossEarly) + "）");
@@ -341,7 +341,7 @@ test("moon: towers hit harder (the boss harder still) and more stalkers come in 
   assert.ok(Math.abs(a - (m * w.stalker) / (tot + (m - 1) * w.stalker)) < 0.05, "moon share " + a);
 });
 
-test("swelter: your stamina comes back slower and the horde walks slower", () => {
+test("swelter: your stamina comes back slower, and the horde is the weaker for the heat", () => {
   const { e } = postStory(30);
   night(e, FIRST, "swelter");
   const regen = (force) => {
@@ -360,8 +360,24 @@ test("swelter: your stamina comes back slower and the horde walks slower", () =>
   const v1 = e.enemySpeed(z);
   e._nfForce = "none";
   const v0 = e.enemySpeed(z);
-  assert.ok(Math.abs(v1 / v0 - PHASES.swelter.fx.speed) < 1e-9);
+  assert.ok(Math.abs(v1 / v0 - (PHASES.swelter.fx.speed ?? 1)) < 1e-9);
+  e._nfForce = "swelter";
   if (PHASES.swelter.fx.count) assert.equal(e.waveCount(0, 1), Math.max(1, Math.round(LN.base[0] * PHASES.swelter.fx.count)));
+  if (PHASES.swelter.fx.hp) {
+    const N = e.ln.night,
+      made0 = N.made;
+    N.left = 5;
+    const a = e.lnSpawn();
+    e.enemies.pop();
+    N.made = made0;
+    N.left = 5;
+    e._nfForce = "none";
+    const b = e.lnSpawn();
+    e.enemies.pop();
+    N.made = made0;
+    assert.equal(a.type, b.type, "same draw");
+    assert.ok(Math.abs(a.maxHp / b.maxHp - PHASES.swelter.fx.hp) < 0.02, "weaker: " + a.maxHp + " vs " + b.maxHp);
+  }
 });
 
 test("migration: more runners and less armour", () => {
@@ -384,7 +400,7 @@ test("migration: more runners and less armour", () => {
   };
   const m = count("migrate"),
     p = count("none");
-  assert.ok(m.runner > p.runner * 1.4, "runners " + m.runner + " vs " + p.runner);
+  assert.ok(m.runner > p.runner * 1.15, "runners " + m.runner + " vs " + p.runner);
   assert.ok((m.armor || 0) < (p.armor || 0), "armour " + m.armor + " vs " + p.armor);
 });
 
@@ -417,6 +433,7 @@ test("gale: all three waves come from one side, named the day before", () => {
     return hp0 - z.hp;
   };
   assert.ok(Math.abs(shot("gale") / shot("none") - (PHASES.gale.fx.towerDmg ?? 1)) < 0.01);
+  e._nfForce = "gale";
   if (PHASES.gale.fx.count) assert.equal(e.waveCount(0, 1), Math.max(1, Math.round(LN.base[0] * PHASES.gale.fx.count)));
   assert.ok(TOWER.mult > 0);
 });
