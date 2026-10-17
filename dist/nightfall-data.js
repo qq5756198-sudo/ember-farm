@@ -112,7 +112,7 @@ export const PHASE_LOOK = {
   thunder: { weather: "暴雨" },
   moon: { tint: [190, 205, 235], k: 0.3, bright: 0.28 },
   swelter: { tint: [200, 140, 96], k: 0.16 },
-  migrate: { tint: [150, 120, 96], k: 0.12, dust: true },
+  migrate: { tint: [150, 120, 96], k: 0.14 },
   gale: { tint: [140, 150, 160], k: 0.12, wind: true },
   frost: { tint: [150, 190, 230], k: 0.26, weather: "小雪" },
   snow: { tint: [200, 215, 230], k: 0.2, weather: "大雪" },

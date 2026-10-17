@@ -2410,7 +2410,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   old.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((x) => x.id === 'broadcast') + 1).map((x) => x.id); old.r.radio = true;
   old.o.hospital = 'water'; old.o.youke = true; old.o.lathe = { mode: 'parts', day: 0 }; old.o.toll = 'refuse'; old.o.raid.phase = 'won';
   old.assignRegion();
-  old.ln.storyDay = 30; old.ct.step = 4; old.ct.done = true;
+  old.ln.storyDay = 30; Object.assign(old.ct, { step: 4, done: true, region: 'residential', day: 35 });
   old.s.day = 37; old.s.minute = 600; old.s.weather = '晴朗'; old.s.stats.hordes = 6; old.c.nextHordeDay = 90;
   old.s.horde = { phase: 'won', timer: 0, remaining: 0, spawnTimer: 0, direction: 0 };
   if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();

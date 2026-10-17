@@ -149,9 +149,10 @@ export class Engine extends GrowEngine {
   }
 
   // ---------- 只数、种类、方向、头目 ----------
+  // 每波多少只：打着的那一夜按那一夜的夜相；白天算“下一个长夜约多少只”按下一个长夜的夜相
   waveCount(k, mult) {
     const n = super.waveCount(k, mult),
-      ph = this.ln?.night ? this.nfPhase(this.ln.night.day) : this.nfTonight(),
+      ph = this.ln?.night ? this.nfPhase(this.ln.night.day) : this.ln?.storyDay ? this.nfPhase(this.nextLongNight?.() || 0) : null,
       c = ph ? PHASES[ph].fx.count : null;
     return c ? Math.max(1, Math.round(n * c)) : n;
   }
@@ -421,6 +422,12 @@ export class Engine extends GrowEngine {
       this.nfStat("falls");
     }
     return super.die();
+  }
+  // 换了图（也包括倒下被送回农场）：下一帧重新看一遍这张图上有没有倒下过的地方
+  assignRegion() {
+    const out = super.assignRegion();
+    this._nfPlace = null;
+    return out;
   }
   // 进一张图（隧道是进一层）：7 天里在这里倒下过，提一句（每次倒下只提一次）
   nfFallTick() {
