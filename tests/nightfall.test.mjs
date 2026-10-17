@@ -120,6 +120,41 @@ test("eight phases, two per season, each with a rule, a hint, what it favours, a
   for (const lines of Object.values(MORNING_LINES)) for (const l of lines) assert.doesNotMatch(l, FORBIDDEN);
 });
 
+// 规则里写的数和真起作用的数一样（“三成五”“多一倍”“慢两成”“02:45”……）
+const CN = ["", "一", "两", "三", "四", "五", "六", "七", "八", "九"];
+const cheng = (f) => {
+  const t = Math.round(f * 100),
+    a = Math.floor(t / 10),
+    b = t % 10;
+  return (a ? CN[a] + "成" : "") + (b ? CN[b] : "");
+};
+const more = (m) => (m >= 2 ? CN[Math.round(m - 1)] + "倍" : cheng(m - 1));
+const less = (m) => (Math.abs(m - 0.5) < 1e-9 ? "一半" : cheng(1 - m));
+test("each rule says the numbers its effects use", () => {
+  const { e } = make();
+  const mixName = { runner: "奔跑者", armor: "重甲", stalker: "夜行者", slow: "游荡者", screamer: "尖叫者", spitter: "吐酸者", bloater: "膨胀者" };
+  for (const id of PHASE_IDS) {
+    const { rule, fx } = PHASES[id],
+      want = [];
+    // 瞭望塔原来够得着 320（expansion.js 的 updateDefense）
+    if (fx.towerRange) want.push("原来的" + cheng(Math.round((fx.towerRange / 320) * 10) / 10));
+    if (fx.clear) want.push("看不清");
+    if (fx.towerDmg) want.push((fx.towerDmg > 1 ? "多" + more(fx.towerDmg) : "少" + less(fx.towerDmg)));
+    if (fx.trapMute) want.push(cheng(fx.trapMute) + "哑火");
+    if (fx.trapFirst) want.push("第一下不响");
+    if (fx.count) want.push((fx.count < 1 ? "少来" + less(fx.count) : "多来" + more(fx.count)));
+    for (const [k, m] of Object.entries(fx.mix || {})) want.push(mixName[k] + (m > 1 ? "多" + more(m) : "少" + less(m)));
+    if (fx.speed) want.push("慢" + less(fx.speed));
+    if (fx.hp) want.push("血多" + more(fx.hp));
+    if (fx.regen) want.push("体力回得慢" + less(fx.regen));
+    if (fx.warmRegen) want.push("快" + more(fx.warmRegen));
+    if (fx.bossEarly) want.push("（" + e.nfClock(LN_PACE.bossAt - fx.bossEarly) + "）");
+    if (fx.oneDir) want.push("同一个方向");
+    assert.ok(want.length >= 2, id + " has at least two effects");
+    for (const w of want) assert.ok(rule.includes(w), `${id}: the rule says “${w}” (${rule})`);
+  }
+});
+
 // ================= 1. 夜相 =================
 test("phases follow the season and the year: four long nights in a row are four different phases, eight in a row are all eight", () => {
   const { e } = postStory(30);
