@@ -68,8 +68,8 @@ const TDD = await import(D + "tidy-data.js");
 // v0.35 夜相（没有这一层的旧版本照常跑）
 const NFD = await import(D + "nightfall-data.js").catch(() => null);
 const LNPHASE = process.env.LNPHASE || "all";
-// 调数：NFPATCH='{"fog":{"towerRange":220}}'（夜相的数，合并进 fx）
-if (NFD && process.env.NFPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.NFPATCH))) Object.assign(NFD.PHASES[k].fx, v);
+// 调数：NFPATCH='{"fog":{"towerRange":220,"clear":200}}'——写了的夜相，这一夜的数整个换成这些（没写的键就是不变，不会留着 dist 里原来的）
+if (NFD && process.env.NFPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.NFPATCH))) NFD.PHASES[k].fx = { ...v };
 if (process.env.TDPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.TDPATCH))) Object.assign(TDD[k], v);
 if (process.env.LNPATCH) Object.assign(LND.LN, JSON.parse(process.env.LNPATCH));
 if (process.env.LNMIX) JSON.parse(process.env.LNMIX).forEach((m, i) => (LND.WAVE_MIX[i] = m));
