@@ -1,0 +1,117 @@
+/* v0.33.0「盼头」：重建站上这周的清单和墙升二级、各处的扩建、营门口的过路人货郎收购的人、这周和今天、来信、账本记下的旧物、大事卡片的三种新颜色。
+   跟着重光那一版的样子：好事金色、能做的绿色；手机上一列排，按钮够大。 */
+.hp-week {
+  margin: 10px 0;
+  border-left-color: #8fd0ff;
+}
+.hp-week.done {
+  border-left-color: #869843;
+}
+.hp-week h4 small {
+  margin-left: 6px;
+}
+.hp-wall2 {
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  background: rgba(24, 19, 15, 0.6);
+  border-left: 3px solid #e9c05a;
+}
+.hp-wall2 p {
+  margin: 2px 0;
+}
+.hp-wall2.done {
+  color: #cfe7a6;
+  border-left-color: #869843;
+}
+.hp-wall2 button {
+  min-height: 34px;
+  margin-top: 4px;
+}
+.hp-ask {
+  margin: 10px 0;
+}
+.hp-ask p {
+  margin: 4px 0;
+}
+.hp-expand h3 small {
+  color: #c9bd9a;
+  font-weight: normal;
+}
+.hp-rows {
+  margin: 4px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.hp-rows li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(162, 138, 78, 0.25);
+}
+.hp-rows li > span {
+  min-width: 5em;
+  color: #efe2b4;
+}
+.hp-rows li.full > span {
+  color: #cfe7a6;
+}
+.hp-rows li small {
+  flex: 1;
+  min-width: 12em;
+  color: #c9bd9a;
+}
+.hp-rows li button {
+  min-height: 34px;
+}
+.hp-rows li .story-lack {
+  flex-basis: 100%;
+}
+.hp-strip {
+  border-left-color: #8fd0ff;
+}
+.hp-letter small {
+  color: #c9bd9a;
+}
+.hp-clues {
+  margin: 10px 0;
+}
+.hp-clues .rl-old li.on b {
+  color: #cfe7a6;
+}
+.view-hpWeek .rl-list {
+  margin: 8px 0;
+}
+.view-hpTraveler .npc-line,
+.view-hpPeddler .npc-line,
+.view-hpBuyer .npc-line {
+  color: #efe2b4;
+}
+.zest-moment.k-upgrade {
+  box-shadow: inset 0 0 0 2px #ffcf6a, 0 0 0 3px rgba(255, 207, 106, 0.32), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+.zest-moment.k-traveler {
+  box-shadow: inset 0 0 0 2px #9fd16a, 0 0 0 3px rgba(159, 209, 106, 0.3), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+.zest-moment.k-week {
+  box-shadow: inset 0 0 0 2px #8fd0ff, 0 0 0 3px rgba(143, 208, 255, 0.3), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+.zest-moment.k-old {
+  box-shadow: inset 0 0 0 2px #e6c48a, 0 0 0 3px rgba(230, 196, 138, 0.3), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+.zest-moment.k-page {
+  box-shadow: inset 0 0 0 2px #e9dcc0, 0 0 0 3px rgba(233, 220, 192, 0.28), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+.zest-moment.k-lift {
+  box-shadow: inset 0 0 0 2px #9fd16a, 0 0 0 3px rgba(159, 209, 106, 0.3), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+@media (max-width: 560px) {
+  .hp-rows li small {
+    min-width: 100%;
+  }
+  .hp-wall2 button,
+  .hp-rows li button {
+    width: 100%;
+  }
+}

@@ -26,13 +26,16 @@
 //   大事卡片、好事之间隔多久（现实秒，游戏里 1.6 分钟 = 现实 1 秒）、一件好事都没有的日子、每周第一次见到的东西、钱。
 const D = new URL("../dist/", import.meta.url).href;
 const { Engine, freshState } = await import(D + "campaign.js");
-const { ITEMS, CROPS, BUILDINGS, RECIPES } = await import(D + "data.js");
+const { ITEMS, CROPS, BUILDINGS, RECIPES, REGIONS } = await import(D + "data.js");
 const RD = await import(D + "relight-data.js");
 const KD = await import(D + "kin-data.js");
 const { TASKS } = await import(D + "rebuild-data.js");
 const { SSPOTS } = await import(D + "seasons-data.js");
 const { WSPOTS } = await import(D + "winter-data.js");
 const { SHAFT } = await import(D + "relight.js");
+const HD = await import(D + "hope-data.js");
+const FS = await import("node:fs");
+const { POINT_BY_ID } = await import(D + "district-data.js");
 const FUN = process.env.FUN === "1";
 
 const MODE = process.argv[2] || "year";
@@ -106,6 +109,7 @@ function hook(e) {
   };
   if (e.zSink) e.zSink = into;
   else e.notify = into;
+  trackMoney(e);
   const arr = [];
   const push0 = Array.prototype.push;
   arr.push = function (...items) {
@@ -118,6 +122,28 @@ function hook(e) {
   };
   e.events = arr;
 }
+// 钱：每一笔进出都记下（v0.33 起看第 31–120 天挣到的花掉几成、3,000 以上的东西每周有没有买）
+function trackMoney(e) {
+  const s = e.s;
+  let v = s.money;
+  Object.defineProperty(s, "money", {
+    configurable: true,
+    enumerable: true,
+    get: () => v,
+    set: (n) => {
+      const d = Number(n) - v;
+      if (CUR && Number.isFinite(d) && d) {
+        const day = s.day || 0;
+        if (d > 0) CUR.earn[day] = (CUR.earn[day] || 0) + d;
+        else {
+          CUR.spend[day] = (CUR.spend[day] || 0) - d;
+          if (-d >= 3000) CUR.big3k.push([day, Math.round(-d)]);
+        }
+      }
+      v = n;
+    },
+  });
+}
 function funDay(e, X, today) {
   if (!FUN) return;
   const seen = (k) => {
@@ -128,6 +154,18 @@ function funDay(e, X, today) {
   for (const r of e.c?.residents || []) seen("resident:" + (r.id || r.type || r.name));
   for (const b of e.s.buildings) seen("building:" + b.type);
   for (const k of Object.keys(e.c?.technologies || {})) if (e.c.technologies[k]) seen("tech:" + k);
+  // v0.33：二级墙、扩建、稀罕货、见过的人、来信、这周的清单和头目、第一次碰到的那种下午的事
+  const h = e.hp;
+  if (h) {
+    for (const w of Object.keys(h.wall2)) seen("wall2:" + w);
+    for (const [k, n] of Object.entries(h.expand)) for (let i = 1; i <= n; i++) seen("expand:" + k + i);
+    for (const g of Object.keys(h.goods)) seen("good:" + g);
+    for (const id of h.met) seen("met:" + id);
+    for (const id of h.letters) seen("letter:" + id);
+    for (const id of h.log.list) seen("list:" + id);
+    for (const id of h.log.boss) seen("boss:" + id);
+    for (const k of X.noonKinds || []) seen("noon:" + k);
+  }
   X.fun.worth[today] = Math.round(worthOf(e));
   X.fun.floats[today] = e.zx?.stats?.floats || 0;
 }
@@ -176,6 +214,8 @@ function funSummary(rows, days) {
       momentsPerDay: +(moments / n).toFixed(2),
       bigGapSec: { mean: real(gaps.reduce((x, y) => x + y, 0) / Math.max(1, gaps.length)), median: real(q(0.5)), p90: real(q(0.9)), max: real(gaps.at(-1) || 0) },
       zeroBigDaysPct: +((zero / n) * 100).toFixed(1),
+      // 有一件值得出门的下午的事的日子
+      noonDaysPct: +((rows.reduce((acc, X) => acc + Object.keys(X.noonDay || {}).filter((d) => d >= a && d <= b).length, 0) / n) * 100).toFixed(1),
     };
   }
   // 每周第一次见到的东西（6 个种子平均）、第 31 天以后最长几天没见到新东西
@@ -199,7 +239,25 @@ function funSummary(rows, days) {
   const momentKinds = {};
   for (const X of rows) for (const [, k] of X.fun.moments) momentKinds[k] = (momentKinds[k] || 0) + 1;
   const moneyAt = (d) => Math.round(rows.reduce((a, X) => a + (X.money[d] || 0), 0) / rows.length);
-  return { phases: out, momentKinds, novelty: weeks.map((x) => +(x / rows.length).toFixed(1)), dryAfter30: dry, money: { d30: moneyAt(30), d60: moneyAt(60), d90: moneyAt(90), d120: moneyAt(120) } };
+  // 第 31 天到最后：挣到的花掉几成；第 31 天起每 7 天里有没有一笔 3,000 以上的花销
+  const spend = rows.map((X) => {
+    let earn = 0,
+      out = 0;
+    for (let d = 31; d <= days; d++) {
+      earn += X.fun.earn[d] || 0;
+      out += X.fun.spend[d] || 0;
+    }
+    let weeks3k = 0,
+      wk = 0;
+    for (let a = 31; a + 6 <= days; a += 7) {
+      wk++;
+      if (X.fun.big3k.some(([d]) => d >= a && d <= a + 6)) weeks3k++;
+    }
+    return { earn: Math.round(earn), spend: Math.round(out), share: earn ? +(out / earn).toFixed(3) : 0, weeks3k: wk ? weeks3k + "/" + wk : "0/0" };
+  });
+  // 第 61–120 天每周新东西（6 个种子平均）
+  const late = weeks.slice(8, Math.ceil(days / 7)).map((x) => +(x / rows.length).toFixed(1));
+  return { phases: out, momentKinds, novelty: weeks.map((x) => +(x / rows.length).toFixed(1)), noveltyD61: { min: Math.min(...late), mean: +(late.reduce((a, b) => a + b, 0) / Math.max(1, late.length)).toFixed(1) }, dryAfter30: dry, money: { d30: moneyAt(30), d60: moneyAt(60), d90: moneyAt(90), d120: moneyAt(120) }, spend };
 }
 
 function seeded(seed) {
@@ -623,10 +681,10 @@ function tunnelTrip(e, X, R) {
     e._earlyPatched = true;
   }
   e.travel("shelter");
-  if (e.s.region !== "shelter") return false;
+  if (e.s.region !== "shelter") return ((X.tunnelFail ||= []).push([e.s.day, "travel:" + e.s.region]), false);
   at(e, SHAFT.x, SHAFT.y);
   const from = Math.max(1, ...e.rl.tunnel.lifts);
-  if (!e.tunnelEnter(from)) return false;
+  if (!e.tunnelEnter(from)) return ((X.tunnelFail ||= []).push([e.s.day, "enter:" + e.tunnelReason(from)]), false);
   X.trips++;
   // 这一趟（往下 5 层）会不会倒下：照隧道台带对装备的倒下率；倒下的话在这 5 层里的某一层
   const fall = R() < TFAIL ? from + Math.floor(R() * 5) : null;
@@ -817,6 +875,169 @@ function gifts(e, day) {
   }
 }
 
+// ---------------- v0.33「盼头」：下午的事、这周的事、把钱花出去 ----------------
+const HOPE = typeof Engine.prototype.noonEnsure === "function";
+const RESERVE = 2500;
+const toBag = (e, ids, n) => {
+  let left = n;
+  for (const id of ids) {
+    const k = Math.min(left, e.s.storage[id] || 0);
+    if (!k) continue;
+    e.s.storage[id] -= k;
+    if (!e.s.storage[id]) delete e.s.storage[id];
+    e.s.inventory[id] = (e.s.inventory[id] || 0) + k;
+    left -= k;
+  }
+};
+function openNoonBoxes(e, X) {
+  for (const o of e.objects.filter((o) => o.type === "crate" && o.noon)) {
+    at(e, o.x, o.y + 4);
+    stash(e);
+    e._picked = o;
+    try {
+      e.openContainer(o);
+    } finally {
+      e._picked = null;
+    }
+  }
+}
+function hopeNoon(e, X) {
+  if (!HOPE || !e.hp) return;
+  const N = e.noonEnsure();
+  if (!N?.kind || N.day !== e.s.day) return;
+  X.noonDay ||= {};
+  X.noonDay[e.s.day] = N.kind;
+  if (e.s.minute < 14 * 60 + 5) toMinute(e, 14 * 60 + 5);
+  if (N.st !== "on") return;
+  X.noonKinds ||= [];
+  if (!X.noonKinds.includes(N.kind)) X.noonKinds.push(N.kind);
+  X.noon ||= {};
+  if (N.kind === "drop" || N.kind === "truck") {
+    e.travel(N.region);
+    if (e.s.region !== N.region) return;
+    run(e, 60, () => !e.enemies.some((z) => !z.dead && !z.fled));
+    openNoonBoxes(e, X);
+    if (N.kind === "drop" && N.st === "on") {
+      // 16:00 以后围上来的那几只：打完再开
+      run(e, 60, () => !e.enemies.some((z) => !z.dead && !z.fled));
+      openNoonBoxes(e, X);
+    }
+  } else if (N.kind === "survivor") {
+    e.travel(N.region);
+    if (e.s.region !== N.region) return;
+    run(e, 60, () => !e.enemies.some((z) => !z.dead && !z.fled));
+    const o = e.objects.find((x) => x.type === "hpSurvivor");
+    if (o) {
+      Object.assign(e.s.player, e.freePoint(o.x + 30, o.y));
+      e.hpSurvivorGo();
+      const exit = REGIONS[N.region]?.exit || { x: 95, y: 523 };
+      for (let i = 0; i < 2400 && N.st === "on" && N.follow; i++) {
+        const p = e.s.player;
+        e.invulnerable = 1e9;
+        p.stamina = Math.max(p.stamina, 60);
+        const path = e.pathTo(p, exit),
+          nx = path[0] || exit,
+          a = Math.atan2(nx.y - p.y, nx.x - p.x);
+        if (Math.hypot(o.x - p.x, o.y - p.y) > 110) e.update(DT, {});
+        else e.update(DT, { x: Math.cos(a), y: Math.sin(a) });
+        e.events.length = 0;
+      }
+    }
+  } else if (N.kind === "peddler") {
+    at(e, HD.PEDDLER_SPOT.x, HD.PEDDLER_SPOT.y + 30);
+    const o = e.peddlerOffer(N);
+    if (!e.peddlerReason("sell") && e.s.money >= RESERVE + o.price) e.peddlerTrade("sell");
+    if (!e.peddlerReason("swap")) e.peddlerTrade("swap");
+  } else if (N.kind === "buyer") {
+    if (N.region !== "farm") {
+      toBag(e, e.hpAccepts(N.item), N.n);
+      e.travel(N.region);
+    }
+    if (e.s.region === N.region) {
+      const q = e.buyerSpot(N);
+      at(e, q.x, q.y + 20);
+      e.buyerSell();
+    }
+  } else if (N.kind === "shoal") {
+    const region = N.water === "river" ? "valley" : "farm";
+    fishTrip(e, X, region, N.water, 4);
+  }
+  if (["done"].includes(N.st) || (N.kind === "shoal" && N.caught)) X.noon[N.kind] = (X.noon[N.kind] || 0) + 1;
+  stash(e);
+  if (e.s.region !== "farm") e.travel("farm");
+}
+// 这周的事：头目那几天去打一回；过路人要的东西给他；唐九的稀罕货和收菜；清单在交重建站时一起交
+function hopeBoss(e, X) {
+  if (!HOPE || !e.hp) return false;
+  const W = e.weekEnsure();
+  if (!W || W.kind !== "boss" || W.st !== "on") return false;
+  e.travel(W.region);
+  if (e.s.region !== W.region) return false;
+  at(e, W.lair.x - 200, W.lair.y);
+  run(e, 300, () => !e.enemies.some((z) => z.hpBoss && !z.dead));
+  run(e, 60, () => !e.enemies.some((z) => !z.dead && !z.fled));
+  stash(e);
+  e.travel("farm");
+  return true;
+}
+function hopeEvening(e, X) {
+  if (!HOPE || !e.hp || e.s.region !== "farm") return;
+  const W = e.weekEnsure();
+  if (W?.kind === "traveler" && W.st === "here") {
+    at(e, HD.TRAVEL.spot.x, HD.TRAVEL.spot.y + 30);
+    if (!e.travelerReason()) e.travelerGive();
+  }
+  if (W?.kind === "caravan" && W.st === "here" && e.caravanHere()) {
+    for (const o of e.o.caravan.offers.filter((o) => o.hpGood && !o.sold)) if (!e.goodReason(o.hpGood) && e.s.money >= RESERVE + HD.GOODS[o.hpGood].price) e.buyOffer(o.key);
+    if (!e.caravanSellReason()) e.caravanSell();
+  }
+  if (W?.kind === "list" && W.st === "open") {
+    const st = e.rlStationB();
+    if (st) {
+      at(e, st.x, st.y + 50);
+      for (const [k] of HD.WEEK_LISTS[W.id].need) if (!e.weekListReason(k)) e.weekListGive(k);
+    }
+  }
+  // 旧站商街这周的稀罕货：买得起就去买
+  const m = e.marketGood();
+  if (m && !m.sold && !e.goodReason(m.good) && e.s.money >= RESERVE + HD.GOODS[m.good].price && e.d?.unlocked?.stationMarket) {
+    e.travel("stationMarket");
+    if (e.s.region === "stationMarket") {
+      const P = POINT_BY_ID.shops;
+      at(e, P.x, P.y + 20);
+      if (!e.districtQuote("shops", "hpGood").reason) e.districtAct("shops", "hpGood");
+      e.travel("farm");
+    }
+  }
+  // 墙升二级、扩建：便宜的先来；缺的木材、石材、废金属、零件、布、药草按买价补（铜线、灯泡、道钉、电路只用自己有的）
+  const BUY = ["wood", "stone", "scrap", "parts", "cloth", "herb"];
+  const opts = [];
+  for (const w of Object.keys(HD.WALL2)) if (e.wallOn(w) && !e.wall2On(w)) opts.push(["w", w, HD.WALL2[w].cost]);
+  for (const k of Object.keys(HD.EXPAND)) {
+    const lv = e.hpLv(k);
+    if (lv < HD.EXPAND[k].length) opts.push(["x", k, HD.EXPAND[k][lv].cost]);
+  }
+  opts.sort((a, b) => a[2].gold - b[2].gold);
+  for (const [kind, id, cost] of opts) {
+    let gold = cost.gold;
+    const lack = {};
+    for (const [k, n] of Object.entries(cost)) if (k !== "gold" && qty(e, k) < n) lack[k] = n - qty(e, k);
+    if (Object.keys(lack).some((k) => !BUY.includes(k))) continue;
+    for (const [k, n] of Object.entries(lack)) gold += n * (ITEMS[k]?.buy || ITEMS[k]?.sell * 2 || 10);
+    if (e.s.money < RESERVE + gold) continue;
+    for (const [k, n] of Object.entries(lack)) {
+      e.s.money -= n * (ITEMS[k]?.buy || ITEMS[k]?.sell * 2 || 10);
+      put(e, { [k]: n });
+    }
+    if (kind === "w") {
+      const st = e.rlStationB();
+      if (!st) continue;
+      at(e, st.x, st.y + 50);
+      e.wall2Up(id);
+    } else e.expand(id);
+  }
+}
+
 // ---------------- 一天 ----------------
 function station(e, X) {
   if (e.rlStationB()) return true;
@@ -862,7 +1083,7 @@ function life(seed) {
   e.gr.slots.melee = "ironspear";
   e.s.slot = 3;
   e.s.inventory.flashlight = 1;
-  const X = { fun: { toasts: [], big: [], moments: [], seen: {}, worth: [], floats: [] }, seed, act: 0, ms: {}, gave: {}, given: {}, harvests: 0, sold: 0, spent: 0, fish: 0, boxes: 0, digs: 0, trips: 0, floors: 0, falls: 0, cooked: 0, ironBoxes: 0, errors: [], lists: {}, walls: {}, cores: {}, reviews: [], old: [], pages: [], lamps: [], money: [], cropValue: [], deepest: [], nights: 0, held: 0, ladder: [], morale: [], hordes: 0, lastKey: {}, net: [] };
+  const X = { fun: { toasts: [], big: [], moments: [], seen: {}, worth: [], floats: [], earn: {}, spend: {}, big3k: [] }, seed, act: 0, ms: {}, gave: {}, given: {}, harvests: 0, sold: 0, spent: 0, fish: 0, boxes: 0, digs: 0, trips: 0, floors: 0, falls: 0, cooked: 0, ironBoxes: 0, errors: [], lists: {}, walls: {}, cores: {}, reviews: [], old: [], pages: [], lamps: [], money: [], cropValue: [], deepest: [], nights: 0, held: 0, ladder: [], morale: [], hordes: 0, lastKey: {}, net: [] };
   const lists0 = new Set();
   CUR = FUN ? X.fun : null;
   for (let day = 1; day <= DAYS && e; day++) {
@@ -895,8 +1116,12 @@ function life(seed) {
       // 隧道：还要往下走、还缺隧道里的东西（铜线、灯泡、道钉、继电器、隧道里的旧物）就隔天去，都齐了四天去一趟
       const tunnelNeeds = e.rl.tunnel.deepest < 30 || ["rlCopper", "rlBulb", "rlSpike", "rlRelay"].some((id) => listNeedOf(e, id) > qty(e, id)) || RD.OLD_IDS.some((id) => RD.OLD[id].home.region === "tunnel" && !e.oldDonated(id) && !qty(e, id));
       const tunnelDay = storyGate(e) && e.shaftOpen() && day % (tunnelNeeds ? 2 : 4) === 0;
-      if (tunnelDay) tunnelTrip(e, X, R);
-      else lootRegion(e, X, where);
+      // 隧道下不去（灰隼团要来了之类）就照平常搜废墟
+      let tripKind = "loot";
+      if (tunnelDay && tunnelTrip(e, X, R)) tripKind = "tunnel";
+      else if (!hopeBoss(e, X)) lootRegion(e, X, where);
+      else tripKind = "boss";
+      const tripEnd = Math.round(e.s.minute);
       // 溪谷的河每 4 天、沉湾的海每 7 天；清单还缺哪种鱼、正是它的时节，就隔一天去一回、多钓几竿
       const sid = e.season?.()?.id || "";
       const wantFish = (id) => listNeedOf(e, id) > qty(e, id);
@@ -913,8 +1138,17 @@ function life(seed) {
         fishOnce(e, "pond", X);
         stash(e);
       }
+      // 14:00 下午的事
+      const noonAt = Math.round(e.s.minute);
+      if (e.s.day === today) hopeNoon(e, X);
+      if (process.env.DAYLOG && e.hp) {
+        const N = e.hp.noon;
+        X.dayLog ||= {};
+        X.dayLog[today] = { trip: tripKind, tripEnd, noonAt, kind: N?.day === today ? N.kind : "", st: N?.day === today ? N.st : "", region: N?.region || "", after: Math.round(e.s.minute) };
+      }
       // 16:00 田
       if (e.s.day === today) {
+        if (e.s.region !== "farm") e.travel("farm");
         toMinute(e, 16 * 60);
         farmPass(e, X);
       }
@@ -976,6 +1210,9 @@ function life(seed) {
         sellSurplus(e, X);
         stash(e);
         deliverAll(e, X);
+        hopeEvening(e, X);
+        if (e.s.region !== "farm") e.travel("farm");
+        stash(e);
       }
       // 尸潮
       if (e.s.day === today) defend();
@@ -1018,7 +1255,11 @@ function life(seed) {
       if (process.env.SHOW) console.error("day", today, "walls", Object.keys(X.walls).join(","), "lists", e.rl.done.length, "old", e.rl.old.length, "pages", e.rl.pages.length, "deep", e.rl.tunnel.deepest, "cores", e.rl.cores.join(","), "money", Math.round(e.s.money), "region", e.s.region);
       // 存档、读回
       const text = e.serialize();
-      if (/NaN|undefined/.test(text)) X.errors.push("day " + today + ": save text has NaN/undefined");
+      if (/NaN|undefined/.test(text)) {
+        X.errors.push("day " + today + ": save text has NaN/undefined");
+        // BAD_DUMP=文件名：第一份有问题的存档写出来查
+        if (process.env.BAD_DUMP && !X.badDumped) FS.writeFileSync(process.env.BAD_DUMP, text), (X.badDumped = true);
+      }
       const back = Engine.parse(text);
       e = new Engine(back, () => {});
       hook(e);
@@ -1028,6 +1269,7 @@ function life(seed) {
       break;
     }
   }
+  if (e?.hp) X.hope = { ...e.hp.stats, goods: Object.keys(e.hp.goods).length, wall2: Object.keys(e.hp.wall2).length, expand: Object.values(e.hp.expand).reduce((a, b) => a + b, 0), letters: e.hp.letters.length, met: e.hp.met.length };
   X.oldMissing = e ? RD.OLD_IDS.filter((id) => !e.oldDonated(id)).map((id) => id + "@" + RD.OLD[id].home.region + ":" + RD.OLD[id].home.kinds.join("/") + (qty(e, id) ? "(有)" : "")) : [];
   X.end = e ? { day: e.s.day, lists: e.rl.done.length, walls: e.wallsOn?.().length, old: e.rl.old.length, pages: e.rl.pages.length, cores: [...e.rl.cores], deepest: e.rl.tunnel.deepest, completion: e.rlCompletion().pct, money: Math.round(e.s.money), trust: Object.fromEntries(Object.entries(e.ss.trust).filter(([, v]) => v > 0)), held: e.ln.held, have: Object.fromEntries(RD.LIST_IDS.filter((L) => !e.listDone(L)).map((L) => [L, RD.LISTS[L].need.filter(([k, n]) => e.listGot(L, k) < n).map(([k, n]) => k + " " + e.listGot(L, k) + "/" + n + " (有" + e.listHave(k) + ")").join("; ")])) } : null;
   return X;
@@ -1081,6 +1323,8 @@ if (MODE === "year") {
           sold: X.sold,
           lists: Object.fromEntries(Object.entries(X.lists).map(([k, d]) => [k, d + " " + (X.lastKey[k] || "")])),
           end: X.end,
+          hope: X.hope,
+          noon: X.noon,
           errors: X.errors.slice(0, 6),
           ...(FUN ? { fun: { toasts: X.fun.toasts.length, big: X.fun.big.length, moments: X.fun.moments.length, floats: X.fun.floats.at(-1) || 0 } } : {}),
         },
@@ -1091,7 +1335,7 @@ if (MODE === "year") {
   }
   if (FUN) console.log(JSON.stringify({ FUN: funSummary(rows, DAYS) }));
   // FUN_DUMP=文件名：把每条提示、每件好事都写进去（找哪些提示还太多用）
-  if (FUN && process.env.FUN_DUMP) (await import("node:fs")).writeFileSync(process.env.FUN_DUMP, JSON.stringify(rows.map((X) => ({ seed: X.seed, ...X.fun, money: X.money }))));
+  if (FUN && process.env.FUN_DUMP) (await import("node:fs")).writeFileSync(process.env.FUN_DUMP, JSON.stringify(rows.map((X) => ({ seed: X.seed, ...X.fun, money: X.money, noonDay: X.noonDay || {}, hope: X.hope || null, noon: X.noon || {}, dayLog: X.dayLog || null, tunnelFail: X.tunnelFail || null, errors: X.errors }))));
 }
 
 if (MODE === "company") {

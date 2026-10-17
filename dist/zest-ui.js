@@ -87,7 +87,13 @@ const PALETTE = {
   harvest: ["#2c3d17", "#9fd16a", "#d9b06a"],
   intro: ["#3a2a1a", "#f3e6c4", "#ffd76a"],
 };
+// 后来的版本加的卡片种类：自带小图和颜色（v0.33：营地升级、过路人、这周的事）
+export function addMomentIcons(icons = {}, palettes = {}) {
+  for (const [k, rows] of Object.entries(icons)) if (Array.isArray(rows) && rows.length === 12) ICONS[k] ??= rows;
+  for (const [k, pal] of Object.entries(palettes)) if (Array.isArray(pal)) PALETTE[k] ??= pal;
+}
 export function momentIcon(ev) {
+  if (ev?.icon && ICONS[ev.icon]) return ev.icon;
   if (ev?.kind === "wall") return ICONS[ev.wall] ? ev.wall : "power";
   return ICONS[ev?.kind] ? ev.kind : "intro";
 }

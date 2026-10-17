@@ -2106,6 +2106,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(card().hidden, false, 'the 手感 card is up');
   assert.match(card().innerHTML, /手感/);
   run(80);
+  // v0.33 起旧档还会接着一张“盼头”的卡片
+  if (!card().hidden) { assert.match(card().innerHTML, /盼头/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   // ---------- 按住 E 沿着一排熟了的萝卜走 ----------
   e.s.region = 'farm'; e.assignRegion(); e.s.minute = 600; e.s.debris = [];
@@ -2153,4 +2155,126 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
   assert.equal(back.zest.intro.told, true); assert.ok(back.zest.stats.holdActs >= 6); assert.ok(back.zest.moments.level >= 1);
   console.log('Zest controller passed: a v0.31 save restored from a file (the 手感 card on the first frame and gone after its time), E held along a row of ripe radishes (harvested, replanted with the last seed, tended, no line per plot, one line for the pass), a level-up card that stays through eight notices and two seconds, the next card after it and a click closing it, the morning broadcast in the journal\'s 今天, the collection\'s three almanacs, the touch 建造 button shown except while building, and save/parse.');
+}
+
+// v0.33.0「盼头」: a v0.32 save restored from a file (the 盼头 card on the first frame and gone after its time), a traveler at the
+// gate met with E (his page, the things handed over with the button, the card), this week's list on the station (a slot handed in)
+// and a wall raised to level II from its row, the farmhouse wing bought on the rooms page, the coop's run from its card, this week's
+// rare good bought at the station market from the district page, a peddler's stall opened with E (one thing bought), the afternoon
+// airdrop box opened with E, a trapped survivor told to follow with E, the alert bar and the journal's 今天 and strip, the farm
+// drawn with every expansion and device at four sizes by day and night, and save/parse.
+{
+  let clock = 28000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const keydown = (key) => listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false });
+  const press = (key) => { keydown(key); listeners.keyup({ key }); };
+  const card = () => document.querySelector('#zest-moment');
+  const goTo = (e, region, x, y) => { e.s.visited = { ...(e.s.visited || {}), [region]: true }; e.s.region = region; e.enemies = e.s.enemies[region] = []; e.assignRegion(); if (x != null) Object.assign(e.s.player, { x, y }); };
+  const hourTo = (e, h) => { e.s.minute = h * 60 - 0.5; e.c.workClock = 59.5; e.advanceMinutes(1); };
+  const sizes = (list = [[1366, 600], [1920, 900], [390, 480], [844, 240]]) => { for (const [w, hh] of list) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); } context.inspect().renderer.resize(1366, 600, 1); };
+  dailyOn = false;
+  const HD = await import('../dist/hope-data.js');
+  const Z = await import('../dist/zest.js');
+  // ---------- 一份 v0.32 的旧档（第二年，主线打完，重建站和鸡舍、六面墙都通了），从文件恢复 ----------
+  const old = new Z.Engine(Z.newGameState(), () => {});
+  const sc = old.sc;
+  sc.act = 9; sc.claimed = ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8']; sc.choice = 'ration';
+  sc.letters = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8', 'act9']; sc.flags.well = sc.flags.camp = sc.flags.farmerFed = true; sc.camp = { x: 560, y: 735 };
+  old.r.claimed = RebuildData.TASKS.map((t) => t.id); old.r.radio = true;
+  old.o.hospital = 'water'; old.o.youke = true; old.o.lathe = { mode: 'parts', day: 0 }; old.o.toll = 'refuse'; old.o.raid.phase = 'won';
+  old.o.caravan.visits = 3;
+  old.assignRegion();
+  old.s.day = 56; old.s.minute = 600; old.s.weather = '晴朗'; if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();
+  old.s.visited = { ...(old.s.visited || {}), residential: true, hospital: true, warehouse: true, valley: true, courtyard: true, stationMarket: true, railDepot: true };
+  for (const r of ['valley', 'stationMarket', 'courtyard', 'railDepot']) old.d.unlocked[r] = true;
+  Object.assign(old.s.storage, { wood: 200, stone: 120, scrap: 80, parts: 30, cloth: 20, herb: 20, circuit: 10, rlCopper: 10, rlBulb: 10, rlSpike: 20, fish: 6, bread: 60, potato: 20, stew: 3, jam: 3, cotton: 10, tomato: 10 });
+  old.s.money = 90000;
+  for (const w of ['water', 'clinic', 'school', 'radio', 'power', 'rail']) old.rl.walls[w] = { by: 'list', day: 50 };
+  old.s.buildings.push({ id: 'hpst', type: 'rlStation', x: 760, y: 820, rotation: 0, hp: 160, open: false });
+  old.s.buildings.push({ id: 'hpcoop', type: 'coop', x: 1000, y: 560, rotation: 0, hp: 150, open: false });
+  context.open('restoreArchive', { files: { old: old.serialize() } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  let e = context.inspect().engine;
+  assert.equal(context.inspect().menu, null);
+  assert.ok(e.hp && e.hp.intro && !e.hp.intro.told, 'the 盼头 record was added to the old save');
+  e.paused = false; if (e.dy) e.dy.pending = null;
+  { const m = context.inspect().moments; m.queue.length = 0; m.close(); }
+  run(3);
+  assert.equal(card().hidden, false, 'the 盼头 card is up'); assert.match(card().innerHTML, /盼头/);
+  run(80);
+  assert.equal(card().hidden, true, 'and gone after its time');
+  // ---------- 过路人：营门口按 E，他的那一页，给他东西 ----------
+  let d = 57; while (HD.weekKind(d) !== 'traveler') d += 7;
+  e.s.day = d - 1; e.s.minute = 1439.5; e.c.workClock = 59.5; e.advanceMinutes(0.5 + 9 * 60 + 5);
+  if (e.s.region !== 'farm') goTo(e, 'farm');
+  const W = e.hp.week;
+  assert.equal(W.kind, 'traveler'); assert.equal(W.st, 'here');
+  const tv = e.objects.find((o) => o.type === 'hpTraveler'); assert.ok(tv);
+  Object.assign(e.s.player, { x: tv.x, y: tv.y + 30 }); context.inspect().engine._picked = null;
+  run(1); press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), new RegExp(HD.TRAVELERS[W.id].name)); clean();
+  click('hpGive', W.id);
+  assert.equal(W.st, 'done', 'he took the things'); click('close'); run(2);
+  assert.equal(card().hidden, false); assert.match(card().innerHTML, /过路人/);
+  { const m = context.inspect().moments; m.queue.length = 0; m.close(); }
+  // ---------- 重建站：墙升二级（这一周不是清单周：清单的格子在单元测试里交） ----------
+  const st = e.s.buildings.find((b) => b.type === 'rlStation');
+  Object.assign(e.s.player, { x: st.x, y: st.y + 50 });
+  context.open('outpost', { view: 'rlStation' }); clean();
+  assert.match(html(), /升二级 · 二级水网/);
+  click('hpWall2', 'water'); assert.ok(e.wall2On('water'), 'the water wall is level II'); clean();
+  assert.match(html(), /二级 · 二级水网<\/b> ✓/); click('close');
+  // ---------- 农舍「房间与家具」：东厢房；鸡舍的设施卡：大鸡舍 ----------
+  goTo(e, 'farm', 760, 640);
+  context.open('frontier', { tab: 'rooms' }); clean(); assert.match(html(), /农舍扩建/);
+  click('hpExpand', 'home'); assert.equal(e.hpLv('home'), 1); click('close');
+  context.open('building', { buildingId: 'hpcoop' }); clean(); assert.match(html(), /鸡舍扩建/);
+  click('hpExpand', 'coop'); assert.equal(e.hpLv('coop'), 1); click('close');
+  // ---------- 旧站商街：这周的稀罕货 ----------
+  const m = e.marketGood(); assert.ok(m);
+  const P = DistrictData.POINT_BY_ID.shops;
+  goTo(e, 'stationMarket', P.x, P.y + 20);
+  context.open('districts', {}); const dui = context.inspect().districtUI; dui.region = 'stationMarket'; dui.point = 'shops'; dui.view = 'point'; context.open('districts', {});
+  clean();
+  click('dQuick', 'shops:hpGood');
+  assert.ok(e.hpOwn(m.good) || HD.GOODS[m.good].repeat, 'bought this week\'s rare good'); click('close');
+  // ---------- 货郎：营门口按 E，买一样 ----------
+  goTo(e, 'farm');
+  e.hp.noon = { day: e.s.day, kind: 'peddler', st: 'soon', id: 'mei' }; hourTo(e, 14);
+  const pd = e.objects.find((o) => o.type === 'hpPeddler'); assert.ok(pd);
+  Object.assign(e.s.player, { x: pd.x, y: pd.y + 30 }); run(1); press('e'); run(1);
+  assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /种子贩子阿梅/); clean();
+  click('hpPeddle', 'sell'); assert.ok(e.hp.noon.sold); click('close');
+  // ---------- 空投：那张图上按 E 开箱 ----------
+  e.s.day += 1; e.hp.noon = { day: e.s.day, kind: 'drop', st: 'soon', region: 'hospital', tier: 'rare', good: 'hpBiscuit' }; hourTo(e, 14);
+  goTo(e, 'hospital', 300, 520);
+  const box = e.objects.find((o) => o.type === 'crate' && o.id === 'hpdrop'); assert.ok(box);
+  Object.assign(e.s.player, { x: box.x, y: box.y + 22 }); run(1); press('e'); run(2);
+  assert.equal(e.hp.noon.st, 'done', 'the airdrop box was opened with E');
+  // ---------- 被困的人：按 E 让他跟着 ----------
+  e.s.day += 1; e.hp.noon = { day: e.s.day, kind: 'survivor', st: 'soon', region: 'residential', id: 1 }; hourTo(e, 14);
+  goTo(e, 'residential', 300, 520);
+  const sv = e.objects.find((o) => o.type === 'hpSurvivor'); assert.ok(sv);
+  Object.assign(e.s.player, e.freePoint(sv.x + 30, sv.y)); run(1); press('e'); run(1);
+  assert.equal(e.hp.noon.follow, true, 'the survivor follows');
+  // ---------- 顶上的提醒、任务手记 ----------
+  const alerts = document.querySelector('#alerts')?.innerHTML || '';
+  assert.match(alerts + WinterUI.alertItems(e).map((a) => a.text).join(' '), /下午的事 · 被困的人/);
+  context.open('journey', {}); clean(); assert.match(html(), /hp-strip/); click('close');
+  // ---------- 画面：所有扩建和稀罕货都在农场上，四种大小，白天和夜里 ----------
+  goTo(e, 'farm', 760, 640);
+  e.hp.expand = { home: 2, store: 2, coop: 2 };
+  for (const id of HD.GOOD_IDS) if (!HD.GOODS[id].repeat) e.hp.goods[id] = e.s.day;
+  e.hp.wall2.power = e.s.day;
+  e.c.animals.goat = true; e.c.animals.chicken = true;
+  e.assignRegion();
+  assert.ok(e.objects.some((o) => o.type === 'hpDeco' && o.kind === 'mill'));
+  assert.ok(!e.nearestObject() || e.nearestObject().type !== 'hpDeco');
+  for (const [x, y] of [[560, 260], [1050, 300], [1000, 600]]) for (const mm of [15 * 60, 22 * 60]) { e.s.minute = mm; Object.assign(e.s.player, { x, y }); sizes(); }
+  e.s.minute = 600;
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.hope.intro.told, true); assert.ok(back.hope.wall2.water); assert.equal(back.hope.expand.home, 2);
+  console.log('Hope controller passed: a v0.32 save restored from a file (the 盼头 card on the first frame and gone after its time), a traveler at the gate met with E (his page, the things handed over, the card), a wall raised to level II from the station, the farmhouse wing from the rooms page and the coop run from its card, this week\'s rare good bought at the station market, a peddler\'s stall opened with E and one thing bought, the afternoon airdrop opened with E, a trapped survivor following after E, the alert bar and the journal strip, the farm with every expansion and device drawn at four sizes by day and night, and save/parse.');
 }

@@ -503,11 +503,13 @@ test("saves: the new field is kept, checked and old saves get a checkpoint and a
   assert.equal(needsStoryMigration(text), false);
   const { e: o } = make(Engine.parse(oldText));
   o.update(0.016, {});
-  const intro = moments(o, "intro");
+  // v0.33 起旧档还会接着来一张“盼头”的卡片（各一张、各说一次）
+  const mine = () => moments(o, "intro").filter((m) => m.title === "手感");
+  const intro = mine();
   assert.equal(intro.length, 1);
   assert.deepEqual(intro[0].lines, INTRO_LINES);
   o.update(0.016, {});
-  assert.equal(moments(o, "intro").length, 1);
+  assert.equal(mine().length, 1);
   const again = Engine.parse(o.serialize());
   assert.equal(again.zest.intro.told, true);
 });

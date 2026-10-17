@@ -422,6 +422,8 @@ test("dog skills: seeds every other morning, an extra egg, earlier warnings and 
   e.s.day = 10;
   const seeds = () => Object.entries(e.s.storage).filter(([k]) => k.startsWith("seed")).reduce((a, [, v]) => a + v, 0);
   const s0 = seeds();
+  // 人情那一版的麦穗早上还会随机叼一样东西（可能是一颗种子）：这一天算它已经叼过了，只看这里的本事
+  if (e.kin) e.kin.dog = 10;
   hour(e, 6);
   assert.equal(seeds(), s0 + 2);
   hour(e, 6);
@@ -444,6 +446,8 @@ test("dog skills: seeds every other morning, an extra egg, earlier warnings and 
   e.s.grave = { region: "hospital", x: 500, y: 500, items: { scrap: 4 } };
   const scrap = e.s.storage.scrap || 0;
   e.s.day = 11;
+  // 人情那一版的麦穗早上还会随机叼一样东西（可能正好是废金属）：这一天算它已经叼过了，只看叼回背包
+  if (e.kin) e.kin.dog = 11;
   hour(e, 6);
   assert.equal(e.s.grave, null);
   assert.equal(e.s.storage.scrap, scrap + 4);

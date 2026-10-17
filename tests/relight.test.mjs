@@ -350,7 +350,8 @@ test("old things: cabinets give only the ones that live there and are still miss
   go(e, "farm", 1300, 200);
   assert.equal(e.donateOldReason(pool[0]), "");
   assert.ok(e.donateOld(pool[0]));
-  assert.ok(said(toasts, new RegExp(OLD_STORY[pool[0]].slice(0, 6))));
+  // v0.33：捐给档案馆是一张卡片，旧物的故事写在卡片上
+  assert.ok(e.events.some((x) => x.type === "moment" && x.kind === "old" && x.lines.some((l) => l.includes(OLD_STORY[pool[0]].slice(0, 6)))));
   // 一组凑齐
   const fam = OLD_IDS.filter((id) => OLD[id].group === "family" && !e.oldDonated(id));
   const rep0 = e.c.reputation;
@@ -423,7 +424,8 @@ test("pages: cabinets, the fallen and the hook all turn some up; a diary marks t
   // 日记
   assert.ok(e.readPage("p02"));
   for (const f of prefsOf("medic").fav) assert.equal(e.kin.know.medic[f], "fav");
-  assert.ok(said(toasts, /残页「急诊科的交班本」/));
+  // v0.33：捡到残页是一张卡片
+  assert.ok(e.events.some((x) => x.type === "moment" && x.kind === "page" && /残页「急诊科的交班本」/.test(x.title)));
   // 水的来历按顺序
   const lore = [];
   for (let i = 0; i < 30 && lore.length < 3; i++) {
