@@ -35,11 +35,11 @@ export const PHASES = {
     name: "春雷夜",
     season: "thaw",
     short: "打雷下雨，陷阱会哑",
-    rule: "雨水灌进陷阱，每次踩到两成五哑火；雷声盖住了动静，每波少来一成。",
+    rule: "雨水灌进陷阱，每次踩到两成五哑火；路滑泥深，感染者走得慢一成。",
     hint: "春雷夜陷阱会哑：多摆两个，或者靠瞭望塔和守卫。",
     good: "瞭望塔、守卫、自己动手",
     bad: "只靠陷阱",
-    fx: { trapMute: 0.25, count: 0.9 },
+    fx: { trapMute: 0.25, speed: 0.9 },
   },
   moon: {
     name: "满月夜",

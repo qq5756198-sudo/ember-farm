@@ -249,10 +249,17 @@ test("fog: towers don't reach as far as on a clear night", () => {
   assert.equal(e.towerLineClear(tower, far), true, "a clear night sees it");
 });
 
-test("thunder: each wave is a little smaller and traps sometimes misfire, without wearing out", () => {
+test("thunder: traps sometimes misfire, without wearing out, and the mud slows the horde", () => {
   const { e } = postStory(30);
-  const N = night(e, FIRST, "thunder");
-  assert.equal(e.waveCount(0, 1), Math.round(LN.base[0] * PHASES.thunder.fx.count));
+  const N = night(e, FIRST, "thunder"),
+    fx = PHASES.thunder.fx;
+  assert.equal(e.waveCount(0, 1), Math.round(LN.base[0] * (fx.count ?? 1)));
+  if (fx.speed) {
+    const z = e.enemy("slow", 900, 500, true),
+      v1 = e.enemySpeed(z);
+    e._nfForce = "none";
+    assert.ok(Math.abs(v1 / e.enemySpeed(z) - fx.speed) < 1e-9);
+  }
   e._nfForce = "none";
   assert.equal(e.waveCount(0, 1), LN.base[0]);
   e._nfForce = "thunder";
