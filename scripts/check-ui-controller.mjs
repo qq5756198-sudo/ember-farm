@@ -2424,7 +2424,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   e.paused = false; if (e.dy) e.dy.pending = null;
   closeCards();
   run(3);
-  assert.equal(card().hidden, false, 'the 长夜 card is up'); assert.match(card().innerHTML, /长夜/); assert.match(card().innerHTML, /雾夜、春雷夜/);
+  assert.equal(card().hidden, false, 'the 长夜 card is up'); assert.match(card().innerHTML, /长夜/); assert.match(card().innerHTML, /雾夜/); assert.match(card().innerHTML, /春雷夜/); assert.match(card().innerHTML, /雪夜/);
   run(80);
   assert.equal(card().hidden, true, 'and gone after its time');
   const ph = e.nfPhase(38), P = ND.PHASES[ph];

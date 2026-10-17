@@ -235,20 +235,21 @@ test("an old save gets phases only after the day it is loaded, so none comes una
   assert.equal(needsStoryMigration(JSON.stringify(fresh.s)), false);
 });
 
-test("fog: towers only reach about six tenths as far", () => {
+test("fog: towers don't reach as far as on a clear night", () => {
   const { e } = postStory(30);
   night(e, FIRST, "fog");
-  const tower = B(e, "tower", 830, 600),
-    near = { x: 830, y: 600 - 150 },
-    far = { x: 830, y: 600 - 250 };
+  const r = PHASES.fog.fx.towerRange,
+    tower = B(e, "tower", 830, 600),
+    near = { x: 830, y: 600 - (r - 40) },
+    far = { x: 830, y: 600 - (r + 50) };
+  assert.ok(r + 50 < 320, "the far one is still in reach on a clear night");
   assert.equal(e.towerLineClear(tower, near), true);
   assert.equal(e.towerLineClear(tower, far), false, "fog hides it");
   e._nfForce = "none";
   assert.equal(e.towerLineClear(tower, far), true, "a clear night sees it");
-  assert.ok(PHASES.fog.fx.towerRange / 320 > 0.55 && PHASES.fog.fx.towerRange / 320 < 0.65);
 });
 
-test("thunder: each wave is a little smaller and traps misfire about a third of the time, without wearing out", () => {
+test("thunder: each wave is a little smaller and traps sometimes misfire, without wearing out", () => {
   const { e } = postStory(30);
   const N = night(e, FIRST, "thunder");
   assert.equal(e.waveCount(0, 1), Math.round(LN.base[0] * PHASES.thunder.fx.count));
@@ -268,7 +269,9 @@ test("thunder: each wave is a little smaller and traps misfire about a third of 
     if (z.hp === hp0) muted++;
     else hit++;
   }
-  assert.ok(muted > 45 && muted < 95, "about 35% misfire: " + muted);
+  const want = 200 * PHASES.thunder.fx.trapMute,
+    sd = Math.sqrt(want * (1 - PHASES.thunder.fx.trapMute));
+  assert.ok(Math.abs(muted - want) < 4 * sd, "about " + want + " of 200 misfire: " + muted);
   assert.ok(hit > 100);
   // 哑了的不掉耐久：踩着陷阱跑，掉的耐久只算真打中的
   const z = e.enemy("slow", 700, 500, true);
@@ -291,12 +294,14 @@ test("thunder: each wave is a little smaller and traps misfire about a third of 
   assert.equal(N.day, FIRST);
 });
 
-test("moon: towers hit a fifth harder and twice as many stalkers come in waves two and three", () => {
+test("moon: towers hit harder (the boss harder still) and more stalkers come in waves two and three", () => {
   const { e } = postStory(30);
   night(e, FIRST, "moon");
-  const dmg = (force) => {
+  const fx = PHASES.moon.fx;
+  const dmg = (force, boss = false) => {
     e._nfForce = force;
-    const z = e.enemy("slow", 900, 500, true);
+    const z = e.enemy(boss ? "brute" : "slow", 900, 500, true);
+    if (boss) z.lnBoss = true;
     const hp0 = z.hp;
     e._damageSource = "tower";
     e.hurtEnemy(z, 10, 0);
@@ -305,7 +310,12 @@ test("moon: towers hit a fifth harder and twice as many stalkers come in waves t
   };
   const moon = dmg("moon"),
     plain = dmg("none");
-  assert.ok(Math.abs(moon / plain - 1.2) < 0.02, moon + " vs " + plain);
+  assert.ok(Math.abs(moon / plain - fx.towerDmg) < 0.02, moon + " vs " + plain);
+  if (fx.towerBoss) {
+    const mb = dmg("moon", true),
+      pb = dmg("none", true);
+    assert.ok(pb > 0 && Math.abs(mb / pb - fx.towerDmg * fx.towerBoss) < 0.05, "the boss: " + mb + " vs " + pb);
+  }
   const share = (force) => {
     e._nfForce = force;
     const N = e.ln.night;
@@ -326,10 +336,12 @@ test("moon: towers hit a fifth harder and twice as many stalkers come in waves t
   const w = WAVE_MIX[1],
     tot = Object.values(w).reduce((x, y) => x + y, 0);
   assert.ok(Math.abs(b - w.stalker / tot) < 0.05, "plain share " + b);
-  assert.ok(Math.abs(a - (2 * w.stalker) / (tot + w.stalker)) < 0.05, "moon share " + a);
+  const m = fx.mix.stalker;
+  assert.ok(m > 1);
+  assert.ok(Math.abs(a - (m * w.stalker) / (tot + (m - 1) * w.stalker)) < 0.05, "moon share " + a);
 });
 
-test("swelter: your stamina comes back three tenths slower and the horde walks a tenth slower", () => {
+test("swelter: your stamina comes back slower and the horde walks slower", () => {
   const { e } = postStory(30);
   night(e, FIRST, "swelter");
   const regen = (force) => {
@@ -342,16 +354,17 @@ test("swelter: your stamina comes back three tenths slower and the horde walks a
   const hot = regen("swelter"),
     plain = regen("none");
   assert.ok(plain > 0);
-  assert.ok(Math.abs(hot / plain - 0.7) < 0.06, hot + " vs " + plain);
+  assert.ok(Math.abs(hot / plain - PHASES.swelter.fx.regen) < 0.06, hot + " vs " + plain);
   const z = e.enemy("slow", 900, 500, true);
   e._nfForce = "swelter";
   const v1 = e.enemySpeed(z);
   e._nfForce = "none";
   const v0 = e.enemySpeed(z);
-  assert.ok(Math.abs(v1 / v0 - 0.9) < 1e-9);
+  assert.ok(Math.abs(v1 / v0 - PHASES.swelter.fx.speed) < 1e-9);
+  if (PHASES.swelter.fx.count) assert.equal(e.waveCount(0, 1), Math.max(1, Math.round(LN.base[0] * PHASES.swelter.fx.count)));
 });
 
-test("migration: twice the runners and half the armour", () => {
+test("migration: more runners and less armour", () => {
   const { e } = postStory(30);
   night(e, FIRST, "migrate");
   const count = (force) => {
@@ -375,7 +388,7 @@ test("migration: twice the runners and half the armour", () => {
   assert.ok((m.armor || 0) < (p.armor || 0), "armour " + m.armor + " vs " + p.armor);
 });
 
-test("gale: all three waves come from one side, named the day before; tower shots lose a fifth", () => {
+test("gale: all three waves come from one side, named the day before", () => {
   const { e, toasts } = postStory(30);
   const day = FIRST;
   e._nfForce = "gale";
@@ -403,11 +416,12 @@ test("gale: all three waves come from one side, named the day before; tower shot
     e._damageSource = null;
     return hp0 - z.hp;
   };
-  assert.ok(Math.abs(shot("gale") / shot("none") - 0.8) < 0.01);
+  assert.ok(Math.abs(shot("gale") / shot("none") - (PHASES.gale.fx.towerDmg ?? 1)) < 0.01);
+  if (PHASES.gale.fx.count) assert.equal(e.waveCount(0, 1), Math.max(1, Math.round(LN.base[0] * PHASES.gale.fx.count)));
   assert.ok(TOWER.mult > 0);
 });
 
-test("frost: slower, tougher infected, and stamina comes back half again as fast by a fire", () => {
+test("frost: slower, tougher infected, and stamina comes back faster by a fire", () => {
   const { e } = postStory(30);
   night(e, FIRST, "frost");
   const N = e.ln.night;
@@ -421,12 +435,12 @@ test("frost: slower, tougher infected, and stamina comes back half again as fast
   const b = e.lnSpawn();
   e.enemies.pop();
   assert.equal(a.type, b.type, "same draw");
-  assert.ok(Math.abs(a.maxHp / b.maxHp - 1.25) < 0.02, a.maxHp + " vs " + b.maxHp);
+  assert.ok(Math.abs(a.maxHp / b.maxHp - PHASES.frost.fx.hp) < 0.02, a.maxHp + " vs " + b.maxHp);
   e._nfForce = "frost";
   const v1 = e.enemySpeed(a);
   e._nfForce = "none";
   const v0 = e.enemySpeed(a);
-  assert.ok(Math.abs(v1 / v0 - 0.8) < 1e-9);
+  assert.ok(Math.abs(v1 / v0 - PHASES.frost.fx.speed) < 1e-9);
   // 火边（农舍门口算暖区）
   const regen = (force, x, y) => {
     e._nfForce = force;
@@ -441,20 +455,22 @@ test("frost: slower, tougher infected, and stamina comes back half again as fast
     plainWarm = regen("none", 340, 330);
   assert.ok(e.warmAt({ x: 340, y: 330 }), "by the farmhouse is warm");
   assert.ok(!e.warmAt({ x: 700, y: 720 }), "out in the field is not");
-  assert.ok(Math.abs(warm / plainWarm - 1.5) < 0.1, warm + " vs " + plainWarm);
+  assert.ok(Math.abs(warm / plainWarm - PHASES.frost.fx.warmRegen) < 0.1, warm + " vs " + plainWarm);
   assert.ok(Math.abs(cold / plainWarm - 1) < 0.1, "away from the fire as usual");
 });
 
-test("snow: each trap's first bite is silent and the boss comes at 02:30, said at 22:00 and with the third wave", () => {
+test("snow: each trap's first bite is silent and the boss comes early, said at 22:00 and with the third wave", () => {
   const { e, toasts } = postStory(30);
   const N = night(e, FIRST, "snow");
-  assert.ok(toasts.some((t) => t.text.includes("，02:30 ")), "the start line names 02:30");
+  const at = e.nfClock(LN_PACE.bossAt - PHASES.snow.fx.bossEarly);
+  assert.match(at, /^0[23]:[0-5]\d$/);
+  assert.ok(toasts.some((t) => t.text.includes("，" + at + " ")), "the start line names " + at);
   assert.ok(!toasts.some((t) => t.text.includes("，03:00 ")));
   N.wave = 3;
   const next = e.lnNext();
   assert.equal(next.what, "boss");
   assert.equal(next.at, N.start + LN_PACE.bossAt - PHASES.snow.fx.bossEarly);
-  assert.match(e.lnBossNote(N), /^02:30，/);
+  assert.ok(e.lnBossNote(N).startsWith(at + "，"), e.lnBossNote(N));
   const trap = B(e, "trap", 700, 500);
   const bite = (id) => {
     const z = e.enemy("slow", 700, 500, true);

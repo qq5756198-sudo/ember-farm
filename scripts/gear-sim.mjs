@@ -844,6 +844,8 @@ function trial(region, kitId, seed) {
     // 长夜：打到第几波、头目打倒没有
     lnWave: LNMODE ? e.ln?.last?.waves ?? 0 : 0,
     phase: LNMODE ? e._nfForce || "" : "",
+    // v0.35：没守住的这一夜留下了东西没有（守夜笔记一页、第二天早上要说的）
+    nfLeft: LNMODE && e.nf && e.ln?.last && !e.ln.last.held ? (e.nf.notes.length > 0 && !!e.nf.morning ? 1 : 0) : null,
     lnBoss: LNMODE ? !!e.ln?.last?.boss : false,
     killBy,
     bldLost: hpStart - bhp(),
@@ -867,17 +869,20 @@ for (const region of REGION_LIST)
     const rs = [];
     const t0 = Date.now();
     const OFF = Number(process.env.OFF || 0);
+    // v0.35 调数：LNONLY=moon,fog 只跑 LNPHASE=all 里轮到这几个夜相的种子（和全跑的那一份同一批种子，好对照）
+    const ONLY = LNPHASE === "all" && NFD && process.env.LNONLY ? new Set(process.env.LNONLY.split(",")) : null;
     for (let i = 0; i < N; i++) {
+      if (ONLY && !ONLY.has(NFD.PHASE_IDS[(i + OFF) % NFD.PHASE_IDS.length])) continue;
       rs.push({ ...trial(region, kitId, i + 1 + OFF), seed: i + 1 + OFF });
-      if (process.env.TPRINT) console.error("seed", i + 1 + OFF, "died", rs[i].died, "floors", rs[i].floors, "times", rs[i].floorTimes.map((x) => Math.round(x)).join(","), "t", Math.round(rs[i].t));
+      if (process.env.TPRINT) console.error("seed", i + 1 + OFF, "died", rs.at(-1).died, "floors", rs.at(-1).floors, "times", rs.at(-1).floorTimes.map((x) => Math.round(x)).join(","), "t", Math.round(rs.at(-1).t));
     }
     const segs = rs.flatMap((r) => r.segs).filter((x) => x > 1).sort((a, b) => a - b);
     const row = {
       day: DAY,
-      n: N,
-      died: pct(rs.filter((r) => r.died).length, N),
-      ok: pct(rs.filter((r) => r.ok).length, N),
-      fled: pct(rs.filter((r) => r.fled).length, N),
+      n: rs.length,
+      died: pct(rs.filter((r) => r.died).length, rs.length),
+      ok: pct(rs.filter((r) => r.ok).length, rs.length),
+      fled: pct(rs.filter((r) => r.fled).length, rs.length),
       timeout: rs.filter((r) => r.timeout).length,
       avgTime: Math.round(mean(rs.map((r) => r.t))),
       fights: +mean(rs.map((r) => r.segs.filter((x) => x > 1).length)).toFixed(1),
@@ -908,6 +913,8 @@ for (const region of REGION_LIST)
       lnBossDown: region === "longnight" ? rs.filter((r) => r.lnBoss).length : undefined,
       // v0.35：每个夜相倒下几趟/几趟
       byPhase: region === "longnight" && NFD ? Object.fromEntries([...new Set(rs.map((r) => r.phase))].sort().map((k) => [k || "none", rs.filter((r) => r.phase === k && r.died).length + "/" + rs.filter((r) => r.phase === k).length])) : undefined,
+      // v0.35：没守住的晚上留下东西的 / 没守住的
+      nfLeft: region === "longnight" && NFD ? rs.filter((r) => r.nfLeft === 1).length + "/" + rs.filter((r) => r.nfLeft !== null && r.nfLeft !== undefined).length : undefined,
       // 守夜台
       killTrap: +mean(rs.map((r) => r.killBy.trap)).toFixed(1),
       killTower: +mean(rs.map((r) => r.killBy.tower)).toFixed(1),

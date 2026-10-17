@@ -4,7 +4,7 @@
 import { ITEMS } from "./data.js";
 import { ALERT_HOOKS } from "./winter-ui.js";
 import { addMomentIcons } from "./zest-ui.js";
-import { PHASES, PHASE_IDS, SEASON_NAMES } from "./nightfall-data.js";
+import { PHASES, PHASE_IDS, SEASON_NAMES, SEASON_PHASES } from "./nightfall-data.js";
 
 const esc = (v) =>
   String(v ?? "").replace(
@@ -13,6 +13,10 @@ const esc = (v) =>
   );
 const button = (a, id, label, extra = "") => `<button data-action="${a}" data-id="${esc(id)}"${extra ? " " + extra : ""}>${esc(label)}</button>`;
 const phaseName = (ph) => PHASES[ph]?.name || "";
+// “回暖是雾夜、春雷夜，酷暑是……”（照着 SEASON_PHASES 的顺序）
+const SEASON_LINE = Object.entries(SEASON_PHASES)
+  .map(([s, list]) => SEASON_NAMES[s] + "是" + list.map(phaseName).join("、"))
+  .join("，");
 
 // ================= 顶栏 =================
 // 长夜横幅：“⚠ 长夜 · 第 2/3 波 …” → “⚠ 长夜 · 雾夜 · 第 2/3 波 …”
@@ -117,7 +121,7 @@ function phaseSection(e, info) {
         .map((n) => `<li>第 ${n.n} 个长夜（第 ${n.day} 天）${n.phase ? " · " + esc(phaseName(n.phase)) : ""} · 打到第 ${n.wave}/3 波，打倒 ${n.kills} 只</li>`)
         .join("")}</ul>`
     : `<p class="muted">守夜笔记还是空的：没守住的晚上会记一页，第二天早上营地里有人跟你说说。</p>`;
-  return `<section class="td-card nf-phases"><h3>夜相 · 见过 ${info.seen}/${PHASE_IDS.length} · 守住过 ${info.heldKinds}/${PHASE_IDS.length}</h3>${next}<p class="muted">按时节轮换：回暖是雾夜、春雷夜，酷暑是满月夜、闷热夜，秋收是迁徙夜、大风夜，寒潮是冰夜、雪夜（单数年第一样，双数年第二样）。每样改的是哪种布置吃香，不是一律更难。</p><ul class="collection nf-list">${rows}</ul>${notes}</section>`;
+  return `<section class="td-card nf-phases"><h3>夜相 · 见过 ${info.seen}/${PHASE_IDS.length} · 守住过 ${info.heldKinds}/${PHASE_IDS.length}</h3>${next}<p class="muted">按时节轮换：${esc(SEASON_LINE)}（单数年第一样，双数年第二样）。每样改的是哪种布置吃香，不是一律更难。</p><ul class="collection nf-list">${rows}</ul>${notes}</section>`;
 }
 
 // ================= 节庆日历 =================

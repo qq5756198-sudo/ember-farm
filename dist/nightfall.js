@@ -222,6 +222,7 @@ export class Engine extends GrowEngine {
     if (!fx || !e || e.dead || this.s.region !== "farm") return super.hurtEnemy(e, n, a, meta);
     const src = this._damageSource;
     if (src === "tower" && fx.towerDmg) n *= fx.towerDmg;
+    if (src === "tower" && fx.towerBoss && e.lnBoss) n *= fx.towerBoss;
     if (src === "trap" && (fx.trapMute || fx.trapFirst)) {
       const trap = this.s.buildings.find((b) => b.type === "trap" && b.hp > 0 && dist(b, e) < 40);
       if (trap && this.nfMute(trap, e, fx)) {
@@ -477,7 +478,8 @@ export class Engine extends GrowEngine {
       nextRule: nextPh ? this.nfRule(nextPh, next) : "",
       seen: PHASE_IDS.filter((p) => g.seen[p]).length,
       heldKinds: PHASE_IDS.filter((p) => g.held[p]).length,
-      rows: PHASE_IDS.map((p) => ({ id: p, name: PHASES[p].name, season: PHASES[p].season, short: PHASES[p].short, seen: g.seen[p] || 0, held: g.held[p] || 0, lost: g.lost[p] || 0, keep: g.keep[p] ? decorItem(NF_KEEPSAKE[p]) : "", hint: g.hint[p] ? PHASES[p].hint : "" })),
+      // 按时节、按年份排（和日历上轮到的顺序一样）
+      rows: Object.values(SEASON_PHASES).flat().map((p) => ({ id: p, name: PHASES[p].name, season: PHASES[p].season, short: PHASES[p].short, seen: g.seen[p] || 0, held: g.held[p] || 0, lost: g.lost[p] || 0, keep: g.keep[p] ? decorItem(NF_KEEPSAKE[p]) : "", hint: g.hint[p] ? PHASES[p].hint : "" })),
       notes: [...g.notes].reverse(),
     };
   }
