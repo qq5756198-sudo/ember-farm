@@ -1,5 +1,5 @@
 // 当前主线的界面入口。game.js 只从这里取前哨相关的界面；每一轮新加的层在这里串起来。
-// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29) → kin (v0.30) → relight (v0.31)
+// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29) → kin (v0.30) → relight (v0.31) → zest (v0.32)
 // v0.25：其余物品的小图重画（接在装备小图后面）；各层的物品都登记好以后再挂一次
 import { assignItemIcons } from "./item-sprites.js";
 import { outpostHud, hungerDeathNote } from "./outpost-ui.js";
@@ -27,6 +27,8 @@ import { buildingExtras, almanacDate, renderAlmanacView, patchAlmanacBoard, alma
 import { renderKinView, kinTitle, handleKinAction } from "./kin-ui.js";
 // v0.31：重建站（6 面墙、28 份清单、信号烟花、陈工撬铁盒、鼎丰物资）、升降井的检修平台、档案馆的旧世界陈列、手记里的残页和年终评定信、成就册的收复度和余烬核、法令簿里的公司规矩
 import { renderRelightView, relightTitle, handleRelightAction, patchRelightJournal } from "./relight-ui.js";
+// v0.32：任务手记“今天”下面的早间广播、成就册里的三本图鉴（大事卡片和手机上的说法在 game.js 里接）
+import { patchZestJournal, patchZestCollection } from "./zest-ui.js";
 export { buildingExtras };
 // v0.25：开始新游戏选出身、二周目、设置里的“带着记忆重新开始”
 export { restartTitle, restartText, restartPicker, restartState, ngPlusRow, exportLine } from "./longnight-ui.js";
@@ -79,10 +81,14 @@ const renderViewBase = (e, ui) => {
   if (ui?.view === "phone") return patchPhone(html);
   return html;
 };
-export const renderCampaignView = (e, ui) => renderRelightView(e, ui, (eR, uR) => patchTidyView(eR, uR, renderKinView(eR, uR, (eK, uK) => renderAlmanacView(eK, uK, (e0, u0) => renderBustleView(e0, u0, (e1, u1) => renderBountyView(e1, u1, renderViewBase))))));
+const renderCampaignView0 = (e, ui) => renderRelightView(e, ui, (eR, uR) => patchTidyView(eR, uR, renderKinView(eR, uR, (eK, uK) => renderAlmanacView(eK, uK, (e0, u0) => renderBustleView(e0, u0, (e1, u1) => renderBountyView(e1, u1, renderViewBase))))));
+export const renderCampaignView = (e, ui) => {
+  const html = renderCampaignView0(e, ui);
+  return ui?.view === "collection" ? patchZestCollection(e, html) : html;
+};
 export const renderCampaignJournal = (e, ui) => {
   const html = renderGardenJournal(e, ui);
-  return ui?.catalog ? html : patchRelightJournal(e, patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html))));
+  return ui?.catalog ? html : patchZestJournal(e, patchRelightJournal(e, patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html)))));
 };
 export const renderMapPlus = (e, ui) => patchUnderMap(e, ui, renderFarMap(e, ui));
 // 去掉营地手册后，“农业”这一页就是菜地告示牌；其余每页只放那一处的内容

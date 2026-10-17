@@ -20,6 +20,10 @@
 //
 // TFAIL=0.08 改隧道每 5 层倒下的机会；MS='{"story":26}' 改里程碑哪天到；SHOW=1 每天打一行；
 // EARLY=1 对照：检修平台不等主线打完，升降井修好就能下（看主线那一条把到第 30 层推后了多少）。
+// FUN=1（v0.32 起，《爽点与耐玩体检方案》用的计数）：每条进提示栏的提示（日常小事只在头顶飘字，不算）、每件大事卡片、
+//   每件好事（稀有、珍贵、头目、守住一轮或交满清单、升级、主线、救人、大事卡片）几点几分、每天手上多少钱、第一次见到的东西；
+//   每个种子多一块 fun，最后打一行六个种子合起来的 FUN 汇总：按第 1–3、4–30、31–60、61+ 天分段的每天提示数、金色、
+//   大事卡片、好事之间隔多久（现实秒，游戏里 1.6 分钟 = 现实 1 秒）、一件好事都没有的日子、每周第一次见到的东西、钱。
 const D = new URL("../dist/", import.meta.url).href;
 const { Engine, freshState } = await import(D + "campaign.js");
 const { ITEMS, CROPS, BUILDINGS, RECIPES } = await import(D + "data.js");
@@ -29,6 +33,7 @@ const { TASKS } = await import(D + "rebuild-data.js");
 const { SSPOTS } = await import(D + "seasons-data.js");
 const { WSPOTS } = await import(D + "winter-data.js");
 const { SHAFT } = await import(D + "relight.js");
+const FUN = process.env.FUN === "1";
 
 const MODE = process.argv[2] || "year";
 const SEEDS = (process.argv[3] || "1,2,3").split(",").map(Number);
@@ -83,6 +88,119 @@ const GIVE = {
 const SEED_BUY = ["seedRadish", "seedPotato", "seedBean", "seedTomato", "seedCorn", "seedPumpkin", "seedHerb", "seedCotton"];
 const RUINS = ["residential", "hospital", "warehouse"];
 const BOSS_DAY = { residential: (d) => d >= 4 && d % 7 === 4, hospital: (d) => d >= 8 && d % 7 === 1 };
+
+// ===================== FUN=1：提示和好事的计数 =====================
+let CUR = null;
+const BIG_EVENTS = ["rareLoot", "preciousLoot", "bossDown", "victory", "level", "quest", "rescue", "moment"];
+const worthOf = (e) => {
+  let w = e.s.money;
+  for (const box of [e.s.inventory, e.s.storage]) for (const [id, n] of Object.entries(box)) if (n > 0) w += n * (ITEMS[id]?.sell || 0);
+  return w;
+};
+function hook(e) {
+  if (!FUN) return;
+  // 进提示栏的：v0.32 起是 zSink（日常小事在 zest 里就拦下了）；更早的版本是 notify
+  const into = (text, tone) => {
+    if (!CUR) return;
+    CUR.toasts.push([e.s.day, Math.round(e.s.minute), tone || "normal", String(text).slice(0, 90)]);
+  };
+  if (e.zSink) e.zSink = into;
+  else e.notify = into;
+  const arr = [];
+  const push0 = Array.prototype.push;
+  arr.push = function (...items) {
+    if (CUR)
+      for (const ev of items) {
+        if (BIG_EVENTS.includes(ev.type)) CUR.big.push([e.s.day, Math.round(e.s.minute), ev.type + (ev.kind ? ":" + ev.kind : "")]);
+        if (ev.type === "moment") CUR.moments.push([e.s.day, ev.kind]);
+      }
+    return push0.apply(this, items);
+  };
+  e.events = arr;
+}
+function funDay(e, X, today) {
+  if (!FUN) return;
+  const seen = (k) => {
+    if (X.fun.seen[k] == null) X.fun.seen[k] = today;
+  };
+  for (const box of [e.s.inventory, e.s.storage]) for (const [id, n] of Object.entries(box)) if (n > 0) seen("item:" + id);
+  for (const r of Object.keys(e.s.visited || {})) if (e.s.visited[r]) seen("region:" + r);
+  for (const r of e.c?.residents || []) seen("resident:" + (r.id || r.type || r.name));
+  for (const b of e.s.buildings) seen("building:" + b.type);
+  for (const k of Object.keys(e.c?.technologies || {})) if (e.c.technologies[k]) seen("tech:" + k);
+  X.fun.worth[today] = Math.round(worthOf(e));
+  X.fun.floats[today] = e.zx?.stats?.floats || 0;
+}
+const PHASES = [["d1-3", 1, 3], ["d4-30", 4, 30], ["d31-60", 31, 60], ["d61+", 61, 1e9]];
+function funSummary(rows, days) {
+  const out = {};
+  for (const [name, a, b0] of PHASES) {
+    const b = Math.min(b0, days);
+    if (b < a) continue;
+    let toasts = 0, gold = 0, warn = 0, moments = 0, zero = 0, awakeAll = 0;
+    const gaps = [];
+    for (const X of rows) {
+      const F = X.fun;
+      const end = {};
+      for (const [d, m] of [...F.toasts, ...F.big]) if (d >= a && d <= b) end[d] = Math.max(end[d] || 480, Math.min(m, 1440));
+      let acc = 0;
+      const offs = {};
+      for (let d = a; d <= b; d++) {
+        offs[d] = acc;
+        acc += Math.max(0, (end[d] || 480) - 480);
+      }
+      awakeAll += acc;
+      const T = (d, m) => offs[d] + Math.max(0, Math.min(m, end[d] || 480) - 480);
+      const big = F.big.filter(([d]) => d >= a && d <= b).map(([d, m]) => T(d, m)).sort((x, y) => x - y);
+      const seg = [0, ...big, acc];
+      for (let i = 0; i + 1 < seg.length; i++) gaps.push(seg[i + 1] - seg[i]);
+      const per = {};
+      for (const [d] of F.big) if (d >= a && d <= b) per[d] = 1;
+      for (let d = a; d <= b; d++) if (!per[d]) zero++;
+      for (const [d, , tone] of F.toasts)
+        if (d >= a && d <= b) {
+          toasts++;
+          if (tone === "gold") gold++;
+          if (tone === "warn") warn++;
+        }
+      moments += F.moments.filter(([d]) => d >= a && d <= b).length;
+    }
+    const n = rows.length * (b - a + 1);
+    gaps.sort((x, y) => x - y);
+    const q = (p) => gaps[Math.min(gaps.length - 1, Math.floor(p * gaps.length))] || 0;
+    const real = (min) => Math.round(min / 1.6);
+    out[name] = {
+      toastsPerDay: +(toasts / n).toFixed(1),
+      goldPerDay: +(gold / n).toFixed(1),
+      warnPerDay: +(warn / n).toFixed(1),
+      momentsPerDay: +(moments / n).toFixed(2),
+      bigGapSec: { mean: real(gaps.reduce((x, y) => x + y, 0) / Math.max(1, gaps.length)), median: real(q(0.5)), p90: real(q(0.9)), max: real(gaps.at(-1) || 0) },
+      zeroBigDaysPct: +((zero / n) * 100).toFixed(1),
+    };
+  }
+  // 每周第一次见到的东西（6 个种子平均）、第 31 天以后最长几天没见到新东西
+  const weeks = [];
+  const dry = [];
+  for (const X of rows) {
+    const byDay = {};
+    for (const d of Object.values(X.fun.seen)) byDay[d] = (byDay[d] || 0) + 1;
+    for (let w = 0; w * 7 < days; w++) {
+      let k = 0;
+      for (let d = w * 7 + 1; d <= Math.min(days, w * 7 + 7); d++) k += byDay[d] || 0;
+      weeks[w] = (weeks[w] || 0) + k;
+    }
+    let best = 0, cur = 0;
+    for (let d = 31; d <= days; d++) {
+      cur = byDay[d] ? 0 : cur + 1;
+      best = Math.max(best, cur);
+    }
+    dry.push(best);
+  }
+  const momentKinds = {};
+  for (const X of rows) for (const [, k] of X.fun.moments) momentKinds[k] = (momentKinds[k] || 0) + 1;
+  const moneyAt = (d) => Math.round(rows.reduce((a, X) => a + (X.money[d] || 0), 0) / rows.length);
+  return { phases: out, momentKinds, novelty: weeks.map((x) => +(x / rows.length).toFixed(1)), dryAfter30: dry, money: { d30: moneyAt(30), d60: moneyAt(60), d90: moneyAt(90), d120: moneyAt(120) } };
+}
 
 function seeded(seed) {
   let s = seed % 2147483647 || 1;
@@ -326,6 +444,9 @@ function pickSeed(e, p, need) {
   return seedsOf(scored[0][0]).sort((a, b) => (b === CROPS[scored[0][0]].seed ? -1 : 0) - (a === CROPS[scored[0][0]].seed ? -1 : 0)).find((id) => qty(e, id) > 0);
 }
 function farmPass(e, X) {
+  return e.zMine ? e.zMine(() => farmPass0(e, X)) : farmPass0(e, X);
+}
+function farmPass0(e, X) {
   if (e.s.region !== "farm") return;
   const need = rawNeeds(e);
   for (let i = 0; i < 18; i++) {
@@ -733,6 +854,7 @@ function life(seed) {
   const st = freshState();
   st.undertow.seed = 6000 + seed;
   let e = new Engine(st, () => {});
+  hook(e);
   e.paused = false;
   if (e.feel?.open) e.feel.open.phase = "done";
   // 开局：机器人手上的钱和材料照新档，另外一把铁头矛（打得快一点，只为了省跑模拟的时间）
@@ -740,8 +862,9 @@ function life(seed) {
   e.gr.slots.melee = "ironspear";
   e.s.slot = 3;
   e.s.inventory.flashlight = 1;
-  const X = { seed, act: 0, ms: {}, gave: {}, given: {}, harvests: 0, sold: 0, spent: 0, fish: 0, boxes: 0, digs: 0, trips: 0, floors: 0, falls: 0, cooked: 0, ironBoxes: 0, errors: [], lists: {}, walls: {}, cores: {}, reviews: [], old: [], pages: [], lamps: [], money: [], cropValue: [], deepest: [], nights: 0, held: 0, ladder: [], morale: [], hordes: 0, lastKey: {}, net: [] };
+  const X = { fun: { toasts: [], big: [], moments: [], seen: {}, worth: [], floats: [] }, seed, act: 0, ms: {}, gave: {}, given: {}, harvests: 0, sold: 0, spent: 0, fish: 0, boxes: 0, digs: 0, trips: 0, floors: 0, falls: 0, cooked: 0, ironBoxes: 0, errors: [], lists: {}, walls: {}, cores: {}, reviews: [], old: [], pages: [], lamps: [], money: [], cropValue: [], deepest: [], nights: 0, held: 0, ladder: [], morale: [], hordes: 0, lastKey: {}, net: [] };
   const lists0 = new Set();
+  CUR = FUN ? X.fun : null;
   for (let day = 1; day <= DAYS && e; day++) {
     try {
       if (e.s.day !== day) X.errors.push("day drift " + e.s.day + " vs " + day);
@@ -887,6 +1010,7 @@ function life(seed) {
       X.deepest[today] = e.rl.tunnel.deepest;
       for (const r of e.rl.reviews) if (!X.reviews.some((q) => q.day === r.day)) X.reviews.push({ day: r.day, lamps: r.lamps, s: r.s, v: r.v });
       X.money[today] = e.s.money;
+      funDay(e, X, today);
       X.net[today] = X.sold - X.spent;
       X.hordes = e.s.stats.hordes || 0;
       X.ladder[today] = e.w?.ladder || 0;
@@ -897,6 +1021,7 @@ function life(seed) {
       if (/NaN|undefined/.test(text)) X.errors.push("day " + today + ": save text has NaN/undefined");
       const back = Engine.parse(text);
       e = new Engine(back, () => {});
+      hook(e);
       e.paused = false;
     } catch (err) {
       X.errors.push("day " + day + ": " + String(err.stack || err).split("\n").slice(0, 4).join(" | "));
@@ -957,12 +1082,16 @@ if (MODE === "year") {
           lists: Object.fromEntries(Object.entries(X.lists).map(([k, d]) => [k, d + " " + (X.lastKey[k] || "")])),
           end: X.end,
           errors: X.errors.slice(0, 6),
+          ...(FUN ? { fun: { toasts: X.fun.toasts.length, big: X.fun.big.length, moments: X.fun.moments.length, floats: X.fun.floats.at(-1) || 0 } } : {}),
         },
         null,
         1,
       ),
     );
   }
+  if (FUN) console.log(JSON.stringify({ FUN: funSummary(rows, DAYS) }));
+  // FUN_DUMP=文件名：把每条提示、每件好事都写进去（找哪些提示还太多用）
+  if (FUN && process.env.FUN_DUMP) (await import("node:fs")).writeFileSync(process.env.FUN_DUMP, JSON.stringify(rows.map((X) => ({ seed: X.seed, ...X.fun, money: X.money }))));
 }
 
 if (MODE === "company") {

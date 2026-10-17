@@ -1,0 +1,207 @@
+/* v0.32.0「手感」：大事卡片、画面一亮、任务手记里的早间广播、成就册里的图鉴、手机上的建造按钮 */
+.zest-moment {
+  position: fixed;
+  left: 50%;
+  top: 64px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: min(92vw, 470px);
+  padding: 10px 16px 10px 10px;
+  color: #f3e6c4;
+  font-family: var(--px, "Microsoft YaHei", sans-serif);
+  background: rgba(24, 18, 12, 0.96);
+  border: 2px solid #140f0b;
+  box-shadow: inset 0 0 0 2px #c9893e, 0 0 0 3px rgba(255, 207, 106, 0.32), 0 6px 0 rgba(20, 15, 11, 0.5);
+  cursor: pointer;
+  animation: zm-in 0.42s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.zest-moment[hidden] {
+  display: none;
+}
+.zest-moment .zm-icon {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+}
+.zest-moment .zm-body {
+  min-width: 0;
+}
+.zest-moment small {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+}
+.zest-moment h3 {
+  margin: 2px 0 4px;
+  font-size: 18px;
+  line-height: 24px;
+  color: #ffe08a;
+}
+.zest-moment p {
+  margin: 2px 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+.zest-moment .zm-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #a99a7a;
+}
+.zest-moment.k-core {
+  box-shadow: inset 0 0 0 2px #ff9a5c, 0 0 18px rgba(255, 154, 92, 0.45), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+.zest-moment.k-fish {
+  box-shadow: inset 0 0 0 2px #8fd0ff, 0 0 0 3px rgba(143, 208, 255, 0.3), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+.zest-moment.k-boss {
+  box-shadow: inset 0 0 0 2px #f1a28a, 0 0 0 3px rgba(241, 162, 138, 0.3), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+.zest-moment.k-harvest {
+  box-shadow: inset 0 0 0 2px #9fd16a, 0 0 0 3px rgba(159, 209, 106, 0.3), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+.a11y-color .zest-moment {
+  box-shadow: inset 0 0 0 2px #ffe066, 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+body.title-screen .zest-moment {
+  display: none;
+}
+@keyframes zm-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+/* 大事登场时画面四周亮一下（减少闪烁时不亮） */
+#world-viewport.zest-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  box-shadow: inset 0 0 140px rgba(255, 207, 106, 0.5);
+  animation: zm-glow 1.2s ease-out forwards;
+}
+.a11y-calm #world-viewport.zest-glow::after {
+  display: none;
+}
+@keyframes zm-glow {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zest-moment {
+    animation: none;
+  }
+  #world-viewport.zest-glow::after {
+    animation-duration: 0.01s;
+  }
+}
+@media (max-width: 850px) {
+  .zest-moment {
+    top: 88px;
+    width: calc(100vw - 24px);
+    padding: 8px 12px 8px 8px;
+  }
+  .zest-moment .zm-icon {
+    width: 36px;
+    height: 36px;
+  }
+  .zest-moment h3 {
+    font-size: 16px;
+    line-height: 22px;
+  }
+  .zest-moment p {
+    font-size: 13px;
+    line-height: 18px;
+  }
+}
+
+/* 任务手记“今天”下面：今天的早间广播 */
+.zest-radio {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 19px;
+  color: #d9cfae;
+}
+.zest-radio b {
+  margin-right: 6px;
+  color: #ffd76a;
+}
+
+/* 成就册：图鉴 */
+.zest-dex {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(201, 137, 62, 0.45);
+}
+.zest-dex h3 {
+  margin: 0 0 4px;
+}
+
+/* 手机上：用不上的按钮收起来；“建造”能一下点到 */
+.touch-extras button[hidden] {
+  display: none !important;
+}
+
+/* 横着拿的手机：画面矮，卡片窄一点、小一点，别挡住半个场景 */
+@media (max-width: 850px) and (max-height: 500px) {
+  .zest-moment {
+    top: 46px;
+    width: min(62vw, 470px);
+    padding: 6px 10px 6px 6px;
+    gap: 8px;
+  }
+  .zest-moment .zm-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .zest-moment small {
+    font-size: 11px;
+  }
+  .zest-moment h3 {
+    margin: 0 0 2px;
+    font-size: 14px;
+    line-height: 18px;
+  }
+  .zest-moment p {
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .zest-moment .zm-hint {
+    display: none;
+  }
+}
+
+/* 重建站：刚交的那一格盖个章 */
+.rl-list li.z-stamped {
+  animation: z-stamp 0.7s ease-out;
+}
+@keyframes z-stamp {
+  0% {
+    background: rgba(255, 207, 106, 0.55);
+    box-shadow: inset 0 0 0 2px #ffcf6a;
+  }
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rl-list li.z-stamped {
+    animation: none;
+    background: rgba(255, 207, 106, 0.25);
+  }
+}

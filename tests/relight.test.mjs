@@ -223,7 +223,8 @@ test("station: built once on the farm, E opens its page; lists take things from 
   assert.ok(e.wallOn("water"));
   assert.equal(e.rl.walls.water.by, "list");
   assert.ok(e.s.money >= gold0);
-  assert.ok(said(toasts, /「通水」通了/));
+  // v0.32：交满一面墙是大事，在画面上方停一张卡片
+  assert.ok(e.events.some((x) => x.type === "moment" && x.kind === "wall" && /「通水」通了/.test(x.title)));
   assert.ok(e.o.log.some((l) => /旧水厂的支管接上了/.test(l.text)));
   // 被打坏了：清单都还在，再建一座不行，走到跟前按 E 修
   const sb = e.s.buildings.find((b) => b.type === "rlStation");
@@ -541,7 +542,8 @@ test("tunnel: the platform by the hospital lift goes down once the lift is fixed
   e.interact();
   assert.ok(e.rl.cores.includes("tunnel"));
   assert.ok(!e.objects.some((o) => o.type === "rlCore"));
-  assert.ok(said(toasts, /余烬核/));
+  // v0.32：拿到余烬核是大事卡片（独白和上限都写在卡片上）
+  assert.ok(e.events.some((x) => x.type === "moment" && x.kind === "core" && x.core === "tunnel"));
 });
 
 test("tunnel: deeper cabinets carry copper from floor 1, bulbs from 6, spikes from 11, relays from 21; the storeroom is emptied for a week; falling down there leaves the pack at the lift shaft", () => {
@@ -735,7 +737,9 @@ test("cores: each adds 15 stamina and 5 health to the caps, kept by food, sleep 
   assert.ok(!e.grantCore("trust"), "once");
   assert.equal(e.maxSta(), 100 + CORE_BONUS.sta);
   assert.equal(e.maxHp(), 100 + CORE_BONUS.hp);
-  assert.ok(e.events.some((x) => x.type === "ledger" && x.any && /余烬核/.test(x.title)));
+  // v0.32：独白的小卡片并进大事卡片
+  assert.ok(e.events.some((x) => x.type === "moment" && x.kind === "core" && /余烬核/.test(x.title) && x.lines.some((l) => /体力上限 \+15/.test(l))));
+  assert.ok(!e.events.some((x) => x.type === "ledger" && /余烬核/.test(x.title)));
   // 睡觉、吃东西不把它压回 100
   go(e, "farm");
   e.s.player.hp = 50;

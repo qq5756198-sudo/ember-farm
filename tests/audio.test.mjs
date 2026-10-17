@@ -170,7 +170,8 @@ test("ten ambience sets cover all fifteen maps; music has six pieces and six sho
     for (const pat of [p.base?.bass, p.base?.arp?.pat, p.drums?.kick, p.drums?.snare, p.drums?.hat, p.drums?.tom].filter(Boolean)) assert.equal(pat.length, 16, id);
     for (const inst of [p.base?.arp?.inst, p.lead?.inst].filter(Boolean)) assert.ok(INSTRUMENTS[inst], id + " " + inst);
   }
-  assert.deepEqual(Object.keys(STINGERS).sort(), ["actDone", "boss", "discover", "downed", "hordeWarn", "victory"]);
+  // v0.32「手感」多三句：交满一面墙、第一次钓到的鱼、第一份收成
+  assert.deepEqual(Object.keys(STINGERS).sort(), ["actDone", "boss", "discover", "downed", "firstHarvest", "hordeWarn", "newFish", "victory", "wallOpen"]);
   for (const list of Object.values(STINGERS)) for (const [, inst] of list) assert.ok(INSTRUMENTS[inst]);
 });
 

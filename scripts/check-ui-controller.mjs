@@ -38,6 +38,7 @@ import * as BeyondUI from '../dist/beyond-ui.js';
 import * as BeyondArt from '../dist/beyond-art.js';
 import * as BeyondData from '../dist/beyond-data.js';
 import * as Clarity from '../dist/clarity-ui.js';
+import * as ZestUI from '../dist/zest-ui.js';
 import * as DistrictArt from '../dist/district-art.js';
 import * as DistrictUI from '../dist/district-ui.js';
 import * as DistrictData from '../dist/district-data.js';
@@ -90,9 +91,9 @@ for(const key of Session.HISTORY_KEYS.slice(0,8))storage.set(key,'historic '+key
 class Image{set src(path){this.path=path;loadImage(dir+'/'+path).then(img=>{this.native=img;this.width=img.width;this.height=img.height;this.complete=true;this.onload?.();}).catch(e=>this.onerror?.(e));}get src(){return this.path;}}
 globalThis.document=document;
 let raf;
-const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},clearTimeout:()=>{},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
+const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...ZestUI,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},clearTimeout:()=>{},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
-script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
+script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo,moments});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
 for(let i=0;i<150&&!document.querySelector('#loading').hidden;i++)await new Promise(resolve=>setTimeout(resolve,20));
 if(!document.querySelector('#loading').hidden)console.log('Loading details:',document.querySelector('#loading').innerHTML);assert.equal(document.querySelector('#loading').hidden,true,'all game assets should finish loading');
@@ -2076,4 +2077,80 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.ok(back.relight.done.includes('w_pond')); assert.ok(back.relight.old.includes('rlOld_photo')); assert.equal(back.relight.co.state, 'torn');
   assert.ok(back.relight.walls.water && back.relight.walls.clinic); assert.equal(back.relight.intro.told, true);
   console.log('Relight controller passed: a v0.30 save restored from a file (the 重光 notice on the first frame), the station picked from the build menu and opened with E (items handed in with their buttons, a list filled, the water wall up), the archive\'s 旧世界陈列 (donated with the button, the owner\'s story), 陈工 opening an iron box from the residents page, the platform by the hospital lift opened with E (closed before the main story, down to floor 1 with the button), a tunnel cabinet opened with E, the ladder taken with E, the way up back to the shelter, a page in the journal and its dig spot dug with E, the year review on the vigil night (journal letter and review page), the company signed, a wall bought and up the next morning, the company rule in the decree book, the contract torn up, the collection\'s 收复度 and cores, the tunnel at floors 1 and 24 and the station, the stone and the platform drawn at four sizes by day and night, and save/parse.');
+}
+
+// v0.32.0「手感」: a v0.31 save restored from a file (the 手感 card on the first frame), E held along a row of ripe radishes
+// (harvested, replanted with the last seed, tended — no line per plot in the notice bar, one 这一遍田 line after a pause),
+// a level-up as the moment card that stays up through a burst of notices and goes when its time is up, a click closing the next
+// card early, the morning broadcast in the journal's 今天, the collection's three almanacs, the touch 建造 button and the hidden
+// grey buttons, and save/parse.
+{
+  let clock = 26000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const keydown = (key) => listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false });
+  const keyup = (key) => listeners.keyup({ key });
+  const card = () => document.querySelector('#zest-moment');
+  const toastsHtml = () => document.querySelector('#toasts').innerHTML;
+  dailyOn = false;
+  const RL = await import('../dist/relight.js');
+  // ---------- 一份 v0.31 的旧档，从文件恢复：第一帧一张“手感”卡片 ----------
+  const old = new RL.Engine(RL.freshState(), () => {});
+  old.s.day = 12; old.s.minute = 600; old.feel.open.phase = 'done'; old.markGearIntro?.(); if (old.dy) old.dy.pending = null;
+  context.open('restoreArchive', { files: { old: old.serialize() } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  let e = context.inspect().engine;
+  assert.ok(e.zx, 'the zest field was added');
+  assert.equal(context.inspect().menu, null);
+  e.paused = false; if (e.dy) e.dy.pending = null;
+  run(3);
+  assert.equal(card().hidden, false, 'the 手感 card is up');
+  assert.match(card().innerHTML, /手感/);
+  run(80);
+  assert.equal(card().hidden, true, 'and gone after its time');
+  // ---------- 按住 E 沿着一排熟了的萝卜走 ----------
+  e.s.region = 'farm'; e.assignRegion(); e.s.minute = 600; e.s.debris = [];
+  const row = e.s.plots.filter((p) => e.isFarmPlot(p)).sort((a, b) => a.y - b.y || a.x - b.x).slice(0, 6);
+  for (const p of row) Object.assign(p, { tilled: true, crop: 'radish', growth: Data.CROPS.radish.grow, wateredDay: e.s.day });
+  e.s.storage.seedRadish = 20; e.s.seed = 'seedRadish'; e.c.water = 24;
+  Object.assign(e.s.player, { x: row[0].x, y: row[0].y + 20 });
+  keydown('e');
+  for (let i = 0; i < 6; i++) { e.s.player.x = row[i].x; run(26); }
+  keyup('e');
+  assert.ok(row.every((p) => p.crop === 'radish' && p.growth < Data.CROPS.radish.grow), 'harvested and replanted');
+  assert.ok(row.every((p) => e.g.plots[p.id]?.t === e.s.day), 'tended');
+  assert.doesNotMatch(toastsHtml(), /收获 ·|照看了|种下萝卜/);
+  run(90);
+  assert.ok(e.zx.stats.tallies >= 1, 'one line for the pass');
+  // ---------- 大事卡片：一连串提示也挤不掉它，到时间才走；下一张点一下就收 ----------
+  // 种地升的那一级先放完
+  { const m = context.inspect().moments; m.queue.length = 0; m.close(); }
+  e.s.xp.combat = 0; e.xp('combat', 45);
+  run(2);
+  assert.match(card().innerHTML, /战斗 Lv\.2/);
+  for (let i = 0; i < 8; i++) e.toast('第 ' + i + ' 条消息：' + '营地里的一件小事', i % 2 ? 'gold' : 'normal');
+  run(40); // 2 秒
+  assert.equal(card().hidden, false); assert.match(card().innerHTML, /战斗 Lv\.2/, 'still the level card after 2 s of notices');
+  e.toast('打赢了大块头：机械零件 ×4', 'gold');
+  run(30);
+  assert.match(card().innerHTML, /打赢了大块头/, 'the next card after the first one ran out');
+  run(10);
+  card().events.click?.();
+  run(1);
+  assert.equal(card().hidden, true, 'a click closes it');
+  // ---------- 早间广播进任务手记的“今天”；成就册里的三本图鉴 ----------
+  e.toast('电台早间播报：明天废弃居民区可能有大块头；老琴抽了支大吉。', 'gold');
+  context.open('journey', {}); clean(); assert.match(html(), /zest-radio/); click('close');
+  context.open('outpost', { view: 'collection' }); clean(); assert.match(html(), /zest-dex/); assert.match(html(), /植物图鉴/); click('close');
+  // ---------- 手机上的“建造”：不建造时出现，建造时让位给旋转、取消（这几个按属性找的按钮在真浏览器里查） ----------
+  run(4);
+  assert.equal(document.querySelector('.touch-build').hidden, false);
+  e.buildMode = 'fence'; run(4);
+  assert.equal(document.querySelector('.touch-build').hidden, true);
+  e.buildMode = null; run(4);
+  assert.equal(document.querySelector('.touch-build').hidden, false);
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.zest.intro.told, true); assert.ok(back.zest.stats.holdActs >= 6); assert.ok(back.zest.moments.level >= 1);
+  console.log('Zest controller passed: a v0.31 save restored from a file (the 手感 card on the first frame and gone after its time), E held along a row of ripe radishes (harvested, replanted with the last seed, tended, no line per plot, one line for the pass), a level-up card that stays through eight notices and two seconds, the next card after it and a click closing it, the morning broadcast in the journal\'s 今天, the collection\'s three almanacs, the touch 建造 button shown except while building, and save/parse.');
 }

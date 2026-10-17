@@ -910,8 +910,10 @@ test("radio at 07:00 tells where something is going on and the boss rumours; bef
   e.r.radio = true;
   assert.ok(e.ruinNews().some((n) => n.kind === "event" && /天上有飞机的声音/.test(n.text)));
   assert.equal(e.radioMorning(), true);
-  assert.ok(e.toasts.at(-1).t.startsWith("电台早间播报："));
-  assert.match(e.toasts.at(-1).t, /明天废弃居民区可能有大块头/);
+  // v0.32：全文进任务手记的“今天”，提示栏里只说要紧的一句
+  assert.ok(e.radioToday().startsWith("电台早间播报："));
+  assert.match(e.radioToday(), /明天废弃居民区可能有大块头/);
+  assert.match(e.toasts.at(-1).t, /^电台：/);
   assert.equal(e.radioMorning(), false, "once a day");
 });
 

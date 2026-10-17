@@ -155,6 +155,14 @@ export const SFX = {
   iceCreak: { layers: [{ w: "saw", f: [300, 500], t: 0.5, bp: [1500, 10], c: 1, j: 0.4, v: 0.3 }], peak: 0.2 },
   branch: { layers: [{ w: "noise", t: 0.08, bp: [2000, 2], c: 3, v: 0.7 }, { w: "noise", d: 0.05, t: 0.06, bp: [1500, 2], c: 3, v: 0.6 }], peak: 0.25 },
   thunder: { layers: [{ w: "brown", t: 3, a: 0.05, c: 1.2, lp: [800, 200], v: 1 }, { w: "noise", t: 0.3, a: 0.01, c: 2, lp: [3000, 500], v: 0.6 }], peak: 0.6, sr: 22050 },
+  // ---------- v0.32「手感」：送礼四种反应、交清单一格盖章 ----------
+  gift_fav: { layers: [880, 1109, 1319, 1760].map((f, i) => ({ w: "sine", d: i * 0.08, f, t: 0.5, a: 0.004, c: 2.2, v: 0.5 })), peak: 0.42 },
+  gift_like: { layers: [{ w: "sine", f: 880, t: 0.32, a: 0.004, c: 2.2, v: 0.55 }, { w: "sine", d: 0.1, f: 1109, t: 0.4, c: 2.2, v: 0.5 }], peak: 0.36 },
+  gift_meh: { layers: [{ w: "tri", f: [560, 520], t: 0.2, a: 0.004, c: 2.6, v: 0.5 }], peak: 0.26 },
+  gift_hate: { layers: [{ w: "square", f: [190, 120], t: 0.26, lp: 900, c: 2, v: 0.5 }, { w: "noise", t: 0.1, lp: 600, c: 3, v: 0.3 }], peak: 0.32 },
+  stamp: { layers: [{ w: "noise", t: 0.08, a: 0.002, c: 3, lp: [2600, 600], v: 0.9 }, { w: "sine", f: [170, 70], t: 0.15, c: 2, v: 0.8 }, { w: "noise", d: 0.06, t: 0.12, bp: [3000, 2], c: 2, v: 0.25 }], peak: 0.5 },
+  // 顺着检修梯往下：三声铁梯，一声比一声低
+  ladder: { layers: [0, 0.17, 0.34].flatMap((d, i) => [{ w: "square", d, f: [900 - i * 110, 860 - i * 110], t: 0.12, bp: [2000, 7], c: 3, v: 0.42 }, { w: "noise", d, t: 0.03, hp: 2500, c: 3, v: 0.35 }]), peak: 0.3 },
 };
 
 // ================= 乐器：按一个基准音算一次，弹别的音时改播放速度 =================
@@ -289,6 +297,10 @@ export const STINGERS = {
   victory: [[0, "pad", 60, 0.45], [0, "bell", 72, 0.7], [0.15, "bell", 76, 0.7], [0.3, "bell", 79, 0.7], [0.45, "bell", 84, 0.8]],
   downed: [[0, "drone", 38, 0.7], [0, "string", 57, 0.75], [0.5, "string", 53, 0.75], [1.0, "string", 50, 0.85]],
   actDone: [[0, "pad", 65, 0.5], [0, "bell", 77, 0.6], [0.2, "bell", 81, 0.6], [0.4, "bell", 84, 0.7], [0.6, "flute", 89, 0.5]],
+  // v0.32「手感」：交满一面墙（钟声慢慢升上去）、第一次钓到的鱼、第一份收成
+  wallOpen: [[0, "pad", 60, 0.5], [0, "bell", 72, 0.6], [0.2, "bell", 76, 0.6], [0.4, "bell", 79, 0.65], [0.6, "bell", 84, 0.7], [0.9, "flute", 88, 0.5], [0.9, "pad", 67, 0.4]],
+  newFish: [[0, "bell", 79, 0.55], [0.12, "bell", 83, 0.55], [0.24, "flute", 86, 0.5]],
+  firstHarvest: [[0, "pluck", 67, 0.6], [0.15, "pluck", 71, 0.6], [0.3, "pluck", 74, 0.6], [0.45, "bell", 79, 0.6]],
 };
 
 // ================= 环境声 =================
@@ -500,6 +512,15 @@ export function soundFor(ev) {
       return { sfx: "firecracker", range: 1600 };
     case "rlCore":
       return { sfx: "uiGold", ui: true };
+    // ---------- v0.32「手感」：送礼看反应、交清单盖章、大事登场 ----------
+    case "gift":
+      return { sfx: "gift_" + (["fav", "like", "meh", "hate"].includes(ev.cat) ? ev.cat : "meh"), ui: true };
+    case "stamp":
+      return { sfx: "stamp", ui: true };
+    case "floor":
+      return { sfx: "ladder" };
+    case "moment":
+      return MOMENT_SOUND[ev.kind] || null;
     default:
       return null;
   }
@@ -513,6 +534,9 @@ export const LN_SOUND_EVENTS = ["lnThunder", "lnScream", "lnWave", "lnBoss", "ln
 export const KIN_SOUND_EVENTS = ["reel", "reelLost"];
 // v0.31「重光」新加的引擎事件
 export const RL_SOUND_EVENTS = ["fireworks", "rlCore"];
+// v0.32「手感」新加的引擎事件（moment 按种类：升级、头目、珍贵、余烬核自己已经有声音，只给墙、鱼、第一份收成、开场配短乐句）
+export const ZEST_SOUND_EVENTS = ["gift", "stamp", "floor"];
+export const MOMENT_SOUND = { wall: { stinger: "wallOpen", ui: true }, fish: { stinger: "newFish", ui: true }, harvest: { stinger: "firstHarvest", ui: true }, intro: { sfx: "uiGold", ui: true } };
 
 // 混音：各条线的基础音量（再乘设置里的四个音量）
 export const MIX = { music: 0.36, ambience: 0.5, sfx: 0.9, ui: 0.55, voice: 0.85 };

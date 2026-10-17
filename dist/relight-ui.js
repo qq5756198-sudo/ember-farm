@@ -33,7 +33,10 @@ function listCard(e, id) {
         have = e.listHave(k),
         full = got >= n;
       const btn = done || full ? "" : act("rlGive", id + "|" + k, "交", e.rlDeliverReason(id, k), true);
-      return `<li class="${full ? "full" : ""}"><span>${esc(keyName(k))}</span><small>${got}/${n}${full ? " ✓" : " · 有 " + have}</small>${btn}</li>`;
+      // v0.32：刚交的那一格闪一下（盖章）
+      const st = e._zStamp,
+        stamped = st && st.list === id && st.key === k && Date.now() - st.at < 900;
+      return `<li class="${full ? "full" : ""}${stamped ? " z-stamped" : ""}"><span>${esc(keyName(k))}</span><small>${got}/${n}${full ? " ✓" : " · 有 " + have}</small>${btn}</li>`;
     })
     .join("");
   return `<article class="rl-list${done ? " done" : ""}"><h4>${esc(L.name)} <small>${p.have}/${p.need}${done ? " ✓" : ""}</small></h4><ul>${rows}</ul>${done ? "" : `<p class="muted">${esc(L.hint)}</p>`}<p class="rl-reward">交满：${esc(rewardText(L.reward))}</p></article>`;
@@ -136,13 +139,14 @@ function patchMuseum(e, html) {
 function strip(e) {
   const pct = e.rlCompletion().pct;
   const t = e.rl.tunnel;
+  // v0.32：还没碰到的（0 件旧物、0 张残页、0 颗余烬核、0%）先不列，免得第一天就是一串 0
   const bits = [
     e.rlStationB() ? "重建清单 " + e.rl.done.length + "/" + LIST_IDS.length : "重建站还没建（农场空地上自己选地方）",
-    "旧物 " + e.rl.old.length + "/" + OLD_IDS.length,
-    "残页 " + e.rl.pages.length + "/24",
+    e.rl.old.length ? "旧物 " + e.rl.old.length + "/" + OLD_IDS.length : "",
+    e.rl.pages.length ? "残页 " + e.rl.pages.length + "/24" : "",
     t.deepest ? "地铁隧道第 " + t.deepest + " 层" : "",
-    "余烬核 " + e.rl.cores.length + "/" + CORE_IDS.length,
-    "收复度 " + pct + "%",
+    e.rl.cores.length ? "余烬核 " + e.rl.cores.length + "/" + CORE_IDS.length : "",
+    pct ? "收复度 " + pct + "%" : "",
   ].filter(Boolean);
   return `<section class="far-strip rl-strip" aria-label="重光"><p>${esc(bits.join(" · "))}</p><div class="outpost-links">${button("sView", "rlStation", "重建清单")}${button("wView", "collection", "收复度")}</div></section>`;
 }

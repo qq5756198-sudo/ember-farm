@@ -110,7 +110,9 @@ test("E on a plot: till, open the seed picker, plant from bag or chest, water, t
   assert.equal(p.crop, "potato");
   assert.equal(e.s.storage.seedPotato, 1);
   assert.equal(e.s.seed, "seedPotato");
-  assert.match(toasts.at(-1).text, /种下土豆 · 照料分 \d+/);
+  // v0.32：种下这件日常小事只在头顶飘一下（照料分在田边的提示和这块田的页面里）
+  assert.ok(e.effects.some((f) => f.text === "种下土豆"));
+  assert.ok(!toasts.some((t) => /种下土豆/.test(t.text)));
   assert.equal(e.g.plots[p.id].pd, e.s.day);
   // 种下了再按 E：浇水 → 照看 → 打开这块田
   const c0 = e.careScore(p);

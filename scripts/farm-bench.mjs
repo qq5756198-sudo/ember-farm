@@ -22,6 +22,9 @@ const SEEDS = (process.argv[3] || "1,2,3").split(",").map(Number);
 const DAYS = Number(process.argv[4] || 30);
 // MODE=diligent：一天两趟（08:00、16:00），每块都照看；MODE=busy：只在 08:00 过一趟、不照看（白天出门）
 const MODE = process.env.MODE || "diligent";
+// v0.32：HOLD=1 按住交互连做——一遍田按住一次走完，碰到要换种子（照轮作要种别的）点开选种页（按两下）、去水井补水（按一下）
+//   都算断开，回来再按住；HOLD=lazy 按住一路种上次的种子，不再挑（看会不会因为不换茬少收）。按的次数记在 A.hold、A.pick 里。
+const HOLD = process.env.HOLD || "";
 const ACTIVE = Array.from({ length: 18 }, (_, i) => i); // 两排：y=448、488，x=335…655
 const CROP_IDS = Object.keys(CROPS);
 const ROT = { potato: "seedBean", bean: "seedTomato", tomato: "seedPotato" };
@@ -60,7 +63,8 @@ function setup(seed, sc) {
   Object.assign(e.s.storage, { seedPotato: 400, seedBean: 400, seedTomato: 400, bread: 300, wood: 200, scrap: 100, parts: 60, cloth: 60 });
   e.s.player.x = 495;
   e.s.player.y = 520;
-  const X = { e, sc, A: { harvest: 0, weed: 0, bugs: 0, hoe: 0, plant: 0, water: 0, refill: 0, tend: 0, other: 0 }, workHours: 0, stallMoney: 0, stallSold: 0, extraValue: 0, shipRef: 0, netMissed: 0, netMade: 0, netDays: 0, droughtMissed: 0 };
+  if (HOLD) e.s.seed = "seedPotato";
+  const X = { e, sc, A: HOLD ? { hold: 0, pick: 0, refill: 0, other: 0 } : { harvest: 0, weed: 0, bugs: 0, hoe: 0, plant: 0, water: 0, refill: 0, tend: 0, other: 0 }, workHours: 0, stallMoney: 0, stallSold: 0, extraValue: 0, shipRef: 0, netMissed: 0, netMade: 0, netDays: 0, droughtMissed: 0 };
   // droneNet = 照看机 + 两个雨水桶（水网有水给它浇）；droneFarmer = 照看机 + 一个种地的居民
   const has = (k) => sc === k || (sc === "auto" && ["tower", "irrig", "drone", "scare"].includes(k)) || (["droneNet", "droneFarmer"].includes(sc) && k === "drone");
   if (sc === "droneNet") {
@@ -133,9 +137,19 @@ function refill(X) {
 }
 function routine(X) {
   const e = X.e,
-    A = X.A;
+    A0 = X.A;
   e.paused = false;
   const planted = new Set();
+  // 按住连做：田里的每一下都不单算，一遍田（中间不断开）只算按了一下
+  let holding = false;
+  const press = () => {
+    if (!HOLD) return;
+    if (!holding) A0.hold++;
+    holding = true;
+  };
+  const A = HOLD
+    ? new Proxy({}, { get: () => 0, set: (t, k) => (k === "refill" ? ((A0.refill = (A0.refill || 0) + 1), (holding = false), true) : (press(), true)) })
+    : A0;
   for (const i of ACTIVE) {
     const p = e.s.plots[i];
     e.s.player.x = p.x + 18;
@@ -151,7 +165,14 @@ function routine(X) {
     if ((e.plotDebris(p) || !p.tilled) && e.toolPlot(p, "hoe")) A.hoe++;
     if (e.g?.plots[p.id]?.w && e.pullWeed(p)) A.weed++;
     if (!p.crop && p.tilled) {
-      const seed = ROT[p.lastCrop] || "seedPotato";
+      let seed = ROT[p.lastCrop] || "seedPotato";
+      if (HOLD === "lazy" && e.s.seed && (e.s.inventory[e.s.seed] || e.s.storage[e.s.seed])) seed = e.s.seed;
+      // 要换种子：点开选种页挑（按两下），按住断开
+      if (HOLD === "1" && seed !== e.s.seed) {
+        A0.pick += 2;
+        holding = false;
+        e.s.seed = seed;
+      }
       if (!e.s.inventory[seed]) {
         e.s.inventory[seed] = 20;
         e.s.storage[seed] -= 20;
@@ -170,6 +191,7 @@ function routine(X) {
     if (p.crop && !e.plotWatered(p) && !irrigated && (!NET_ONLY.includes(X.sc) || planted.has(p.id))) {
       if ((e.c.water || 0) < 1) {
         refill(X);
+        holding = false;
         e.s.player.x = p.x + 18;
         e.s.player.y = p.y + 6;
       }

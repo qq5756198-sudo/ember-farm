@@ -405,7 +405,8 @@ test("radio: at 07:00 the repaired radio tells tomorrow's weather and 老琴's l
   nextDay(e); // 第 22 天：寒潮时节第一天
   hour(e, 7);
   const L = e.luckOf(22);
-  const line = toasts.find((t) => /电台早间播报/.test(t.text))?.text || "";
+  // v0.32：早间广播的全文进任务手记的“今天”（提示栏里只有要紧的一句）
+  const line = e.radioToday() || toasts.find((t) => /电台早间播报/.test(t.text))?.text || "";
   assert.ok(line.includes(L.line.replace(/。$/, "")), line);
   assert.match(line, new RegExp("明天" + WEATHER[22 % WEATHER.length]));
   assert.match(line, /今天起是寒潮时节/);
@@ -424,6 +425,7 @@ test("radio: at 07:00 the repaired radio tells tomorrow's weather and 老琴's l
   nextDay(q);
   hour(q, 7);
   assert.ok(!said(t2, /老琴抽了/));
+  assert.equal(q.radioToday(), "");
   assert.ok(!q.al.dishes.includes("alColdSoup"));
   // 电台那一页：今天的签、明天的天气、学会的菜
   const page = view(e, "radio");
