@@ -529,7 +529,7 @@ export class AudioDirector {
       night = !!eng.isNight?.(),
       indoor = INDOOR.includes(s.region),
       w = s.weather,
-      weather = indoor ? null : s.region === "frost" ? "snow" : w === "暴雨" ? "rainHeavy" : w === "小雨" || w === "酸雨" ? "rainLight" : null,
+      weather = indoor ? null : eng.soundWeather?.() || (s.region === "frost" ? "snow" : w === "暴雨" ? "rainHeavy" : w === "小雨" || w === "酸雨" ? "rainLight" : null),
       nightBed = night && def.night ? def.night : null;
     const A = this.amb;
     const swap = (slot, id, vol) => {

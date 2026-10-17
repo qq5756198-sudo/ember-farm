@@ -106,16 +106,16 @@ export const PHASE_IDS = Object.keys(PHASES);
 // 每个时节两样：单数年用第一样，双数年用第二样（连着四个长夜是四个时节，不会重样）
 export const SEASON_PHASES = { thaw: ["fog", "thunder"], heat: ["moon", "swelter"], harvest: ["migrate", "gale"], cold: ["frost", "snow"] };
 export const SEASON_NAMES = { thaw: "回暖", heat: "酷暑", harvest: "秋收", cold: "寒潮" };
-// 画面：夜里的天色（往这个颜色拉多少）和天气
+// 画面：tint/k 是天色往这个颜色拉多少（盖过一部分长夜的红）；其余是这一夜画上去的东西；sound：农场的环境声换成哪一段
 export const PHASE_LOOK = {
-  fog: { tint: [150, 158, 160], k: 0.22, fog: true },
-  thunder: { weather: "暴雨" },
-  moon: { tint: [190, 205, 235], k: 0.3, bright: 0.28 },
-  swelter: { tint: [200, 140, 96], k: 0.16 },
-  migrate: { tint: [150, 120, 96], k: 0.14 },
-  gale: { tint: [140, 150, 160], k: 0.12, wind: true },
-  frost: { tint: [150, 190, 230], k: 0.26, weather: "小雪" },
-  snow: { tint: [200, 215, 230], k: 0.2, weather: "大雪" },
+  fog: { tint: [112, 120, 122], k: 0.42, fog: true },
+  thunder: { tint: [78, 94, 140], k: 0.45, rain: true, flash: true, sound: "rainHeavy" },
+  moon: { tint: [128, 150, 214], k: 0.55 },
+  swelter: { tint: [196, 112, 54], k: 0.4, motes: true },
+  migrate: { tint: [150, 122, 80], k: 0.42, dust: true },
+  gale: { tint: [112, 124, 140], k: 0.4, wind: true, sound: "windStrong" },
+  frost: { tint: [124, 164, 218], k: 0.5, snow: 1, sound: "snow" },
+  snow: { tint: [150, 164, 196], k: 0.5, snow: 2, sound: "snow" },
 };
 
 // ================= 2. 没守住留下的 =================
@@ -155,7 +155,7 @@ export const FALL_MARK = { days: 7, keep: 30 };
 // 谁打倒的 → 下回怎么防（和游戏里的预兆说法一样）
 export const FALL_HINTS = {
   slow: "游荡者慢，怕的是被围：边退边打，贴上来就推开。",
-  runner: "奔跑者蹲下就要扑：按空格翻滚躲开，或者带砍刀迎面砍腿。",
+  runner: "奔跑者蹲下就要扑：往旁边一滚躲开，或者带砍刀迎面砍腿。",
   screamer: "尖叫者吸气时会把别的叫来：先打它，打断那一口气。",
   armor: "重甲跺脚就要冲：闪开再打背后，或者带消防斧把甲劈开。",
   elite: "仓库守卫甲还在时绕到背后打，它出手就退开；大锤能正面砸松甲片。",

@@ -457,6 +457,28 @@ test("phases leave holding, rewards and the size of the next night as they were"
   assert.equal(N.day, FIRST);
 });
 
+test("the farm sounds like the phase on a long night: rain with thunder, a strong wind, snow; nowhere else and not on other nights", () => {
+  const { e } = postStory(30);
+  clock(e, FIRST - 1, 1380);
+  e._nfForce = "thunder";
+  assert.equal(e.soundWeather(), null, "the night before is a plain night");
+  clock(e, FIRST, 600);
+  assert.equal(e.soundWeather(), null, "nothing in the morning of the long night");
+  clock(e, FIRST, 1140);
+  assert.equal(e.lnSky() >= 0.5, true);
+  assert.equal(e.soundWeather(), "rainHeavy", "from when the sky is half red");
+  const want = { fog: null, thunder: "rainHeavy", moon: null, swelter: null, migrate: null, gale: "windStrong", frost: "snow", snow: "snow" };
+  night(e, FIRST, "fog");
+  for (const ph of PHASE_IDS) {
+    e._nfForce = ph;
+    assert.equal(e.soundWeather(), want[ph], ph);
+    assert.equal(PHASE_LOOK[ph].sound || null, want[ph]);
+  }
+  e._nfForce = "gale";
+  go(e, "residential");
+  assert.equal(e.soundWeather(), null, "not in a ruin");
+});
+
 // ================= 2. 没守住留下的 =================
 test("a lost night always leaves something: a page in the night notes, next morning's card, and the first time for a phase a keepsake; never money", async () => {
   const UI = await import("../dist/campaign-ui.js");

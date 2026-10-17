@@ -21,7 +21,7 @@ import { ITEMS, REGIONS, ZOMBIES } from "./data.js";
 import { WAVE_MIX } from "./longnight-data.js";
 import { HORDE_DIRECTIONS } from "./expansion-data.js";
 import { seasonOf, yearOf, decorItem } from "./almanac-data.js";
-import { NIGHTFALL_SCHEMA, PHASES, PHASE_IDS, SEASON_PHASES, NF_KEEPSAKE, NOTES_MAX, MORNING_LINES, SELF_LINE, FALL_MARK, FALL_HINTS, INTRO_LINES } from "./nightfall-data.js";
+import { NIGHTFALL_SCHEMA, PHASES, PHASE_IDS, PHASE_LOOK, SEASON_PHASES, NF_KEEPSAKE, NOTES_MAX, MORNING_LINES, SELF_LINE, FALL_MARK, FALL_HINTS, INTRO_LINES } from "./nightfall-data.js";
 
 export { legacyGear };
 export const needsUpgrade = (text) => {
@@ -132,6 +132,13 @@ export class Engine extends GrowEngine {
     const N = this.ln?.night;
     if (N) return this.nfPhase(N.day);
     return this.lnPending?.() ? this.nfPhase(this.s.day) : null;
+  }
+  // 长夜里农场的环境声跟着夜相（天边红过一半起）：春雷夜大雨、隔一阵打雷，大风夜呼呼的风，冰夜、雪夜风雪声
+  soundWeather() {
+    if (this.s.region !== "farm") return null;
+    const ph = this.nfTonight?.();
+    if (!ph || !(this.ln?.night || (this.lnSky?.() || 0) >= 0.5)) return null;
+    return PHASE_LOOK[ph]?.sound || null;
   }
   // 大风夜从哪边来
   nfWindFrom(day) {

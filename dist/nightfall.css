@@ -1,0 +1,45 @@
+/* v0.35.0「长夜」：长夜战报下面的“夜相”一段（下一个长夜、八个夜相各守住几次、纪念物和记下的提示、守夜笔记），
+   没守住时记下的那一句。跟着长夜战报的样子：好事金色、夜相用月光一样的淡蓝；手机上一列排。 */
+.nf-phases h3 {
+  margin: 0 0 6px;
+  color: #cdd9d8;
+}
+.nf-phases h4 {
+  margin: 12px 0 4px;
+  color: #e9c05a;
+}
+.nf-phases > p b {
+  color: #a9c4e6;
+}
+.nf-list li {
+  grid-template-columns: 64px 40px minmax(90px, 0.8fr) minmax(0, 1.6fr);
+}
+.nf-list li span:not(.nf-season) {
+  color: #d9d2bf;
+  font-size: 12px;
+}
+.nf-season {
+  color: #a9b4c2;
+  font-size: 12px;
+}
+.nf-note {
+  color: #e9c05a;
+}
+.nf-notes li {
+  font-size: 13px;
+}
+.far-row.nf-row b {
+  color: #a9c4e6;
+}
+@media (max-width: 640px) {
+  .nf-list li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .nf-list li span:not(.nf-season) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .nf-list li small {
+    grid-column: 1 / -1;
+  }
+}
