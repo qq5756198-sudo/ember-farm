@@ -1215,8 +1215,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   e.s.minute = 1319.9; e.invulnerable = 999; run(4);
   assert.ok(e.ln.night, 'the night began');
   const warn = document.querySelector('#horde-warning');
-  assert.equal(warn.hidden, false); assert.match(warn.textContent, /长夜 · 第 1\/3 波/);
-  assert.match(document.querySelector('#alert-bar').innerHTML, /长夜 · 第 1\/3 波/);
+  assert.equal(warn.hidden, false); assert.match(warn.textContent, /长夜 · (?:[^ ·<]+夜 · )?第 1\/3 波/);
+  assert.match(document.querySelector('#alert-bar').innerHTML, /长夜 · (?:[^ ·<]+夜 · )?第 1\/3 波/);
   // 第三波和头目：v0.26 头目 03:00 来；第三波打完，走到菜地北边的警钟按 E 提前叫（横幅上写着还有几秒）；血条在农场上方
   e.ln.night.wave = 2; e.lnWave(3); e.ln.night.left = 0;
   for (const z of e.enemies) if (z.horde) z.dead = true;
@@ -1237,7 +1237,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   e.s.day = 39; e.s.minute = 239.9; run(3);
   assert.equal(e.ln.night, null); assert.equal(e.ln.held, 1);
   assert.equal(context.inspect().menu, 'outpost'); clean();
-  assert.match(html(), /第 1 个长夜 · 守住了/); assert.match(html(), /长夜的铁哨/);
+  assert.match(html(), /第 1 个长夜 · (?:[^ ·<]+夜 · )?守住了/); assert.match(html(), /长夜的铁哨/);
   click('lnNap');
   assert.equal(context.inspect().menu, null); assert.equal(e.s.minute, 480);
   // 结局卡
@@ -2116,8 +2116,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(card().hidden, false, 'the 手感 card is up');
   assert.match(card().innerHTML, /手感/);
   run(80);
-  // v0.33 起旧档还会接着一张“盼头”的卡片，v0.34 起再接一张“成长”
-  for (let i = 0; i < 3 && !card().hidden; i++) { assert.match(card().innerHTML, /盼头|成长/); run(80); }
+  // v0.33 起旧档还会接着一张“盼头”的卡片，v0.34 起再接一张“成长”，v0.35 起再接一张“长夜”
+  for (let i = 0; i < 4 && !card().hidden; i++) { assert.match(card().innerHTML, /盼头|成长|长夜/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   // ---------- 按住 E 沿着一排熟了的萝卜走 ----------
   e.s.region = 'farm'; e.assignRegion(); e.s.minute = 600; e.s.debris = [];
@@ -2212,8 +2212,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   run(3);
   assert.equal(card().hidden, false, 'the 盼头 card is up'); assert.match(card().innerHTML, /盼头/);
   run(80);
-  // v0.34 起接着一张“成长”
-  if (!card().hidden) { assert.match(card().innerHTML, /成长/); run(80); }
+  // v0.34 起接着一张“成长”，v0.35 起再接一张“长夜”
+  for (let i = 0; i < 2 && !card().hidden; i++) { assert.match(card().innerHTML, /成长|长夜/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   // ---------- 过路人：营门口按 E，他的那一页，给他东西 ----------
   let d = 57; while (HD.weekKind(d) !== 'traveler') d += 7;
@@ -2335,6 +2335,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   run(3);
   assert.equal(card().hidden, false, 'the 成长 card is up'); assert.match(card().innerHTML, /成长/); assert.match(card().innerHTML, /直接到了 Lv\.8/);
   run(80);
+  // v0.35 起接着一张“长夜”
+  if (!card().hidden) { assert.match(card().innerHTML, /长夜/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   assert.match(document.querySelector('#skill-summary')?.textContent || '', /Lv\.7.*Lv\.9/);
   // ---------- 技能页：按 K ----------
@@ -2382,4 +2384,102 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
   assert.equal(back.grow.intro.told, true); assert.equal(back.grow.lv.combat, 8); assert.ok(back.grow.chDone.axeSplit); assert.equal(back.grow.l2.w2_deep.riverFish, 4);
   console.log('Grow controller passed: a v0.33 save restored from a file (the 成长 card saying how far the old experience went, gone after its time), the HUD skill line past level five, the skill page opened with K (levels to ten and their perks), a level-up card while playing, a second-year list cell handed in at the station, the collection\'s challenges and 老手 rows, the weapon bench page with what each melee weapon is good at, the hospital with a cramped spear and the cabinets drawn at two sizes, the warehouse storeroom door chopped open with the fire axe after E, a challenge card, and save/parse.');
+}
+
+// v0.35.0「长夜」: a v0.34 save restored from a file (the 长夜 card on the first frame, phases only from the next long night on),
+// the alert bar and the journal telling tomorrow's phase, the journal's 夜相 row opening the report page with the eight phases,
+// the 08:00 phase card, the banner and the alert bar naming the phase at 22:00, the farm drawn under each phase's look at two sizes,
+// a lost night with next morning's card, the keepsake and the night notes on the report page, a fall in a ruin leaving a flag
+// (drawn) and one reminder in the toasts, and save/parse.
+{
+  let clock = 31000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const card = () => document.querySelector('#zest-moment');
+  const closeCards = () => { const m = context.inspect().moments; m.queue.length = 0; m.close(); };
+  const goTo = (e, region, x, y) => { e.s.visited = { ...(e.s.visited || {}), [region]: true }; e.s.region = region; e.enemies = e.s.enemies[region] = []; e.assignRegion(); if (x != null) Object.assign(e.s.player, { x, y }); };
+  const sizes = (list = [[1366, 600], [1920, 900], [390, 480], [844, 240]]) => { for (const [w, hh] of list) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); } context.inspect().renderer.resize(1366, 600, 1); };
+  dailyOn = false;
+  const ND = await import('../dist/nightfall-data.js');
+  const AD = await import('../dist/almanac-data.js');
+  const G = await import('../dist/grow.js');
+  // ---------- 一份 v0.34 的旧档：主线第 30 天打完，现在第 37 天上午（明晚是长夜） ----------
+  const old = new G.Engine(G.newGameState(), () => {});
+  const sc = old.sc;
+  sc.act = 9; sc.claimed = ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8']; sc.choice = 'ration';
+  sc.letters = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8', 'act9']; sc.flags.well = sc.flags.camp = sc.flags.farmerFed = true; sc.camp = { x: 560, y: 735 };
+  old.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((x) => x.id === 'broadcast') + 1).map((x) => x.id); old.r.radio = true;
+  old.o.hospital = 'water'; old.o.youke = true; old.o.lathe = { mode: 'parts', day: 0 }; old.o.toll = 'refuse'; old.o.raid.phase = 'won';
+  old.assignRegion();
+  old.ln.storyDay = 30; old.ct.step = 4; old.ct.done = true;
+  old.s.day = 37; old.s.minute = 600; old.s.weather = '晴朗'; old.s.stats.hordes = 6; old.c.nextHordeDay = 90;
+  old.s.horde = { phase: 'won', timer: 0, remaining: 0, spawnTimer: 0, direction: 0 };
+  if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();
+  old.s.visited = { ...(old.s.visited || {}), residential: true };
+  context.open('restoreArchive', { files: { old: old.serialize() } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  let e = context.inspect().engine;
+  assert.equal(context.inspect().menu, null);
+  assert.ok(e.nf && e.nf.intro && !e.nf.intro.told, 'the nightfall record was added to the old save');
+  assert.equal(e.nf.since, 37, 'phases only after the day it was loaded');
+  e.paused = false; if (e.dy) e.dy.pending = null;
+  closeCards();
+  run(3);
+  assert.equal(card().hidden, false, 'the 长夜 card is up'); assert.match(card().innerHTML, /长夜/); assert.match(card().innerHTML, /雾夜、春雷夜/);
+  run(80);
+  assert.equal(card().hidden, true, 'and gone after its time');
+  const ph = e.nfPhase(38), P = ND.PHASES[ph];
+  assert.ok(P, 'tomorrow night has a phase');
+  // ---------- 前一天：顶上的提醒、手记、战报页上的夜相 ----------
+  e.s.minute = 450; run(2);
+  assert.ok(document.querySelector('#alert-bar').innerHTML.includes('明晚长夜 · ' + P.name), 'the alert bar tells tomorrow night');
+  context.open('journey'); clean();
+  assert.ok(html().includes('（明天）· ' + P.name + ' · 约'), 'the journal names the phase');
+  assert.ok(html().includes(P.name + '：' + e.nfRule(ph, 38)));
+  assert.match(html(), /<b>夜相<\/b>见过 0\/8 种/);
+  click('oView', 'lnight'); clean();
+  assert.match(html(), /夜相 · 见过 0\/8/); assert.ok(html().includes('下一个长夜（明晚）：' + P.name));
+  for (const id of ND.PHASE_IDS) assert.ok(html().includes('<b>' + ND.PHASES[id].name + '</b>'));
+  click('close');
+  // ---------- 当天 08:00：一张夜相卡片 ----------
+  e.s.day = 38; e.s.minute = 470; run(2); closeCards();
+  e.s.minute = 481; run(2);
+  assert.equal(card().hidden, false, 'the phase card'); assert.ok(card().innerHTML.includes('今晚是' + P.name)); assert.match(card().innerHTML, /吃香的/);
+  closeCards();
+  // ---------- 22:00：横幅和提醒写夜相 ----------
+  e.s.minute = 1319.9; e.invulnerable = 999; run(4);
+  assert.ok(e.ln.night, 'the night began');
+  assert.ok(document.querySelector('#horde-warning').textContent.includes('长夜 · ' + P.name + ' · 第 1/3 波'), 'the banner names the phase');
+  assert.ok(document.querySelector('#alert-bar').innerHTML.includes('长夜 · ' + P.name + ' · 第 1/3 波'));
+  // 八种夜相的样子（雾、雨、月光、热、尘、风、小雪、大雪）：两个大小各画一遍
+  for (const id of ND.PHASE_IDS) { e._nfForce = id; sizes([[1366, 600], [390, 480]]); }
+  e._nfForce = null;
+  // ---------- 没守住：第二天早上一张卡片、纪念物、守夜笔记 ----------
+  e.invulnerable = 0; e.damagePlayer(999); run(1);
+  assert.equal(context.inspect().menu, 'death'); click('close');
+  assert.equal(e.ln.night, null); assert.equal(e.nf.notes.length, 1);
+  e.paused = false; closeCards();
+  e.s.day = 39; e.s.minute = 361; run(3);
+  assert.equal(card().hidden, false, 'the morning card'); assert.ok(card().innerHTML.includes('第 1 个长夜没守住 · ' + P.name));
+  const keep = AD.decorItem(ND.NF_KEEPSAKE[ph]);
+  assert.equal((e.s.inventory[keep] || 0) + (e.s.storage[keep] || 0), 1, 'the keepsake');
+  closeCards();
+  context.open('outpost', { view: 'lnight' }); clean();
+  assert.ok(html().includes('第 1 个长夜 · ' + P.name + ' · 没守住')); assert.ok(html().includes('守夜笔记记下了：' + P.hint)); assert.match(html(), /<h4>守夜笔记<\/h4>/);
+  click('close');
+  // ---------- 废墟里倒下：一根小旗、再进去提一句 ----------
+  goTo(e, 'residential', 640, 520); run(1);
+  e.fx.lastHitBy = 'runner'; e.invulnerable = 0; e.damagePlayer(999); run(1);
+  assert.equal(context.inspect().menu, 'death'); click('close');
+  assert.equal(e.nf.falls.length, 1);
+  e.paused = false; e.s.minute = 600;
+  goTo(e, 'residential', 900, 520); run(2);
+  assert.match(document.querySelector('#toasts').innerHTML, /上回你在这里倒下（第 39 天，被奔跑者打倒）/);
+  assert.equal(e.nfFallMarks('residential').length, 1);
+  Object.assign(e.s.player, { x: 680, y: 560 }); sizes();
+  goTo(e, 'farm', 760, 640); run(1);
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.nightfall.intro.told, true); assert.equal(back.nightfall.lost[ph], 1); assert.equal(back.nightfall.notes.length, 1); assert.equal(back.nightfall.falls[0].region, 'residential');
+  console.log('Nightfall controller passed: a v0.34 save restored from a file (the 长夜 card on the first frame, phases only from the next long night on), the alert bar and the journal telling tomorrow\'s phase, the journal\'s 夜相 row opening the report page with the eight phases, the 08:00 phase card, the banner and the alert bar naming the phase at 22:00, the farm drawn under all eight looks at two sizes, a lost night with next morning\'s card, the keepsake and the night notes, a fall in a ruin leaving a flag and one reminder, and save/parse.');
 }
