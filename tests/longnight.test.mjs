@@ -556,9 +556,9 @@ test("the journal, alerts, top bar, report, ending card, museum, collection and 
   run(e, 0.2);
   run(e, 3);
   hud = UI.campaignHud(e);
-  // v0.26：横幅上多一段“下一波还有几秒”
-  assert.match(hud.raid, /长夜 · 第 1\/3 波 · 还剩 \d+ 只 · 第 2 波 \d+ 秒后 · 天亮还有 5 小时/);
-  assert.match(hud.alerts, /长夜 · 第 1\/3 波/);
+  // v0.26：横幅上多一段“下一波还有几秒”；v0.35：“长夜”后面写这一夜的夜相
+  assert.match(hud.raid, /长夜 · (?:[^ ·]+夜 · )?第 1\/3 波 · 还剩 \d+ 只 · 第 2 波 \d+ 秒后 · 天亮还有 5 小时/);
+  assert.match(hud.alerts, /长夜 · (?:[^ ·<]+夜 · )?第 1\/3 波/);
   assert.doesNotMatch(hud.alerts, /尸潮来袭/);
   assert.match(journal(), /第 1\/3 波/);
   // 守住：战报（睡到 8 点的按钮）
@@ -566,7 +566,7 @@ test("the journal, alerts, top bar, report, ending card, museum, collection and 
   run(e, 0.5);
   const report = UI.renderCampaignView(e, { view: "lnight" });
   assert.equal(UI.campaignTitle({ view: "lnight" }), "长夜战报");
-  assert.match(report, /第 1 个长夜 · 守住了/);
+  assert.match(report, /第 1 个长夜 · (?:[^ ·<]+夜 · )?守住了/);
   assert.match(report, /lnNap/);
   assert.match(report, /长夜的铁哨/);
   assert.match(report, /下一个长夜：第 45 天/);

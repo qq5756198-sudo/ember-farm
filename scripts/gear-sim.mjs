@@ -35,6 +35,8 @@
 //   破甲不到六成的（砍刀、木矛）打没劈开的重甲先绕到背后；大锤正面砸仓库守卫的甲片（不绕背）；
 //   钉子球棒打出血以后边退边打（流血的走不动）。调数：WPATCH='{"axe":{"knock":30}}'（武器的数）、WFX='{"machete":{"trip":0.7}}'（擅长的场合）；
 //   MASTERY=10：五项技能的经验都给到 10 级（看老手的小本事有没有让夜里变容易）
+// v0.35 夜相：LNPHASE=all（默认：按种子轮流八个夜相，平均下来就是“一年两年里的长夜”）、LNPHASE=none（没有夜相，和 v0.34 一样）、
+//   LNPHASE=fog|thunder|moon|swelter|migrate|gale|frost|snow（只打这一种）；雾夜里离你一百七十以外的预兆，机器人看见的几率减半（和画面上的雾一样）
 // v0.28 改良：HNUP=tower:light,trap:spike,fence:iron（每类选一条路线，LNSET 摆出来的这类设施全部改好；双人哨要守卫比塔多）
 //   对照：HNPATCH='{"INJURY":{"chance":0}}'（守塔的人被摸到不受伤）
 const D = new URL("../dist/", import.meta.url).href;
@@ -63,6 +65,11 @@ if (process.env.UBOSS)
 const LND = await import(D + "longnight-data.js");
 // v0.26 调数：TDPATCH='{"TRAP_ALL":{"mult":1.25}}'
 const TDD = await import(D + "tidy-data.js");
+// v0.35 夜相（没有这一层的旧版本照常跑）
+const NFD = await import(D + "nightfall-data.js").catch(() => null);
+const LNPHASE = process.env.LNPHASE || "all";
+// 调数：NFPATCH='{"fog":{"towerRange":220}}'（夜相的数，合并进 fx）
+if (NFD && process.env.NFPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.NFPATCH))) Object.assign(NFD.PHASES[k].fx, v);
 if (process.env.TDPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.TDPATCH))) Object.assign(TDD[k], v);
 if (process.env.LNPATCH) Object.assign(LND.LN, JSON.parse(process.env.LNPATCH));
 if (process.env.LNMIX) JSON.parse(process.env.LNMIX).forEach((m, i) => (LND.WAVE_MIX[i] = m));
@@ -207,6 +214,7 @@ function trial(region, kitId, seed) {
     set = SETS[region !== "residential" && kit.setHosp ? kit.setHosp : kit.set];
   const e = new Engine(freshState(), () => {});
   if (ORIGIN && e.s.longnight) e.s.longnight.origin = ORIGIN;
+  if (NFD && e.nf) e._nfForce = LNPHASE === "all" ? NFD.PHASE_IDS[(seed - 1) % NFD.PHASE_IDS.length] : LNPHASE;
   const TUNNELMODE = region === "tunnel",
     TFLOOR = Number(process.env.TFLOOR || 1),
     TSPAN = Number(process.env.TSPAN || 5);
@@ -413,7 +421,10 @@ function trial(region, kitId, seed) {
     if (z["_" + key] == null) {
       z["_" + key] = t;
       z["_r" + key] = 0.12 + R() * 0.38;
-      z["_n" + key] = R() < Math.max(0.35, SKILL - 0.12 * (crowd - 1));
+      // v0.35 雾夜：雾里（离你 clear 以外）的预兆看见的几率减半
+      const fogC = e.nfFx?.()?.clear || 0,
+        far = fogC && Number.isFinite(z.x) && Math.hypot(z.x - p.x, z.y - p.y) > fogC;
+      z["_n" + key] = R() < Math.max(0.35, SKILL - 0.12 * (crowd - 1)) * (far ? 0.5 : 1);
     }
     return z["_n" + key] && t - z["_" + key] >= z["_r" + key];
   };
@@ -832,6 +843,7 @@ function trial(region, kitId, seed) {
     rolls: (e.feel?.stats.rolls || 0) - stats.rolls0,
     // 长夜：打到第几波、头目打倒没有
     lnWave: LNMODE ? e.ln?.last?.waves ?? 0 : 0,
+    phase: LNMODE ? e._nfForce || "" : "",
     lnBoss: LNMODE ? !!e.ln?.last?.boss : false,
     killBy,
     bldLost: hpStart - bhp(),
@@ -894,6 +906,8 @@ for (const region of REGION_LIST)
       // 长夜：倒在第几波（1/2/3）、头目打倒的趟数
       lnDiedAt: region === "longnight" ? [1, 2, 3].map((w) => rs.filter((r) => r.died && r.lnWave === w).length).join("/") : undefined,
       lnBossDown: region === "longnight" ? rs.filter((r) => r.lnBoss).length : undefined,
+      // v0.35：每个夜相倒下几趟/几趟
+      byPhase: region === "longnight" && NFD ? Object.fromEntries([...new Set(rs.map((r) => r.phase))].sort().map((k) => [k || "none", rs.filter((r) => r.phase === k && r.died).length + "/" + rs.filter((r) => r.phase === k).length])) : undefined,
       // 守夜台
       killTrap: +mean(rs.map((r) => r.killBy.trap)).toFixed(1),
       killTower: +mean(rs.map((r) => r.killBy.tower)).toFixed(1),

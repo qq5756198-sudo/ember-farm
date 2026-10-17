@@ -1,5 +1,5 @@
 // 当前主线的界面入口。game.js 只从这里取前哨相关的界面；每一轮新加的层在这里串起来。
-// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29) → kin (v0.30) → relight (v0.31) → zest (v0.32) → hope (v0.33) → grow (v0.34)
+// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29) → kin (v0.30) → relight (v0.31) → zest (v0.32) → hope (v0.33) → grow (v0.34) → nightfall (v0.35)
 // v0.25：其余物品的小图重画（接在装备小图后面）；各层的物品都登记好以后再挂一次
 import { assignItemIcons } from "./item-sprites.js";
 import { outpostHud, hungerDeathNote } from "./outpost-ui.js";
@@ -35,6 +35,8 @@ export { patchHopeDistricts };
 // v0.34：技能页的 6–10 级、重建站上的第二年清单、成就册里的打法挑战和老手、武器台那一页每样近战擅长什么
 import { renderGrowSkillPage, patchGrowStation, patchGrowCollection, patchGrowBench, handleGrowAction } from "./grow-ui.js";
 const renderSkillPage = (e) => renderGrowSkillPage(e, thiefSkillPage);
+// v0.35：顶栏和提醒带上夜相、手记长夜那几行、长夜战报里的夜相和守夜笔记、日历、成就册的夜相
+import { nfHud, patchNfAlerts, patchNfJournal, patchNfReport, patchNfCalendar, patchNfCollection } from "./nightfall-ui.js";
 // 设施卡下面：腌缸、果树、摆件、鸡舍（v0.29）；仓库箱、鸡舍的扩建（v0.33）
 export const buildingExtras = (e, b) => almanacBuildingExtras(e, b) + hopeBuildingExtras(e, b);
 // v0.25：开始新游戏选出身、二周目、设置里的“带着记忆重新开始”
@@ -91,13 +93,15 @@ const renderViewBase = (e, ui) => {
 const renderCampaignView0 = (e, ui) => renderHopeView(e, ui, (eH, uH) => renderRelightView(eH, uH, (eR, uR) => patchTidyView(eR, uR, renderKinView(eR, uR, (eK, uK) => renderAlmanacView(eK, uK, (e0, u0) => renderBustleView(e0, u0, (e1, u1) => renderBountyView(e1, u1, renderViewBase)))))));
 export const renderCampaignView = (e, ui) => {
   const html = renderCampaignView0(e, ui);
-  if (ui?.view === "collection") return patchGrowCollection(e, patchZestCollection(e, html));
+  if (ui?.view === "collection") return patchNfCollection(e, patchGrowCollection(e, patchZestCollection(e, html)));
   if (ui?.view === "rlStation") return patchGrowStation(e, html);
+  if (ui?.view === "lnight") return patchNfReport(e, html);
+  if (ui?.view === "calendar") return patchNfCalendar(e, html);
   return html;
 };
 export const renderCampaignJournal = (e, ui) => {
   const html = renderGardenJournal(e, ui);
-  return ui?.catalog ? html : patchHopeJournal(e, patchZestJournal(e, patchRelightJournal(e, patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html))))));
+  return ui?.catalog ? html : patchHopeJournal(e, patchZestJournal(e, patchRelightJournal(e, patchNfJournal(e, patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html)))))));
 };
 export const renderMapPlus = (e, ui) => patchUnderMap(e, ui, renderFarMap(e, ui));
 // 去掉营地手册后，“农业”这一页就是菜地告示牌；其余每页只放那一处的内容
@@ -116,7 +120,7 @@ export function campaignHud(e) {
   const base = outpostHud(e);
   if (!base) return null;
   const ln = tidyLnHud(e);
-  return { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchAlerts(e, alertBar(e)), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e), date: almanacDate(e) };
+  return nfHud(e, { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchNfAlerts(e, patchAlerts(e, alertBar(e))), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e), date: almanacDate(e) });
 }
 // 动作：成长 → 盼头 → 重光 → 人情 → 四时 → 热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
