@@ -171,7 +171,8 @@ test("ten ambience sets cover all fifteen maps; music has six pieces and six sho
     for (const inst of [p.base?.arp?.inst, p.lead?.inst].filter(Boolean)) assert.ok(INSTRUMENTS[inst], id + " " + inst);
   }
   // v0.32「手感」多三句：交满一面墙、第一次钓到的鱼、第一份收成；v0.33「盼头」再多三句：档案馆收下旧物、捡到残页、修好检修电梯
-  assert.deepEqual(Object.keys(STINGERS).sort(), ["actDone", "archive", "boss", "discover", "downed", "firstHarvest", "hordeWarn", "lift", "newFish", "page", "victory", "wallOpen"]);
+  // v0.34：多两句短乐句（老手、打法挑战）
+  assert.deepEqual(Object.keys(STINGERS).sort(), ["actDone", "archive", "boss", "challenge", "discover", "downed", "firstHarvest", "hordeWarn", "lift", "master", "newFish", "page", "victory", "wallOpen"]);
   for (const list of Object.values(STINGERS)) for (const [, inst] of list) assert.ok(INSTRUMENTS[inst]);
 });
 

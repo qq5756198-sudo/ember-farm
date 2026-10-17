@@ -34,6 +34,9 @@ const { SSPOTS } = await import(D + "seasons-data.js");
 const { WSPOTS } = await import(D + "winter-data.js");
 const { SHAFT } = await import(D + "relight.js");
 const HD = await import(D + "hope-data.js");
+// v0.34：第二年的清单、打法挑战、技能 6–10 级
+const GD = await import(D + "grow-data.js").catch(() => null);
+const L2 = GD ? GD.LIST2_IDS : [];
 const FS = await import("node:fs");
 const { POINT_BY_ID } = await import(D + "district-data.js");
 const FUN = process.env.FUN === "1";
@@ -168,6 +171,8 @@ function funDay(e, X, today) {
   }
   X.fun.worth[today] = Math.round(worthOf(e));
   X.fun.floats[today] = e.zx?.stats?.floats || 0;
+  // v0.34：每天各技能的经验（妙手另算），看 6–10 级多少天一级
+  (X.fun.xp ||= {})[today] = { ...e.s.xp, thief: e.sk?.thiefXp || 0 };
 }
 const PHASES = [["d1-3", 1, 3], ["d4-30", 4, 30], ["d31-60", 31, 60], ["d61+", 61, 1e9]];
 function funSummary(rows, days) {
@@ -465,16 +470,21 @@ function listNeedOf(e, id) {
     if (e.listDone(L)) continue;
     for (const [k, m] of RD.LISTS[L].need) if (k === id) n += Math.max(0, m - e.listGot(L, k));
   }
+  // v0.34：开了的第二年清单也算
+  for (const L of L2) {
+    if (!e.list2Open?.(L) || e.list2Done(L)) continue;
+    for (const [k, m] of GD.LISTS2[L].need) if (k === id) n += Math.max(0, m - e.list2Got(L, k));
+  }
   return n;
 }
 // 清单还要的东西拆成原料（做菜做药的配方拆一层，布再拆成棉花）
 function rawNeeds(e) {
   const out = {};
   const add = (id, n) => (out[id] = (out[id] || 0) + n);
-  for (const L of RD.LIST_IDS) {
-    if (e.listDone(L)) continue;
-    for (const [k, m] of RD.LISTS[L].need) {
-      const left = Math.max(0, m - e.listGot(L, k) - qty(e, k));
+  const lists = [...RD.LIST_IDS.filter((L) => !e.listDone(L)).map((L) => [RD.LISTS[L].need, (k) => e.listGot(L, k)]), ...L2.filter((L) => e.list2Open?.(L) && !e.list2Done(L)).map((L) => [GD.LISTS2[L].need, (k) => e.list2Got(L, k)])];
+  for (const [need, got] of lists) {
+    for (const [k, m] of need) {
+      const left = Math.max(0, m - got(k) - qty(e, k));
       if (!left) continue;
       add(k, left);
       const r = COOK.includes(k) ? recipeFor(k) : null;
@@ -834,6 +844,12 @@ function deliverAll(e, X) {
     for (const L of RD.LIST_IDS) {
       if (e.listDone(L)) continue;
       for (const [k] of RD.LISTS[L].need) if (!e.rlDeliverReason(L, k) && e.rlDeliver(L, k) && e.listDone(L)) X.lastKey[L] = k;
+    }
+    // v0.34：第二年的清单（开了的）
+    for (const L of L2) {
+      if (!e.list2Open?.(L) || e.list2Done(L)) continue;
+      for (const [k] of GD.LISTS2[L].need) if (!e.list2Reason(L, k)) e.list2Deliver(L, k);
+      if (e.list2Done(L)) (X.lists2 ||= {})[L] = e.s.day;
     }
   } finally {
     for (const [id, n] of Object.entries(held)) e.s.storage[id] = (e.s.storage[id] || 0) + n;
@@ -1270,6 +1286,21 @@ function life(seed) {
     }
   }
   if (e?.hp) X.hope = { ...e.hp.stats, goods: Object.keys(e.hp.goods).length, wall2: Object.keys(e.hp.wall2).length, expand: Object.values(e.hp.expand).reduce((a, b) => a + b, 0), letters: e.hp.letters.length, met: e.hp.met.length };
+  // v0.34：第 120 天还有哪些长期目标没做完（第二年的清单、打法挑战、技能 6–10 级）
+  if (e?.gw)
+    X.grow = {
+      ...e.gw.stats,
+      lists2: Object.keys(e.gw.l2done).length,
+      lists2Max: L2.length,
+      wall2Free: Object.keys(e.gw.w2).length,
+      challenges: Object.keys(e.gw.chDone),
+      levels: Object.fromEntries(Object.keys(GD.MASTER_XP).map((k) => [k, e.masterLv(k)])),
+      ups: e.masterUps(),
+      upsMax: Object.keys(GD.MASTER_XP).length * 5,
+      completion: e.rlCompletion().pct,
+      core: e.rlCompletion().core,
+      left: L2.filter((L) => !e.list2Done(L)).map((L) => L + (e.list2Open(L) ? "" : "(未开)")),
+    };
   X.oldMissing = e ? RD.OLD_IDS.filter((id) => !e.oldDonated(id)).map((id) => id + "@" + RD.OLD[id].home.region + ":" + RD.OLD[id].home.kinds.join("/") + (qty(e, id) ? "(有)" : "")) : [];
   X.end = e ? { day: e.s.day, lists: e.rl.done.length, walls: e.wallsOn?.().length, old: e.rl.old.length, pages: e.rl.pages.length, cores: [...e.rl.cores], deepest: e.rl.tunnel.deepest, completion: e.rlCompletion().pct, money: Math.round(e.s.money), trust: Object.fromEntries(Object.entries(e.ss.trust).filter(([, v]) => v > 0)), held: e.ln.held, have: Object.fromEntries(RD.LIST_IDS.filter((L) => !e.listDone(L)).map((L) => [L, RD.LISTS[L].need.filter(([k, n]) => e.listGot(L, k) < n).map(([k, n]) => k + " " + e.listGot(L, k) + "/" + n + " (有" + e.listHave(k) + ")").join("; ")])) } : null;
   return X;
@@ -1324,6 +1355,8 @@ if (MODE === "year") {
           lists: Object.fromEntries(Object.entries(X.lists).map(([k, d]) => [k, d + " " + (X.lastKey[k] || "")])),
           end: X.end,
           hope: X.hope,
+          grow: X.grow,
+          lists2: X.lists2 || {},
           noon: X.noon,
           errors: X.errors.slice(0, 6),
           ...(FUN ? { fun: { toasts: X.fun.toasts.length, big: X.fun.big.length, moments: X.fun.moments.length, floats: X.fun.floats.at(-1) || 0 } } : {}),
@@ -1335,7 +1368,7 @@ if (MODE === "year") {
   }
   if (FUN) console.log(JSON.stringify({ FUN: funSummary(rows, DAYS) }));
   // FUN_DUMP=文件名：把每条提示、每件好事都写进去（找哪些提示还太多用）
-  if (FUN && process.env.FUN_DUMP) (await import("node:fs")).writeFileSync(process.env.FUN_DUMP, JSON.stringify(rows.map((X) => ({ seed: X.seed, ...X.fun, money: X.money, noonDay: X.noonDay || {}, hope: X.hope || null, noon: X.noon || {}, dayLog: X.dayLog || null, tunnelFail: X.tunnelFail || null, errors: X.errors }))));
+  if (FUN && process.env.FUN_DUMP) (await import("node:fs")).writeFileSync(process.env.FUN_DUMP, JSON.stringify(rows.map((X) => ({ seed: X.seed, ...X.fun, money: X.money, noonDay: X.noonDay || {}, hope: X.hope || null, grow: X.grow || null, lists2: X.lists2 || {}, noon: X.noon || {}, dayLog: X.dayLog || null, tunnelFail: X.tunnelFail || null, errors: X.errors }))));
 }
 
 if (MODE === "company") {

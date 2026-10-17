@@ -29,12 +29,24 @@
 //   每层先去开一个柜子，再找往下的检修梯，一趟下 TSPAN 层（默认 5）；倒下算这一趟没过；结果多两列：每层几秒（floorSec）、下到第几层（floors）。
 //   TLIGHT=flashlight 身上带手电（默认带），TLIGHT=none 不带；第 30 层走到泵房里的光跟前算到底；TUNE 调一层几只、多厚、多疼（见下）
 //   CORES=3：身上已经有几颗余烬核（长夜、尸潮、出门都认，看余烬核让夜里容易了多少）
+// v0.34 成长：六样近战各有打法（TACTIC=0 关掉，回到照着矛写的老打法）——
+//   打法多七套：lateBat 钉子球棒、lateCrowbar 回收撬棍、lateSledge 大锤、lateAxe 消防斧（都配后期装备），midBlade 砍刀、midSledge 大锤、midAxe 消防斧（配中期装备）；
+//   能打断出手的（矛、大锤、消防斧、撬棍）看见它抬手、够得着就先砍下去；砍刀对着蹲下要扑的奔跑者，等它扑过来迎面砍腿；
+//   破甲不到六成的（砍刀、木矛）打没劈开的重甲先绕到背后；大锤正面砸仓库守卫的甲片（不绕背）；
+//   钉子球棒打出血以后边退边打（流血的走不动）。调数：WPATCH='{"axe":{"knock":30}}'（武器的数）、WFX='{"machete":{"trip":0.7}}'（擅长的场合）；
+//   MASTERY=10：五项技能的经验都给到 10 级（看老手的小本事有没有让夜里变容易）
 // v0.28 改良：HNUP=tower:light,trap:spike,fence:iron（每类选一条路线，LNSET 摆出来的这类设施全部改好；双人哨要守卫比塔多）
 //   对照：HNPATCH='{"INJURY":{"chance":0}}'（守塔的人被摸到不受伤）
 const D = new URL("../dist/", import.meta.url).href;
 const { Engine, freshState } = await import(D + "campaign.js");
 const { REGIONS, BUILDINGS: BUILD } = await import(D + "data.js");
 const { RULES, MELEE, ARMOR } = await import(D + "gear-data.js");
+// v0.34：武器的数、擅长的场合（调数用）
+const GD = await import(D + "grow-data.js").catch(() => ({}));
+const WEAPON_FX = GD.WEAPON_FX || {};
+if (process.env.WPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.WPATCH))) Object.assign(MELEE[k], v);
+if (process.env.WFX) for (const [k, v] of Object.entries(JSON.parse(process.env.WFX))) Object.assign((WEAPON_FX[k] ??= {}), v);
+const TACTIC = process.env.TACTIC !== "0";
 // v0.24：NOSWAP=bloater,faker,spitter 不放这几种（看各自让一趟难了多少）
 const U = await import(D + "undertow-data.js");
 const HNU = await import(D + "bustle-data.js");
@@ -117,6 +129,16 @@ const KIT = {
   // 第 8 天以后：铁头矛 + 后期防具；lateBlade 换成砍刀（利器打重甲正面只剩三成五）
   late: { weapon: "ironspear", set: "late", bandage: 4, stones: 6 },
   lateBlade: { weapon: "machete", set: "late", bandage: 4, stones: 6 },
+  // v0.34：六样近战各一套（同一身后期防具），看每样武器在哪片废墟最好用
+  lateBat: { weapon: "bat", set: "late", bandage: 4, stones: 6 },
+  lateCrowbar: { weapon: "crowbar", set: "late", bandage: 4, stones: 6 },
+  lateSledge: { weapon: "sledge", set: "late", bandage: 4, stones: 6 },
+  lateAxe: { weapon: "axe", set: "late", bandage: 4, stones: 6 },
+  // 长夜的打法挑战“砍刀守夜”：中期防具 + 砍刀（对照 mid 的铁头矛）
+  midBlade: { weapon: "machete", set: "mid", bandage: 3, stones: 6 },
+  // 中期防具下再比一次：仓库里大锤对消防斧（后期防具下倒下率打平）
+  midSledge: { weapon: "sledge", set: "mid", bandage: 3, stones: 6 },
+  midAxe: { weapon: "axe", set: "mid", bandage: 3, stones: 6 },
 };
 function seeded(seed) {
   let s = seed % 2147483647 || 1;
@@ -192,6 +214,16 @@ function trial(region, kitId, seed) {
     HORDEMODE = region === "horde";
   // v0.31 余烬核：CORES=3 身上已经有几颗（每颗生命上限 +5、体力上限 +15），一开始是满的
   if (process.env.CORES && e.rl) e.rl.cores = CORE_IDS.slice(0, Number(process.env.CORES));
+  // v0.34：MASTERY=10 五项技能都到 10 级（老手的小本事全开）；MASTERY=5 都到 5 级
+  if (process.env.MASTERY && GD.MASTER_XP) {
+    const L = Number(process.env.MASTERY);
+    for (const [k, t] of Object.entries(GD.MASTER_XP)) {
+      const x = L >= 6 ? t[Math.min(4, L - 6)] : (L - 1) * (k === "thief" ? 60 : 40);
+      if (k === "thief") e.sk && (e.sk.thiefXp = x);
+      else e.s.xp[k] = x;
+    }
+    if (e.gw) e.gw.lv = Object.fromEntries(Object.keys(GD.MASTER_XP).map((k) => [k, e.masterLv(k)]));
+  }
   const HP0 = e.maxHp?.() || 100,
     STA0 = e.maxSta?.() || 100;
   if (LNMODE || HORDEMODE) region = "farm";
@@ -389,6 +421,9 @@ function trial(region, kitId, seed) {
     z["_" + key] = null;
   };
   const W = kit.weapon ? e.meleeStats(kit.weapon) : null;
+  // v0.34：这把武器擅长什么、能不能打断出手（抬手时先砍下去）
+  const WF = (kit.weapon && WEAPON_FX[kit.weapon]) || {},
+    cutsWind = !!W && (W.knock >= RULES.knockInterrupt || !!WF.interrupt);
   const inFront = (z) => {
     const a = Math.atan2(p.y - z.y, p.x - z.x) - (z.facing ?? 0);
     return Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < 1.1;
@@ -572,7 +607,7 @@ function trial(region, kitId, seed) {
           act = 0.4;
           acted = true;
         } else if (lunger) {
-          if (W?.brace) bracing = lunger;
+          if (W?.brace || (TACTIC && WF.leap)) bracing = lunger;
           else {
             const a = Math.atan2(lunger.y - p.y, lunger.x - p.x) + (Math.PI / 2) * (R() < 0.5 ? 1 : -1);
             if (roll(a)) acted = true;
@@ -584,6 +619,8 @@ function trial(region, kitId, seed) {
           }
         } else if (bracing) {
           p.facing = Math.atan2(bracing.y - p.y, bracing.x - p.x);
+          // 砍刀：等它扑过来，够得着就迎面一刀砍腿
+          if (TACTIC && WF.leap && bracing.lunge?.phase === "leap" && dist(bracing, p) < W.range - 4 && e.cooldown <= 0) e.use({ x: bracing.x, y: bracing.y - 20 });
           acted = true;
         } else if (charger) {
           const a = Math.atan2(charger.y - p.y, charger.x - p.x) + Math.PI / 2;
@@ -603,6 +640,10 @@ function trial(region, kitId, seed) {
             p.facing = Math.atan2(z.y - p.y, z.x - p.x);
             e.shove();
             acted = true;
+          } else if (threat && TACTIC && cutsWind && !e.bossKind?.(threat) && dist(threat, p) < W.range - 6 && e.cooldown <= 0) {
+            // 能打断出手的：它抬手、够得着，就先砍下去
+            e.use({ x: threat.x, y: threat.y - 20 });
+            acted = true;
           } else if (threat) {
             const a = Math.atan2(p.y - threat.y, p.x - threat.x);
             if (roll(a)) acted = true;
@@ -621,13 +662,20 @@ function trial(region, kitId, seed) {
               }
             roll(Math.atan2(ay, ax));
             acted = true;
-          } else if (FLANK && e.bossKind?.(z) === "guard" && !z.g2 && !z.charge && d < 160 && inFront(z) && (circleT += DT) < 3) {
+          } else if (((FLANK && e.bossKind?.(z) === "guard" && !z.g2 && !(TACTIC && WF.guardPlate)) || (TACTIC && z.type === "armor" && !z.split && W.pierce < 0.6 && !close.some((o) => o !== z && dist(o, p) < 110))) && !z.charge && d < 160 && inFront(z) && (circleT += DT) < 3) {
+            // 绕到背后：仓库守卫甲还在时（拿大锤的不绕，正面砸它的甲片）；破甲差的武器（砍刀）打重甲、身边没别的时也绕
             // 绕到背后（绕 3 秒还绕不过去，就正面打 2 秒再试）
             const back = (z.facing ?? 0) + Math.PI,
               a = Math.atan2(z.y + Math.sin(back) * 60 - p.y, z.x + Math.cos(back) * 60 - p.x);
             mx = Math.cos(a);
             my = Math.sin(a);
             run = p.stamina > 20;
+          } else if (TACTIC && WF.slowBleed && z.slowT > 0 && e.cooldown > 0.05 && adj <= 1 && d < W.range - 14) {
+            // 钉子球棒：它流着血走不动，等下一下的工夫退半步
+            const a = Math.atan2(p.y - z.y, p.x - z.x);
+            mx = Math.cos(a);
+            my = Math.sin(a);
+            acted = true;
           } else if (d < W.range - 6) {
             if (e.cooldown <= 0) e.use({ x: z.x, y: z.y - 20 });
             if (circleT >= 3 && (circleT += DT) > 5) circleT = 0;

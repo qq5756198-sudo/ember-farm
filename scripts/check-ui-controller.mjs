@@ -93,7 +93,7 @@ globalThis.document=document;
 let raf;
 const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...ZestUI,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},clearTimeout:()=>{},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
-script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo,moments});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
+script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo,moments});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.hud=updateHUD;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
 for(let i=0;i<150&&!document.querySelector('#loading').hidden;i++)await new Promise(resolve=>setTimeout(resolve,20));
 if(!document.querySelector('#loading').hidden)console.log('Loading details:',document.querySelector('#loading').innerHTML);assert.equal(document.querySelector('#loading').hidden,true,'all game assets should finish loading');
@@ -1727,12 +1727,18 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const led = document.querySelector('#ledger');
   let summaryMorning = true;
   for (let night = 0; night < 4 && summaryMorning; night++) {
-    e.s.storage.bread = (e.s.storage.bread || 0) + 80; e.s.minute = 21 * 60; e.c.workClock = 0;
+    // 第二晚起：早上那张今日抉择被“稍后再选”压着、时间又是直接拨到 21:00 的（没走过中午），不先清掉睡觉会先弹它
+    e.s.storage.bread = (e.s.storage.bread || 0) + 80; e.s.minute = 21 * 60; e.c.workClock = 0; if (night && e.dy) e.dy.pending = null;
     context.open('home'); click('sleep'); run(2);
     summaryMorning = false;
     for (let i = 0; i < 6 && context.inspect().menu; i++) { if (/日终总结/.test(html())) summaryMorning = true; if (e.dailyCard?.()) e.dailyLater?.(); click('close'); run(1); }
     run(2);
-    if (summaryMorning) assert.equal(led.hidden, true, 'no ledger on a summary morning');
+    // 前一天还开着的小卡片（读档那天的“重光”）换了一天就淡出：浏览器里 0.4 秒后藏起来；这里的 setTimeout 不走，只看得到它在淡出，
+    // 替它藏起来（不然下一个早上的账本排在它后面出不来）。老琴抽到下签的早上——一成五的机会——早间广播是 warn，照规矩弹日终总结，
+    // 原来这一项就在这种早上偶尔挂
+    const fading = /(^|\s)out(\s|$)/.test(led.className);
+    if (summaryMorning) assert.ok(led.hidden || fading, 'no ledger on a summary morning');
+    if (fading) { led.hidden = true; led.classList.remove('out'); run(1); }
   }
   assert.equal(summaryMorning, false, 'a calm morning within four nights');
   assert.equal(context.inspect().menu, null);
@@ -1759,7 +1765,9 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // 存档
   click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
   const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
-  assert.equal(back.almanac.intro.told, true); assert.ok(back.almanac.trees[tree.id]); assert.equal(back.almanac.herd.flock.pts, AL.HERD.pet);
+  assert.equal(back.almanac.intro.told, true); assert.ok(back.almanac.trees[tree.id]);
+  // 摸过的亲近读回来一样（日终总结的早上多睡了一晚的话，亲近每天会掉一点，所以和眼下的比）
+  assert.equal(back.almanac.herd.flock.pts, e.al.herd.flock.pts);
   assert.equal(back.buildings.find((b) => b.id === deco.id)?.decor, 'globe');
   console.log('Almanac controller passed: a v0.28 save restored from a file (the cold snap moved onto the cold season, the 四时 notice on the first frame), the HUD date with the season, the date button opening the calendar with the four seasons, the farm board\'s season section, the seed picker\'s in-season tag, the radio page with today\'s luck, the build list with the jars and trees (the decor only once owned), a pickle jar placed, filled with E and taken, the coop card petting the flock, an old peach tree cut with E and a peach grafted through the build flow, a decor picked from its build card and placed, forage picked with E, mushrooms sorted from 许医生\'s card, a parcel at the door opened with E, the morning ledger after sleeping (held behind pages, shown after, a click hides it), jars/trees/decor/forage/old trees/debris drawn at four sizes by day and night in all four seasons, and save/parse.');
 }
@@ -1777,7 +1785,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
   const keydown = (key) => listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false });
   const press = (key) => { keydown(key); listeners.keyup({ key }); };
-  const ctxLine = () => document.querySelector('#context').innerHTML;
+  // 交互那一行由 HUD 每 0.12 秒刷一次，两帧（0.1 秒）不一定刷得到：读之前先刷一下
+  const ctxLine = () => (context.hud(), document.querySelector('#context').innerHTML);
   const goTo = (e, region, x, y) => { e.s.visited = { ...(e.s.visited || {}), [region]: true }; e.s.region = region; e.enemies = e.s.enemies[region] = (e.s.enemies[region] || []).filter((z) => !z.dead && false); e.assignRegion(); if (x != null) Object.assign(e.s.player, { x, y }); };
   dailyOn = false;
   const KD = await import('../dist/kin-data.js');
@@ -1952,7 +1961,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
   const keydown = (key) => listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false });
   const press = (key) => { keydown(key); listeners.keyup({ key }); };
-  const ctxLine = () => document.querySelector('#context').innerHTML;
+  // 交互那一行由 HUD 每 0.12 秒刷一次，两帧（0.1 秒）不一定刷得到：读之前先刷一下
+  const ctxLine = () => (context.hud(), document.querySelector('#context').innerHTML);
   const goTo = (e, region, x, y) => { e.s.visited = { ...(e.s.visited || {}), [region]: true }; e.s.region = region; e.enemies = e.s.enemies[region] = []; e.assignRegion(); if (x != null) Object.assign(e.s.player, { x, y }); };
   const spotFor = (e, type, cx = 760, cy = 640) => { for (let r = 60; r < 640; r += 16) for (let a = 0; a < 6.28; a += 0.3) { const x = Math.round((cx + Math.cos(a) * r) / 8) * 8, y = Math.round((cy + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x: x + 30, y: y + 46 }); if (!e.buildReason(type, x, y)) return { x, y }; } return null; };
   const sizes = (list = [[1366, 600], [1920, 900], [390, 480], [844, 240]]) => { for (const [w, hh] of list) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); } context.inspect().renderer.resize(1366, 600, 1); };
@@ -2106,8 +2116,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(card().hidden, false, 'the 手感 card is up');
   assert.match(card().innerHTML, /手感/);
   run(80);
-  // v0.33 起旧档还会接着一张“盼头”的卡片
-  if (!card().hidden) { assert.match(card().innerHTML, /盼头/); run(80); }
+  // v0.33 起旧档还会接着一张“盼头”的卡片，v0.34 起再接一张“成长”
+  for (let i = 0; i < 3 && !card().hidden; i++) { assert.match(card().innerHTML, /盼头|成长/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   // ---------- 按住 E 沿着一排熟了的萝卜走 ----------
   e.s.region = 'farm'; e.assignRegion(); e.s.minute = 600; e.s.debris = [];
@@ -2202,6 +2212,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   run(3);
   assert.equal(card().hidden, false, 'the 盼头 card is up'); assert.match(card().innerHTML, /盼头/);
   run(80);
+  // v0.34 起接着一张“成长”
+  if (!card().hidden) { assert.match(card().innerHTML, /成长/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   // ---------- 过路人：营门口按 E，他的那一页，给他东西 ----------
   let d = 57; while (HD.weekKind(d) !== 'traveler') d += 7;
@@ -2277,4 +2289,97 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
   assert.equal(back.hope.intro.told, true); assert.ok(back.hope.wall2.water); assert.equal(back.hope.expand.home, 2);
   console.log('Hope controller passed: a v0.32 save restored from a file (the 盼头 card on the first frame and gone after its time), a traveler at the gate met with E (his page, the things handed over, the card), a wall raised to level II from the station, the farmhouse wing from the rooms page and the coop run from its card, this week\'s rare good bought at the station market, a peddler\'s stall opened with E and one thing bought, the afternoon airdrop opened with E, a trapped survivor following after E, the alert bar and the journal strip, the farm with every expansion and device drawn at four sizes by day and night, and save/parse.');
+}
+
+// v0.34.0「成长」: a v0.33 save restored from a file (the 成长 card says how far the old experience went, gone after its time),
+// the HUD's skill line past level five, the skill page opened with K (levels to ten, the perks), a level-up card while playing,
+// the station's second-year lists (a cell handed in with its button), the collection's challenges and 老手 rows, the weapon bench
+// page saying what each melee weapon is good at, the hospital with a cramped spear and the star over a good cabinet drawn at four
+// sizes, the warehouse storeroom door chopped open with the fire axe after E, a challenge card, and save/parse.
+{
+  let clock = 29000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const keydown = (key) => listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false });
+  const press = (key) => { keydown(key); listeners.keyup({ key }); };
+  const card = () => document.querySelector('#zest-moment');
+  const closeCards = () => { const m = context.inspect().moments; m.queue.length = 0; m.close(); };
+  const goTo = (e, region, x, y) => { e.s.visited = { ...(e.s.visited || {}), [region]: true }; e.s.region = region; e.enemies = e.s.enemies[region] = []; e.assignRegion(); if (x != null) Object.assign(e.s.player, { x, y }); };
+  const sizes = (list = [[1366, 600], [1920, 900], [390, 480], [844, 240]]) => { for (const [w, hh] of list) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); } context.inspect().renderer.resize(1366, 600, 1); };
+  dailyOn = false;
+  const GD = await import('../dist/grow-data.js');
+  const H = await import('../dist/hope.js');
+  const RD2 = await import('../dist/relight-data.js');
+  // ---------- 一份 v0.33 的旧档（第二年，主线打完，六面墙都通了，三项技能的经验早过了 5 级） ----------
+  const old = new H.Engine(H.newGameState(), () => {});
+  const sc = old.sc;
+  sc.act = 9; sc.claimed = ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8']; sc.choice = 'ration';
+  sc.letters = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8', 'act9']; sc.flags.well = sc.flags.camp = sc.flags.farmerFed = true; sc.camp = { x: 560, y: 735 };
+  old.r.claimed = RebuildData.TASKS.map((t) => t.id); old.r.radio = true;
+  old.o.hospital = 'water'; old.o.youke = true; old.o.lathe = { mode: 'parts', day: 0 }; old.o.toll = 'refuse'; old.o.raid.phase = 'won';
+  old.assignRegion();
+  old.s.day = 60; old.s.minute = 600; old.s.weather = '晴朗'; if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();
+  old.s.visited = { ...(old.s.visited || {}), residential: true, hospital: true, warehouse: true };
+  old.s.xp.combat = GD.MASTER_XP.combat[2] + 50; old.s.xp.agriculture = GD.MASTER_XP.agriculture[1] + 50; old.s.xp.exploration = GD.MASTER_XP.exploration[3] + 50;
+  Object.assign(old.s.storage, { wood: 200, stone: 120, scrap: 80, parts: 30, riverFish: 6, nightFish: 3, kinEel: 3, kinKoi: 1, axe: 1, machete: 1, bat: 1, crowbar: 1, sledge: 1, ironspear: 1 });
+  for (const w of RD2.WALL_IDS) old.rl.walls[w] = { by: 'list', day: 50 };
+  for (const id of RD2.LIST_IDS) if (!old.rl.done.includes(id)) old.rl.done.push(id);
+  old.s.buildings.push({ id: 'grst', type: 'rlStation', x: 760, y: 820, rotation: 0, hp: 160, open: false });
+  old.s.buildings.push({ id: 'grwb', type: 'weaponbench', x: 980, y: 300, rotation: 0, hp: Data.BUILDINGS.weaponbench.hp, open: false });
+  context.open('restoreArchive', { files: { old: old.serialize() } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  let e = context.inspect().engine;
+  assert.equal(context.inspect().menu, null);
+  assert.ok(e.gw && e.gw.intro && !e.gw.intro.told, 'the 成长 record was added to the old save');
+  e.paused = false; if (e.dy) e.dy.pending = null;
+  closeCards();
+  run(3);
+  assert.equal(card().hidden, false, 'the 成长 card is up'); assert.match(card().innerHTML, /成长/); assert.match(card().innerHTML, /直接到了 Lv\.8/);
+  run(80);
+  assert.equal(card().hidden, true, 'and gone after its time');
+  assert.match(document.querySelector('#skill-summary')?.textContent || '', /Lv\.7.*Lv\.9/);
+  // ---------- 技能页：按 K ----------
+  goTo(e, 'farm', 760, 640); run(1);
+  press('k'); run(1);
+  assert.equal(context.inspect().menu, 'skills'); assert.match(html(), /gr-master/); assert.match(html(), /战斗<span>Lv\.8<\/span>/); clean(); click('close');
+  // ---------- 玩着升一级 ----------
+  closeCards(); e.xp('agriculture', 2000); run(2);
+  assert.equal(card().hidden, false); assert.match(card().innerHTML, /农业 Lv\.8/); closeCards();
+  // ---------- 重建站：第二年的清单，交一格 ----------
+  const st = e.s.buildings.find((b) => b.type === 'rlStation');
+  Object.assign(e.s.player, { x: st.x, y: st.y + 50 });
+  context.open('outpost', { view: 'rlStation' }); clean();
+  assert.match(html(), /第二年的清单/); assert.match(html(), /深水里的鱼/);
+  click('grL2', 'w2_deep|riverFish'); assert.equal(e.list2Got('w2_deep', 'riverFish'), 4, 'four blue-backs handed in'); click('close');
+  // ---------- 成就册 ----------
+  context.open('outpost', { view: 'collection' }); clean(); assert.match(html(), /打法挑战/); assert.match(html(), /老手（技能 6–10 级）/); click('close');
+  // ---------- 武器台那一页 ----------
+  Object.assign(e.s.player, { x: 980, y: 350 });
+  context.open('frontier', { tab: 'combat' }); clean();
+  assert.ok((html().match(/gr-use/g) || []).length >= 6, 'six notes on what each weapon is good at'); click('close');
+  // ---------- 旧医院：长矛伸不开；眼尖的星画得出来 ----------
+  e.s.inventory.ironspear = 1; e.gr.slots.melee = 'ironspear'; e.s.slot = 3;
+  goTo(e, 'hospital', 600, 520);
+  assert.ok(e.meleeStats('ironspear').cramped);
+  for (const o of e.objects.filter((x) => x.type === 'crate' && x.ukind)) { Object.assign(e.s.player, { x: o.x, y: o.y + 60 }); sizes([[1366, 600], [390, 480]]); }
+  // ---------- 仓库：储藏室的铁门，拿消防斧按 E 劈开 ----------
+  e.s.day += 1; e.ut.evDay = e.s.day; e.ut.ev = { day: e.s.day, id: 'storeroom', region: 'warehouse', spot: 0, st: 'wait', bits: 0, spawned: false };
+  e.s.inventory.axe = 1; e.gr.slots.melee = 'axe';
+  e.s.region = 'warehouse'; e.s.enemies.warehouse = null; e.assignRegion(); run(1);
+  for (const z of e.enemies) z.dead = true;
+  const door = e.objects.find((o) => o.type === 'uDoor'); assert.ok(door, 'the storeroom door is there');
+  Object.assign(e.s.player, { x: door.x, y: door.y + 30 }); e._picked = null; run(1);
+  press('e'); run(1);
+  if (context.inspect().menu === 'outpost' && /sPick/.test(html())) { clean(); click('sPick', String((context.inspect().engine.pickCandidates?.() || []).findIndex((o) => o.type === 'uDoor'))); }
+  assert.equal(e.ux.pry?.grTool, 'axe', 'chopping with the axe');
+  run(GD.WEAPON_FX.axe.door * 20 + 10);
+  assert.equal(e.ut.ev.st, 'open', 'the door is open after four seconds');
+  // ---------- 打法挑战的卡片 ----------
+  closeCards(); e.grChallenge('axeSplit', 12); run(2);
+  assert.equal(card().hidden, false); assert.match(card().innerHTML, /劈甲/); closeCards();
+  goTo(e, 'farm', 760, 640);
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.grow.intro.told, true); assert.equal(back.grow.lv.combat, 8); assert.ok(back.grow.chDone.axeSplit); assert.equal(back.grow.l2.w2_deep.riverFish, 4);
+  console.log('Grow controller passed: a v0.33 save restored from a file (the 成长 card saying how far the old experience went, gone after its time), the HUD skill line past level five, the skill page opened with K (levels to ten and their perks), a level-up card while playing, a second-year list cell handed in at the station, the collection\'s challenges and 老手 rows, the weapon bench page with what each melee weapon is good at, the hospital with a cramped spear and the cabinets drawn at two sizes, the warehouse storeroom door chopped open with the fire axe after E, a challenge card, and save/parse.');
 }

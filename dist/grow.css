@@ -1,0 +1,115 @@
+/* v0.34.0「成长」：技能页的 6–10 级（老手）、重建站上每面墙的第二年清单、成就册里的打法挑战、武器台那一页每样近战擅长什么、
+   大事卡片的三种新颜色。跟着重光、盼头那两版的样子：好事金色、能做的绿色；手机上一列排，按钮够大。 */
+.gr-master {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(24, 19, 15, 0.45);
+  border-left: 3px solid #7d6a3a;
+}
+.gr-master > b {
+  color: #e9c05a;
+  font-size: 12px;
+}
+.gr-master ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gr-perk {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: baseline;
+  gap: 2px 6px;
+  color: #9aa597;
+  font-size: 12px;
+}
+.gr-perk b {
+  color: #c9c3a8;
+  font-weight: normal;
+}
+.gr-perk small {
+  grid-column: 1 / -1;
+  color: #8f9a8c;
+}
+.gr-perk.on b {
+  color: #ffd76a;
+  font-weight: bold;
+}
+.gr-perk.on small {
+  color: #d9d2b5;
+}
+.gr-perk i {
+  grid-column: 4;
+  grid-row: 1;
+  color: #9fd16a;
+  font-style: normal;
+}
+.skill-col.gr-past5 {
+  border-color: #b9963f;
+}
+.skill-col.gr-past5 h3 span {
+  color: #ffd76a;
+}
+.gr-year2 {
+  margin: 8px 0 4px;
+  padding: 6px 8px;
+  border-left: 3px solid #e9c05a;
+  background: rgba(24, 19, 15, 0.5);
+}
+.gr-year2 h4 {
+  margin: 2px 0;
+  color: #ffcf6a;
+}
+.gr-year2 h4 small {
+  margin-left: 6px;
+  color: #c9bd9a;
+  font-weight: normal;
+}
+.gr-year2.locked {
+  border-left-color: #62645d;
+}
+.gr-year2 p {
+  margin: 2px 0 6px;
+}
+.gr-list2 {
+  border-left-color: #e9c05a;
+}
+.gr-ch {
+  display: inline-block;
+  margin: 1px 0;
+  color: #c9c3a8;
+}
+.gr-ch.on {
+  color: #cfe7a6;
+}
+.gr-use {
+  margin: 2px 0 4px;
+  color: #e6c48a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.zest-moment.k-master {
+  box-shadow: inset 0 0 0 2px #ffd76a, 0 0 0 3px rgba(255, 215, 106, 0.32), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+.zest-moment.k-challenge {
+  box-shadow: inset 0 0 0 2px #f1a28a, 0 0 0 3px rgba(241, 162, 138, 0.3), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+.zest-moment.k-list2 {
+  box-shadow: inset 0 0 0 2px #ffcf6a, 0 0 0 3px rgba(255, 207, 106, 0.3), 0 6px 0 rgba(20, 15, 11, 0.5);
+}
+@media (max-width: 560px) {
+  .gr-year2 li button {
+    width: 100%;
+  }
+  .gr-perk {
+    grid-template-columns: auto 1fr auto;
+  }
+  .gr-perk i {
+    grid-column: 3;
+  }
+}

@@ -1,5 +1,5 @@
 // 当前主线的界面入口。game.js 只从这里取前哨相关的界面；每一轮新加的层在这里串起来。
-// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29) → kin (v0.30) → relight (v0.31) → zest (v0.32) → hope (v0.33)
+// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29) → kin (v0.30) → relight (v0.31) → zest (v0.32) → hope (v0.33) → grow (v0.34)
 // v0.25：其余物品的小图重画（接在装备小图后面）；各层的物品都登记好以后再挂一次
 import { assignItemIcons } from "./item-sprites.js";
 import { outpostHud, hungerDeathNote } from "./outpost-ui.js";
@@ -7,7 +7,7 @@ import { winterHud, alertBar, winterTitle, renderWinterView, handleWinterAction 
 import { handleOutpostAction } from "./outpost-ui.js";
 import { renderManualSeasons, stationExtras as seasonsStationExtras, itemLinks, seasonsHud } from "./seasons-ui.js";
 import { dailyHud, dailyLocked } from "./daily-ui.js";
-import { renderSkillPage, menuLock as thiefMenuLock, menuKey, thiefFrame } from "./thief-ui.js";
+import { renderSkillPage as thiefSkillPage, menuLock as thiefMenuLock, menuKey, thiefFrame } from "./thief-ui.js";
 import { renderGardenJournal, gardenTitle, renderGardenView, handleGardenAction, renderGardenBoard, placeTitle, gardenStationExtras } from "./garden-ui.js";
 import { gearTitle, renderGearView, handleGearAction, gearStationExtras, gearStatusHtml, renderGearPanel as gearPanel, gearUI, renderGearBench, gearDetailHtml } from "./gear-ui.js";
 import { paintDoll, paintGearIcon } from "./gear-sprites.js";
@@ -32,6 +32,9 @@ import { patchZestJournal, patchZestCollection } from "./zest-ui.js";
 // v0.33：营门口的过路人、货郎、收购的人；重建站上这周的清单和墙升二级；农舍、仓库箱、鸡舍的扩建；商队的稀罕货；任务手记的这周和今天；顶上的提醒
 import { renderHopeView, hopeTitle, handleHopeAction, patchHopeJournal, hopeBuildingExtras, patchHopeDistricts } from "./hope-ui.js";
 export { patchHopeDistricts };
+// v0.34：技能页的 6–10 级、重建站上的第二年清单、成就册里的打法挑战和老手、武器台那一页每样近战擅长什么
+import { renderGrowSkillPage, patchGrowStation, patchGrowCollection, patchGrowBench, handleGrowAction } from "./grow-ui.js";
+const renderSkillPage = (e) => renderGrowSkillPage(e, thiefSkillPage);
 // 设施卡下面：腌缸、果树、摆件、鸡舍（v0.29）；仓库箱、鸡舍的扩建（v0.33）
 export const buildingExtras = (e, b) => almanacBuildingExtras(e, b) + hopeBuildingExtras(e, b);
 // v0.25：开始新游戏选出身、二周目、设置里的“带着记忆重新开始”
@@ -88,7 +91,9 @@ const renderViewBase = (e, ui) => {
 const renderCampaignView0 = (e, ui) => renderHopeView(e, ui, (eH, uH) => renderRelightView(eH, uH, (eR, uR) => patchTidyView(eR, uR, renderKinView(eR, uR, (eK, uK) => renderAlmanacView(eK, uK, (e0, u0) => renderBustleView(e0, u0, (e1, u1) => renderBountyView(e1, u1, renderViewBase)))))));
 export const renderCampaignView = (e, ui) => {
   const html = renderCampaignView0(e, ui);
-  return ui?.view === "collection" ? patchZestCollection(e, html) : html;
+  if (ui?.view === "collection") return patchGrowCollection(e, patchZestCollection(e, html));
+  if (ui?.view === "rlStation") return patchGrowStation(e, html);
+  return html;
 };
 export const renderCampaignJournal = (e, ui) => {
   const html = renderGardenJournal(e, ui);
@@ -103,7 +108,7 @@ export const renderManualPlus = (e, tab, h, ui, fui) => {
   if (tab === "farm" && !ui?.tool && !ui?.guided && e.g) return `<div class="outpost-page view-gBoard">${patchAlmanacBoard(e, patchBoard(e, renderGardenBoard(e)))}</div>`;
   const html = renderManualSeasons(e, tab, h, ui, fui);
   if (!(ui?.tool?.menu === "frontier" && ui.tool.tab === "combat" && e.gr)) return html;
-  const bench = renderGearBench(e, h);
+  const bench = patchGrowBench(e, renderGearBench(e, h));
   return html.endsWith(PAGE_TAIL) ? html.slice(0, -PAGE_TAIL.length) + bench + PAGE_TAIL : `<div class="place-page"><div class="detail-scroll">${html}${bench}</div></div>`;
 };
 // 顶栏：口粮、袭击横幅（长夜里换成长夜的）、日期（带时节）变红、寒潮标签、警报栏、手记上的“新”点。
@@ -113,9 +118,9 @@ export function campaignHud(e) {
   const ln = tidyLnHud(e);
   return { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchAlerts(e, alertBar(e)), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e), date: almanacDate(e) };
 }
-// 动作：盼头 → 重光 → 人情 → 四时 → 热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
+// 动作：成长 → 盼头 → 重光 → 人情 → 四时 → 热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
-  return handleHopeAction(action, el, ctx) || handleRelightAction(action, el, ctx) || handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
+  return handleGrowAction(action, el, ctx) || handleHopeAction(action, el, ctx) || handleRelightAction(action, el, ctx) || handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
 }
 
 // v0.25：到这里所有层的物品都登记过了，把还没挂上的新小图挂上

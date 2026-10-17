@@ -634,7 +634,8 @@ test("completion: the collection book adds the lists, old things, pages, cores, 
   const { e } = make();
   toAct(e, 8);
   const c0 = e.rlCompletion();
-  assert.equal(c0.parts.length, 8);
+  // v0.34：收复度多了两项（打法挑战、第二年的清单），重光的结尾只看原来那八项
+  assert.equal(c0.parts.length, 10);
   assert.ok(c0.pct < 5);
   const h = view(e, "collection");
   assert.doesNotMatch(h, DEV);
@@ -649,7 +650,8 @@ test("completion: the collection book adds the lists, old things, pages, cores, 
   e.ln.held = 10;
   for (const id of HEART_IDS) e.kin.heart[id] = { ...(e.kin.heart[id] || {}), seg: 3 };
   for (const id of FISH_IDS) e.kin.fish[id] = 1;
-  assert.equal(e.rlCompletion().pct, 100);
+  assert.equal(e.rlCompletion().core, 100);
+  assert.ok(e.rlCompletion().pct < 100, "the two new parts are still to do");
   e.events.length = 0;
   hour(e, 7);
   assert.ok(e.rl.finale > 0);
