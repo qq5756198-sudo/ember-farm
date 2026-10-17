@@ -294,7 +294,7 @@ test("thunder: each wave is a little smaller and traps sometimes misfire, withou
   assert.equal(N.day, FIRST);
 });
 
-test("moon: towers hit harder (the boss harder still) and more stalkers come in waves two and three", () => {
+test("moon: towers hit harder and more stalkers come in waves two and three", () => {
   const { e } = postStory(30);
   night(e, FIRST, "moon");
   const fx = PHASES.moon.fx;
@@ -311,11 +311,6 @@ test("moon: towers hit harder (the boss harder still) and more stalkers come in 
   const moon = dmg("moon"),
     plain = dmg("none");
   assert.ok(Math.abs(moon / plain - fx.towerDmg) < 0.02, moon + " vs " + plain);
-  if (fx.towerBoss) {
-    const mb = dmg("moon", true),
-      pb = dmg("none", true);
-    assert.ok(pb > 0 && Math.abs(mb / pb - fx.towerDmg * fx.towerBoss) < 0.05, "the boss: " + mb + " vs " + pb);
-  }
   const share = (force) => {
     e._nfForce = force;
     const N = e.ln.night;

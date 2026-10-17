@@ -17,19 +17,19 @@ export const NIGHTFALL_SCHEMA = 1;
 // ================= 1. 夜相 =================
 // 数都是对“原来的长夜”乘的；没写的就是不变。
 //   towerRange：瞭望塔够得着多远（原来 320）；clear：雾里人身边看得清的一圈（画面上的雾、机器人看预兆都按它）；
-//   towerDmg：瞭望塔一发的伤害；towerBoss：瞭望塔打头目再乘多少；trapMute：陷阱每次踩到几成哑火；trapFirst：每个陷阱第一下不响；
-//   count：每波多少只；mix：这一种感染者的份数乘多少；speed：感染者走多快；hp：感染者多少血；
+//   towerDmg：瞭望塔一发的伤害；trapMute：陷阱每次踩到几成哑火；trapFirst：每个陷阱第一下不响；
+//   count：每波多少只；mix：这一种感染者的份数乘多少；speed：感染者走多快；hp：感染者多少血（头目不算）；
 //   regen：你的体力回得多快；warmRegen：在火炉、篝火边上体力回得多快；bossEarly：头目早来几个游戏分钟；oneDir：三波都从同一个方向来
 export const PHASES = {
   fog: {
     name: "雾夜",
     season: "thaw",
     short: "雾大，瞭望塔看不远",
-    rule: "雾大，瞭望塔只够得着原来的七成，你身边一圈以外的东西看不清。",
+    rule: "雾大，瞭望塔只够得着原来的六成，你身边一圈以外的东西看不清。",
     hint: "雾夜瞭望塔看不远：陷阱和塔都往里收，人站在灯底下，等它们撞上来。",
     good: "陷阱、围栏、守在灯下",
     bad: "离得远的瞭望塔",
-    fx: { towerRange: 220, clear: 200 },
+    fx: { towerRange: 200, clear: 230 },
   },
   thunder: {
     name: "春雷夜",
@@ -85,11 +85,11 @@ export const PHASES = {
     name: "冰夜",
     season: "cold",
     short: "冰冻，感染者慢但扛打",
-    rule: "冻僵了，感染者走得慢两成、血多三成；火炉、篝火边上你的体力回得快五成。",
+    rule: "冻僵了，感染者走得慢两成、血多两成五；火炉、篝火边上你的体力回得快五成。",
     hint: "冰夜它们慢但扛打：守在火炉、篝火边上慢慢磨，别追出去。",
     good: "火炉边、慢慢磨",
     bad: "追出去打",
-    fx: { speed: 0.8, hp: 1.3, warmRegen: 1.5 },
+    fx: { speed: 0.8, hp: 1.25, warmRegen: 1.5 },
   },
   snow: {
     name: "雪夜",

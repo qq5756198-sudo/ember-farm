@@ -222,7 +222,6 @@ export class Engine extends GrowEngine {
     if (!fx || !e || e.dead || this.s.region !== "farm") return super.hurtEnemy(e, n, a, meta);
     const src = this._damageSource;
     if (src === "tower" && fx.towerDmg) n *= fx.towerDmg;
-    if (src === "tower" && fx.towerBoss && e.lnBoss) n *= fx.towerBoss;
     if (src === "trap" && (fx.trapMute || fx.trapFirst)) {
       const trap = this.s.buildings.find((b) => b.type === "trap" && b.hp > 0 && dist(b, e) < 40);
       if (trap && this.nfMute(trap, e, fx)) {
