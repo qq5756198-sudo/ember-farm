@@ -440,10 +440,19 @@ test("gale: all three waves come from one side, named the day before", () => {
   assert.ok(TOWER.mult > 0);
 });
 
-test("frost: slower, tougher infected, and stamina comes back faster by a fire", () => {
+test("frost: slower, tougher infected, the boss early, and stamina comes back faster by a fire", () => {
   const { e } = postStory(30);
   night(e, FIRST, "frost");
   const N = e.ln.night;
+  if (PHASES.frost.fx.bossEarly) {
+    const w0 = N.wave;
+    N.wave = 3;
+    const next = e.lnNext();
+    assert.equal(next.what, "boss");
+    assert.equal(next.at, N.start + LN_PACE.bossAt - PHASES.frost.fx.bossEarly);
+    assert.ok(e.lnBossNote(N).startsWith(e.nfClock(LN_PACE.bossAt - PHASES.frost.fx.bossEarly) + "，"));
+    N.wave = w0;
+  }
   const made0 = N.made;
   N.left = 5;
   const a = e.lnSpawn();
