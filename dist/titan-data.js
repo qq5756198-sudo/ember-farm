@@ -933,6 +933,7 @@ export const FINAL_TEXT = {
   busy: "今晚另有一场仗：扑火的往后挪一天（第 {d} 天）。",
   travel: "扑火的就在农场里：走不开。",
   sleep: "扑火的今晚要来：睡不过 22:00。",
+  nap: "最后一夜过去了，睡到早上 8 点：生命 +35，体力回满。",
 };
 // 结局卡：打赢扑火的那一下
 export const FINAL_END = {

@@ -170,6 +170,7 @@ test("broken part records are refused when a save is read", () => {
   bad((g) => (g.hp.train.parts.head = 1.5));
   bad((g) => (g.hp.train.parts.car0 = -3));
   bad((g) => (g.final.on = "x"));
+  bad((g) => (g.final.end = -5));
   bad((g) => (g.intro2 = { day: 1, told: "no" }));
 });
 
@@ -652,6 +653,12 @@ test("during the final night: the guards man the towers, the clock runs at half 
   assert.equal(e.tg.final.day, e.s.day - 1 + FINAL.retry);
   assert.ok(toasts.some((t) => t.text.includes("天快亮了")));
   assert.equal(e._fGuards, null, "the guards stand down");
+  // 天亮前后睡一觉：跟长夜一样睡到当天早上 8 点，不把这一天睡过去
+  const day1 = e.s.day;
+  assert.equal(e.sleep(), true, "a nap after the night");
+  assert.equal(e.s.day, day1, "the same day");
+  assert.equal(Math.round(e.s.minute), 8 * 60);
+  assert.ok(toasts.some((t) => t.text === FINAL_TEXT.nap));
   // 下一回：一开始就少两成
   e.s.day = e.tg.final.day;
   e.s.minute = FINAL.hour;
@@ -785,7 +792,7 @@ test("a v0.36 save gets the 后五凶 card once and the final-night record; a ne
   const s = Engine.parse(JSON.stringify(raw));
   assert.equal(s.titan.schema, TITAN_SCHEMA);
   assert.deepEqual(s.titan.intro2, { day: s.day, told: false });
-  assert.deepEqual(s.titan.final, { day: 0, on: 0, tries: 0, lost: 0, keep: 0, won: 0 });
+  assert.deepEqual(s.titan.final, { day: 0, on: 0, tries: 0, lost: 0, keep: 0, won: 0, end: 0 });
   const { e: e2 } = make(s);
   e2.events.length = 0;
   run(e2, DT * 2);

@@ -42,7 +42,8 @@ const itemsText = (b) =>
 const STAT_KEYS = ["fights", "wins", "falls", "staggers", "phases", "strikes", "hits", "gifts", "donated", "told", "finals"];
 // 最后一夜：定在哪天（0 = 还没定）、打过几夜、没打赢几夜、上回身上的伤留下几成（打掉的血占几成）、打赢那天
 // on：打起来的那一夜是第几天（打完、天亮、倒下以后回到 0）
-const finalDefaults = () => ({ day: 0, on: 0, tries: 0, lost: 0, keep: 0, won: 0 });
+// end：上一回这一夜几点结束（第几天 × 1440 + 分钟；天亮前后睡一觉睡到当天 8 点用）
+const finalDefaults = () => ({ day: 0, on: 0, tries: 0, lost: 0, keep: 0, won: 0, end: 0 });
 const tDefaults = () => ({
   schema: TITAN_SCHEMA,
   // 第一次撞见、第一次听说（传闻）、学到打法的那天
@@ -1721,6 +1722,7 @@ export class Engine extends NfEngine {
         dealt = clamp(1 - hp / Math.max(1, max), 0, 1);
       F.keep = Math.round(clamp(dealt * FINAL.keep, 0, 0.9) * 1000) / 1000;
       F.lost++;
+      F.end = this.s.day * 1440 + Math.floor(this.s.minute);
     }
     F.on = 0;
     F.day = this.finalPick(base + FINAL.retry);
@@ -1737,6 +1739,7 @@ export class Engine extends NfEngine {
   finalWon() {
     const F = this.tg.final;
     F.won = this.s.day;
+    F.end = this.s.day * 1440 + Math.floor(this.s.minute);
     F.on = 0;
     F.day = 0;
     F.keep = 0;
@@ -1802,7 +1805,27 @@ export class Engine extends NfEngine {
       this.toast(FINAL_TEXT.sleep, "warn");
       return false;
     }
+    if (this.finalNapOk()) return this.finalNap();
     return super.sleep();
+  }
+  // 最后一夜过去了（守住、没守住都一样）：天亮前后睡一觉，跟长夜一样睡到当天早上 8 点，不把这一天睡过去
+  finalNapOk() {
+    const F = this.tg?.final;
+    if (!F?.end || F.on || this.s.region !== "farm" || this._fNap === this.s.day) return false;
+    return Math.floor(F.end / 1440) === this.s.day && this.s.minute < 8 * 60;
+  }
+  finalNap() {
+    const p = this.s.player;
+    this._fNap = this.s.day;
+    this.advanceMinutes(8 * 60 - this.s.minute);
+    p.hp = Math.min(this.maxHp?.() ?? 100, p.hp + 35);
+    p.stamina = this.maxSta();
+    p.hunger = Math.max(30, p.hunger - 6);
+    if (this.gx) this.gx.bleed = 0;
+    this.releaseGrab?.(false);
+    this.toast(FINAL_TEXT.nap, "gold");
+    this.emit("sleep");
+    return true;
   }
   // 动静招来的夜袭：最后一夜不另来
   noiseBlocked() {
@@ -2008,5 +2031,5 @@ function validateTitan(s) {
   if (g.intro !== undefined && (!obj(g.intro) || !int(g.intro.day, 0, 1e6) || typeof g.intro.told !== "boolean")) bad("记录");
   if (g.intro2 !== undefined && (!obj(g.intro2) || !int(g.intro2.day, 0, 1e6) || typeof g.intro2.told !== "boolean")) bad("记录");
   const F = g.final;
-  if (!obj(F) || !int(F.day, 0, 1e6) || !int(F.on, 0, 1e6) || !int(F.tries, 0, 1e5) || !int(F.lost, 0, 1e5) || !Number.isFinite(F.keep) || F.keep < 0 || F.keep > 1 || !int(F.won, 0, 1e6) || Object.keys(F).length > 8) bad("最后一夜");
+  if (!obj(F) || !int(F.day, 0, 1e6) || !int(F.on, 0, 1e6) || !int(F.tries, 0, 1e5) || !int(F.lost, 0, 1e5) || !Number.isFinite(F.keep) || F.keep < 0 || F.keep > 1 || !int(F.won, 0, 1e6) || (F.end != null && !int(F.end, 0, 2e9)) || Object.keys(F).length > 8) bad("最后一夜");
 }
