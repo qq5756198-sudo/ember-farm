@@ -400,8 +400,8 @@ export class Engine extends NfEngine {
     e.fightT = 0;
     e.state = "chase";
     e.mode = e.mode === "lair" ? "up" : e.mode;
-    // 有几只的：一只醒了，别的一起醒
-    for (const z of this.titansHere(e.titan)) if (z !== e && !z.awake) Object.assign(z, { awake: true, homing: false, fightT: 0, state: "chase", mode: z.mode === "lair" ? "up" : z.mode });
+    // 有几只的（后五凶）：一只醒了，别的一起醒（〇号分成的两半照旧各醒各的）
+    if (TITANS[e.titan]?.parts) for (const z of this.titansHere(e.titan)) if (z !== e && !z.awake) Object.assign(z, { awake: true, homing: false, fightT: 0, state: "chase", mode: z.mode === "lair" ? "up" : z.mode });
     g.tries[e.titan] = (g.tries[e.titan] || 0) + 1;
     this.tStat("fights");
     if (first) {

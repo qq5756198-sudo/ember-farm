@@ -566,6 +566,8 @@ test("during the final night: the guards man the towers, the clock runs at half 
   const { e, toasts } = farmGame({ minute: 21 * 60 + 59 });
   e.tg.final.day = e.s.day;
   e.s.minute = FINAL.hour;
+  // 这一项量的是钟、守卫、天亮，不是挨打：人不会倒下（扑火的巨手、扔过来的感染者打不着）
+  e.invulnerable = 1e9;
   run(e, 0.2);
   assert.ok(e.finalLive());
   // 这一夜只有它：夜行者不来摸农场
