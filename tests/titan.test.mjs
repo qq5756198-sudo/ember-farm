@@ -127,6 +127,52 @@ test("sounds, captions and rumour cards are all there", () => {
   }
 });
 
+// ================= 窝 =================
+test("each lair has blood, claw marks and a red warning sign on open ground outside its wake circle; work points, exits and the fishing spot stay out of the circle", async () => {
+  const { lairSpot } = await import("../dist/titan-renderer.js");
+  const WORK = ["districtPoint", "beyondPoint", "districtExit", "beyondExit", "districtStore", "beyondStore", "beyondGate", "kinWater"];
+  for (const id of TITAN_IDS) {
+    const { e, T } = arena(id);
+    const S = lairSpot(e, id);
+    assert.ok(S.sign, id + " has a sign");
+    const d = Math.hypot(S.sign.x - T.lair.x, S.sign.y - T.lair.y);
+    assert.ok(d > T.wake + 40, id + " sign at " + Math.round(d));
+    assert.ok(!e.blocked(S.sign.x, S.sign.y, true, 12), id + " sign on open ground");
+    assert.ok(S.marks.length >= 3, id + " marks");
+    // 站在工作点上干活、在河边钓鱼不会把它吵醒（收破烂的是瞎的，醒只看声音，这里按它醒的那一圈算）
+    for (const o of e.objects.filter((x) => WORK.includes(x.type))) {
+      const dd = Math.hypot(o.x - T.lair.x, o.y - T.lair.y);
+      assert.ok(dd >= T.wake + (o.type === "kinWater" ? 60 : 35), id + ": " + (o.name || o.type) + " at " + Math.round(dd) + " inside the wake circle " + T.wake);
+    }
+  }
+});
+
+test("the campfire: someone has heard of a titan and tells its weakness, one a night, only for ones you have heard of and not beaten", () => {
+  const { e, toasts } = arena("scrap", { force: false });
+  e.sc.camp = { x: 560, y: 735 };
+  e.talkReason = () => "";
+  e.talkPeople = () => [
+    { id: "medic", name: "许医生" },
+    { id: "farmer", name: "阿禾" },
+  ];
+  e.s.region = "farm";
+  e.assignRegion();
+  Object.assign(e.s.player, e.fireSpot());
+  e.tg.rumor = { scrap: e.s.day - 1 };
+  e.tg.intel = {};
+  assert.ok(e.talk("future"));
+  assert.equal(e.tg.intel.scrap, e.s.day);
+  const line = toasts.find((t) => t.text.includes("说起收破烂的"));
+  assert.ok(line, "a line about the rag-and-bone man");
+  assert.match(line.text, /^营火边，(许医生|阿禾)说起收破烂的：/);
+  assert.doesNotMatch(line.text, FORBIDDEN);
+  // 都记下了、没听说过的不说
+  const n = toasts.length;
+  assert.ok(e.talk("future"));
+  assert.ok(!toasts.slice(n).some((t) => t.text.includes("说起")), "nothing more to tell");
+  assert.equal(e.tg.intel.hebo, undefined);
+});
+
 // ================= 什么时候有它 =================
 test("each titan shows up only once its map is open and its day has come; the river one only after dark; none on a long night", () => {
   const { e } = arena("hebo", { force: false, day: 10, minute: 21 * 60 });

@@ -205,3 +205,26 @@
 .boss-bar .t-bar .boss-note {
   margin-top: 2px;
 }
+/* 横着拿手机（场景只有两百来高）：血条再矮一截，名字和“晃”挤在一起 */
+@media (max-height: 460px) {
+  .boss-bar:has(.t-bar) {
+    padding: 2px 8px 3px;
+  }
+  .boss-bar .t-bar .boss-name {
+    font-size: 12px;
+    line-height: 14px;
+  }
+  .boss-bar .t-bar .t-title {
+    display: none;
+  }
+  .boss-bar .t-hp {
+    height: 8px;
+  }
+  .boss-bar .t-armor {
+    height: 5px;
+    margin-top: 2px;
+  }
+  .boss-bar .t-poise {
+    margin-top: 2px;
+  }
+}

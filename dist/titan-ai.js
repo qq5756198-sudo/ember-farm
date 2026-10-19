@@ -845,7 +845,7 @@ PHASE_HOOK.bear = (E, e, tp) => {
   e.mode = "fade";
   e.fadeT = 1.5;
 };
-// 皮糙肉厚：撞晕、吓得缩成一团、被夹住、站起来露出肚子的时候挨打多三成；别的时候只打得进一半
+// 皮糙肉厚：撞晕、吓得缩成一团、被夹住、站起来露出肚子、打晃的时候挨打多五成；别的时候只打得进三成五
 HURT_HOOK.bear = (E, e, n, h) => (["stun", "panic", "trapped"].includes(e.act?.k) || e.stand > 0 || e.stag > 0 ? B.bare : B.hide);
 
 // ================= 第五凶：白毛风 =================

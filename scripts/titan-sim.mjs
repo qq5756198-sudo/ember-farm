@@ -8,7 +8,7 @@
 // 两种都一样会看预兆（看到要 0.12–0.5 秒，SKILL 的机会看到，默认 0.85）、血少了缠绷带、没绷带又血少就跑（算逃回）。
 // 用法：node scripts/titan-sim.mjs 次数 凶[,凶] 打法[,打法] 装备[,装备]
 //   凶：hebo scrap zero bear frost；打法：right naive；装备：mid（这凶开出来时手上有的）late（后期）
-// 环境变量：SKILL=0.85 看到预兆的机会；LIMIT=600 一场最长几秒；TRACE=1 打出每一场
+// 环境变量：SKILL=0.85 看到预兆的机会；LIMIT=600 一场最长几秒；TRACE=1 打出每一场；TPATCH 换掉某一凶的数（见下）
 const D = new URL("../dist/", import.meta.url).href;
 const { Engine, freshState } = await import(D + "campaign.js");
 const { RULES } = await import(D + "gear-data.js");
@@ -20,6 +20,16 @@ const KITS = (process.argv[5] || "mid").split(",");
 const SKILL = Number(process.env.SKILL || 0.85);
 const LIMIT = Number(process.env.LIMIT || 600);
 const TRACE = !!process.env.TRACE;
+// 调数用：TPATCH='{"bear":{"wake":200,"swipe":{"dmg":20}}}' 换掉某一凶的数（嵌套的只换写到的那几个）
+if (process.env.TPATCH) {
+  const merge = (o, p) => {
+    for (const [k, v] of Object.entries(p)) {
+      if (v && typeof v === "object" && !Array.isArray(v) && o[k] && typeof o[k] === "object" && !Array.isArray(o[k])) merge(o[k], v);
+      else o[k] = v;
+    }
+  };
+  for (const [id, p] of Object.entries(JSON.parse(process.env.TPATCH))) merge(TITANS[id], p);
+}
 const DT = 0.05;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -110,8 +120,9 @@ function trial(id, style, kitId, seed) {
     g = e.gr,
     p = s.player;
   e._tForce = id;
-  if (e.d?.unlocked) e.d.unlocked[T.region] = true;
-  if (e.b?.unlocked) e.b.unlocked[T.region] = true;
+  // 城区的图记在 districts 里，城外的（松林、冻土）记在 beyond 里
+  if (["pinewood", "frost"].includes(T.region)) e.b.unlocked[T.region] = true;
+  else e.d.unlocked[T.region] = true;
   for (const k of ["head", "body", "hands", "legs", "feet", "melee", "ranged", "throw", "trap"]) if (k in g.slots) g.slots[k] = null;
   delete s.inventory.club;
   delete s.inventory.ragGloves;

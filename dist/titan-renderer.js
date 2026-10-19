@@ -4,7 +4,7 @@
 // 敲锅荡开的声波、扔过来的木头、吼一声震开的一圈、被抓住时那只手。夜里也看得清，雾里也看得清。
 // 只是画出来，挨不挨、挡不挡路都在引擎里算。
 import { Renderer as NfRenderer } from "./nightfall-renderer.js";
-import { TITANS, POD_TYPE } from "./titan-data.js";
+import { TITANS, TITAN_IDS, POD_TYPE } from "./titan-data.js";
 import { makeCanvas } from "./pixel-kit.js";
 import { WORLD } from "./data.js";
 import { heboSprite, scrapSprite, cartSprite, zeroSprite, podSprite, bearSprite, frostSprite, barrelSprite, giftSprite } from "./titan-sprites.js";
@@ -23,6 +23,43 @@ const TONE = {
 };
 const ZONE = { mud: [86, 58, 36], water: [52, 104, 112], ice: [196, 226, 240], gas: [150, 196, 84] };
 const GLOW = { hebo: [150, 200, 170], scrap: [230, 200, 150], zero: [180, 230, 140], bear: [170, 170, 150], frost: [190, 220, 245] };
+
+// 窝边上的血印、爪痕和一块红漆警示牌：在空地上找地方（河伯的不落在河里），每一凶算一次
+const lairSpots = new Map();
+export function lairSpot(e, id) {
+  if (lairSpots.has(id)) return lairSpots.get(id);
+  const T = TITANS[id],
+    L = T.lair,
+    W = WORLD.w || 1536,
+    H = WORLD.h || 1024;
+  const wet = (x) => !!T.river && x >= T.river.x - 24 && x <= T.river.x + T.river.w + 24;
+  const free = (x, y, pad) => x > 70 && y > 90 && x < W - 70 && y < H - 60 && !wet(x) && !e.blocked?.(x, y, true, pad);
+  const marks = [];
+  for (let i = 0; i < 18 && marks.length < 6; i++) {
+    const a = i * 2.39996 + id.length,
+      r = 50 + ((i * 53) % 90),
+      x = L.x + Math.cos(a) * r,
+      y = L.y + Math.sin(a) * r * 0.8;
+    if (free(x, y, 6)) marks.push({ x, y, k: i % 3, a: a * 0.7 });
+  }
+  // 警示牌：离窝两百八左右（比它醒的那一圈远），朝地图中间那一边
+  let sign = null;
+  const toward = Math.atan2(H / 2 - L.y, W / 2 - L.x);
+  for (let i = 0; i < 26 && !sign; i++) {
+    const a = toward + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.25;
+    for (const r of [280, 255, 310]) {
+      const x = L.x + Math.cos(a) * r,
+        y = L.y + Math.sin(a) * r;
+      if (free(x, y, 18) && free(x, y - 30, 12)) {
+        sign = { x: snap(x), y: snap(y) };
+        break;
+      }
+    }
+  }
+  const out = { marks, sign };
+  lairSpots.set(id, out);
+  return out;
+}
 
 // 被打中那一下的白影（每张图做一次）
 const whites = new WeakMap();
@@ -354,11 +391,59 @@ export class Renderer extends NfRenderer {
     if (e?.tg && e.tx) this.tGround(e);
     return out;
   }
+  // 窝边上的血印、爪痕、红漆警示牌（这一凶在这张图上开了才有；打赢以后淡一半）
+  tLairMarks(e) {
+    const c = this.ctx;
+    for (const id of TITAN_IDS) {
+      const T = TITANS[id];
+      if (T.region !== e.s.region || !e.titanOpen?.(id)) continue;
+      const S = lairSpot(e, id),
+        fade = e.titanGone?.(id) ? 0.45 : 1;
+      for (const m of S.marks) {
+        if (m.k === 0) {
+          // 一摊干了的血
+          c.fillStyle = rgba([92, 26, 22], 0.55 * fade);
+          c.fillRect(snap(m.x - 8), snap(m.y - 2), 16, 6);
+          c.fillRect(snap(m.x - 4), snap(m.y - 6), 10, 12);
+          c.fillStyle = rgba([120, 34, 28], 0.5 * fade);
+          c.fillRect(snap(m.x + 10), snap(m.y + 2), 4, 4);
+          c.fillRect(snap(m.x - 14), snap(m.y - 6), 2, 2);
+        } else {
+          // 三道爪痕
+          c.fillStyle = rgba(m.k === 1 ? [40, 28, 22] : [88, 30, 24], 0.5 * fade);
+          const dx = Math.cos(m.a),
+            dy = Math.sin(m.a);
+          for (let j = -1; j <= 1; j++) for (let s = 0; s < 11; s++) c.fillRect(snap(m.x + dx * s * 2 - dy * j * 6), snap(m.y + dy * s * 2 + dx * j * 6), 2, 2);
+        }
+      }
+      const g = S.sign;
+      if (!g) continue;
+      c.globalAlpha = fade;
+      c.fillStyle = "rgba(20,14,10,0.35)";
+      c.fillRect(g.x - 10, g.y - 2, 20, 4);
+      c.fillStyle = "#3b2a1c";
+      c.fillRect(g.x - 2, g.y - 26, 4, 26);
+      c.fillStyle = "#2d1e14";
+      c.fillRect(g.x - 16, g.y - 40, 32, 20);
+      c.fillStyle = "#6b4a2e";
+      c.fillRect(g.x - 14, g.y - 38, 28, 16);
+      // 红漆打个叉，往下淌
+      c.fillStyle = "#b8322a";
+      for (let s = 0; s < 6; s++) {
+        c.fillRect(g.x - 12 + s * 4, g.y - 36 + s * 2, 4, 2);
+        c.fillRect(g.x + 8 - s * 4, g.y - 36 + s * 2, 4, 2);
+      }
+      c.fillRect(g.x - 8, g.y - 22, 2, 4);
+      c.fillRect(g.x + 6, g.y - 22, 2, 6);
+      c.globalAlpha = 1;
+    }
+  }
   tGround(e) {
     const c = this.ctx,
       t = this.calm ? 0 : this.time,
       tx = e.tx;
     c.save();
+    this.tLairMarks(e);
     for (const Z of tx.zones) {
       const fade = Z.t === Infinity ? 1 : clamp(Z.t / 0.8, 0, 1) * clamp((Z.max - Z.t) / 0.4, 0, 1);
       if (Z.kind === "water" && Z.w != null) {

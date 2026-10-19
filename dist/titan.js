@@ -33,7 +33,7 @@ const itemsText = (b) =>
     .filter(([, n]) => n > 0)
     .map(([id, n]) => (ITEMS[id]?.name || id) + " ×" + n)
     .join("、");
-const STAT_KEYS = ["fights", "wins", "falls", "staggers", "phases", "strikes", "hits", "gifts", "donated"];
+const STAT_KEYS = ["fights", "wins", "falls", "staggers", "phases", "strikes", "hits", "gifts", "donated", "told"];
 const tDefaults = () => ({
   schema: TITAN_SCHEMA,
   // 第一次撞见、第一次听说（传闻）、学到打法的那天
@@ -69,8 +69,8 @@ const isTitanThing = (z) => !!z && (z.titan || z.type === POD_TYPE || Object.has
 function stripTitans(s) {
   for (const [id, list] of Object.entries(s.enemies || {})) if (Array.isArray(list) && list.some(isTitanThing)) s.enemies[id] = list.filter((z) => !isTitanThing(z));
 }
-export function migrateState(s) {
-  nfMigrate(s);
+// 只补十凶这一块：下面几层由它们自己的构造、读档迁移（多迁一遍会多抽一次随机数，各台的同一个种子就对不上上一版了）
+function tMigrate(s) {
   if (!s.titan) {
     s.titan = tDefaults();
     // 旧档：第一帧一张“巨影”卡片（新开的档在下面删掉）
@@ -83,9 +83,13 @@ export function migrateState(s) {
   stripTitans(s);
   return s;
 }
+export function migrateState(s) {
+  nfMigrate(s);
+  return tMigrate(s);
+}
 const fresh = (s) => {
   delete s.titan;
-  migrateState(s);
+  tMigrate(s);
   delete s.titan.intro;
   return s;
 };
@@ -104,7 +108,7 @@ const transient = () => ({ strikes: [], shots: [], zones: [], fx: [], rings: [],
 
 export class Engine extends NfEngine {
   constructor(s = freshState(), notify = () => {}) {
-    super(migrateState(s), notify);
+    super(tMigrate(s), notify);
     this.tx = transient();
     this._tRegion = this.s.region;
     // 凶台用：强行打开某一凶（不看日子、不看时辰）
@@ -1294,6 +1298,23 @@ export class Engine extends NfEngine {
     return out;
   }
 
+  // ================= 营火夜谈：营地里有人知道它的弱点 =================
+  // 听说过、还没记下打法、还没打赢的那几凶，营火边聊一回说一凶（和传闻卡上打听到的一样：大招的预兆长一点，血条下面写着怎么打）
+  talk(topic) {
+    const people = this.tg ? this.talkPeople?.() || [] : [];
+    const ok = super.talk(topic);
+    if (!ok || !this.tg) return ok;
+    const id = TITAN_IDS.find((k) => this.titanKnown(k) && !this.tg.intel[k] && !this.tg.first[k]);
+    if (!id) return ok;
+    const who = people.length ? people[this.s.day % people.length] : null;
+    this.tg.intel[id] = this.s.day;
+    this.tStat("told");
+    const text = "营火边，" + (who?.name || "有人") + "说起" + TITANS[id].name + "：" + TITANS[id].intel + "。记下了打法。";
+    this.toast(text, "gold");
+    if (this.o) this.olog?.(text, "gold");
+    return ok;
+  }
+
   // ================= 每日抉择：传闻卡 =================
   applyOp(op, ctx, tier, roll = 0.5) {
     const [kind, a] = op;
@@ -1420,7 +1441,7 @@ export class Engine extends NfEngine {
   }
   static parse(text) {
     const s = NfEngine.parse(text);
-    migrateState(s);
+    tMigrate(s);
     validateTitan(s);
     return s;
   }
