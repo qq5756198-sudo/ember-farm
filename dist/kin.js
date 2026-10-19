@@ -1121,15 +1121,16 @@ export class Engine extends AlmanacEngine {
     k.morning = { ...(k.morning.day === day ? k.morning : { day, notes: [], dog: "" }), day, breakfast: name + line + help };
     this.kinLog(name + line + "（热早饭放仓库了）" + help + "。");
   }
-  // 长夜里守在你身边的那个人
+  // 长夜里守在你身边的那个人（v0.37：最后一夜也来）
   allyUpdate(dt) {
     const p = this.partnerHome(),
-      on = !!p && !!this.ln?.night && this.s.region === "farm" && !this.partnerHurt();
+      fin = !this.ln?.night && !!this.finalLive?.(),
+      on = !!p && (!!this.ln?.night || fin) && this.s.region === "farm" && !this.partnerHurt();
     if (!on) {
       if (this._kinAlly) {
         const a = this._kinAlly;
         this._kinAlly = null;
-        if (p && !a.down && !a.back && a.kills) this.kinLog(this.kinName(p.id) + "陪你守完了长夜（打倒 " + a.kills + " 只）。", "gold");
+        if (p && !a.down && !a.back && a.kills) this.kinLog(this.kinName(p.id) + "陪你守完了" + (a.final ? "最后一夜" : "长夜") + "（打倒 " + a.kills + " 只）。", "gold");
       }
       return;
     }
@@ -1137,7 +1138,7 @@ export class Engine extends AlmanacEngine {
       me = this.s.player;
     if (!this._kinAlly) {
       const q = this.freePoint?.(me.x - 40, me.y + 20) || { x: me.x - 40, y: me.y + 20 };
-      this._kinAlly = { id: p.id, x: q.x, y: q.y, hp: A.hp, cd: 0, down: false, kills: 0, facing: 0 };
+      this._kinAlly = { id: p.id, x: q.x, y: q.y, hp: A.hp, cd: 0, down: false, kills: 0, facing: 0, final: fin };
       this.toast(this.kinName(p.id) + "拿着家伙站到了你身边。", "gold");
     }
     const a = this._kinAlly;

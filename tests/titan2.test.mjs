@@ -623,6 +623,17 @@ test("during the final night: the guards man the towers, the clock runs at half 
   assert.ok(Math.abs(hp / max - 0.8) < 0.02, "starts weaker: " + (hp / max).toFixed(3));
 });
 
+test("the one you live with stands by you on the final night too, as on a long night", () => {
+  const { e, toasts } = farmGame({ minute: FINAL.hour });
+  e.kin.partner = { id: "medic", stage: "home", day: 1, hurt: 0 };
+  e.tg.final.day = e.s.day;
+  run(e, 0.3);
+  assert.ok(e.finalLive());
+  assert.ok(e._kinAlly && e._kinAlly.id === "medic" && e._kinAlly.final, "at your side");
+  assert.ok(toasts.some((t) => t.text.includes("站到了你身边")));
+  assert.equal(e.residentActive(e.c.residents.find((r) => r.id === "medic")), false, "not at the post while beside you");
+});
+
 test("falling on the final night or missing it: falling sends it back (and counts), missing it does not count", () => {
   const { e, toasts } = farmGame({ minute: FINAL.hour });
   e.tg.final.day = e.s.day;
