@@ -562,6 +562,42 @@ test("the final night by the clock: told three days ahead, a busy day pushes it 
   assert.ok(e.titansHere("moth").length, "it came");
 });
 
+test("the final night keeps the night to itself: a 灰隼团 sneak-in that night pushes it on a day; ripe fields call no field raid on its day, and neither noise nor ripe fields bring one while it is on", () => {
+  const { e, toasts } = farmGame();
+  const d = e.s.day;
+  e.s.minute = 7 * 60 + 1;
+  run(e, 0.2);
+  assert.equal(e.tg.final.day, d + FINAL.notice);
+  // 灰隼团反扑的第二步定在那天 23:00（有人摸进农场埋东西）：往后挪一天
+  const step0 = e.ct.step;
+  Object.assign(e.ct, { step: 2, day: d + 3, sabOn: false });
+  assert.equal(e.finalPick(d + 3), d + 4, "the day is picked past the sneak-in");
+  e.s.day = d + 3;
+  e.s.minute = 7 * 60;
+  run(e, 0.2);
+  assert.equal(e.tg.final.day, d + 4, "pushed by the sneak-in");
+  assert.ok(toasts.some((t) => t.text.includes("往后挪一天")));
+  e.ct.step = step0;
+  // 熟菜招来的菜地夜袭：别的日子 20:00 照说“今晚 01:00 来踩田”
+  e.raidTempt = () => true;
+  e.s.minute = 20 * 60;
+  e.raidWarn();
+  assert.equal(e.bt.raid.state, "warned", "an ordinary evening still warns");
+  Object.assign(e.bt.raid, { day: 0, n: 0, state: "" });
+  // 最后一夜那天不说
+  e.s.day = d + 4;
+  e.s.minute = 20 * 60;
+  e.raidWarn();
+  assert.notEqual(e.bt.raid.state, "warned", "no field raid on the final night's day");
+  // 打起来以后：动静、熟菜都不另招一拨
+  e.s.minute = FINAL.hour;
+  e.invulnerable = 1e9;
+  run(e, 0.2);
+  assert.ok(e.finalLive());
+  assert.ok(e.raidBlocked(), "no field raid while it is on");
+  assert.ok(e.noiseBlocked(), "no noise attack while it is on");
+});
+
 test("during the final night: the guards man the towers, the clock runs at half speed, you cannot leave or sleep; dawn sends it back keeping half the damage, and the next try starts that much weaker", () => {
   const { e, toasts } = farmGame({ minute: 21 * 60 + 59 });
   e.tg.final.day = e.s.day;

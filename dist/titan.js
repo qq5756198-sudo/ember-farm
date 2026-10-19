@@ -1604,9 +1604,14 @@ export class Engine extends NfEngine {
   }
   // 这一天（d）另有一场仗：长夜、灰隼团
   finalClash(d) {
-    if (this.isLongNight?.(d)) return true;
+    if (this.isLongNight?.(d) || this.finalSneakNight(d)) return true;
     const r = this.raidState?.();
     return !!r && r.phase === "scheduled" && r.day === d;
+  }
+  // 灰隼团反扑的第二步：那天 23:00 有人摸进农场埋东西（也算那天另有一场仗）
+  finalSneakNight(d) {
+    const c = this.ct;
+    return !!(c && c.step === 2 && !c.sabOn && c.day === d);
   }
   finalPick(d) {
     for (let i = 0; i < 14 && this.finalClash(d); i++) d++;
@@ -1642,7 +1647,7 @@ export class Engine extends NfEngine {
     if (now >= end) return this.finalEnd("away");
     if (day !== F.day && now < start) return;
     // 那天另有一场仗（尸潮、灰隼团、长夜）：往后挪一天
-    if (now < start && this.titanBusyDay()) {
+    if (now < start && (this.titanBusyDay() || this.finalSneakNight(F.day))) {
       F.day = this.finalPick(F.day + 1);
       this.finalSay(FINAL_TEXT.busy.replace("{d}", F.day));
       return;
@@ -1808,6 +1813,12 @@ export class Engine extends NfEngine {
     const F = this.tg?.final;
     if (F && !F.won && (F.on || (F.day === this.s.day && this.s.minute >= FINAL.warn && this.titanOpen("moth")))) return;
     return super.tickProwl();
+  }
+  // 熟菜招来的菜地夜袭：最后一夜那天 20:00 不说“今晚 01:00 来踩田”，打起来以后也不来
+  raidBlocked() {
+    if (super.raidBlocked()) return true;
+    const F = this.tg?.final;
+    return !!(F && !F.won && (F.on || (F.day === this.s.day && this.s.minute >= 7 * 60 && this.titanOpen("moth"))));
   }
   // 风口：避难城的居住舱多两张床
   residentsCapacity() {
