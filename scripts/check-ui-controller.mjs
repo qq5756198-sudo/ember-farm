@@ -2116,8 +2116,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(card().hidden, false, 'the 手感 card is up');
   assert.match(card().innerHTML, /手感/);
   run(80);
-  // v0.33 起旧档还会接着一张“盼头”的卡片，v0.34 起再接一张“成长”，v0.35 起再接一张“长夜”
-  for (let i = 0; i < 4 && !card().hidden; i++) { assert.match(card().innerHTML, /盼头|成长|长夜/); run(80); }
+  // v0.33 起旧档还会接着一张“盼头”的卡片，v0.34 起再接一张“成长”，v0.35 起再接一张“长夜”，v0.36 起再接一张“巨影”
+  for (let i = 0; i < 5 && !card().hidden; i++) { assert.match(card().innerHTML, /盼头|成长|长夜|巨影/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   // ---------- 按住 E 沿着一排熟了的萝卜走 ----------
   e.s.region = 'farm'; e.assignRegion(); e.s.minute = 600; e.s.debris = [];
@@ -2213,7 +2213,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(card().hidden, false, 'the 盼头 card is up'); assert.match(card().innerHTML, /盼头/);
   run(80);
   // v0.34 起接着一张“成长”，v0.35 起再接一张“长夜”
-  for (let i = 0; i < 2 && !card().hidden; i++) { assert.match(card().innerHTML, /成长|长夜/); run(80); }
+  for (let i = 0; i < 3 && !card().hidden; i++) { assert.match(card().innerHTML, /成长|长夜|巨影/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   // ---------- 过路人：营门口按 E，他的那一页，给他东西 ----------
   let d = 57; while (HD.weekKind(d) !== 'traveler') d += 7;
@@ -2336,7 +2336,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(card().hidden, false, 'the 成长 card is up'); assert.match(card().innerHTML, /成长/); assert.match(card().innerHTML, /直接到了 Lv\.8/);
   run(80);
   // v0.35 起接着一张“长夜”
-  if (!card().hidden) { assert.match(card().innerHTML, /长夜/); run(80); }
+  for (let i = 0; i < 2 && !card().hidden; i++) { assert.match(card().innerHTML, /长夜|巨影/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   assert.match(document.querySelector('#skill-summary')?.textContent || '', /Lv\.7.*Lv\.9/);
   // ---------- 技能页：按 K ----------
@@ -2426,6 +2426,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   run(3);
   assert.equal(card().hidden, false, 'the 长夜 card is up'); assert.match(card().innerHTML, /长夜/); assert.match(card().innerHTML, /雾夜/); assert.match(card().innerHTML, /春雷夜/); assert.match(card().innerHTML, /雪夜/);
   run(80);
+  // v0.36 起再接一张“巨影”
+  if (!card().hidden) { assert.match(card().innerHTML, /巨影/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   const ph = e.nfPhase(38), P = ND.PHASES[ph];
   assert.ok(P, 'tomorrow night has a phase');
@@ -2482,4 +2484,127 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
   assert.equal(back.nightfall.intro.told, true); assert.equal(back.nightfall.lost[ph], 1); assert.equal(back.nightfall.notes.length, 1); assert.equal(back.nightfall.falls[0].region, 'residential');
   console.log('Nightfall controller passed: a v0.34 save restored from a file (the 长夜 card on the first frame, phases only from the next long night on), the alert bar and the journal telling tomorrow\'s phase, the journal\'s 夜相 row opening the report page with the eight phases, the 08:00 phase card, the banner and the alert bar naming the phase at 22:00, the farm drawn under all eight looks at two sizes, a lost night with next morning\'s card, the keepsake and the night notes, a fall in a ruin leaving a flag and one reminder, and save/parse.');
+}
+
+// v0.36.0「巨影」: a v0.35 save restored from a file (the 巨影 card on the first frame, one rumour a day in the toasts),
+// the journal's today line opening the collection with the 十凶录 (unknown ones a black shape), 标出它的窝 opening the map
+// with the lair pin and setting the gold marker, the rag-and-bone man asleep at his lair and woken (the first-meeting card,
+// the titan boss bar inside the scene with its two phase marks and poise, no popup), all five drawn awake with their
+// telegraphs at four sizes by day and by night with colour-safe hues, a win (one 倒下了 card and no second 打赢了 card,
+// the trophy and the gear, the bar gone), the trophy given to the 十凶柜 at the archive, the book after the win, and save/parse.
+{
+  let clock = 36000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const card = () => document.querySelector('#zest-moment');
+  const closeCards = () => { const m = context.inspect().moments; m.queue.length = 0; m.close(); };
+  const sizes = (list = [[1366, 600], [1920, 900], [390, 480], [844, 240]]) => { for (const [w, hh] of list) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); } context.inspect().renderer.resize(1366, 600, 1); };
+  dailyOn = false;
+  const TD = await import('../dist/titan-data.js');
+  const NF = await import('../dist/nightfall.js');
+  // ---------- 一份 v0.35 的旧档：主线打完，第 41 天上午；城区三张图、松林、冻土都开了 ----------
+  const old = new NF.Engine(NF.newGameState(), () => {});
+  const sc = old.sc;
+  sc.act = 9; sc.claimed = ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8']; sc.choice = 'ration';
+  sc.letters = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8', 'act9']; sc.flags.well = sc.flags.camp = sc.flags.farmerFed = true; sc.camp = { x: 560, y: 735 };
+  old.r.claimed = RebuildData.TASKS.slice(0, RebuildData.TASKS.findIndex((x) => x.id === 'broadcast') + 1).map((x) => x.id); old.r.radio = true;
+  old.o.hospital = 'water'; old.o.youke = true; old.o.lathe = { mode: 'parts', day: 0 }; old.o.toll = 'refuse'; old.o.raid.phase = 'won';
+  old.assignRegion();
+  old.ln.storyDay = 30; Object.assign(old.ct, { step: 4, done: true, region: 'residential', day: 35 });
+  old.s.day = 41; old.s.minute = 600; old.s.weather = '晴朗'; old.s.stats.hordes = 6; old.c.nextHordeDay = 90;
+  old.s.horde = { phase: 'won', timer: 0, remaining: 0, spawnTimer: 0, direction: 0 };
+  if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();
+  if (old.nf?.intro) old.nf.intro.told = true;
+  old.s.visited = { ...(old.s.visited || {}), residential: true };
+  Object.assign(old.d.unlocked, { valley: true, courtyard: true, quarantine: true });
+  Object.assign(old.b.unlocked, { pinewood: true, frost: true });
+  context.open('restoreArchive', { files: { old: old.serialize() } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  let e = context.inspect().engine;
+  assert.equal(context.inspect().menu, null);
+  assert.ok(e.tg && e.tg.intro && !e.tg.intro.told, 'the titan record was added to the old save');
+  e.paused = false; if (e.dy) e.dy.pending = null;
+  closeCards();
+  run(3);
+  assert.equal(card().hidden, false, 'the 巨影 card is up'); assert.match(card().innerHTML, /巨影/); assert.match(card().innerHTML, /十凶/);
+  assert.doesNotMatch(card().innerHTML, /按末日故事|undefined|NaN/);
+  // 一天只说一凶（今天是河伯），说在提示栏里
+  assert.equal(e.tg.rumor.hebo, 41); assert.equal(e.tg.rumor.scrap, undefined, 'one rumour a day');
+  assert.match(document.querySelector('#toasts').innerHTML, /河伯/);
+  run(80);
+  assert.equal(card().hidden, true, 'and gone after its time');
+  // ---------- 手记“今天”：点开是成就册里的十凶录；标出它的窝：世界地图上的牌子、金色路标 ----------
+  context.open('journey'); clean();
+  assert.ok(html().includes('河伯 · 溪谷试验田（天黑以后）'), 'the journal names the titan heard of today');
+  click('wView', 'collection'); assert.equal(context.inspect().menu, 'outpost'); clean();
+  assert.match(html(), /<h3>十凶录<\/h3>/); assert.match(html(), /一团黑影/); assert.match(html(), /听说过，还没碰上。/);
+  assert.match(html(), /data-action="tMark" data-id="hebo"/); assert.doesNotMatch(html(), /data-action="tMark" data-id="scrap"/, 'only the ones heard of');
+  assert.match(html(), /<b>十凶<\/b>/); assert.match(html(), /<b>十凶柜<\/b>/);
+  click('tMark', 'hebo');
+  assert.equal(context.inspect().menu, 'map', 'away from the river it opens the map'); clean();
+  assert.match(html(), /far-pin u-pin night[^>]*>河伯的窝</);
+  assert.equal(e.guidance.target.label, '河伯的窝', 'the gold marker points at the lair');
+  click('close');
+  // ---------- 雨巷：收破烂的在窝里睡着；醒了停一张卡片，血条在场景里，不弹窗 ----------
+  e.travel('courtyard'); e.paused = false; run(2);
+  const z = e.titansHere('scrap')[0];
+  assert.ok(z && !z.awake, 'the rag-and-bone man sleeps at his lair');
+  for (const q of e.enemies) if (!q.titan) q.dead = true;
+  Object.assign(e.s.player, e.freePoint(z.x - 160, z.y + 40), { hp: 100 }); e.invulnerable = 999;
+  e.titanWake(z); run(3);
+  assert.equal(card().hidden, false, 'the first-meeting card'); assert.match(card().innerHTML, /收破烂的/);
+  closeCards();
+  const bar = document.querySelector('#boss-bar');
+  assert.equal(bar.hidden, false, 'the boss bar shows'); assert.match(bar.innerHTML, /class="t-bar/); assert.match(bar.innerHTML, /<b>收破烂的<span class="t-title">/); assert.match(bar.innerHTML, /aria-label="收破烂的血"/);
+  assert.equal((bar.innerHTML.match(/<em style="left:/g) || []).length, 2, 'two phase marks'); assert.match(bar.innerHTML, /class="t-poise/);
+  assert.doesNotMatch(bar.innerHTML, /undefined|NaN/);
+  assert.equal(context.inspect().menu, null, 'no popup for a titan');
+  run(40); sizes();
+  // ---------- 五凶醒着出招：四个大小，白天、夜里（色弱配色） ----------
+  for (const id of TD.TITAN_IDS) {
+    const T = TD.TITANS[id];
+    e._tForce = id; e.s.minute = id === 'hebo' ? 21 * 60 : 600;
+    e.travel(T.region); e.paused = false; run(1); closeCards();
+    for (const q of e.enemies) if (!q.titan) q.dead = true;
+    const t = e.titansHere(id)[0]; assert.ok(t, id + ' is at its lair');
+    Object.assign(e.s.player, e.freePoint(T.lair.x - 150, T.lair.y + 60), { hp: 100 }); e.invulnerable = 999;
+    if (!t.awake) e.titanWake(t);
+    run(30); closeCards();
+    for (const [night, color] of [[false, false], [true, true]]) {
+      e.s.minute = night ? 1380 : (id === 'hebo' ? 21 * 60 : 600); e.s.settings.access = { ...(e.s.settings.access || {}), color };
+      run(6); sizes();
+    }
+    e.s.settings.access.color = false;
+    assert.ok(e.tx.strikes.length + e.tx.zones.length + e.tx.rings.length > 0 || e.tg.tries[id] >= 1, id + ' fought');
+    e._tForce = null;
+  }
+  // ---------- 打赢收破烂的：一张“倒下了”，不再多一张“打赢了”；战利品、凶器；血条收起 ----------
+  e._tForce = 'scrap'; e.s.minute = 600; e.travel('courtyard'); e.paused = false; run(1); closeCards();
+  const s2 = e.titansHere('scrap')[0]; for (const q of e.enemies) if (!q.titan) q.dead = true;
+  Object.assign(e.s.player, e.freePoint(s2.x - 160, s2.y + 40), { hp: 100 }); e.invulnerable = 999;
+  if (!s2.awake) e.titanWake(s2); run(2); closeCards();
+  s2.inv = 0; s2.hp = 1; e.hurtEnemy(s2, 999, 0); run(3);
+  assert.equal(e.tg.wins.scrap, 1, 'won');
+  assert.equal(card().hidden, false); assert.match(card().innerHTML, /收破烂的 倒下了/);
+  assert.ok(!context.inspect().moments.queue.some((m) => /^打赢了/.test(m.title || '')), 'no second card for the same win');
+  assert.ok(e.qty('tTrophyScrap', true) >= 1 && e.qty('scrapShoes', true) >= 1, 'the trophy and the gear');
+  closeCards(); run(2);
+  assert.equal(bar.hidden, true, 'the bar goes away after the win');
+  e._tForce = null;
+  // ---------- 档案馆：十凶柜 ----------
+  e.travel('farm'); e.paused = false; run(1); closeCards();
+  e.w.museum.built = true; Object.assign(e.s.player, { x: WinterData.WSPOTS.museum.x, y: WinterData.WSPOTS.museum.y + 40 });
+  context.open('outpost', { view: 'museum' }); clean();
+  assert.match(html(), /十凶柜/); assert.match(html(), /data-action="tDonate" data-id="tTrophyScrap"/);
+  click('tDonate', 'tTrophyScrap'); assert.deepEqual(e.tg.donated, ['tTrophyScrap']); clean();
+  click('close');
+  // ---------- 成就册：打赢以后的那一格 ----------
+  context.open('outpost', { view: 'collection' }); clean();
+  assert.match(html(), /打赢 1 回/); assert.match(html(), /第 \d+ 天回来（更难打）/); assert.match(html(), /地方变了：/);
+  click('close');
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.titan.intro.told, true); assert.equal(back.titan.wins.scrap, 1); assert.deepEqual(back.titan.donated, ['tTrophyScrap']); assert.equal(back.titan.rumor.hebo, 41);
+  assert.ok(!Object.values(back.enemies || {}).some((list) => Array.isArray(list) && list.some((q) => q.titan)), 'no titan saved among the infected');
+  console.log('Titan controller passed: a v0.35 save restored from a file (the 巨影 card on the first frame, one rumour a day in the toasts), the journal\'s today line opening the 十凶录 (unknown ones a black shape), 标出它的窝 opening the map with the lair pin and the gold marker, the rag-and-bone man woken at his lair (the first-meeting card, the titan bar inside the scene with two phase marks and poise, no popup), all five drawn awake with their telegraphs at four sizes by day and by night with colour-safe hues, a win with one 倒下了 card and no second 打赢了 card (trophy, gear, bar gone), the trophy given to the 十凶柜, the book after the win, and save/parse.');
 }

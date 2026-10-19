@@ -150,6 +150,8 @@ export function cueText(ev, e) {
     return CUES.alarm;
   }
   if (["horde", "raid", "raiderShot"].includes(ev.type)) return "";
+  // v0.36 十凶：预兆和吼声说一句（哪一声写在事件上）
+  if (ev.type === "tSfx") return ev.voice || ev.duck ? CUES[ev.sfx] || "" : "";
   return CUES[ev.type] || "";
 }
 export class CueQueue {

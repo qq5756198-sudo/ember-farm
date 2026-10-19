@@ -521,6 +521,9 @@ export function soundFor(ev) {
       return { sfx: "ladder" };
     case "moment":
       return MOMENT_SOUND[ev.kind] || null;
+    // ---------- v0.36「巨影」：十凶的声音在事件上写明是哪一声、算不算预兆、多远听得见 ----------
+    case "tSfx":
+      return ev.sfx || ev.stinger ? { sfx: ev.sfx || null, voice: !!ev.voice, duck: !!ev.duck, range: ev.range || null, stinger: ev.stinger || null, ui: !!ev.ui } : null;
     default:
       return null;
   }

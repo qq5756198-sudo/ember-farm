@@ -1,5 +1,5 @@
 // 当前主线的界面入口。game.js 只从这里取前哨相关的界面；每一轮新加的层在这里串起来。
-// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29) → kin (v0.30) → relight (v0.31) → zest (v0.32) → hope (v0.33) → grow (v0.34) → nightfall (v0.35)
+// 链：outpost (v0.14) → winter (v0.15) → seasons (v0.16) → farlands (v0.17) → daily (v0.18) → thief (v0.19) → garden (v0.20) → gear (v0.22) → feel (v0.23) → undertow (v0.24) → longnight (v0.25) → tidy (v0.26) → bounty (v0.27) → bustle (v0.28) → almanac (v0.29) → kin (v0.30) → relight (v0.31) → zest (v0.32) → hope (v0.33) → grow (v0.34) → nightfall (v0.35) → titan (v0.36)
 // v0.25：其余物品的小图重画（接在装备小图后面）；各层的物品都登记好以后再挂一次
 import { assignItemIcons } from "./item-sprites.js";
 import { outpostHud, hungerDeathNote } from "./outpost-ui.js";
@@ -13,7 +13,7 @@ import { gearTitle, renderGearView, handleGearAction, gearStationExtras, gearSta
 import { paintDoll, paintGearIcon } from "./gear-sprites.js";
 import { slotOf } from "./gear-data.js";
 import { soundRows, helpHtml, patchPadHelp, radialItems, radialHtml, radialPick, coachHtml, CueQueue, patchDailyCard, patchJournal, patchCollection, patchPhone, careerHtml, todayHtml, handleFeelAction } from "./feel-ui.js";
-import { bossBarHtml, patchUnderMap, patchUnderJournal, patchMuseum, patchUnderCollection, handleUnderAction } from "./undertow-ui.js";
+import { patchUnderMap, patchUnderJournal, patchMuseum, patchUnderCollection, handleUnderAction } from "./undertow-ui.js";
 import { patchAlerts, patchLnJournal, longNightTitle, renderLongNightView, patchLnMuseum, patchLnCollection, patchLnCalendar, handleLongNightAction, originLine, patchLegacyBook, patchSummaryExport } from "./longnight-ui.js";
 // v0.26：设施卡、心情三档、挂牌、机床加急、警钟、整顿清单、队员卡带徒
 import { tidyLnHud, patchTidyView, handleTidyAction } from "./tidy-ui.js";
@@ -37,6 +37,8 @@ import { renderGrowSkillPage, patchGrowStation, patchGrowCollection, patchGrowBe
 const renderSkillPage = (e) => renderGrowSkillPage(e, thiefSkillPage);
 // v0.35：顶栏和提醒带上夜相、手记长夜那几行、长夜战报里的夜相和守夜笔记、日历、成就册的夜相
 import { nfHud, patchNfAlerts, patchNfJournal, patchNfReport, patchNfCalendar, patchNfCollection } from "./nightfall-ui.js";
+// v0.36：屏幕上方的十凶血条（换段刻度、冰甲、两半、打晃）、成就册里的十凶录、档案馆的十凶柜、传闻卡的说明
+import { titanBossBar, patchTitanCollection, patchTitanMuseum, handleTitanAction } from "./titan-ui.js";
 // 设施卡下面：腌缸、果树、摆件、鸡舍（v0.29）；仓库箱、鸡舍的扩建（v0.33）
 export const buildingExtras = (e, b) => almanacBuildingExtras(e, b) + hopeBuildingExtras(e, b);
 // v0.25：开始新游戏选出身、二周目、设置里的“带着记忆重新开始”
@@ -58,8 +60,8 @@ import {
 export { dailyLocked, renderSkillPage, menuKey, thiefFrame, placeTitle };
 // v0.23：设置里的四个音量、按键说明、轮盘、开局提示条、声音提示、生涯记录
 export { soundRows, helpHtml, patchPadHelp, radialItems, radialHtml, radialPick, coachHtml, CueQueue, careerHtml, todayHtml };
-// v0.24：屏幕上方的头目血条
-export { bossBarHtml };
+// v0.24：屏幕上方的头目血条（v0.36：十凶醒着时换成十凶的）
+export const bossBarHtml = titanBossBar;
 // 放着的每日抉择卡从手记里打开时可以关上
 export function menuLock(e, ui) {
   if (ui?.view === "daily" && e.dailyDeferred?.()) return "";
@@ -93,7 +95,8 @@ const renderViewBase = (e, ui) => {
 const renderCampaignView0 = (e, ui) => renderHopeView(e, ui, (eH, uH) => renderRelightView(eH, uH, (eR, uR) => patchTidyView(eR, uR, renderKinView(eR, uR, (eK, uK) => renderAlmanacView(eK, uK, (e0, u0) => renderBustleView(e0, u0, (e1, u1) => renderBountyView(e1, u1, renderViewBase)))))));
 export const renderCampaignView = (e, ui) => {
   const html = renderCampaignView0(e, ui);
-  if (ui?.view === "collection") return patchNfCollection(e, patchGrowCollection(e, patchZestCollection(e, html)));
+  if (ui?.view === "collection") return patchTitanCollection(e, patchNfCollection(e, patchGrowCollection(e, patchZestCollection(e, html))));
+  if (ui?.view === "museum") return patchTitanMuseum(e, html);
   if (ui?.view === "rlStation") return patchGrowStation(e, html);
   if (ui?.view === "lnight") return patchNfReport(e, html);
   if (ui?.view === "calendar") return patchNfCalendar(e, html);
@@ -122,9 +125,9 @@ export function campaignHud(e) {
   const ln = tidyLnHud(e);
   return nfHud(e, { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchNfAlerts(e, patchAlerts(e, alertBar(e))), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e), date: almanacDate(e) });
 }
-// 动作：成长 → 盼头 → 重光 → 人情 → 四时 → 热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
+// 动作：巨影 → 成长 → 盼头 → 重光 → 人情 → 四时 → 热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
-  return handleGrowAction(action, el, ctx) || handleHopeAction(action, el, ctx) || handleRelightAction(action, el, ctx) || handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
+  return handleTitanAction(action, el, ctx) || handleGrowAction(action, el, ctx) || handleHopeAction(action, el, ctx) || handleRelightAction(action, el, ctx) || handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
 }
 
 // v0.25：到这里所有层的物品都登记过了，把还没挂上的新小图挂上
