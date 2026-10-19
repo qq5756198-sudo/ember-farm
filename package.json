@@ -8,6 +8,6 @@
     "sim:gear": "node scripts/gear-sim.mjs 40 1 residential,hospital none,club,right",
     "sim:loot": "node scripts/loot-sim.mjs 1000",
     "sim:boss": "node scripts/boss-sim.mjs 30 brute,nurse,guard mid",
-    "sim:titan": "node scripts/titan-sim.mjs 30 hebo,scrap,zero,bear,frost right,naive mid"
+    "sim:titan": "node scripts/titan-sim.mjs 30 hebo,scrap,zero,bear,frost,diao,tide,vent,train,moth right,naive mid"
   }
 }

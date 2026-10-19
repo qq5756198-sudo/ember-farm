@@ -1,5 +1,6 @@
 // v0.36.0「巨影」：十凶共用的规矩（窝、预兆、打晃、换段、回窝回血、第二天回满、卷土重来）和前五凶
 // （河伯、收破烂的、〇号、黑瞎子、白毛风）各自的那一招、战利品和凶器、十凶柜、存档和页面。
+// v0.37.0「扑火」：十凶都在了，共用的那几条（窝、个头、预兆、伤害上限）十凶一起查；后五凶各自的打法在 titan2.test.mjs。
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Engine, freshState, needsStoryMigration } from "../dist/campaign.js";
@@ -11,7 +12,7 @@ import { CUES } from "../dist/feel-data.js";
 import { FALL_HINTS } from "../dist/nightfall-data.js";
 import { EVENTS } from "../dist/daily-data.js";
 import { PERSON_H } from "../dist/pixel-sprites.js";
-import { TRULES, TITANS, TITAN_IDS, TITAN_ORDER, TITAN_SLOTS, POD_TYPE, TITAN_TROPHY_IDS, TITAN_CASE, TITAN_ARMOR, TITAN_MELEE, T_CARD_IDS, PERK_DROPS, SCRAP_GIFT, TITAN_INTRO } from "../dist/titan-data.js";
+import { TRULES, TITANS, TITAN_IDS, TITAN_ORDER, TITAN_SLOTS, POD_TYPE, TITAN_TROPHY_IDS, TITAN_CASE, TITAN_ARMOR, TITAN_MELEE, T_CARD_IDS, PERK_DROPS, SCRAP_GIFT, TITAN_INTRO, mainPart } from "../dist/titan-data.js";
 
 const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
 const DT = 0.05;
@@ -32,9 +33,11 @@ function arena(id, { day = 40, minute = null, far = 420, force = true, seed = 36
   const { e, toasts } = make(st, seed);
   const T = TITANS[id];
   if (force) e._tForce = id;
-  // 城区的图记在 districts 里，城外的（松林、冻土）记在 beyond 里；记错地方存档会读不回来
-  if (["pinewood", "frost"].includes(T.region)) e.b.unlocked[T.region] = true;
-  else e.d.unlocked[T.region] = true;
+  // 城区的图记在 districts 里，城外的（松林、冻土、船坞、避难城）记在 beyond 里；记错地方存档会读不回来
+  // 隧道按层：拿着第 25 层的钥匙下去；农场不用开
+  if (["pinewood", "frost", "shipyard", "shelter"].includes(T.region)) e.b.unlocked[T.region] = true;
+  else if (T.region === "tunnel") Object.assign(e.rl.tunnel, { key: { floor: T.floor, day: st.day, luck: false }, floor: T.floor, deepest: T.floor });
+  else if (T.region !== "farm") e.d.unlocked[T.region] = true;
   e.s.region = T.region;
   e.s.enemies[T.region] = null;
   e.assignRegion();
@@ -53,9 +56,9 @@ const awake = (e, z) => {
 };
 
 // ================= 数据 =================
-test("ten slots, five titans here: each has a lair on open ground in its own map, is far bigger than an infected and speaks plainly", () => {
+test("ten titans: each has a lair on open ground in its own map, is far bigger than an infected and speaks plainly", () => {
   assert.equal(TITAN_ORDER.length, 10);
-  assert.deepEqual(TITAN_IDS, ["hebo", "scrap", "zero", "bear", "frost"]);
+  assert.deepEqual(TITAN_IDS, ["hebo", "scrap", "zero", "bear", "frost", "diao", "tide", "vent", "train", "moth"]);
   for (const id of TITAN_ORDER) assert.ok(TITAN_SLOTS[id].name && TITAN_SLOTS[id].where, id);
   const regions = new Set();
   for (const id of TITAN_IDS) {
@@ -66,7 +69,8 @@ test("ten slots, five titans here: each has a lair on open ground in its own map
     regions.add(T.region);
     // 个头：至少是普通感染者的 2.3 倍
     assert.ok(Math.max(T.w, T.h) >= PERSON_H * 2.3, id + " is big");
-    assert.equal(ZOMBIES[T.type].name, T.name);
+    // 有几只的那几凶：感染者表里记的是这一凶的名字，或者本体那一只的名字（雕爷和看门的记“看门的”）
+    assert.ok([T.name, T.parts?.[mainPart(id)]?.name].includes(ZOMBIES[T.type].name), id + " " + ZOMBIES[T.type].name);
     assert.ok(T.phases.length === 2 && T.phases[0] > T.phases[1], id);
     for (const k of ["name", "title", "openText", "perk", "rumor", "tip", "intel"]) assert.doesNotMatch(String(T[k]), FORBIDDEN, id + "." + k);
     for (const line of [...T.lore, ...T.down]) assert.doesNotMatch(line, FORBIDDEN);
@@ -101,7 +105,9 @@ test("trophies, unique gear and the case: every item has a name, a picture and a
   assert.ok(ITEMS.heboFork.desc.includes("走得慢一半"));
   for (const id of TITAN_IDS) {
     assert.ok(ITEMS[TITANS[id].trophy], id);
-    assert.ok(ITEMS[TITANS[id].gear], id);
+    // 最后一凶只掉最后一盏灯（没有凶器）
+    if (TITANS[id].final) assert.equal(TITANS[id].gear, null);
+    else assert.ok(ITEMS[TITANS[id].gear], id);
   }
   assert.deepEqual(
     TITAN_CASE.steps.map((s) => s.n),
@@ -118,9 +124,12 @@ test("sounds, captions and rumour cards are all there", () => {
   assert.equal(soundFor({ type: "tSfx", stinger: "titanDown", ui: true }).stinger, "titanDown");
   assert.ok(STINGERS.titan && STINGERS.titanDown);
   for (const k of ["tBubble", "tGong", "tCharge", "tIcicle", "tBreath", "tSweep"]) assert.ok(CUES[k], k);
-  assert.equal(T_CARD_IDS.length, 5);
+  // 一凶一张传闻卡；名字不跟别的卡撞（v0.36 的 T01–T05 跟扒手卡重名，一直没进卡池）
+  assert.equal(T_CARD_IDS.length, 10);
   for (const id of T_CARD_IDS) {
     const ev = EVENTS[id];
+    assert.equal(ev.pack, "titan", id + " is the titan card");
+    assert.ok(ev.opts.some((o) => (o.fx || []).some((op) => op[0] === "tIntel")), id);
     assert.equal(ev.opts.length, 3);
     assert.ok(ev.opts.some((o) => !o.cost));
     assert.doesNotMatch(ev.name + ev.text, FORBIDDEN);
@@ -132,15 +141,20 @@ test("each lair has blood, claw marks and a red warning sign on open ground outs
   const { lairSpot } = await import("../dist/titan-renderer.js");
   const WORK = ["districtPoint", "beyondPoint", "districtExit", "beyondExit", "districtStore", "beyondStore", "beyondGate", "kinWater"];
   for (const id of TITAN_IDS) {
+    // 最后一凶没有窝：它自己找上门来
+    if (TITANS[id].final) continue;
     const { e, T } = arena(id);
     const S = lairSpot(e, id);
     assert.ok(S.sign, id + " has a sign");
     const d = Math.hypot(S.sign.x - T.lair.x, S.sign.y - T.lair.y);
-    assert.ok(d > T.wake + 40, id + " sign at " + Math.round(d));
+    // 末班车整层都听得见（醒的那一圈比这一层还大）：牌子只是说这一层有它
+    if (T.wake < 600) assert.ok(d > T.wake + 40, id + " sign at " + Math.round(d));
     assert.ok(!e.blocked(S.sign.x, S.sign.y, true, 12), id + " sign on open ground");
     assert.ok(S.marks.length >= 3, id + " marks");
     // 站在工作点上干活、在河边钓鱼不会把它吵醒（收破烂的是瞎的，醒只看声音，这里按它醒的那一圈算）
     for (const o of e.objects.filter((x) => WORK.includes(x.type))) {
+      // 风口就长在主风道上：主风道修好（它开出来的前提）以后那个工作点没有别的事可做
+      if (id === "vent" && o.pointId === "shelter_air") continue;
       const dd = Math.hypot(o.x - T.lair.x, o.y - T.lair.y);
       assert.ok(dd >= T.wake + (o.type === "kinWater" ? 60 : 35), id + ": " + (o.name || o.type) + " at " + Math.round(dd) + " inside the wake circle " + T.wake);
     }
@@ -252,8 +266,10 @@ test("every blow is painted on the ground first, at least 0.6 s ahead, and hurts
       const before = p.hp;
       e.update(DT, { x: 0, y: 0 });
       maxHit = Math.max(maxHit, before - p.hp);
-      // 一直站在它身边（收破烂的是瞎的：每秒弄出点响动）
-      if (dist(p, z) > 200 && !z.hidden) place(e, z.x - 120, z.y + 30);
+      // 一直站在它身边（收破烂的是瞎的：每秒弄出点响动）；扑火太大，站在它身前三百上下
+      const near = T.final ? 300 : 120,
+        dz = dist(p, z);
+      if ((dz > near + 80 || (T.final && dz < near - 80)) && !z.hidden) place(e, z.x - near, z.y + 30);
       if (id === "scrap" && Math.round(t * 20) % 20 === 0) e.noise.push({ x: p.x, y: p.y, r: 120, t: 1 });
       if (e.s.region !== T.region) break;
     }
@@ -628,8 +644,8 @@ test("the titan case at the archive: one of each trophy, three, six and ten brin
   assert.equal(e.titanCase().can.length, TITAN_TROPHY_IDS.length);
   for (const id of TITAN_TROPHY_IDS) assert.ok(e.donateTitanTrophy(id));
   assert.ok(!e.donateTitanTrophy(TITAN_TROPHY_IDS[0]), "only once");
-  assert.deepEqual(e.tg.caseDone, [3]);
-  assert.equal(e.tg.donated.length, 5);
+  assert.deepEqual(e.tg.caseDone, [3, 6, 10]);
+  assert.equal(e.tg.donated.length, 10);
 });
 
 // ================= 存档 =================

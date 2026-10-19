@@ -228,3 +228,39 @@
     margin-top: 2px;
   }
 }
+
+/* ---------- v0.37.0「扑火」：有几只的那几凶，每一只一小条（同名的排在一起，打没了的是空的） ---------- */
+.boss-bar .t-parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 4px;
+}
+.boss-bar .t-pgroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.boss-bar .t-pgroup b {
+  margin-right: 2px;
+  font-size: 11px;
+  font-weight: normal;
+  line-height: 12px;
+  color: #ddc98c;
+}
+.boss-bar .t-pbar {
+  display: inline-block;
+  width: 26px;
+  height: 6px;
+  background: #251d17;
+  border: 2px solid #140f0b;
+}
+.boss-bar .t-pbar i {
+  display: block;
+  height: 100%;
+  background: #d2654c;
+  transition: width 0.15s steps(4);
+}
+.boss-bar .t-pbar.gone {
+  opacity: 0.35;
+}

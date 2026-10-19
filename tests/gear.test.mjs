@@ -94,10 +94,11 @@ const oldSave = (day = 1) => {
 
 // ================= 数据 =================
 // v0.36「巨影」：十凶的凶器多三件护具（千层底、隔离服、熊皮袄）、两件近战（分水叉、冰镐）
-test("data: 22 armour pieces in five slots, 22 weapons, three phases, unique icons and blueprints", () => {
-  assert.equal(Object.keys(ARMOR).length, 22);
+// v0.37「扑火」：再多三件护具（雕爷的大氅、潜水头盔、防毒面具）、一件近战（道钉锤）
+test("data: 25 armour pieces in five slots, 23 weapons, three phases, unique icons and blueprints", () => {
+  assert.equal(Object.keys(ARMOR).length, 25);
   for (const slot of ["head", "body", "hands", "legs", "feet"]) assert.ok(Object.values(ARMOR).some((a) => a.slot === slot), slot);
-  assert.equal(Object.keys(MELEE).length + Object.keys(RANGED).length + Object.keys(THROWN).length + Object.keys(TRAPS).length, 22);
+  assert.equal(Object.keys(MELEE).length + Object.keys(RANGED).length + Object.keys(THROWN).length + Object.keys(TRAPS).length, 23);
   assert.deepEqual([phaseOf(1), phaseOf(3), phaseOf(4), phaseOf(7), phaseOf(8), phaseOf(40)], [0, 0, 1, 1, 2, 2]);
   assert.equal(ZSTATS.length, 3);
   for (const ph of ZSTATS) assert.ok(ph.slow.hp < ph.armor.hp && ph.runner.speed > ph.slow.speed);

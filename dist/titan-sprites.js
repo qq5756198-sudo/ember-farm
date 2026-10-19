@@ -580,3 +580,5 @@ export function giftSprite(kind = "hebo") {
   });
 }
 export { mix };
+// v0.37：后五凶的样子（titan-sprites2.js）用同一套画法
+export { blob, limb, spots, eye };

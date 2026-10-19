@@ -22,7 +22,7 @@ const TONE = {
   yellow: { fill: [222, 190, 70], core: [255, 226, 120], line: "#fff0b0" },
 };
 const ZONE = { mud: [86, 58, 36], water: [52, 104, 112], ice: [196, 226, 240], gas: [150, 196, 84] };
-const GLOW = { hebo: [150, 200, 170], scrap: [230, 200, 150], zero: [180, 230, 140], bear: [170, 170, 150], frost: [190, 220, 245] };
+const GLOW = { hebo: [150, 200, 170], scrap: [230, 200, 150], zero: [180, 230, 140], bear: [170, 170, 150], frost: [190, 220, 245], tide: [246, 176, 90] };
 
 // 窝边上的血印、爪痕和一块红漆警示牌：在空地上找地方（河伯的不落在河里），每一凶算一次
 const lairSpots = new Map();
@@ -380,7 +380,8 @@ export class Renderer extends NfRenderer {
     for (const b of e?.tx?.barrels || []) if (b.lit) L.push({ x: b.x, y: b.y - 24, r: 170, color: [255, 166, 86], power: 0.95 });
     if (night > 0.2)
       for (const z of e?.enemies || []) {
-        if (!z.titan || z.dead || z.hidden || !z.awake) continue;
+        // 有几只的那几凶（titan-renderer2.js）自己打光
+        if (!z.titan || z.dead || z.hidden || !z.awake || TITANS[z.titan]?.parts) continue;
         L.push({ x: z.x, y: z.y - 80, r: 170, color: GLOW[z.titan] || [200, 190, 170], power: 0.42 });
       }
     return L;
@@ -396,7 +397,8 @@ export class Renderer extends NfRenderer {
     const c = this.ctx;
     for (const id of TITAN_IDS) {
       const T = TITANS[id];
-      if (T.region !== e.s.region || !e.titanOpen?.(id)) continue;
+      // 最后一凶没有窝（它从林子里找上门来）
+      if (T.region !== e.s.region || T.final || !e.titanOpen?.(id)) continue;
       const S = lairSpot(e, id),
         fade = e.titanGone?.(id) ? 0.45 : 1;
       for (const m of S.marks) {
@@ -658,7 +660,8 @@ export class Renderer extends NfRenderer {
         c.setLineDash([6, 6]);
         continue;
       }
-      if (Z.data?.river) continue;
+      // 油、火、烟、通电的铁轨另外画（titan-renderer2.js）
+      if (Z.data?.river || !["mud", "ice", "water"].includes(Z.kind)) continue;
       c.strokeStyle = Z.kind === "mud" ? rgba([196, 150, 100], 0.55 * fade) : Z.kind === "ice" ? rgba([230, 244, 255], 0.65 * fade) : rgba([150, 210, 220], 0.5 * fade);
       c.beginPath();
       if (Z.w != null) c.rect(Z.x, Z.y, Z.w, Z.h);

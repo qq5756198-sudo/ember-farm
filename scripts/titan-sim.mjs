@@ -1,4 +1,9 @@
 // v0.36.0「巨影」凶台：用正式代码（不改规则，只给按键）打十凶，看第一次打能不能赢、要多久、挨的最重一下多重。
+// v0.37.0「扑火」：加上后五凶（雕爷和看门的、黑潮、风口、末班车、扑火）。有几只的那几凶照样按只打；
+//   right：雕爷——弩从链子够不着的地方、绕到侧面先打雕爷，手下近了先收拾；黑潮——它擦焊枪就走出油，第二段等它站进油里扔燃烧瓶；
+//          风口——弩在远处先打破四个肺，吸的时候往外跑，风刃转起来跟着绕；末班车——车来就钻过道，停下来打最后一节，通电离开铁轨；
+//          扑火——步枪打四盏光，浪来站进口子，心往篝火爬时摆夹子、推开；农场里有两座塔、三个守卫。
+//   naive：一把长矛打离得最近的那一只，地上亮了就躲。
 // 两种打法：
 //   right  知道打法的人：每一凶用它的那一招（河伯：站干地、等它冒出来滚开、搁浅时上去打；
 //          收破烂的：蹲着走、往墙边扔石头让它撞墙、晕了上去打、背后下手、锅响时蹲着不动；
@@ -7,12 +12,13 @@
 //   naive  不知道打法的人：地上亮了就躲、够得着就打，一把长矛打到底
 // 两种都一样会看预兆（看到要 0.12–0.5 秒，SKILL 的机会看到，默认 0.85）、血少了缠绷带、没绷带又血少就跑（算逃回）。
 // 用法：node scripts/titan-sim.mjs 次数 凶[,凶] 打法[,打法] 装备[,装备]
-//   凶：hebo scrap zero bear frost；打法：right naive；装备：mid（这凶开出来时手上有的）late（后期）
+//   凶：hebo scrap zero bear frost diao tide vent train moth；打法：right naive；装备：mid（这凶开出来时手上有的）late（后期）
 // 环境变量：SKILL=0.85 看到预兆的机会；LIMIT=600 一场最长几秒；TRACE=1 打出每一场；TPATCH 换掉某一凶的数（见下）
 const D = new URL("../dist/", import.meta.url).href;
 const { Engine, freshState } = await import(D + "campaign.js");
 const { RULES } = await import(D + "gear-data.js");
 const { TITANS, TRULES, POD_TYPE } = await import(D + "titan-data.js");
+const { BUILDINGS } = await import(D + "data.js");
 const N = Number(process.argv[2] || 20);
 const WHO = (process.argv[3] || "hebo,scrap,zero,bear,frost").split(",");
 const STYLES = (process.argv[4] || "right,naive").split(",");
@@ -31,6 +37,7 @@ if (process.env.TPATCH) {
   for (const [id, p] of Object.entries(JSON.parse(process.env.TPATCH))) merge(TITANS[id], p);
 }
 const DT = 0.05;
+const WORLD_W = 1536;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const angDiff = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
@@ -39,14 +46,21 @@ const SETS = {
   late: { head: "riotHelmet", body: "riotSuit", hands: "steelBracers", legs: "motoGreaves", feet: "workBoots" },
 };
 // 每一凶开出来的日子；right 带的东西
-const DAY = { hebo: 14, scrap: 17, zero: 20, bear: 22, frost: 34 };
+const DAY = { hebo: 14, scrap: 17, zero: 20, bear: 22, frost: 34, diao: 48, tide: 30, vent: 40, train: 44, moth: 70 };
 const PACK = {
   hebo: { melee: ["ironspear"] },
   scrap: { melee: ["ironspear"], stone: 12 },
   zero: { melee: ["ironspear", "bat", "machete"], molotov: 2 },
   bear: { melee: ["ironspear"], molotov: 3, bearTrap: 1 },
   frost: { melee: { mid: ["bat"], late: ["sledge"] }, molotov: 3, wood: 4 },
+  diao: { melee: ["ironspear", "machete"], ranged: "crossbow", bolt: 40, molotov: 2 },
+  tide: { melee: { mid: ["ironspear", "machete"], late: ["ironspear", "sledge"] }, molotov: 6 },
+  vent: { melee: { mid: ["ironspear", "machete"], late: ["sledge", "ironspear"] }, ranged: "crossbow", bolt: 60 },
+  train: { melee: { mid: ["ironspear", "machete"], late: ["ironspear", "sledge"] }, ranged: "crossbow", bolt: 30 },
+  moth: { melee: { mid: ["ironspear", "machete"], late: ["ironspear", "sledge"] }, ranged: "rifle", ammo: 160, bearTrap: 2 },
 };
+// 后五凶的 naive 也带一把远程（不带打法），只是不知道该打哪一只、站哪儿
+const NAIVE_PACK = { moth: { melee: ["ironspear"], ranged: "rifle", ammo: 90 } };
 function seeded(seed) {
   let s = seed % 2147483647 || 1;
   return () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
@@ -82,6 +96,15 @@ function exitOf(sh, p, pad = 16) {
       const side = n >= 0 ? 1 : -1;
       return { a: sh.a + side * (Math.PI / 2), d: sh.w / 2 + pad - Math.abs(n) + 6 };
     }
+    case "ring": {
+      // 一圈（扑火的心跳）：往里进到内圈里，或者往外出到外圈外
+      const d = Math.hypot(p.x - sh.x, p.y - sh.y);
+      if (d < sh.r0 - pad || d > sh.r1 + pad) return null;
+      const a = Math.atan2(p.y - sh.y, p.x - sh.x),
+        outD = sh.r1 + pad - d + 6,
+        inD = d - (sh.r0 - pad) + 6;
+      return outD < inD ? { a, d: outD } : { a: a + Math.PI, d: inD };
+    }
     case "rect": {
       if (p.x < sh.x - pad || p.x > sh.x + sh.w + pad || p.y < sh.y - pad || p.y > sh.y + sh.h + pad) return null;
       const opts = [
@@ -102,12 +125,12 @@ function trial(id, style, kitId, seed) {
   const R = seeded(seed * 104729 + 7);
   const T = TITANS[id],
     right = style === "right",
-    pack = right ? PACK[id] : { melee: ["ironspear"] },
+    pack = right ? PACK[id] : NAIVE_PACK[id] || { melee: ["ironspear"] },
     meleeList = Array.isArray(pack.melee) ? pack.melee : pack.melee[kitId] || pack.melee.mid;
   const st = freshState();
   st.undertow.seed = 1000 + seed;
   st.day = DAY[id];
-  st.minute = id === "hebo" ? 21 * 60 : 600;
+  st.minute = id === "hebo" ? 21 * 60 : id === "moth" ? 22 * 60 : 600;
   st.weather = "晴朗";
   const e = new Engine(st, () => {});
   let died = false;
@@ -120,9 +143,27 @@ function trial(id, style, kitId, seed) {
     g = e.gr,
     p = s.player;
   e._tForce = id;
-  // 城区的图记在 districts 里，城外的（松林、冻土）记在 beyond 里
-  if (["pinewood", "frost"].includes(T.region)) e.b.unlocked[T.region] = true;
-  else e.d.unlocked[T.region] = true;
+  // 城区的图记在 districts 里，城外的（松林、冻土、船坞、避难城）记在 beyond 里；隧道第 25 层、农场另说
+  if (["pinewood", "frost", "shipyard", "shelter"].includes(T.region)) e.b.unlocked[T.region] = true;
+  else if (T.region === "tunnel") {
+    Object.assign(e.rl.tunnel, { key: { floor: T.floor, day: st.day, luck: false }, floor: T.floor, deepest: T.floor });
+  } else if (T.region !== "farm") e.d.unlocked[T.region] = true;
+  // 最后一夜：营火、两座塔、三个守卫（摆在东边）、仓库里的弹药
+  if (id === "moth") {
+    s.storyCampaign.camp = e.campSite();
+    for (const rid of ["farmer", "medic", "mechanic"]) e.recruit(rid);
+    e.residentsCapacity = () => 5;
+    for (const r of e.c.residents) {
+      r.fed = true;
+      r.priorities.guard = 1;
+    }
+    const fire = e.fireSpot();
+    for (const [dx, dy] of [[300, -150], [300, 110]]) s.buildings.push({ id: "sim-tower-" + dx + dy, type: "tower", x: fire.x + dx, y: fire.y + dy, rotation: 0, hp: BUILDINGS.tower.hp });
+    s.storage.ammo = 80;
+    e.navRevision = (e.navRevision || 0) + 1;
+    // 这一夜已经打起来了（守卫上塔、钟慢一半、天快亮它就退）
+    Object.assign(e.tg.final, { day: st.day, on: st.day });
+  }
   for (const k of ["head", "body", "hands", "legs", "feet", "melee", "ranged", "throw", "trap"]) if (k in g.slots) g.slots[k] = null;
   delete s.inventory.club;
   delete s.inventory.ragGloves;
@@ -132,11 +173,19 @@ function trial(id, style, kitId, seed) {
   }
   for (const w of meleeList) s.inventory[w] = 1;
   g.slots.melee = meleeList[0];
-  s.inventory.bandage = kitId === "late" ? 5 : 4;
+  // 最后一夜在自己家门口打：备得足一点（多两卷绷带）
+  s.inventory.bandage = (kitId === "late" ? 5 : 4) + (id === "moth" && right ? 2 : 0);
   if (pack.stone) s.inventory.stone = pack.stone;
   if (pack.molotov) s.inventory.molotov = pack.molotov + (kitId === "late" ? 1 : 0);
   if (pack.bearTrap) s.inventory.bearTrap = pack.bearTrap;
   if (pack.wood) s.inventory.wood = pack.wood;
+  if (pack.ranged) {
+    s.inventory[pack.ranged] = 1;
+    g.slots.ranged = pack.ranged;
+    if (pack.bolt) s.inventory.bolt = pack.bolt;
+    if (pack.ammo) s.inventory.ammo = pack.ammo;
+    if (s.magazines && pack.ranged === "rifle") s.magazines.rifle = 5;
+  }
   g.slots.throw = pack.molotov ? "molotov" : pack.stone ? "stone" : null;
   if (pack.bearTrap) g.slots.trap = "bearTrap";
   s.slot = 3;
@@ -144,8 +193,8 @@ function trial(id, style, kitId, seed) {
   s.enemies[T.region] = null;
   e.assignRegion();
   e.paused = false;
-  // 它进图时才生出来：先走一帧
-  Object.assign(p, e.freePoint(80, 500), { hp: 100 });
+  // 它进图时才生出来：先走一帧（离窝远一点，别一进来就弄醒它）
+  Object.assign(p, T.region === "tunnel" ? { x: 150, y: 512 } : e.freePoint(80, 500), { hp: 100 });
   e.update(DT, { x: 0, y: 0 });
   // 场上只留这一凶
   const isT = (z) => z.titan === id || z.type === POD_TYPE;
@@ -161,6 +210,9 @@ function trial(id, style, kitId, seed) {
     if (!e.blocked(q.x, q.y, false, 14) && e.lineClear(lair, q) && !wet(q)) start = q;
   }
   Object.assign(p, start || e.freePoint(lair.x + 330, lair.y), { hp: 100, stamina: 100, hunger: 90 });
+  // 隧道：从检修梯下来；最后一夜：守在篝火东边
+  if (T.region === "tunnel") Object.assign(p, { x: 150, y: 512 });
+  if (id === "moth") Object.assign(p, e.freePoint(e.fireSpot().x + 240, e.fireSpot().y - 40));
   const exit = e.freePoint(p.x + (p.x - lair.x) * 1.8, p.y + (p.y - lair.y) * 1.8);
   let t = 0,
     path = [],
@@ -175,7 +227,8 @@ function trial(id, style, kitId, seed) {
     throwT = 0,
     swapT = 0,
     relightT = 0;
-  const stat = { low: 1, swings: 0, landed: 0, rolls: 0, bandages: 0, maxHit: 0, hits: 0, strikes: 0, lures: 0, crashes: 0, backstabs: 0, molotovs: 0, traps: 0, swaps: 0, relights: 0, staggers: 0, beached: 0 };
+  const flank = { dir: seed % 2 ? 1 : -1, dirT: 0 };
+  const stat = { low: 1, swings: 0, landed: 0, rolls: 0, bandages: 0, maxHit: 0, hits: 0, strikes: 0, lures: 0, crashes: 0, backstabs: 0, molotovs: 0, traps: 0, swaps: 0, relights: 0, staggers: 0, beached: 0, shots: 0 };
   const seen = new Map();
   // 同一下一起出来的（一把泥、一排冰锥）算一回看见没看见
   const volley = new Map();
@@ -238,13 +291,24 @@ function trial(id, style, kitId, seed) {
     }
     return best;
   };
-  const melee = () => e.meleeStats(g.slots.melee);
+  const melee = () => {
+    // 家伙坏了（伤害减半）：换带着的另一把
+    const c = e.cond?.(g.slots.melee);
+    if (c && c.d <= 0) {
+      const next = meleeList.find((w) => w !== g.slots.melee && (e.cond?.(w)?.d ?? 1) > 0);
+      if (next) {
+        g.slots.melee = next;
+        stat.swaps++;
+      }
+    }
+    return e.meleeStats(g.slots.melee);
+  };
   const swing = (z) => {
     // 留一口体力滚（倒地、搁浅、晕了这种好机会不算）
     const chance = z.mode === "beached" || ["stun", "panic", "trapped"].includes(z.act?.k) || z.stag > 0;
     // 知道打法的人留一口体力好跑（好机会、它刚出完招的空当不留）；不知道的人一直打（累了打得慢）
     const opening = (z.act?.k === "wait" || z.act?.k === "rest") && !e.tx.strikes.some((S) => S.src === z.id);
-    const keep = process.env.RESERVE && right && !chance && !opening && z.titan ? 12 + (melee()?.stamina || 8) : 0;
+    const keep = (process.env.RESERVE && right && !chance && !opening && z.titan) || (cur.reserve && z.titan) ? 12 + (melee()?.stamina || 8) + (cur.reserve || 0) : 0;
     if (e.cooldown > 0 || act > 0 || (p.stamina < keep && z.type !== POD_TYPE)) return false;
     s.slot = 3;
     const hp0 = z.hp;
@@ -256,6 +320,45 @@ function trial(id, style, kitId, seed) {
     }
     return ok;
   };
+  // 远程：弩、步枪（打它身上挨打的那一块）
+  const shoot = (z) => {
+    if (!g.slots.ranged || e.cooldown > 0 || e.reload || act > 0) return false;
+    s.slot = 4;
+    const ok = e.use({ x: z.x, y: z.y - (z.hy ?? 40) });
+    s.slot = 3;
+    if (ok) stat.shots++;
+    return ok;
+  };
+  // 有没有东西挡在你和它中间（墙、别的那一只）
+  const clearShot = (z, others = []) => {
+    if (!e.lineClear(p, z)) return false;
+    const tx0 = z.x,
+      ty0 = z.y - (z.hy ?? 40),
+      ox = p.x,
+      oy = p.y - 26,
+      vx = tx0 - ox,
+      vy = ty0 - oy,
+      L = vx * vx + vy * vy || 1;
+    for (const o of others) {
+      if (o === z || o.dead || o.hidden) continue;
+      const cy = o.y - (o.hy ?? 40),
+        k = clamp(((o.x - ox) * vx + (cy - oy) * vy) / L, 0, 1);
+      if (k < 0.98 && Math.hypot(ox + vx * k - o.x, oy + vy * k - cy) < (o.r || 30) * 1.05 + 4) return false;
+    }
+    return true;
+  };
+  const inZone = (q, kind) => e.tx.zones.some((Z) => Z.kind === kind && e.tZoneHas(Z, q));
+  // 隧道：轨道两边过道的口子（车来了往这儿钻）
+  let mouths = null;
+  const trackMouths = () => {
+    if (mouths) return mouths;
+    mouths = [];
+    const TY0 = TITANS.train.track.y;
+    for (let x = 96; x <= 1440; x += 16)
+      for (const y of [TY0 - 100, TY0 + 100])
+        if (!e.blocked(x, y, false, 14) && !e.blocked(x, (y + TY0) / 2, false, 14)) mouths.push({ x, y });
+    return mouths;
+  };
   const throwAt = (item, q) => {
     if (!(s.inventory[item] > 0) || e.cooldown > 0) return false;
     g.slots.throw = item;
@@ -264,7 +367,7 @@ function trial(id, style, kitId, seed) {
     s.slot = 3;
     return ok;
   };
-  const cur = { all: [], W: null, live: [] };
+  const cur = { all: [], W: null, live: [], reserve: 0 };
   function attackPlan(z, dz, rch) {
     if (z.hidden || !z.awake) {
       // 睡着：走近把它弄醒；藏起来了：原地等
@@ -455,6 +558,214 @@ function trial(id, style, kitId, seed) {
       return attackPlan(z, dz, rch);
     },
   };
+  Object.assign(RIGHT, {
+    // 雕爷和看门的：手下先收拾；雕爷在：绕着他转（离他四百三上下，看门的拴着够不着），看得见就放箭（他瞄你时大氅敞着）；
+    // 挡着就打看门的；雕爷倒了打看门的
+    diao(z, dz, rch) {
+      const boss = cur.all.find((q) => q.part === "boss"),
+        dog = cur.all.find((q) => q.part === "dog"),
+        men = e.enemies.filter((q) => q.tMan && !q.dead && dist(q, p) < 430).sort((a1, b1) => dist(a1, p) - dist(b1, p)),
+        man = men[0];
+      if (man && dist(man, p) < (cur.W?.range || 90) - 6) {
+        swing(man);
+        return { x: 0, y: 0, run: false };
+      }
+      if (man && clearShot(man, cur.all)) shoot(man);
+      if (boss) {
+        const D = TITANS.diao,
+          R0 = D.chain + 150,
+          db = dist(boss, p),
+          th = Math.atan2(p.y - boss.y, p.x - boss.x);
+        const spotAt = (sgn) => {
+          const a2 = th + sgn * 0.35;
+          return { x: boss.x + Math.cos(a2) * R0, y: boss.y + Math.sin(a2) * R0 };
+        };
+        const okSpot = (q) => q.x > 90 && q.x < 1446 && q.y > 100 && q.y < 924 && !e.blocked(q.x, q.y, false, 14);
+        flank.dirT -= DT;
+        if (flank.dirT <= 0 || !okSpot(spotAt(flank.dir))) {
+          if (!okSpot(spotAt(flank.dir)) && okSpot(spotAt(-flank.dir))) flank.dir = -flank.dir;
+          flank.dirT = 2;
+        }
+        let goal = spotAt(flank.dir);
+        if (!okSpot(goal)) goal = e.freePoint(clamp(goal.x, 100, 1436), clamp(goal.y, 110, 914));
+        if (!man || !clearShot(man, cur.all)) {
+          if (db < 445 && clearShot(boss, cur.all)) shoot(boss);
+          else if (dog && dist(dog, p) < 445 && clearShot(dog, cur.all)) shoot(dog);
+        }
+        if (dog && dist(dog, p) < 170) return step(freeDir(Math.atan2(p.y - dog.y, p.x - dog.x)), true);
+        return moveTo(goal, Math.abs(db - R0) > 120);
+      }
+      // 看门的挣断了链子：远了放箭，近了打
+      if (dz > rch + 60 && clearShot(z, cur.all)) shoot(z);
+      return attackPlan(z, dz, rch);
+    },
+    // 黑潮：擦焊枪时走出油；第二段起它站进油里、没着火就扔燃烧瓶；平时别站在油里
+    tide(z, dz, rch) {
+      if (process.env.TIDE && Math.round(t * 20) % 20 === 0) console.log("  tide", t.toFixed(1), "tp", z.tp, "hp", Math.round(z.hp), "act", z.act?.k || "-", "aflame", (z.aflame || 0).toFixed(1), "d", Math.round(dz), "oil", e.tx.zones.filter((Z) => Z.kind === "oil").map((Z) => Math.round(dist(Z, z))).join("/"), "fire", e.tx.zones.filter((Z) => Z.kind === "fire").length, "mol", s.inventory.molotov || 0, "php", Math.round(p.hp), "pOil", inZone(p, "oil"));
+      throwT -= DT;
+      // 它站进油里、或者就在一滩油边上：往那滩油扔燃烧瓶（油一着就是一大片）
+      const oilBy = z.tp === 1 && !(z.aflame > 0) ? e.tx.zones.filter((Z) => Z.kind === "oil" && dist(Z, z) < Z.r + 50 && dist(Z, p) < 300 && dist(Z, p) > Z.r + 40).sort((a1, b1) => dist(a1, z) - dist(b1, z))[0] : null;
+      if (oilBy && throwT <= 0 && (s.inventory.molotov || 0) > 0 && e.lineClear(p, oilBy)) {
+        if (throwAt("molotov", dist(oilBy, z) < oilBy.r ? z : oilBy)) {
+          stat.molotovs++;
+          throwT = 2.5;
+          return { x: 0, y: 0, run: false };
+        }
+      }
+      // 着火了：离它远一点，等火灭（它追得急）
+      if (z.aflame > 0 && z.tp === 1 && inZone(z, "fire") && dz < 200) return step(freeDir(Math.atan2(p.y - z.y, p.x - z.x)), true);
+      // 第二段：站到一滩油后面，等它走进来
+      if (z.tp === 1 && (s.inventory.molotov || 0) > 0 && !(z.aflame > 0)) {
+        const oil = e.tx.zones.filter((Z) => Z.kind === "oil" && Z.t > 4 && dist(Z, p) < 320).sort((a1, b1) => dist(a1, p) - dist(b1, p))[0];
+        if (oil && dz > 120) {
+          const a = Math.atan2(oil.y - z.y, oil.x - z.x),
+            spot = { x: oil.x + Math.cos(a) * (oil.r + 90), y: oil.y + Math.sin(a) * (oil.r + 90) };
+          if (!e.blocked(spot.x, spot.y, false, 12) && !inZone(spot, "oil") && !inZone(spot, "fire")) return dist(p, spot) > 24 ? moveTo(spot, dist(p, spot) > 120) : { x: 0, y: 0, run: false };
+        }
+      }
+      // 第三段身边烫：血少了就退开喘口气
+      if (z.tp >= 2 && dz < TITANS.tide.aura.r + 10 && p.hp < 45) return step(freeDir(Math.atan2(p.y - z.y, p.x - z.x)), false);
+      return attackPlan(z, dz, rch);
+    },
+    // 风口：肺还在就站远了放箭打肺；肺破完了贴上去打风机（风刃交给躲）
+    vent(z, dz, rch) {
+      const fan = cur.all.find((q) => q.part === "fan"),
+        lungs = cur.all.filter((q) => q.part === "lung");
+      if (!fan) return attackPlan(z, dz, rch);
+      if (lungs.length) {
+        const L = lungs.slice().sort((a1, b1) => dist(a1, p) - dist(b1, p))[0],
+          df = dist(fan, p);
+        // 站在离风机 360 上下、正对着那个肺的地方
+        const a = Math.atan2(L.y + 300 - fan.y, L.x - fan.x),
+          spot = { x: clamp(fan.x + Math.cos(a) * 360, 90, 1440), y: clamp(fan.y + Math.sin(a) * 360, 120, 920) };
+        if (dist(L, p) < 440 && clearShot(L, cur.all)) shoot(L);
+        if (dist(p, spot) > 50) return moveTo(e.blocked(spot.x, spot.y, false, 12) ? e.freePoint(spot.x, spot.y) : spot, df < 300);
+        return { x: 0, y: 0, run: false };
+      }
+      // 风刃那一段：贴到风口跟前（风刃从风口外面一圈起，贴着风口的那一小块扫不到）
+      cur.reserve = 0;
+      if (fan.tp >= 1) {
+        const inner = { x: fan.x, y: fan.y + 44 },
+          q = e.blocked(inner.x, inner.y, false, 12) ? e.freePoint(inner.x, inner.y) : inner,
+          tpi = Math.min(fan.tp, 2);
+        if (dist(p, q) > 18) {
+          const V = TITANS.vent.blades,
+            ph = Math.atan2(p.y - fan.y, p.x - fan.x),
+            d0 = dist(fan, p),
+            w = V.speed[tpi] * e.tRage(fan).speed;
+          // 等风刃刚扫过去再进（在它后面跟着走进去）；它在吸就别进
+          let ok = true;
+          for (let i = 0; i < V.n[tpi]; i++) {
+            const a = (fan.bladeA || 0) + (i * Math.PI * 2) / V.n[tpi],
+              gap = (((ph - a) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+            if (Math.sin(a) > -0.2 && gap / w < 1.6 && d0 > V.r0 - 10) ok = false;
+          }
+          if (ok || d0 < V.r0) return moveTo(q, d0 < 260);
+          return { x: 0, y: 0, run: false };
+        }
+        swing(fan);
+        return { x: 0, y: 0, run: false };
+      }
+      // 风刃快扫到身上：逆着它转的方向滚过去（滚的那一下不挨打）
+      if (fan.tp >= 1) {
+        const V = TITANS.vent.blades,
+          n = V.n[Math.min(fan.tp, V.n.length - 1)],
+          w = V.speed[Math.min(fan.tp, V.speed.length - 1)] * e.tRage(fan).speed,
+          d0 = dist(fan, p),
+          ph = Math.atan2(p.y - fan.y, p.x - fan.x);
+        if (d0 > V.r0 - 20 && d0 < V.len + 30)
+          for (let i = 0; i < n; i++) {
+            const a = (fan.bladeA || 0) + (i * Math.PI * 2) / n,
+              gap = (((ph - a) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2),
+              arrive = gap / Math.max(0.05, w) - (30 / Math.max(40, d0)) / Math.max(0.05, w);
+            if (arrive < 0.32 && arrive > -0.1 && p.stamina >= e.dodgeCost() && !e.dodgeReason()) {
+              if (roll(ph - Math.PI / 2)) return { x: 0, y: 0, run: false };
+            }
+          }
+      }
+      // 肺破完了：贴上去打风机（铁丝网挡箭），风刃交给躲
+      if (process.env.VENTRANGE && (s.inventory.bolt || 0) > 0) {
+        const V = TITANS.vent,
+          a = clamp(Math.atan2(p.y - fan.y, p.x - fan.x), 0.35, Math.PI - 0.35),
+          spot = { x: clamp(fan.x + Math.cos(a) * (V.blades.len + 40), 90, 1440), y: clamp(fan.y + Math.sin(a) * (V.blades.len + 40), 120, 920) },
+          df = dist(fan, p);
+        if (df < 450 && clearShot(fan, [])) shoot(fan);
+        if (dist(p, spot) > 40) return moveTo(e.blocked(spot.x, spot.y, false, 12) ? e.freePoint(spot.x, spot.y) : spot, df < V.blades.len + 20);
+        return { x: 0, y: 0, run: false };
+      }
+      return attackPlan(fan, dist(fan, p), (cur.W?.range || 90) + (fan.r || 40) * 0.85 - 12);
+    },
+    // 末班车：车不停就待在过道口；停下来打离得最近的车厢（车头连着车厢打不动），够不着就放箭；翻下轨道了就近打
+    train(z, dz, rch) {
+      const head = cur.all.find((q) => q.part === "head"),
+        cars = cur.all.filter((q) => q.part === "car"),
+        A = head?.act,
+        TY0 = TITANS.train.track.y;
+      if (!head) return attackPlan(z, dz, rch);
+      // 还没醒：往车那边走（走到离它八百多它就醒）
+      if (!head.awake) return moveTo({ x: Math.min(head.x - 300, p.x + 200), y: TY0 }, false);
+      if (head.tp >= 1) return attackPlan(head, dist(head, p), (cur.W?.range || 90) + (head.r || 40) * 0.85 - 12);
+      if (A?.k === "stop" && A.t > 0.9 && cars.length) {
+        const tgt = cars.slice().sort((a1, b1) => dist(a1, p) - dist(b1, p))[0],
+          dt2 = dist(tgt, p),
+          r2 = (cur.W?.range || 90) + (tgt.r || 40) * 0.85 - 12;
+        if (dt2 > r2 && dt2 < 440 && clearShot(tgt, [])) shoot(tgt);
+        return attackPlan(tgt, dt2, r2);
+      }
+      // 车不停：待在离你最近的过道口
+      const M0 = trackMouths(),
+        best = M0.slice().sort((a1, b1) => dist(a1, p) - dist(b1, p))[0];
+      if (best && (Math.abs(p.y - TY0) < 90 || dist(p, best) > 60)) return moveTo(best, Math.abs(p.y - TY0) < 90);
+      return { x: 0, y: 0, run: false };
+    },
+    // 扑火：光还在就站在四五百外用步枪打光；心露出来了在热圈外打；它往篝火爬就在它前面摆夹子、贴上去推
+    moth(z, dz, rch) {
+      const body = cur.all.find((q) => q.part === "body"),
+        lights = cur.all.filter((q) => q.part === "light"),
+        fire = e.fireSpot();
+      if (!body) return attackPlan(z, dz, rch);
+      if (lights.length) {
+        // 打亮着的那盏（暗下去的那两秒打不动）
+        const L = lights.slice().sort((a1, b1) => (a1.dim ? 1 : 0) - (b1.dim ? 1 : 0) || dist(a1, p) - dist(b1, p))[0],
+          a = Math.atan2(fire.y - body.y, fire.x - body.x) + flank.dir * 0.5,
+          spot = { x: clamp(body.x + Math.cos(a) * 430, 90, 1440), y: clamp(body.y + Math.sin(a) * 430, 120, 920) };
+        const shotOk = dist(L, p) < 820 && !L.dim && shoot(L);
+        if (process.env.MOTH && Math.round(t * 20) % 20 === 0) console.log("  moth", t.toFixed(1), "L", L.pkey, Math.round(L.hp), "dL", Math.round(dist(L, p)), "p", Math.round(p.x), Math.round(p.y), "body", Math.round(body.x), Math.round(body.y), "spot", Math.round(spot.x), Math.round(spot.y), "ammo", s.inventory.ammo || 0, "mag", s.magazines?.rifle, "reload", !!e.reload, "cd", e.cooldown.toFixed(2), "shot", shotOk);
+        if (dist(p, spot) > 60) return moveTo(e.blocked(spot.x, spot.y, false, 12) ? e.freePoint(spot.x, spot.y) : spot);
+        return { x: 0, y: 0, run: false };
+      }
+      if (body.hidden) return { x: 0, y: 0, run: false };
+      const dh = dist(body, p);
+      if (body.tp >= 2) {
+        // 拦住它：在它和篝火中间摆夹子；贴上去推开、打
+        trapT -= DT;
+        const a = Math.atan2(fire.y - body.y, fire.x - body.x),
+          front = { x: body.x + Math.cos(a) * 70, y: body.y + Math.sin(a) * 70 };
+        if (trapT <= 0 && (s.inventory.bearTrap || 0) > 0 && dist(p, front) < 60 && e.cooldown <= 0) {
+          s.slot = 6;
+          g.slots.trap = "bearTrap";
+          const ok = e.use(front);
+          s.slot = 3;
+          if (ok) stat.traps++;
+          trapT = 3;
+        }
+        if (dh < 60 + (body.r || 0) && (e.gx.shoveCd || 0) <= 0 && p.stamina >= 15 && !(body.crawlSlow > 0)) {
+          p.facing = Math.atan2(body.y - p.y, body.x - p.x);
+          e.shove();
+        }
+        if ((s.inventory.bearTrap || 0) > 0 && trapT <= 0) return moveTo(front, true);
+        return attackPlan(body, dh, (cur.W?.range || 90) + (body.r || 40) * 0.85 - 12);
+      }
+      // 心：有子弹就在热圈外放枪；没子弹了贴上去打（心跳那一圈火要躲）
+      const ammo = (s.inventory.ammo || 0) + (s.magazines?.[g.slots.ranged] || 0);
+      if (ammo > 0) {
+        if (dh < TITANS.moth.heart.beat.r1 + 30) return step(freeDir(Math.atan2(p.y - body.y, p.x - body.x)), false);
+        if (dh < 600) shoot(body);
+        return dh > 340 ? moveTo(body) : { x: 0, y: 0, run: false };
+      }
+      return attackPlan(body, dh, (cur.W?.range || 90) + (body.r || 40) * 0.85 - 12);
+    },
+  });
   // 收破烂的：找一处墙边，扔过去它会扑过去撞上
   function wallSpot(z) {
     let best = null;
@@ -477,6 +788,46 @@ function trial(id, style, kitId, seed) {
     }
     return best;
   }
+  // 风口的风刃（快扫到你那一格）、扑火的浪（口子以外）、开着的末班车（车头前面那一截）
+  function hazards() {
+    const out = [];
+    for (const z of cur.all) {
+      // 风刃：不懂打法的看见了就跑开；知道打法的逆着滚过去（在 RIGHT.vent 里）
+      if (z.titan === "vent" && z.part === "fan" && z.tp >= 1 && !right) {
+        const V = TITANS.vent.blades,
+          n = V.n[Math.min(z.tp, V.n.length - 1)],
+          w = V.speed[Math.min(z.tp, V.speed.length - 1)] * e.tRage(z).speed,
+          d = dist(z, p),
+          ph = Math.atan2(p.y - z.y, p.x - z.x);
+        if (d < V.r0 - 20 || d > V.len + 30) continue;
+        for (let i = 0; i < n; i++) {
+          const a = (z.bladeA || 0) + (i * Math.PI * 2) / n,
+            gap = (((ph - a) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2),
+            tt = gap / Math.max(0.05, w);
+          if (tt > 1.1 || Math.sin(a + gap) < -0.1) continue;
+          out.push({ id: "blade" + i, t: tt, max: 1.1, col: "red", hit: { dmg: V.dmg }, shape: { k: "cone", x: z.x, y: z.y, a: a + gap / 2 + 0.06, arc: gap / 2 + 0.14, r: V.len } });
+        }
+      }
+      if (z.titan === "train" && z.part === "head" && ["run", "leave"].includes(z.act?.k) && !z.hidden) {
+        const TR = TITANS.train,
+          dir = z.act.dir || 1,
+          v = Math.max(200, z.act.v || TR.run.speed),
+          x0 = dir > 0 ? z.x - TR.headLen : 0,
+          x1 = dir > 0 ? WORLD_W : z.x + TR.headLen;
+        out.push({ id: "train", t: Math.max(0, (p.x - z.x) * dir) / v, max: 2, col: "orange", hit: { dmg: TR.run.dmg }, shape: { k: "rect", x: x0, y: TR.track.y - TR.track.h / 2, w: x1 - x0, h: TR.track.h } });
+      }
+    }
+    // 通了电的铁轨、要通电的铁轨（蓝色那一道）：跟预兆一样躲开
+    for (const S of e.tx.strikes) if (S.cue === "tArc") out.push({ id: "arc", t: S.t, max: S.max, col: "red", hit: { dmg: 14 }, shape: S.shape });
+    for (const Z of e.tx.zones) if (Z.kind === "volt") out.push({ id: "volt", t: 0.1, max: 1, col: "red", hit: { dmg: 14 }, shape: { k: "rect", x: Z.x, y: Z.y, w: Z.w, h: Z.h } });
+    for (const w of e.tx.waves || []) {
+      const tt = w.wait + Math.max(0, w.x - w.w / 2 - p.x) / w.speed;
+      if (w.x + w.w / 2 < p.x - 30 || tt > 2.2) continue;
+      out.push({ id: "waveA", t: tt, max: 2.2, col: "red", hit: { dmg: 34 }, shape: { k: "rect", x: 0, y: 0, w: WORLD_W, h: w.gy0 } });
+      out.push({ id: "waveB", t: tt, max: 2.2, col: "red", hit: { dmg: 34 }, shape: { k: "rect", x: 0, y: w.gy1, w: WORLD_W, h: 1024 - w.gy1 } });
+    }
+    return out;
+  }
   let lastHp = p.hp,
     prevStrikes = [];
   const DEBUG = !!process.env.HITLOG;
@@ -485,6 +836,8 @@ function trial(id, style, kitId, seed) {
     act = Math.max(0, act - DT);
     const all = e.titansHere(id);
     if (!all.length) break;
+    // 最后一夜：心扑到了篝火、天快亮了退回去——这一夜就结束了（凶台里它会被重新叫出来，不算）
+    if (id === "moth" && e.tg.final.lost > 0) break;
     const b = all.slice().sort((x, y) => dist(x, p) - dist(y, p))[0];
     if (fightStart < 0 && b.awake) fightStart = t;
     const gx = e.gx;
@@ -493,6 +846,9 @@ function trial(id, style, kitId, seed) {
       reach = (W?.range || 90) + (b.r || 40) * 0.85 - 12;
     cur.all = all;
     cur.W = W;
+    // 火烧掉了多少（黑潮）、打进去多少（别的）
+    stat.fire = Math.max(stat.fire || 0, all.reduce((a1, z) => a1 + (z.dealt?.fire || 0), 0));
+    if (process.env.DMG) for (const z of all) if (z.pkey) (stat.part ||= {})[z.pkey] = Math.round(z.maxHp - z.hp) + (z.tp ? "@" + z.tp : "");
     stat.low = Math.min(stat.low, all.reduce((a, z) => a + Math.max(0, z.hp), 0) / Math.max(1, e.titanMaxHp(id)));
     // ---------- 缠绷带、跑 ----------
     const strikesIn = e.tx.strikes.filter((S) => (S.hit?.dmg || S.hit?.hold || S.col === "orange") && exitOf(S.shape, p, 16));
@@ -525,6 +881,8 @@ function trial(id, style, kitId, seed) {
       // ---------- 预兆：在哪一块里、多急 ----------
       // 看到了的、要伤人的预兆（冲撞、扔木头的那条线也算：它随后就到）
       const live = e.tx.strikes.filter((S) => (S.hit?.dmg || S.hit?.hold || S.hit?.sta || S.col === "orange") && notice(S));
+      // 后五凶一直在动的那几样（风刃、浪、开着的车）：看得见，当成快到点的预兆躲
+      for (const S of hazards()) live.push(S);
       cur.live = live;
       const danger = (q) => {
         let v = 0,
@@ -543,12 +901,12 @@ function trial(id, style, kitId, seed) {
         let best = null;
         for (let k = 0; k < 16; k++) {
           const a0 = (k / 16) * Math.PI * 2;
-          for (const r of [30, 55, 80, 105, 135, 170]) {
+          for (const r of id === "moth" ? [30, 55, 80, 105, 135, 170, 210] : [30, 55, 80, 105, 135, 170]) {
             const q = { x: p.x + Math.cos(a0) * r, y: p.y + Math.sin(a0) * r };
             if (q.x < 70 || q.x > 1466 || q.y < 80 || q.y > 944 || e.blocked(q.x, q.y, false, 12) || !e.lineClear(p, q)) continue;
             const dq = danger(q),
               tw = r / 157,
-              mud = e.tx.zones.some((Z) => (Z.kind === "mud" || Z.kind === "gas" || Z.kind === "ice") && Z.w == null && e.tZoneHas(Z, q)) || (e.gx.fires || []).some((f) => f.region === s.region && dist(f, q) < f.r + 14),
+              mud = e.tx.zones.some((Z) => (Z.kind === "mud" || Z.kind === "gas" || Z.kind === "ice" || Z.kind === "fire" || Z.kind === "volt" || (Z.kind === "oil" && right)) && e.tZoneHas(Z, q)) || (e.gx.fires || []).some((f) => f.region === s.region && dist(f, q) < f.r + 14),
               score = dq.v * 100 + r * 0.25 + (mud ? 25 : 0) + (right && id === "hebo" && wet(q) ? 40 : 0) + (tw > here.urg - 0.06 ? 20 + (tw - here.urg) * 60 : 0);
             if (!best || score < best.score) best = { a: a0, r, score, dq, tw };
           }
@@ -593,7 +951,11 @@ function trial(id, style, kitId, seed) {
       const gas = e.tx.zones.find((Z) => Z.kind === "gas" && e.tZoneHas(Z, p));
       const adds = e.enemies.filter((q) => !q.dead && !q.titan && q.type !== POD_TYPE && dist(q, p) < 200).sort((a1, b1) => dist(a1, p) - dist(b1, p));
       // 脚下的泥、冰（不是河）：站在里面躲不快，走出来
-      const mire = e.tx.zones.find((Z) => (Z.kind === "mud" || Z.kind === "ice" || (Z.kind === "water" && right && id === "hebo")) && e.tZoneHas(Z, p) && Z.w == null) || (e.gx.fires || []).find((f) => f.region === s.region && dist(f, p) < f.r + 14);
+      const mire = e.tx.zones.find((Z) => (Z.kind === "mud" || Z.kind === "ice" || Z.kind === "fire" || (Z.kind === "oil" && right) || (Z.kind === "water" && right && id === "hebo")) && e.tZoneHas(Z, p) && Z.w == null) || (e.gx.fires || []).find((f) => f.region === s.region && dist(f, p) < f.r + 14);
+      // 通了电的铁轨：往最近的过道口走
+      const volt = e.tx.zones.find((Z) => Z.kind === "volt" && e.tZoneHas(Z, p));
+      // 风口在吸：往外跑（知道打法的人）
+      const fan = cur.all.find((z) => z.part === "fan" && ["suck", "suckWind"].includes(z.act?.k));
       dodging = !!(lane || threat);
       if (lane) {
         const a = freeDir(lane.a);
@@ -608,6 +970,11 @@ function trial(id, style, kitId, seed) {
         else if (threat.safe && runT < threat.urg - 0.06 && p.stamina > 12) input = step(threat.a, true);
         else if (threat.urg <= 0.24 && canRoll) roll(threat.a) || (input = step(threat.a, true));
         else input = step(threat.a, !canRoll);
+      } else if (right && fan && dist(fan, p) < TITANS.vent.suck.edge + 20) {
+        input = step(freeDir(Math.atan2(p.y - fan.y, p.x - fan.x)), true);
+      } else if (volt) {
+        const m = trackMouths().slice().sort((a1, b1) => dist(a1, p) - dist(b1, p))[0];
+        input = m ? moveTo(m, true) : step(freeDir(-Math.PI / 2), true);
       } else if (gas) {
         input = step(freeDir(Math.atan2(p.y - gas.y, p.x - gas.x)), true);
       } else if (mire && !(right && id === "hebo" && cur.all[0]?.mode === "beached")) {
@@ -636,6 +1003,13 @@ function trial(id, style, kitId, seed) {
     }
     e.update(DT, input);
     t += DT;
+    // DMG=1：每一点血掉在哪儿（按来源加起来，打完一场打出来）
+    if (process.env.DMG && p.hp < lastHp - 0.001) {
+      const gone = prevStrikes.filter((S) => !e.tx.strikes.includes(S) && S.t <= 0.05);
+      const fanNow = cur.all.find((z) => z.part === "fan");
+      const k = gone.length ? gone.map((S) => (S.titan || "") + ":" + S.shape.k + (S.hit?.dmg || "")).join("+") : e.tx.zones.some((Z) => Z.kind === "gas" && e.tZoneHas(Z, p)) ? "gas" : e.gx.bleed > 0 ? "bleed" : "?" + (e.fx?.lastHitBy || "") + (fanNow && e.fx?.lastHitBy === "t_vent" ? (fanNow.act?.k === "suck" ? "-suck" : "-blade" + (e.invulnerable > 0.6 ? "" : "?")) : "");
+      (stat.dmg ||= {})[k] = ((stat.dmg ||= {})[k] || 0) + (lastHp - p.hp);
+    }
     if (p.hp < lastHp - 0.5) {
       stat.maxHit = Math.max(stat.maxHit, lastHp - p.hp);
       stat.hits++;
@@ -652,8 +1026,12 @@ function trial(id, style, kitId, seed) {
   }
   const left = e.titansHere(id);
   const won = !died && !left.length && !!e.tg.wins[id];
-  const out = { won, died, fled: !died && !won && fleeing, timeout: !died && !won && !fleeing, t: fightStart >= 0 ? t - fightStart : t, hp: Math.round(p.hp), bossHp: left.reduce((a, z) => a + Math.max(0, z.hp), 0) / Math.max(1, e.titanMaxHp(id)), tp: left[0]?.tp ?? 3, ...stat, crashes: e.tg.stats.staggers };
+  // 最后一夜：心扑到了篝火、天快亮了（算没守住）
+  const lost = id === "moth" && !won && !died && (e.tg.final.lost > 0 || !left.length);
+  const out = { won, died: died || lost, fled: !died && !lost && !won && fleeing, timeout: !died && !lost && !won && !fleeing, t: fightStart >= 0 ? t - fightStart : t, hp: Math.round(p.hp), bossHp: left.reduce((a, z) => a + Math.max(0, z.hp), 0) / Math.max(1, e.titanMaxHp(id)), tp: left[0]?.tp ?? 3, ...stat, crashes: e.tg.stats.staggers };
   if (TRACE) console.log(id, style, kitId, seed, JSON.stringify(out));
+  if (process.env.DMG && stat.part) console.log("  part", seed, JSON.stringify(stat.part));
+  if (process.env.DMG) console.log("  dmg", seed, out.won ? "WON" : out.died ? "DIED" : "FLED", Object.entries(stat.dmg || {}).sort((a1, b1) => b1[1] - a1[1]).map(([k, v]) => k + ":" + Math.round(v)).join("  "));
   return out;
 }
 
@@ -689,7 +1067,7 @@ for (const id of WHO)
           rolls: +mean(rs.map((r) => r.rolls)).toFixed(1),
           bandages: +mean(rs.map((r) => r.bandages)).toFixed(1),
           staggers: +mean(rs.map((r) => r.crashes)).toFixed(1),
-          extra: { lures: +mean(rs.map((r) => r.lures)).toFixed(1), backstabs: +mean(rs.map((r) => r.backstabs)).toFixed(1), molotovs: +mean(rs.map((r) => r.molotovs)).toFixed(1), traps: +mean(rs.map((r) => r.traps)).toFixed(1), swaps: +mean(rs.map((r) => r.swaps)).toFixed(1), relights: +mean(rs.map((r) => r.relights)).toFixed(1), beached: +mean(rs.map((r) => r.beached)).toFixed(1) },
+          extra: { fire: Math.round(mean(rs.map((r) => r.fire || 0))), shots: +mean(rs.map((r) => r.shots || 0)).toFixed(1), lures: +mean(rs.map((r) => r.lures)).toFixed(1), backstabs: +mean(rs.map((r) => r.backstabs)).toFixed(1), molotovs: +mean(rs.map((r) => r.molotovs)).toFixed(1), traps: +mean(rs.map((r) => r.traps)).toFixed(1), swaps: +mean(rs.map((r) => r.swaps)).toFixed(1), relights: +mean(rs.map((r) => r.relights)).toFixed(1), beached: +mean(rs.map((r) => r.beached)).toFixed(1) },
           ms: Date.now() - t0,
         }),
       );

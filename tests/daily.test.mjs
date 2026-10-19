@@ -12,7 +12,7 @@ import { alertItems } from "../dist/winter-ui.js";
 
 const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
 // v0.19 的妙手卡另加了 6 个动作（rumor thiefXp confess clearCase blame giveTreasure）；v0.24 加了打听头目（uIntel）和缝口罩（uMask）
-const OPS = new Set("give money rep mood fatigue hp stamina research xp trust cheer buff later debt night drain spawn ambush cache crew perk peng dog lose water fertility growthBack harvestRipe sick heal visitor clearRuin repair rush killJob stationHit visitBlock hordeShift hordeTomorrow raidDelay raidLess raidWarn seeds seedsAll seedsOwned rareSeeds mod random time caravanDisc caravanOrder festNext talkUsed sellTop payGoods tell flag next mark rumor thiefXp confess clearCase blame giveTreasure bp fixGear gear uIntel uMask".split(" "));
+const OPS = new Set("give money rep mood fatigue hp stamina research xp trust cheer buff later debt night drain spawn ambush cache crew perk peng dog lose water fertility growthBack harvestRipe sick heal visitor clearRuin repair rush killJob stationHit visitBlock hordeShift hordeTomorrow raidDelay raidLess raidWarn seeds seedsAll seedsOwned rareSeeds mod random time caravanDisc caravanOrder festNext talkUsed sellTop payGoods tell flag next mark rumor thiefXp confess clearCase blame giveTreasure bp fixGear gear uIntel uMask tIntel".split(" "));
 const make = (state = freshState()) => {
   const toasts = [];
   const e = new Engine(state, (text, tone) => toasts.push({ text, tone }));
@@ -84,12 +84,14 @@ const finite = (v, path = "s") => {
 
 // ---------- 数据 ----------
 test("the event library holds 100 events: 9 chains with 36 steps and 64 standalone events, three options each", () => {
-  // v0.19 在后面加了 7 张“妙手”卡，v0.22 又加了 6 张装备卡，v0.24 加了 3 张新感染者和头目的卡；这里数的是 v0.18 的一百张
-  const BASE = EVENT_IDS.filter((id) => EVENTS[id].cat !== "thief" && !["gear", "undertow"].includes(EVENTS[id].pack));
+  // v0.19 在后面加了 7 张“妙手”卡，v0.22 又加了 6 张装备卡，v0.24 加了 3 张新感染者和头目的卡，v0.36–v0.37 加了十张十凶的传闻卡；这里数的是 v0.18 的一百张
+  const BASE = EVENT_IDS.filter((id) => EVENTS[id].cat !== "thief" && !["gear", "undertow", "titan"].includes(EVENTS[id].pack));
   assert.equal(BASE.length, 100);
   assert.equal(EVENT_IDS.filter((id) => EVENTS[id].cat === "thief").length, 7);
   assert.equal(EVENT_IDS.filter((id) => EVENTS[id].pack === "gear").length, 6);
   assert.equal(EVENT_IDS.filter((id) => EVENTS[id].pack === "undertow").length, 3);
+  // 十凶的传闻卡：一凶一张，名字不跟扒手那几张（T01–T07）撞
+  assert.equal(EVENT_IDS.filter((id) => EVENTS[id].pack === "titan").length, 10);
   const chain = EVENT_IDS.filter((id) => EVENTS[id].chain);
   assert.equal(chain.length, 36);
   assert.equal(BASE.length - chain.length, 64);
@@ -103,8 +105,8 @@ test("the event library holds 100 events: 9 chains with 36 steps and 64 standalo
   assert.equal(EVENT_IDS.filter((id) => EVENTS[id].newbie).length, 13);
   const cats = {};
   for (const id of EVENT_IDS) cats[EVENTS[id].cat] = (cats[EVENTS[id].cat] || 0) + 1;
-  // 装备卡：搜刮 2、交易 2、危机 1、运气 1；v0.24 的三张：危机 2、搜刮 1
-  assert.deepEqual(cats, { chain: 36, farm: 12, scav: 13, camp: 12, trade: 12, crisis: 13, luck: 11, thief: 7 });
+  // 装备卡：搜刮 2、交易 2、危机 1、运气 1；v0.24 的三张：危机 2、搜刮 1；十凶的十张传闻卡：危机 10
+  assert.deepEqual(cats, { chain: 36, farm: 12, scav: 13, camp: 12, trade: 12, crisis: 23, luck: 11, thief: 7 });
   for (const id of EVENT_IDS) {
     const ev = EVENTS[id];
     assert.ok(CATS[ev.cat], id);
