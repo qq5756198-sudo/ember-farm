@@ -374,11 +374,11 @@ export class Engine extends NfEngine {
     const g = this.tg,
       p = this.s.player;
     // 旧档：一张“巨影”卡片。很老的档第一帧前几层已经排了四张，卡片最多排四张、多了挤掉最早的：
-    // 这一帧有别的卡片就等 1.2 秒（那时第一张已经放出来了）再排
+    // 这一帧有别的卡片就晚一帧再排（下一帧第一张已经放出来了，排得下）
     if (g.intro && !g.intro.told) {
-      if (this._tIntroWait == null) this._tIntroWait = this.events.some((ev) => ev.type === "moment") ? 1.2 : 0;
-      this._tIntroWait -= dt;
-      if (this._tIntroWait <= 0) {
+      if (this._tIntroWait == null) this._tIntroWait = this.events.some((ev) => ev.type === "moment") ? 1 : 0;
+      if (this._tIntroWait > 0) this._tIntroWait--;
+      else {
         g.intro.told = true;
         this.moment?.("intro", "巨影", TITAN_INTRO, { icon: "titan" });
       }
