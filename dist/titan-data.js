@@ -549,8 +549,9 @@ export const TITANS = {
     lightRanged: 1.5,
     // 光一明一暗：亮几秒、暗几秒，暗下去的时候只打得进几成
     pulse: { on: 3, off: 2, dim: 0.2 },
-    hand: { r: 120, warn: 1.4, dmg: 60, down: 1.5, cd: 9 },
-    fling: { r: 70, warn: 1.0, dmg: 20, n: 2, cd: 10, min: 160, max: 520, cap: 3 },
+    // 巨手 50：被感染者抓着的时候挨别的一下多三成，60 会变成 78（最后一凶的线是 70）
+    hand: { r: 120, warn: 1.4, dmg: 50, down: 1.5, cd: 8 },
+    fling: { r: 70, warn: 1.0, dmg: 20, n: 2, cd: 9, min: 160, max: 520, cap: 3 },
     // 往前挪：挪到离篝火多远停下（第一、二段；第三段那颗心才往篝火爬）
     standoff: 520,
     // 踩坏设施：身边多近的设施每秒掉多少（只踩外面的：围栏、大门、陷阱、塔、信标、稻草人、水桶、喷灌头、太阳能板、照看机、堆肥桶）
@@ -560,7 +561,7 @@ export const TITANS = {
     wave: { n: 3, w: 170, gap: 170, warn: 1.6, dmg: 50, push: 220, every: 2.6, speed: 760, near: 180 },
     // 心：多大、身边一圈烫（多大、每秒多少）；心跳一下荡开一圈火（几秒一下、从多大到多大、挨一下多少）
     // 塌下来的那一堆还在动：心露出来以后隔几秒又卷一道浪、扔几只过来
-    heart: { r: 90, aura: 120, dps: 6, beat: { every: 5, warn: 1.0, r0: 110, r1: 260, dmg: 20 }, wave: 18, fling: 13 },
+    heart: { r: 90, aura: 120, dps: 6, beat: { every: 5, warn: 1.0, r0: 110, r1: 260, dmg: 20 }, wave: 16, fling: 12 },
     // 第三段：心剩几成就直奔篝火爬；爬多快、多近算扑到；推开、捕兽夹、钉板拖慢几秒
     crawl: { at: 0.08, speed: 20, reach: 60, slow: 1.6 },
     trophy: "tTrophyMoth",
