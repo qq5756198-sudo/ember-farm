@@ -18,11 +18,13 @@ import { AI, PHASE_HOOK, HURT_HOOK, SPAWN_HOOK, WAKE_HOOK } from "./titan-ai.js"
 import "./titan-ai2.js";
 
 export { legacyGear };
+// 读档前要不要先留一份：没有十凶这一块的旧档、十凶记录还是上一版（v0.36 是第 1 版）的档
 export const needsUpgrade = (text) => {
   if (nfNeedsUpgrade(text)) return true;
   try {
     const raw = JSON.parse(text);
-    return !!raw && typeof raw === "object" && !raw.titan;
+    if (!raw || typeof raw !== "object") return false;
+    return !raw.titan || (Number.isInteger(raw.titan.schema) && raw.titan.schema < TITAN_SCHEMA);
   } catch {
     return false;
   }
@@ -428,21 +430,23 @@ export class Engine extends NfEngine {
   // 隧道换一层也算离开（list 是那一层原来的感染者名单）
   titanLeftRegion(from, list = this.s.enemies?.[from]) {
     if (!Array.isArray(list)) return;
-    const seen = new Set();
+    // 先每一只都回窝、回血（有几只的那几凶每一只回自己的四分之一），再按凶记一笔
+    const ids = new Set();
     for (const z of list) {
       if (!z.titan || z.dead) continue;
+      ids.add(z.titan);
       if (z.awake || z.homing) {
         const add = z.regenUsed ? 0 : z.maxHp * TRULES.regen;
         z.hp = Math.min(z.maxHp, z.hp + add);
         z.regenUsed = true;
       }
       Object.assign(z, { awake: false, homing: false, act: null, x: z.homeX, y: z.homeY, mode: "lair", stag: 0 });
-      if (!seen.has(z.titan)) {
-        seen.add(z.titan);
-        const all = list.filter((x) => x.titan === z.titan && !x.dead),
-          hp = all.reduce((a, x) => a + Math.max(0, x.hp), 0);
-        if (hp < this.titanMaxHp(z.titan) - 0.5) this.tRecord(z.titan, list, z.regenUsed);
-      }
+    }
+    for (const id of ids) {
+      const all = list.filter((x) => x.titan === id && !x.dead),
+        hp = all.reduce((a, x) => a + Math.max(0, x.hp), 0);
+      // 回满了的：tRecord 把旧的那一笔删掉
+      if (all.length) this.tRecord(id, list, all.some((x) => x.regenUsed));
     }
     // 〇号的两半回到一只、孢囊收掉：下回进图重新生
     if (this.s.enemies[from] === list) this.s.enemies[from] = list.filter((z) => !isTitanThing(z));
@@ -964,7 +968,8 @@ export class Engine extends NfEngine {
     }
     if (gold) this.s.money += gold;
     this.receive(bundle);
-    // 剩下的手下、孢囊、地上的预兆都收掉（后五凶叫来的也散了）
+    // 剩下的手下、孢囊、地上的预兆都收掉（后五凶叫来的也散了）；还没倒的那几只（肺、车厢、光）跟着倒下，不再算一回
+    for (const z of this.enemies) if (z.titan === id) z.dead = true;
     this.enemies = this.s.enemies[this.s.region] = this.enemies.filter((z) => !(z.type === POD_TYPE && z.of === id) && !(z.titan === id) && !(z.tOf === id));
     this.tClearFrom(null, true);
     this.tx.hold = null;
@@ -1670,6 +1675,11 @@ export class Engine extends NfEngine {
     F.on = F.day;
     F.tries++;
     this.tStat("finals");
+    // 已经摸到农场边上的夜行者这一夜不在
+    if (this.s.enemies.farm?.some((z) => z.prowl)) {
+      this.s.enemies.farm = this.s.enemies.farm.filter((z) => !z.prowl);
+      if (this.s.region === "farm") this.enemies = this.s.enemies.farm;
+    }
     this.finalGuards();
     this.finalSay(FINAL_TEXT.start);
     this.emit?.("alarm");
@@ -1769,6 +1779,12 @@ export class Engine extends NfEngine {
   // 动静招来的夜袭：最后一夜不另来
   noiseBlocked() {
     return super.noiseBlocked() || !!this.tg?.final?.on;
+  }
+  // 夜行者摸到农场边上：最后一夜那天晚上不来（21:00 以后、打起来以后）
+  tickProwl() {
+    const F = this.tg?.final;
+    if (F && !F.won && (F.on || (F.day === this.s.day && this.s.minute >= FINAL.warn && this.titanOpen("moth")))) return;
+    return super.tickProwl();
   }
   // 风口：避难城的居住舱多两张床
   residentsCapacity() {

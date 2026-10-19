@@ -255,7 +255,9 @@ test("every blow is painted on the ground first, at least 0.6 s ahead, and hurts
     const seen = new Set();
     for (let t = 0; t < 90; t += DT) {
       const p = e.s.player;
-      p.hp = 100;
+      // 被扔过来的感染者咬了会发烧（生命上限掉到 70）：每一帧把烧退了、血补满，量的只是这一帧挨的
+      if (e.gr) e.gr.fever = 0;
+      p.hp = e.maxHp?.() ?? 100;
       e.invulnerable = 0;
       for (const S of e.tx.strikes)
         if (!seen.has(S)) {
@@ -275,7 +277,8 @@ test("every blow is painted on the ground first, at least 0.6 s ahead, and hurts
     }
     assert.ok(n >= 8, id + " attacked " + n + " times");
     assert.ok(minWarn >= TRULES.minWarn - 1e-9, id + " warning " + minWarn);
-    assert.ok(maxHit <= 60, id + " hit " + maxHit);
+    // 最后一凶打一整夜，线是 70
+    assert.ok(maxHit <= (T.final ? 70 : 60), id + " hit " + maxHit);
   }
 });
 

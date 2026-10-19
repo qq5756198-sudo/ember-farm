@@ -791,8 +791,27 @@ export class Renderer extends TitanRenderer {
   }
 
   // ---------- 光 ----------
+  // 风口长在墙上：盖住的那几扇窗户不亮（夜里的窗光画在最上面一层，会透过那一大片人）
+  tCovered(e) {
+    if (e?.s?.region !== TITANS.vent.region) return null;
+    const f = (e.enemies || []).find((z) => z.titan === "vent" && z.part === "fan" && !z.dead);
+    if (!f) return null;
+    return { x0: (f.x - 168) / 2, x1: (f.x + 168) / 2, y0: (f.y + 46 - 190) / 2, y1: (f.y + 52) / 2 };
+  }
+  withCovered(e, fn) {
+    const R = this.tCovered(e),
+      art = this.art;
+    if (!R || !Array.isArray(art?.lights)) return fn();
+    const lights = art.lights;
+    art.lights = lights.filter((l) => !(l.kind === "window" && l.x >= R.x0 && l.x <= R.x1 && l.y >= R.y0 && l.y <= R.y1));
+    try {
+      return fn();
+    } finally {
+      art.lights = lights;
+    }
+  }
   collectLights(e, night) {
-    const L = super.collectLights(e, night);
+    const L = this.withCovered(e, () => super.collectLights(e, night));
     if (!e?.tg || (night <= 0.15 && !this.indoor)) return L;
     const t = this.calm ? 0 : this.time;
     for (const Z of e.tx?.zones || []) {
@@ -828,7 +847,7 @@ export class Renderer extends TitanRenderer {
     return L;
   }
   drawEmissive(e, night, view) {
-    super.drawEmissive(e, night, view);
+    this.withCovered(e, () => super.drawEmissive(e, night, view));
     // 补上的日光灯管
     if (this._tLamps?.length && e.s?.region === "tunnel") {
       const c = this.ctx;
@@ -849,9 +868,10 @@ export class Renderer extends TitanRenderer {
     if (o?.type === "seasonPlaza" && (e?.tg?.perks?.moth || e?.tg?.caseDone?.includes(10))) this.tStele(e, o);
   }
   tStele(e, o) {
+    // 纪念石（广场西边 170、往上 24）的正下方那块空地
     const c = this.ctx,
-      x = snap(o.x - 216),
-      y = snap(o.y - 40);
+      x = snap(o.x - 166),
+      y = snap(o.y + 2);
     c.save();
     c.fillStyle = "rgba(20,14,10,0.35)";
     c.fillRect(x - 4, y + 52, 38, 6);
