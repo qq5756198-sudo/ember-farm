@@ -2559,8 +2559,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.doesNotMatch(bar.innerHTML, /undefined|NaN/);
   assert.equal(context.inspect().menu, null, 'no popup for a titan');
   run(40); sizes();
-  // ---------- 五凶醒着出招：四个大小，白天、夜里（色弱配色） ----------
-  for (const id of TD.TITAN_IDS) {
+  // ---------- 五凶醒着出招：四个大小，白天、夜里（色弱配色）；后五凶在下一段 ----------
+  for (const id of TD.TITAN_IDS.slice(0, 5)) {
     const T = TD.TITANS[id];
     e._tForce = id; e.s.minute = id === 'hebo' ? 21 * 60 : 600;
     e.travel(T.region); e.paused = false; run(1); closeCards();
@@ -2607,4 +2607,137 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(back.titan.intro.told, true); assert.equal(back.titan.wins.scrap, 1); assert.deepEqual(back.titan.donated, ['tTrophyScrap']); assert.equal(back.titan.rumor.hebo, 41);
   assert.ok(!Object.values(back.enemies || {}).some((list) => Array.isArray(list) && list.some((q) => q.titan)), 'no titan saved among the infected');
   console.log('Titan controller passed: a v0.35 save restored from a file (the 巨影 card on the first frame, one rumour a day in the toasts), the journal\'s today line opening the 十凶录 (unknown ones a black shape), 标出它的窝 opening the map with the lair pin and the gold marker, the rag-and-bone man woken at his lair (the first-meeting card, the titan bar inside the scene with two phase marks and poise, no popup), all five drawn awake with their telegraphs at four sizes by day and by night with colour-safe hues, a win with one 倒下了 card and no second 打赢了 card (trophy, gear, bar gone), the trophy given to the 十凶柜, the book after the win, and save/parse.');
+}
+
+// v0.37.0「扑火」: a v0.36 save restored from a file (the 后五凶 card on the first frame and gone after its time, no second 巨影 card),
+// the last five drawn awake with their telegraphs at four sizes by day and by night (雕爷和看门的 on the chain with both in the boss
+// bar, 黑潮's oil, 风口's lungs as part bars, 末班车 on the 25th floor, 扑火 on the farm), the final night by the clock (the radio three
+// days ahead, the morning line, the 21:00 warning, no sleeping, 22:00 on the farm with the boss bar and no leaving), the win (one
+// 最后一夜 card, no 倒下了 card, the last lamp, the 十凶碑 drawn by the memorial stone), the book after it, and save/parse.
+{
+  let clock = 37000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const card = () => document.querySelector('#zest-moment');
+  const closeCards = () => { const m = context.inspect().moments; m.queue.length = 0; m.close(); };
+  const sizes = (list = [[1366, 600], [1920, 900], [390, 480], [844, 240]]) => { for (const [w, hh] of list) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); } context.inspect().renderer.resize(1366, 600, 1); };
+  const toasts = () => document.querySelector('#toasts').innerHTML;
+  dailyOn = false;
+  const TD = await import('../dist/titan-data.js');
+  const RD = await import('../dist/relight-data.js');
+  // ---------- 一份 v0.36 的档：十凶记录是第 1 版、还没有最后一夜那一块；“巨影”那张早看过了 ----------
+  const raw = JSON.parse(context.inspect().engine.serialize());
+  raw.titan.schema = 1; delete raw.titan.final; delete raw.titan.intro2; raw.titan.intro = { day: raw.day, told: true };
+  context.open('restoreArchive', { files: { old: JSON.stringify(raw) } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  let e = context.inspect().engine;
+  assert.equal(context.inspect().menu, null);
+  assert.equal(e.tg.schema, 2, 'the record is brought up to date');
+  assert.ok(e.tg.intro2 && !e.tg.intro2.told && e.tg.final, 'one card about the last five, and the final night');
+  e.paused = false; if (e.dy) e.dy.pending = null;
+  closeCards(); run(3);
+  assert.equal(card().hidden, false, 'the 后五凶 card is up'); assert.match(card().innerHTML, /后五凶/); assert.match(card().innerHTML, /最后一凶/);
+  assert.doesNotMatch(card().innerHTML, /巨影|undefined|NaN/);
+  run(80);
+  assert.equal(card().hidden, true, 'and gone after its time');
+  assert.equal(e.tg.intro2.told, true);
+  // ---------- 后五凶醒着出招：四个大小，白天、夜里（色弱配色） ----------
+  e.d.unlocked.railDepot = true; Object.assign(e.b.unlocked, { shipyard: true, shelter: true });
+  for (const id of ['diao', 'tide', 'vent', 'train', 'moth']) {
+    const T = TD.TITANS[id];
+    e._tForce = id; e.s.minute = id === 'moth' ? 22 * 60 + 5 : 600;
+    if (T.region === 'tunnel') {
+      Object.assign(e.rl.tunnel, { key: { floor: T.floor, day: e.s.day, luck: false }, floor: T.floor, deepest: Math.max(e.rl.tunnel.deepest || 0, T.floor) });
+      e.s.region = 'tunnel'; e.s.enemies.tunnel = null; e._tunnel = null; e.assignRegion();
+    } else e.travel(T.region);
+    e.paused = false; run(1); closeCards();
+    assert.equal(e.s.region, T.region, id + ' in its map');
+    for (const q of e.enemies) if (!q.titan) q.dead = true;
+    const all = e.titansHere(id), t = all[0];
+    assert.ok(t, id + ' is at its lair');
+    if (T.parts) assert.equal(all.length, TD.partKeys(id).length, id + ' has all its parts');
+    Object.assign(e.s.player, e.freePoint(T.lair.x - (id === 'moth' ? 340 : 170), T.lair.y + 60), { hp: 100 }); e.invulnerable = 999;
+    if (!t.awake) e.titanWake(t);
+    run(40); closeCards();
+    const bar = document.querySelector('#boss-bar');
+    assert.equal(bar.hidden, false, id + ' boss bar'); assert.match(bar.innerHTML, new RegExp('<b>' + T.name + '<span class="t-title">'));
+    assert.doesNotMatch(bar.innerHTML, /undefined|NaN/);
+    if (T.parts) {
+      // 有几只的：每一只一小条，同名的排在一起
+      assert.match(bar.innerHTML, /class="t-parts"/, id + ' part bars');
+      assert.equal((bar.innerHTML.match(/class="t-pbar/g) || []).length, TD.partKeys(id).length, id + ' one bar each');
+      for (const P of Object.values(T.parts)) assert.ok(bar.innerHTML.includes('<b>' + P.name + '</b>'), id + ' ' + P.name);
+      assert.equal((bar.innerHTML.match(/<em style="left:/g) || []).length, 0, 'no hp marks when the parts decide the phases');
+    }
+    for (const [night, color] of [[false, false], [true, true]]) {
+      e.s.minute = night ? 1380 : (id === 'moth' ? 22 * 60 + 30 : 600); e.s.settings.access = { ...(e.s.settings.access || {}), color };
+      run(6); sizes();
+    }
+    e.s.settings.access.color = false;
+    assert.ok(e.tx.strikes.length + e.tx.zones.length + (e.tx.waves || []).length > 0 || e.tg.tries[id] >= 1, id + ' fought');
+    e._tForce = null;
+    e.travel('farm'); e.paused = false; run(1); closeCards();
+  }
+  // ---------- 最后一夜：主线打完、七凶打赢、三颗余烬核；早上 7 点电台说三天后 ----------
+  for (const id of TD.TITAN_IDS.slice(0, 7)) e.tg.first[id] ||= e.s.day;
+  for (const id of RD.CORE_IDS.slice(0, 3)) e.grantCore(id);
+  closeCards(); run(2);
+  e.tg.final = { day: 0, on: 0, tries: 0, lost: 0, keep: 0, won: 0 };
+  delete e.tg.first.moth; delete e.tg.perks.moth;
+  e.isLongNight = () => false;
+  assert.ok(e.titanOpen('moth'), 'the last one is coming');
+  e.s.minute = 6 * 60 + 50; run(2);
+  e.s.minute = 7 * 60 + 1; run(2);
+  const fday = e.tg.final.day;
+  assert.ok(fday >= e.s.day + 3, 'three days ahead');
+  assert.match(toasts(), new RegExp('第 ' + fday + ' 天'), 'the radio names the day');
+  // 那天早上、21:00；睡不过去
+  e.s.day = fday; e.s.minute = 7 * 60 + 2; run(2);
+  assert.match(toasts(), /今晚 22:00/);
+  e.s.minute = 21 * 60 + 1; run(2);
+  assert.match(toasts(), /一小时后到/);
+  assert.equal(e.sleep(), false, 'no sleeping through it');
+  // 22:00：在农场打起来，血条、四盏光；走不开
+  e.s.minute = 22 * 60; run(3); closeCards();
+  assert.ok(e.finalLive(), 'the final night is on');
+  const body = e.titansHere('moth').find((q) => q.part === 'body');
+  assert.ok(body, 'it came out of the east woods');
+  assert.equal(e.titansHere('moth').filter((q) => q.part === 'light').length, 4, 'four lights');
+  Object.assign(e.s.player, e.freePoint(body.x - 360, body.y + 40), { hp: 100 }); e.invulnerable = 999;
+  run(20); closeCards();
+  const bar = document.querySelector('#boss-bar');
+  assert.equal(bar.hidden, false); assert.match(bar.innerHTML, /<b>扑火<span class="t-title">/); assert.match(bar.innerHTML, /<b>光<\/b>/);
+  assert.equal(e.travel('valley'), false, 'no leaving'); assert.equal(e.s.region, 'farm');
+  assert.match(toasts(), /走不开/);
+  sizes();
+  // ---------- 打赢：四盏光、那颗心；一张“最后一夜”，没有“倒下了” ----------
+  for (const L of e.titansHere('moth').filter((q) => q.part === 'light')) { L.inv = 0; L.dim = false; L.hp = 1; e.hurtEnemy(L, 999, 0); }
+  run(4);
+  const b2 = e.titansHere('moth').find((q) => q.part === 'body');
+  assert.ok(b2 && b2.tp >= 1, 'the lights are out');
+  e.tx.waves = []; Object.assign(b2, { hidden: false, act: null, heart: true, inv: 0, hp: 1 });
+  closeCards();
+  e.hurtEnemy(b2, 999, 0); run(3);
+  assert.equal(e.tg.wins.moth, 1, 'won the last one');
+  assert.ok(e.tg.final.won && !e.finalLive(), 'the night is over');
+  assert.equal(card().hidden, false); assert.match(card().innerHTML, /最后一夜/); assert.match(card().innerHTML, /十凶的名号/);
+  assert.ok(!context.inspect().moments.queue.some((m) => /倒下了|^打赢了/.test(m.title || '')), 'one card for the last win');
+  assert.ok(e.qty('tTrophyMoth', true) >= 1, 'the last lamp');
+  assert.ok(e.tg.perks.moth, 'the 十凶碑 stands');
+  closeCards(); run(2);
+  assert.equal(bar.hidden, true, 'the bar goes away');
+  // 纪念石旁的十凶碑（画出来不出错）
+  const plaza = e.objects.find((o) => o.type === 'seasonPlaza');
+  if (plaza) { Object.assign(e.s.player, e.freePoint(plaza.x - 200, plaza.y + 30)); run(4); sizes(); }
+  // 成就册：最后一凶那一格（十张小像是 base64 的图，查违禁词时先拿掉——图里的字母碰巧拼出 NaN 不算）
+  const plain = () => html().replace(/data:[a-z]+\/[a-z+.-]+;base64,[A-Za-z0-9+\/=]+/g, '');
+  context.open('outpost', { view: 'collection' });
+  { const m = plain().match(/机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN/); assert.ok(!m, 'collection: ' + (m && plain().slice(Math.max(0, m.index - 120), m.index + 40))); }
+  assert.match(html(), /那一夜守住了/); assert.doesNotMatch(html(), /data-action="tMark" data-id="moth"/);
+  click('close');
+  // 存档
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.titan.schema, 2); assert.equal(back.titan.intro2.told, true); assert.equal(back.titan.wins.moth, 1); assert.ok(back.titan.final.won);
+  assert.ok(!Object.values(back.enemies || {}).some((list) => Array.isArray(list) && list.some((q) => q.titan || q.tMan)), 'no titan or raider of his saved among the infected');
+  console.log('Titan II controller passed: a v0.36 save restored from a file (the 后五凶 card on the first frame and gone after its time, no second 巨影 card), the last five drawn awake with their telegraphs at four sizes by day and by night (part bars in the boss bar, one per part, grouped by name), the final night by the clock (the radio three days ahead, the morning line, the 21:00 warning, no sleeping, 22:00 on the farm with four lights and no leaving), the win (one 最后一夜 card, no 倒下了 card, the last lamp, the 十凶碑 drawn), the book after it, and save/parse.');
 }
