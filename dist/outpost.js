@@ -2242,7 +2242,8 @@ function validateOutpost(o) {
     bad();
   if (o.caravan !== undefined) {
     const c = o.caravan;
-    if (!object(c) || !Array.isArray(c.offers) || c.offers.length > 6 || !Array.isArray(c.cheated) || c.cheated.length > 6) bad();
+    // 车上平时最多摆 6 样；唐九的商队那一周（v0.33 起）在摆满的车上还会多放两样稀罕货，所以存档里最多 8 样
+    if (!object(c) || !Array.isArray(c.offers) || c.offers.length > 8 || !Array.isArray(c.cheated) || c.cheated.length > 6) bad();
     for (const k of ["next", "until", "trust", "exposed", "visits"]) if (c[k] !== undefined && !int(c[k])) bad();
     for (const f of c.offers)
       if (

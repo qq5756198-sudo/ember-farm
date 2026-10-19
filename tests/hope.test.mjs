@@ -578,6 +578,28 @@ test("caravan week: Tang Jiu comes on day 2 with two rare goods, stays a day lon
   assert.ok(!e.caravanHere());
 });
 
+test("caravan week on a full cart: the two rare goods sit on top of six and the game still saves while Tang Jiu is here", () => {
+  const { e } = make();
+  const W = week(e, "caravan");
+  toDay(e, W.start + CARAVAN_WEEK.arriveSd - 1, 9);
+  assert.ok(e.caravanHere());
+  const c = e.o.caravan;
+  // 四样普通货、一张图纸、一件皮夹克（身上没有）摆满六样，稀罕货再放两样
+  assert.equal(c.offers.filter((o) => o.hpGood).length, 2);
+  assert.ok(c.offers.length > 6, "the cart is over six: " + c.offers.length);
+  assert.equal(new Set(c.offers.map((o) => o.key)).size, c.offers.length);
+  const back = Engine.parse(e.serialize());
+  assert.equal(back.outpost.caravan.offers.length, c.offers.length);
+  // 第二天还在，照样存得下；走了以后车上清空
+  toDay(e, W.start + CARAVAN_WEEK.leaveSd - 1, 19);
+  assert.ok(e.caravanHere());
+  assert.ok(Engine.parse(e.serialize()));
+  toDay(e, W.start + CARAVAN_WEEK.leaveSd, 9);
+  assert.ok(!e.caravanHere());
+  assert.equal(e.o.caravan.offers.length, 0);
+  assert.ok(Engine.parse(e.serialize()));
+});
+
 test("season boss: waits in its map on days 2–6 with a health bar; the first win leaves a trophy", () => {
   const { e, toasts } = make();
   const W = week(e, "boss");
