@@ -1757,6 +1757,29 @@ export class Engine extends NfEngine {
       this._tDef = false;
     }
   }
+  // 最后一夜：塔上的子弹先从仓库拿（身上带的留给你自己打光）
+  takeFarm(cost) {
+    if (this._tDef && !this._freeAmmo && this.finalLive?.() && cost && cost.ammo === 1 && Object.keys(cost).length === 1 && (this.s.storage?.ammo || 0) > 0) {
+      this.s.storage.ammo--;
+      if (!this.s.storage.ammo) delete this.s.storage.ammo;
+      return true;
+    }
+    return super.takeFarm(cost);
+  }
+  // 塔上的人不往打不动的那一块放枪（扑火身上的光还亮着时的身子、藏起来的那一只）：子弹留着打光、打扔过来的
+  towerLineClear(tower, e) {
+    if (e?.titan && (e.hidden || this.tShielded(e))) return false;
+    return super.towerLineClear(tower, e);
+  }
+  // 挨打只进一两成的那一块：光还亮着时扑火的身子、肺还在时的风机、车厢还连着时的车头
+  tShielded(z) {
+    if (!z?.titan || !z.part) return false;
+    const has = (k) => this.titansHere(z.titan).some((q) => q.part === k && !q.dead);
+    if (z.titan === "moth") return z.part === "body" && has("light");
+    if (z.titan === "vent") return z.part === "fan" && has("lung");
+    if (z.titan === "train") return z.part === "head" && has("car");
+    return false;
+  }
   advanceMinutes(n) {
     if (this._tFrame && n > 0 && n < 0.2 && this.tg && this.finalLive()) n *= FINAL.clock;
     return super.advanceMinutes(n);

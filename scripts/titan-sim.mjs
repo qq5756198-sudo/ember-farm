@@ -13,7 +13,7 @@
 // 两种都一样会看预兆（看到要 0.12–0.5 秒，SKILL 的机会看到，默认 0.85）、血少了缠绷带、没绷带又血少就跑（算逃回）。
 // 用法：node scripts/titan-sim.mjs 次数 凶[,凶] 打法[,打法] 装备[,装备]
 //   凶：hebo scrap zero bear frost diao tide vent train moth；打法：right naive；装备：mid（这凶开出来时手上有的）late（后期）
-// 环境变量：SKILL=0.85 看到预兆的机会；LIMIT=600 一场最长几秒；TRACE=1 打出每一场；TPATCH 换掉某一凶的数（见下）
+// 环境变量：SKILL=0.85 看到预兆的机会；LIMIT=600 一场最长几秒；TRACE=1 打出每一场；TPATCH 换掉某一凶的数（见下）；SEED0=19 从第 20 号种子打起
 const D = new URL("../dist/", import.meta.url).href;
 const { Engine, freshState } = await import(D + "campaign.js");
 const { RULES } = await import(D + "gear-data.js");
@@ -133,6 +133,21 @@ function trial(id, style, kitId, seed) {
   st.minute = id === "hebo" ? 21 * 60 : id === "moth" ? 22 * 60 : 600;
   st.weather = "晴朗";
   const e = new Engine(st, () => {});
+  // HITS=1：子弹、箭打在了哪一块上（自己的、塔上的分开记），打完一场打出来
+  const hits = process.env.HITS ? {} : null;
+  if (hits) {
+    const hurt = e.hurtEnemy.bind(e);
+    e.hurtEnemy = (z, n, a, meta) => {
+      const hp0 = z.hp,
+        r = hurt(z, n, a, meta),
+        who = meta?.vx != null ? "me" : "other",
+        k = who + ":" + (z.part || (z.titan ? "titan" : z.type)) + (z.dim ? "(dim)" : "");
+      const h = (hits[k] ||= { n: 0, dmg: 0 });
+      h.n++;
+      h.dmg += Math.max(0, hp0 - z.hp);
+      return r;
+    };
+  }
   let died = false;
   const emit = e.emit.bind(e);
   e.emit = (name, data) => {
@@ -148,7 +163,7 @@ function trial(id, style, kitId, seed) {
   else if (T.region === "tunnel") {
     Object.assign(e.rl.tunnel, { key: { floor: T.floor, day: st.day, luck: false }, floor: T.floor, deepest: T.floor });
   } else if (T.region !== "farm") e.d.unlocked[T.region] = true;
-  // 最后一夜：营火、两座塔、三个守卫（摆在东边）、仓库里的弹药
+  // 最后一夜：营火、两座塔、三个守卫（摆在东边）、仓库里给塔留的弹药（提前三天知道，弹药 2 份废金属 12 发）
   if (id === "moth") {
     s.storyCampaign.camp = e.campSite();
     for (const rid of ["farmer", "medic", "mechanic"]) e.recruit(rid);
@@ -159,7 +174,7 @@ function trial(id, style, kitId, seed) {
     }
     const fire = e.fireSpot();
     for (const [dx, dy] of [[300, -150], [300, 110]]) s.buildings.push({ id: "sim-tower-" + dx + dy, type: "tower", x: fire.x + dx, y: fire.y + dy, rotation: 0, hp: BUILDINGS.tower.hp });
-    s.storage.ammo = 80;
+    s.storage.ammo = 240;
     e.navRevision = (e.navRevision || 0) + 1;
     // 这一夜已经打起来了（守卫上塔、钟慢一半、天快亮它就退）
     Object.assign(e.tg.final, { day: st.day, on: st.day });
@@ -226,7 +241,9 @@ function trial(id, style, kitId, seed) {
     trapT = 0,
     throwT = 0,
     swapT = 0,
-    relightT = 0;
+    relightT = 0,
+    mothSpot = null,
+    mothSpotT = 0;
   const flank = { dir: seed % 2 ? 1 : -1, dirT: 0 };
   const stat = { low: 1, swings: 0, landed: 0, rolls: 0, bandages: 0, maxHit: 0, hits: 0, strikes: 0, lures: 0, crashes: 0, backstabs: 0, molotovs: 0, traps: 0, swaps: 0, relights: 0, staggers: 0, beached: 0, shots: 0 };
   const seen = new Map();
@@ -725,11 +742,39 @@ function trial(id, style, kitId, seed) {
         fire = e.fireSpot();
       if (!body) return attackPlan(z, dz, rch);
       if (lights.length) {
-        // 打亮着的那盏（暗下去的那两秒打不动）
-        const L = lights.slice().sort((a1, b1) => (a1.dim ? 1 : 0) - (b1.dim ? 1 : 0) || dist(a1, p) - dist(b1, p))[0],
-          a = Math.atan2(fire.y - body.y, fire.x - body.x) + flank.dir * 0.5,
-          spot = { x: clamp(body.x + Math.cos(a) * 430, 90, 1440), y: clamp(body.y + Math.sin(a) * 430, 120, 920) };
-        const shotOk = dist(L, p) < 820 && !L.dim && shoot(L);
+        // 子弹打光了：走上去拿家伙敲最近的那盏（暗下去的那两秒不打）
+        const left = (s.inventory.ammo || 0) + (s.magazines?.[g.slots.ranged] || 0);
+        if (!left) {
+          const L2 = lights.slice().sort((a1, b1) => dist(a1, p) - dist(b1, p))[0],
+            dl = dist(L2, p),
+            rl = (cur.W?.range || 90) + (L2.r || 34) * 0.85 - 12;
+          if (dl < rl) {
+            if (!L2.dim) swing(L2);
+            return { x: 0, y: 0, run: false };
+          }
+          return moveTo(e.blocked(L2.x, L2.y, false, 12) ? e.freePoint(L2.x, L2.y) : L2, dl > 260);
+        }
+        // 站的地方：离它四百三、在篝火那一边，看得见那几盏光（塔、房子挡着子弹就换个地方；一秒换一回）
+        const gun = (q) => ({ x: q.x, y: q.y - 28 });
+        mothSpotT -= DT;
+        if (!mothSpot || mothSpotT <= 0) {
+          mothSpotT = 1;
+          const base = Math.atan2(fire.y - body.y, fire.x - body.x);
+          let best = null;
+          for (const k of [0.5, -0.5, 0, 0.9, -0.9, 1.3, -1.3]) {
+            const a = base + k * flank.dir,
+              q = { x: clamp(body.x + Math.cos(a) * 430, 90, 1440), y: clamp(body.y + Math.sin(a) * 430, 120, 920) };
+            if (e.blocked(q.x, q.y, false, 12)) continue;
+            const n = lights.filter((L0) => e.lineClear(gun(q), L0)).length;
+            if (!best || n > best.n) best = { q, n };
+            if (n === lights.length) break;
+          }
+          mothSpot = best?.q || { x: body.x - 430, y: body.y };
+        }
+        const spot = mothSpot;
+        // 打亮着的那盏（暗下去的那两秒打不动）；挡着的不打
+        const L = lights.slice().sort((a1, b1) => (a1.dim ? 1 : 0) - (b1.dim ? 1 : 0) || (e.lineClear(gun(p), a1) ? 0 : 1) - (e.lineClear(gun(p), b1) ? 0 : 1) || dist(a1, p) - dist(b1, p))[0];
+        const shotOk = dist(L, p) < 820 && !L.dim && e.lineClear(gun(p), L) && shoot(L);
         if (process.env.MOTH && Math.round(t * 20) % 20 === 0) console.log("  moth", t.toFixed(1), "L", L.pkey, Math.round(L.hp), "dL", Math.round(dist(L, p)), "p", Math.round(p.x), Math.round(p.y), "body", Math.round(body.x), Math.round(body.y), "spot", Math.round(spot.x), Math.round(spot.y), "ammo", s.inventory.ammo || 0, "mag", s.magazines?.rifle, "reload", !!e.reload, "cd", e.cooldown.toFixed(2), "shot", shotOk);
         if (dist(p, spot) > 60) return moveTo(e.blocked(spot.x, spot.y, false, 12) ? e.freePoint(spot.x, spot.y) : spot);
         return { x: 0, y: 0, run: false };
@@ -760,8 +805,10 @@ function trial(id, style, kitId, seed) {
       const ammo = (s.inventory.ammo || 0) + (s.magazines?.[g.slots.ranged] || 0);
       if (ammo > 0) {
         if (dh < TITANS.moth.heart.beat.r1 + 30) return step(freeDir(Math.atan2(p.y - body.y, p.x - body.x)), false);
-        if (dh < 600) shoot(body);
-        return dh > 340 ? moveTo(body) : { x: 0, y: 0, run: false };
+        // 塔、房子挡着就往它那边挪一点
+        const clear = e.lineClear({ x: p.x, y: p.y - 28 }, { x: body.x, y: body.y - (body.hy ?? 30) });
+        if (dh < 600 && clear) shoot(body);
+        return dh > 340 || !clear ? moveTo(body) : { x: 0, y: 0, run: false };
       }
       return attackPlan(body, dh, (cur.W?.range || 90) + (body.r || 40) * 0.85 - 12);
     },
@@ -849,6 +896,25 @@ function trial(id, style, kitId, seed) {
     // 火烧掉了多少（黑潮）、打进去多少（别的）
     stat.fire = Math.max(stat.fire || 0, all.reduce((a1, z) => a1 + (z.dealt?.fire || 0), 0));
     if (process.env.DMG) for (const z of all) if (z.pkey) (stat.part ||= {})[z.pkey] = Math.round(z.maxHp - z.hp) + (z.tp ? "@" + z.tp : "");
+    // DMG=1：最后一夜每一段从第几秒开始（光全灭、心露出来、往篝火爬）
+    if (process.env.DMG && id === "moth") {
+      const bd = all.find((z) => z.part === "body"),
+        ph = (stat.ph ||= {});
+      if (bd && !all.some((z) => z.part === "light")) ph.out ??= Math.round(t);
+      if (bd?.heart) ph.heart ??= Math.round(t);
+      if (bd?.tp >= 2) ph.crawl ??= Math.round(t);
+      // 往篝火爬的那一段：心还剩多少、离篝火多远、挥了几下打中几下、开了几枪
+      if (bd?.tp >= 2) {
+        const c = (stat.cr ||= { hp0: Math.round(bd.hp), d0: Math.round(dist(bd, e.fireSpot())), sw: stat.swings, ld: stat.landed, sh: stat.shots, slow: 0 });
+        c.hp = Math.round(bd.hp);
+        c.d = Math.round(dist(bd, e.fireSpot()));
+        c.swings = stat.swings - c.sw;
+        c.landed = stat.landed - c.ld;
+        c.shots = stat.shots - c.sh;
+        if (bd.crawlSlow > 0) c.slow += DT;
+        c.pd = Math.round(dist(bd, p));
+      }
+    }
     stat.low = Math.min(stat.low, all.reduce((a, z) => a + Math.max(0, z.hp), 0) / Math.max(1, e.titanMaxHp(id)));
     // ---------- 缠绷带、跑 ----------
     const strikesIn = e.tx.strikes.filter((S) => (S.hit?.dmg || S.hit?.hold || S.col === "orange") && exitOf(S.shape, p, 16));
@@ -1009,6 +1075,11 @@ function trial(id, style, kitId, seed) {
       const fanNow = cur.all.find((z) => z.part === "fan");
       const k = gone.length ? gone.map((S) => (S.titan || "") + ":" + S.shape.k + (S.hit?.dmg || "")).join("+") : e.tx.zones.some((Z) => Z.kind === "gas" && e.tZoneHas(Z, p)) ? "gas" : e.gx.bleed > 0 ? "bleed" : "?" + (e.fx?.lastHitBy || "") + (fanNow && e.fx?.lastHitBy === "t_vent" ? (fanNow.act?.k === "suck" ? "-suck" : "-blade" + (e.invulnerable > 0.6 ? "" : "?")) : "");
       (stat.dmg ||= {})[k] = ((stat.dmg ||= {})[k] || 0) + (lastHp - p.hp);
+      // 最后一夜：每一段挨了多少
+      if (id === "moth") {
+        const seg = stat.ph?.crawl != null ? "crawl" : stat.ph?.out != null ? "heart" : "lights";
+        (stat.seg ||= {})[seg] = Math.round(((stat.seg ||= {})[seg] || 0) + (lastHp - p.hp));
+      }
     }
     if (p.hp < lastHp - 0.5) {
       stat.maxHit = Math.max(stat.maxHit, lastHp - p.hp);
@@ -1030,7 +1101,8 @@ function trial(id, style, kitId, seed) {
   const lost = id === "moth" && !won && !died && (e.tg.final.lost > 0 || !left.length);
   const out = { won, died: died || lost, fled: !died && !lost && !won && fleeing, timeout: !died && !lost && !won && !fleeing, t: fightStart >= 0 ? t - fightStart : t, hp: Math.round(p.hp), bossHp: left.reduce((a, z) => a + Math.max(0, z.hp), 0) / Math.max(1, e.titanMaxHp(id)), tp: left[0]?.tp ?? 3, ...stat, crashes: e.tg.stats.staggers };
   if (TRACE) console.log(id, style, kitId, seed, JSON.stringify(out));
-  if (process.env.DMG && stat.part) console.log("  part", seed, JSON.stringify(stat.part));
+  if (process.env.DMG && stat.part) console.log("  part", seed, JSON.stringify(stat.part), stat.ph ? JSON.stringify(stat.ph) : "", stat.seg ? JSON.stringify(stat.seg) : "", stat.cr ? JSON.stringify({ ...stat.cr, sw: undefined, ld: undefined, sh: undefined, slow: Math.round(stat.cr.slow * 10) / 10 }) : "");
+  if (hits) console.log("  hits", seed, Object.entries(hits).sort((a1, b1) => b1[1].dmg - a1[1].dmg).map(([k, v]) => k + " " + v.n + "/" + Math.round(v.dmg)).join("  "));
   if (process.env.DMG) console.log("  dmg", seed, out.won ? "WON" : out.died ? "DIED" : "FLED", Object.entries(stat.dmg || {}).sort((a1, b1) => b1[1] - a1[1]).map(([k, v]) => k + ":" + Math.round(v)).join("  "));
   return out;
 }
@@ -1042,7 +1114,7 @@ for (const id of WHO)
     for (const style of STYLES) {
       const rs = [];
       const t0 = Date.now();
-      for (let i = 0; i < N; i++) rs.push(trial(id, style, kitId, i + 1));
+      for (let i = 0; i < N; i++) rs.push(trial(id, style, kitId, i + 1 + Number(process.env.SEED0 || 0)));
       const wins = rs.filter((r) => r.won),
         times = wins.map((r) => r.t).sort((a, b) => a - b),
         q = (k) => (times.length ? Math.round(times[Math.min(times.length - 1, Math.floor(times.length * k))]) : null);

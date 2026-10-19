@@ -34,7 +34,7 @@ function addFoe(E, type, q, of) {
 const addsOf = (E, of) => (E.enemies || []).filter((z) => z.tOf === of && !z.titan && !z.dead).length;
 
 // ================= 第六凶：雕爷和看门的 =================
-// 看门的拴在雕爷身上（离他 320 以外够不着）；雕爷躲在它身后放枪、扔烟、叫人。先倒下谁，后面就不一样：
+// 看门的拴在雕爷身上（离他 280 以外够不着）；雕爷躲在它身后放枪、扔烟、叫人。先倒下谁，后面就不一样：
 // 雕爷先倒下——看门的挣断链子、嘴套掉了会咬；看门的先倒下——雕爷脱了大氅拼命、扔燃烧瓶、一次叫三个。
 const D = TITANS.diao;
 const bossOf = (E) => E.titansHere("diao").find((z) => z.part === "boss") || null;
@@ -129,7 +129,7 @@ AI.diao = {
     }
     const C = D.charge;
     if (!e.cd.charge && d > C.from[0] && d < C.from[1] && E.lineClear(e, p) && (free || dist(boss, p) < D.chain + 80)) return AI.diao.chargeAt(E, e);
-    // 往你那儿走：链子拴着，离雕爷 320 以外够不着（绷在链子头上）
+    // 往你那儿走：链子拴着，离雕爷 280 以外够不着（绷在链子头上）
     let goal = { x: p.x, y: p.y };
     if (!free && dist(boss, goal) > D.chain) {
       const a = aim(boss, goal);
@@ -999,13 +999,13 @@ PHASE_HOOK.train = (E, e, tp) => {
     E.toast("车厢打完了：车头翻下轨道，拖着车钩追过来了！", "warn");
   }
 };
-// 车厢还连着：车头只打得进三成
+// 车厢还连着：车头只打得进一成
 HURT_HOOK.train = (E, e, n, h) => (e.part === "head" && trainCars(E).length ? TR.linked : 1);
 
 // ================= 最后一凶：扑火 =================
 // 一座会走的尸山，身上嵌着四盏光（以前被它吞掉的营火），一直往农场中间的篝火挪；光在的时候身子只打得进一成。
 // 巨手从天上砸、从身上扯下感染者扔过来、踩坏外面的设施；光全灭：塌成三道浪从东往西卷（只留一个口子），
-// 浪退下去露出一颗烧着的心；心剩两成五就直奔篝火爬——扑到了这一夜就没守住。
+// 浪退下去露出一颗烧着的心；心只剩最后一小截（不到一成）就直奔篝火爬——扑到了这一夜就没守住。
 const M = TITANS.moth;
 const mothBody = (E) => E.titansHere("moth").find((z) => z.part === "body") || null;
 const mothLights = (E) => E.titansHere("moth").filter((z) => z.part === "light");
@@ -1167,7 +1167,7 @@ AI.moth = {
     }
     E.tx.waves = L.filter((w) => w.x > -w.w);
   },
-  // 心：身边一圈烫，跳一下荡开一圈火；剩两成五就往篝火爬
+  // 心：身边一圈烫，跳一下荡开一圈火；只剩最后一小截就往篝火爬
   heart(E, e, dt) {
     const p = E.s.player,
       d = dist(e, p),

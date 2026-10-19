@@ -483,7 +483,7 @@ test("扑火: the four lights shield its body; arrows break the lights fast, but
   assert.equal(hit(e, body, 100), 100, "and takes blows");
 });
 
-test("the heart at its last eighth crawls for the fire; shoving and traps slow it; reaching the fire ends the night as lost", () => {
+test("the heart's last sliver (under a tenth) crawls for the fire; shoving and traps slow it; reaching the fire ends the night as lost", () => {
   const { e, toasts } = farmGame({ minute: 22 * 60 });
   e.tg.final.day = e.s.day;
   run(e, 0.2);
@@ -621,6 +621,48 @@ test("during the final night: the guards man the towers, the clock runs at half 
   assert.ok(e.finalLive());
   const hp = e.titansHere("moth").reduce((a, q) => a + q.hp, 0);
   assert.ok(Math.abs(hp / max - 0.8) < 0.02, "starts weaker: " + (hp / max).toFixed(3));
+});
+
+test("on the final night the towers shoot what they can hurt — the lights, then the heart — never the shielded body, and take their bullets from the storage first", () => {
+  const { e } = farmGame({ minute: FINAL.hour });
+  e.tg.final.day = e.s.day;
+  run(e, 0.2);
+  assert.ok(e.finalLive());
+  e.enemies = e.s.enemies.farm = e.enemies.filter((q) => q.titan === "moth");
+  const body = one(e, "moth", "body"),
+    lights = all(e, "moth", "light");
+  const at = e.freePoint(body.x - 190, body.y - 150);
+  e.s.buildings.push({ id: "test-tower", type: "tower", x: Math.round(at.x), y: Math.round(at.y), rotation: 0, hp: 300 });
+  e.navRevision = (e.navRevision || 0) + 1;
+  const tower = e.s.buildings.at(-1);
+  assert.equal(e.towerLineClear(tower, body), false, "not at the body while the lights burn");
+  assert.ok(lights.some((q) => e.towerLineClear(tower, q)), "the lights are fair game");
+  e.s.storage.ammo = 6;
+  e.s.inventory.ammo = 20;
+  const bodyHp = body.hp,
+    lightHp = lights.reduce((a, q) => a + q.hp, 0);
+  for (let i = 0; i < 4; i++) {
+    tower.shotTimer = 0;
+    e.updateDefense(DT);
+  }
+  assert.equal(body.hp, bodyHp, "the body untouched");
+  assert.ok(lights.reduce((a, q) => a + q.hp, 0) < lightHp, "the lights take the shots");
+  assert.equal(e.s.storage.ammo, 2, "the tower's bullets come from the storage first");
+  assert.equal(e.s.inventory.ammo, 20, "yours are kept for you");
+  // 光全灭了：心打得动，塔就往它身上打
+  for (const q of lights) q.dead = true;
+  e.enemies = e.s.enemies.farm = e.enemies.filter((q) => !q.dead);
+  Object.assign(body, { hidden: false, heart: true, act: null });
+  assert.equal(e.tShielded(body), false);
+  // 平常（不是最后一夜）还是先用身上的
+  e.finalEnd("dawn");
+  e._tDef = true;
+  try {
+    assert.ok(e.takeFarm({ ammo: 1 }));
+  } finally {
+    e._tDef = false;
+  }
+  assert.equal(e.s.inventory.ammo, 19, "other nights as before");
 });
 
 test("the one you live with stands by you on the final night too, as on a long night", () => {

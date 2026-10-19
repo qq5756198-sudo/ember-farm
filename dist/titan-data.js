@@ -526,7 +526,7 @@ export const TITANS = {
     open: (e) => !!e.storyDone?.() && TITAN_IDS.filter((id) => id !== "moth" && e.tg?.first?.[id]).length >= FINAL.wins && (e.coreCount?.() || 0) >= FINAL.cores,
     openText: "主线打完、打赢七凶、身上有三颗余烬核以后；那天夜里从农场东边的林子里来",
     // 四盏光加一颗心
-    hp: 15600,
+    hp: 22800,
     speed: 8,
     r: 120,
     w: 200,
@@ -534,8 +534,8 @@ export const TITANS = {
     phases: [0.5, 0.15],
     poise: 99999,
     parts: {
-      body: { type: "t_moth", name: "心", hp: 12000 },
-      light: { type: "t_light", name: "光", hp: 900, r: 34, n: 4 },
+      body: { type: "t_moth", name: "心", hp: 18000 },
+      light: { type: "t_light", name: "光", hp: 1200, r: 34, n: 4 },
     },
     // 四盏光嵌在身上的位置（离身子中间多远）
     lights: [
@@ -549,20 +549,20 @@ export const TITANS = {
     lightRanged: 1.5,
     // 光一明一暗：亮几秒、暗几秒，暗下去的时候只打得进几成
     pulse: { on: 3, off: 2, dim: 0.2 },
-    hand: { r: 120, warn: 1.4, dmg: 30, down: 1.5, cd: 16 },
-    fling: { r: 70, warn: 1.0, dmg: 14, n: 2, cd: 15, min: 160, max: 520, cap: 2 },
+    hand: { r: 120, warn: 1.4, dmg: 60, down: 1.5, cd: 9 },
+    fling: { r: 70, warn: 1.0, dmg: 20, n: 2, cd: 10, min: 160, max: 520, cap: 3 },
     // 往前挪：挪到离篝火多远停下（第一、二段；第三段那颗心才往篝火爬）
     standoff: 520,
     // 踩坏设施：身边多近的设施每秒掉多少（只踩外面的：围栏、大门、陷阱、塔、信标、稻草人、水桶、喷灌头、太阳能板、照看机、堆肥桶）
     trample: { r: 150, dps: 40, kinds: ["fence", "gate", "trap", "tower", "lure", "scarecrow", "rain", "irrigation", "solar", "drone", "compost"] },
     // 第二段：塌下来——一道浪从一边卷到另一边（几次、多宽、口子多宽、预兆、挨上多少、卷走多远）；然后露出心
     // 浪从东往西卷过整张图（多快）；口子是横着的一条（离你上下多远以内）
-    wave: { n: 3, w: 170, gap: 170, warn: 1.6, dmg: 34, push: 220, every: 2.6, speed: 760, near: 180 },
+    wave: { n: 3, w: 170, gap: 170, warn: 1.6, dmg: 50, push: 220, every: 2.6, speed: 760, near: 180 },
     // 心：多大、身边一圈烫（多大、每秒多少）；心跳一下荡开一圈火（几秒一下、从多大到多大、挨一下多少）
     // 塌下来的那一堆还在动：心露出来以后隔几秒又卷一道浪、扔几只过来
-    heart: { r: 90, aura: 120, dps: 6, beat: { every: 7, warn: 1.0, r0: 110, r1: 260, dmg: 12 }, wave: 28, fling: 24 },
+    heart: { r: 90, aura: 120, dps: 6, beat: { every: 5, warn: 1.0, r0: 110, r1: 260, dmg: 20 }, wave: 18, fling: 13 },
     // 第三段：心剩几成就直奔篝火爬；爬多快、多近算扑到；推开、捕兽夹、钉板拖慢几秒
-    crawl: { at: 0.12, speed: 20, reach: 60, slow: 1.6 },
+    crawl: { at: 0.08, speed: 20, reach: 60, slow: 1.6 },
     trophy: "tTrophyMoth",
     gear: null,
     perk: "纪念石旁立起十凶碑，刻下十凶的名号",
@@ -918,7 +918,7 @@ export const TITAN_INTRO2 = ["后五凶：雕爷和看门的（北线货运站�
 // ================= 最后一夜（扑火） =================
 export const FINAL_TEXT = {
   notice: "电台：东边林子里的鸟都飞光了。有一座会动的山循着余烬核的光往这边挪——三天后（第 {d} 天）夜里 22:00 到余烬农场。",
-  morning: "今晚 22:00，扑火的从东边林子里来：塔、陷阱、守卫都摆在东边，弩和箭备足。今晚没有长夜、没有尸潮。",
+  morning: "今晚 22:00，扑火的从东边林子里来：塔、陷阱、守卫都摆在东边，仓库里给塔留足子弹，弩和箭备足。今晚没有长夜、没有尸潮。",
   warn: "扑火的一小时后到：22:00 前回农场，到时候不在也会被叫回去。",
   start: "东边林子里的火光过来了——扑火的来了！它会一直往篝火挪：先打它身上的四盏光，别让它扑到篝火。",
   home: "扑火的来了：你赶回了农场。",
