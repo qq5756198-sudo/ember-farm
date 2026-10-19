@@ -847,3 +847,17 @@ test("pages and actions: the station, the platform, the review, the museum, the 
   const alerts = alertItems(e).map((a) => a.text).join("|");
   assert.match(alerts, /铁盒/);
 });
+
+// v0.36 查出来的：长夜打着的时候存档（每 20 秒一次），守住过 4 个以上、身上有余烬核时这一夜的“多多少”超过两倍，读不回来
+test("a save made in the middle of a long night reads back even with every ember core", () => {
+  const e = new Engine(freshState(), () => {});
+  e.ln.storyDay = 30;
+  e.ln.held = e.ln.tried = 9;
+  e.rl.cores = [...CORE_IDS];
+  const mult = Math.round(e.lnMult() * 100);
+  assert.ok(mult > 200, "cores push it past twice: " + mult);
+  e.s.day = 94;
+  e.ln.night = { day: 94, n: 10, mult, wave: 2, left: 40, made: 30, boss: 0, kills: 20, start: 94 * 1440 + 1320, prev: "won" };
+  const back = Engine.parse(e.serialize());
+  assert.equal(back.longnight.night.mult, mult);
+});

@@ -1401,7 +1401,8 @@ function validateLongnight(x) {
     const n = x.night,
       keys = ["day", "n", "mult", "wave", "left", "made", "boss", "kills", "start", "prev"];
     if (!object(n) || Object.keys(n).some((k) => !keys.includes(k))) bad();
-    if (!int(n.day, 1, 1e6) || !int(n.n, 1, 1e5) || !int(n.mult, 100, 100 * LN.cap) || !int(n.wave, 0, 3) || !int(n.left, 0, 400) || !int(n.made, 0, 1000) || !int(n.boss, 0, 2) || !int(n.kills, 0, 1e5) || !int(n.start, 0, 1e9) || !["won", "locked"].includes(n.prev)) bad();
+    // mult：守住几个的那一截最多 LN.cap，v0.31 起身上的余烬核还会再乘一点（7 颗 ×1.21），上限放宽到一倍半
+    if (!int(n.day, 1, 1e6) || !int(n.n, 1, 1e5) || !int(n.mult, 100, Math.round(150 * LN.cap)) || !int(n.wave, 0, 3) || !int(n.left, 0, 400) || !int(n.made, 0, 1000) || !int(n.boss, 0, 2) || !int(n.kills, 0, 1e5) || !int(n.start, 0, 1e9) || !["won", "locked"].includes(n.prev)) bad();
   }
   if (x.last !== undefined && x.last !== null) {
     const l = x.last,
