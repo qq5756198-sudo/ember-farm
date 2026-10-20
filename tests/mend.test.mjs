@@ -327,6 +327,10 @@ test("on touch no keyboard or mouse words are left on the hotbar line, fishing, 
     "防线视图：绿圈是有人驻守的射程，红框是薄弱的围栏。再按 Z 关闭。",
     "角色可以通过。E 切换开关；关闭时阻挡僵尸。",
     "附近不止一样东西。按数字键或点一下：",
+    // 画面上写的：精英头上、相机取景、防线视图顶上那一行
+    "瞄准 腿部 · T切换",
+    "H 拍照 · 最近6张保留",
+    "防线视图 · 绿圈=有人驻守的射程 · 红框=薄弱围栏 · Z 关闭",
   ];
   const KEYS = /按\s?[A-Z]\b|\b[A-Z]\s?(推开|装填|打开|播种|站起|拍照|选择|旋转|切换|关闭)|左键|右键|数字键|Esc|Tab|[A-Z](站起|拍照|选择)/;
   for (const t of lines) {
@@ -338,6 +342,11 @@ test("on touch no keyboard or mouse words are left on the hotbar line, fishing, 
   assert.match(game, /fishing\.textContent=tw\(/);
   assert.match(game, /el\.textContent=tw\(r\?`远征第/);
   assert.match(game, /tw\('按住 E（手机按住「收线」）收；线绷红了就松'\)/);
+  // 画面上那几行原样在渲染器里（手机上画之前过一遍 touchWords）
+  const fr = readFileSync(new URL("../dist/frontier-renderer.js", import.meta.url), "utf8");
+  assert.ok(fr.includes("' · T切换'") && fr.includes("'H 拍照 · 最近6张保留'"));
+  const or = readFileSync(new URL("../dist/outpost-renderer.js", import.meta.url), "utf8");
+  assert.ok(or.includes("红框=薄弱围栏 · Z 关闭"));
   const css = readFileSync(new URL("../dist/mend.css", import.meta.url), "utf8");
   assert.match(css, /@media \(pointer: coarse\) \{\s*\.dock-hints \{\s*display: none !important;/);
 });
