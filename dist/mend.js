@@ -187,7 +187,9 @@ export class Engine extends TitanEngine {
     let n = 0;
     const d = this.f?.dog,
       p = this.s.player;
-    if (d?.rescued && this.s.region !== "market" && this.blocked(d.x, d.y, false, MEND.r)) {
+    // 只管跟着你、就在这张图上的它（留在原地等、回农场看家的不动）
+    const here = d?.rescued && this.s.region !== "market" && !["wait", "home"].includes(this.b?.dog?.mode) && (this.objects || []).some((o) => o.type === "partnerDog");
+    if (here && this.blocked(d.x, d.y, false, MEND.r)) {
       const q = this.mendFree(d) || this.mendFree(d, p);
       if (q) {
         Object.assign(d, q);
@@ -265,6 +267,10 @@ export class Engine extends TitanEngine {
       return false;
     }
     const q = this.mendSpot(true);
+    if (!q) {
+      this.toast(MEND_TEXT.why.none + "。", "warn");
+      return false;
+    }
     this.mendMove(q);
     this._mendAt = Date.now();
     this._mendWhy = null;
