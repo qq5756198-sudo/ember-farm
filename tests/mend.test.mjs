@@ -393,6 +393,20 @@ test("going to bed after midnight sleeps to 8 that morning instead of sleeping t
   e.s.minute = 60;
   e.s.horde.phase = "active";
   assert.equal(e.sleep(), false);
+  e.s.horde.phase = "locked";
+  if (e.dy) e.dy.pending = null;
+  // 农舍那一页：这一觉睡到今天 8 点就写“睡到早上 8 点”——长夜刚过去的清晨也是（原来写“休息至次日”）
+  e.s.minute = 2 * 60;
+  assert.equal(e.napToday(), true);
+  e.s.minute = 22 * 60;
+  assert.equal(e.napToday(), false, "an evening sleep goes to tomorrow");
+  e.s.minute = 5 * 60;
+  e.ln.last = { held: true, end: e.s.day * 1440 + 4 * 60 };
+  assert.equal(e.mendNapOk(), false, "after a long night its own nap applies");
+  assert.equal(e.napToday(), true, "and the farmhouse still says 8 this morning");
+  const game = readFileSync(new URL("../dist/game.js", import.meta.url), "utf8");
+  assert.match(game, /engine\.napToday\?\.\(\)\?MEND_TEXT\.napNote/);
+  assert.match(game, /engine\.napToday\?\.\(\)\?MEND_TEXT\.napButton/);
 });
 
 // ================= 17. 麦穗挡着按交互 =================

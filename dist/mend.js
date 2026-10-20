@@ -406,6 +406,10 @@ export class Engine extends TitanEngine {
     if (this.mendNapOk()) return this.mendNap();
     return super.sleep();
   }
+  // 这一觉睡到今天早上 8 点（过了半夜，或者长夜、最后一夜刚过去）：农舍那一页的按钮照这个写（原来长夜过后也写“休息至次日”）
+  napToday() {
+    return !!(this.mendNapOk() || this.lnNapOk?.() || this.finalNapOk?.());
+  }
 
   // ================= 麦穗不挡着按交互 =================
   mendNoDog(fn) {

@@ -61,7 +61,7 @@ const dir=new URL('../dist',import.meta.url).pathname;
 let all=[];const listeners={};
 function decode(s){return s.replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');}
 function parse(html,parent){const out=[];for(const m of html.matchAll(/<([a-zA-Z][\w-]*)([^>]*)>/g)){const el=new El(m[1].toLowerCase(),parent);for(const a of m[2].matchAll(/([\w:-]+)(?:="([^"]*)")?/g)){const k=a[1],v=decode(a[2]||'');if(k==='id')el.id=v;else if(k==='class')el.className=v;else if(k.startsWith('data-'))el.dataset[k.slice(5).replace(/-([a-z])/g,(_,v)=>v.toUpperCase())]=v;else if(k==='disabled')el.disabled=true;else if(k==='hidden')el.hidden=true;else if(k==='value')el.value=v;}out.push(el);}return out;}
-function match(el,selector){const hot=selector.match(/^#modal \[data-hotkey="(\d)"\]$/);if(hot){if(el.dataset.hotkey!==hot[1])return false;for(let p=el.parent;p;p=p.parent)if(p.id==='modal')return true;return false;}return selector.split(',').some(part=>{part=part.trim();if(part.includes(':not([disabled])')&&el.disabled)return false;part=part.replace(':not([disabled])','');const attr=part.match(/\[([\w-]+)\]/)?.[1];if(attr){const key=attr.slice(5).replace(/-([a-z])/g,(_,v)=>v.toUpperCase());if(attr.startsWith('data-')&&!(key in el.dataset))return false;part=part.replace(/\[[\w-]+\]/,'');}if(part.startsWith('#'))return el.id===part.slice(1);if(part.startsWith('.'))return el.className.split(' ').includes(part.slice(1));return !part||el.tag===part;});}
+function match(el,selector){const hot=selector.match(/^#modal \[data-hotkey="(\d)"\]$/);if(hot){if(el.dataset.hotkey!==hot[1])return false;for(let p=el.parent;p;p=p.parent)if(p.id==='modal')return true;return false;}return selector.split(',').some(part=>{part=part.trim();if(part.includes(':not([disabled])')&&el.disabled)return false;part=part.replace(':not([disabled])','');const av=part.match(/\[(data-[\w-]+)="([^"]*)"\]/);if(av){if(el.dataset[av[1].slice(5).replace(/-([a-z])/g,(_,v)=>v.toUpperCase())]!==av[2])return false;part=part.replace(av[0],'');}const attr=part.match(/\[([\w-]+)\]/)?.[1];if(attr){const key=attr.slice(5).replace(/-([a-z])/g,(_,v)=>v.toUpperCase());if(attr.startsWith('data-')&&!(key in el.dataset))return false;part=part.replace(/\[[\w-]+\]/,'');}if(part.startsWith('#'))return el.id===part.slice(1);if(part.startsWith('.'))return el.className.split(' ').includes(part.slice(1));return !part||el.tag===part;});}
 class El{
  constructor(tag,parent=null){this.scrollTop=0;this.classList={add:(v)=>{this.className+=' '+v},remove:v=>{this.className=this.className.split(' ').filter(x=>x!==v).join(' ')},toggle:(v,force)=>{const on=force??!this.className.split(' ').includes(v);this.className=this.className.split(' ').filter(x=>x!==v).join(' ')+(on?' '+v:'');return on}};this.tag=tag;this.parent=parent;this.children=[];this.dataset={};this.className='';this.hidden=false;this.disabled=false;this.style={setProperty(k,v){this[k]=v}};this.textContent='';this.value='';this.events={};this._width=0;this._height=0;}
  set innerHTML(html){for(const el of this._parsed||[])all=all.filter(x=>x!==el);this._html=html;this._parsed=parse(html,this);all.push(...this._parsed);this.children=this._parsed;const selects=this._parsed.filter(x=>x.tag==='select');for(const el of selects){const snippet=html.match(new RegExp('<select[^>]*'+(el.id?'id="'+el.id+'"':'')+'[^>]*>([\\s\\S]*?)</select>'))?.[1];el.value=decode(snippet?.match(/<option value="([^"]*)"[^>]*selected/)?.[1]||snippet?.match(/<option value="([^"]*)"/)?.[1]||'');}}
@@ -2743,4 +2743,135 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(back.titan.schema, 2); assert.equal(back.titan.intro2.told, true); assert.equal(back.titan.wins.moth, 1); assert.ok(back.titan.final.won);
   assert.ok(!Object.values(back.enemies || {}).some((list) => Array.isArray(list) && list.some((q) => q.titan || q.tMan)), 'no titan or raider of his saved among the infected');
   console.log('Titan II controller passed: a v0.36 save restored from a file (the 后五凶 card on the first frame and gone after its time, no second 巨影 card), the last five drawn awake with their telegraphs at four sizes by day and by night (part bars in the boss bar, one per part, grouped by name), the final night by the clock (the radio three days ahead, the morning line, the 21:00 warning, no sleeping, 22:00 on the farm with four lights and no leaving), the win (one 最后一夜 card, no 倒下了 card, the last lamp, the 十凶碑 drawn), the book after it, and save/parse.');
+}
+
+// v0.38.0「修缮」: the stuck escape through the real pages — the settings row can't be pressed while you can walk out (and says why;
+// 被抓着 says so too), a ring of fences round you makes it pressable, one press moves you to where the exit is reachable and closes the
+// page, then 稍等 for a few seconds; the phone menu's 脱困 tile the same way; standing inside a new bed moves you out by itself; the
+// touch 部位 button next to an elite; 睡到早上 8 点 after midnight in the farmhouse; a save refused for a data reason says so (and a full
+// browser still says the space ran out); and save/parse.
+{
+  let clock = 38000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const closeCards = () => { const m = context.inspect().moments; m.queue.length = 0; m.close(); };
+  const toasts = () => document.querySelector('#toasts').innerHTML;
+  const T = MendData.MEND_TEXT, M = MendData.MEND;
+  const e = context.inspect().engine;
+  dailyOn = false;
+  if (e.s.region !== 'farm') e.travel('farm');
+  e.paused = false; if (e.dy) e.dy.pending = null; closeCards(); run(2);
+  e.invulnerable = 999;
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const stuck = () => e.blocked(e.s.player.x, e.s.player.y, false, M.r);
+  const added = [];
+  const addB = (type, x, y, extra = {}) => { const b = { id: 'mend-' + type + '-' + added.length, type, x, y, rotation: 0, hp: Data.BUILDINGS[type].hp, open: false, ...extra }; e.s.buildings.push(b); added.push(b.id); e.navRevision = (e.navRevision || 0) + 1; return b; };
+  // 农场上一处空地（四周没有设施、田和交互的东西）
+  let at = null;
+  for (let y = 560; y < 960 && !at; y += 20) for (let x = 600; x < 1500 && !at; x += 20) {
+    const p = { x, y };
+    if (e.blocked(x, y, false, 70) || e.s.plots.some((q) => dist(q, p) < 170) || e.objects.some((o) => dist(o, p) < 170)) continue;
+    if (dist(p, Data.REGIONS.farm.exit) < 260 || dist(p, M.home) < 200) continue;
+    at = p;
+  }
+  assert.ok(at, 'an open spot on the farm');
+  Object.assign(e.s.player, at); e.navCache = null; e._mendAt = 0; e._mendWhy = null; run(1);
+  // ---------- 走得出去：设置里那一行按不了，写着为什么 ----------
+  context.open('pause'); clean();
+  assert.ok(html().includes(T.row.title), 'the row is in the settings');
+  assert.match(html(), /data-action="mendUnstuck" disabled/);
+  assert.ok(html().includes(T.why.free), 'and says why');
+  click('mendUnstuck'); assert.equal(context.inspect().menu, 'pause', 'a disabled button does nothing');
+  click('close');
+  // 手机的快捷菜单：脱困那一格也按不了，写一句短的
+  click('xView', 'phone'); clean();
+  assert.ok(html().includes('>' + T.tile + '<small>' + T.short.free + '</small>'), 'the 脱困 tile with its short reason');
+  assert.match(html(), /class="phone-tile" data-action="mendUnstuck" disabled/);
+  click('close');
+  // ---------- 一圈围栏围死：按一下挪出去 ----------
+  for (const dx of [-72, 0, 72]) { addB('fence', at.x + dx, at.y - 60); addB('fence', at.x + dx, at.y + 60); }
+  for (const dy of [-60, -36, 36, 60]) { addB('fence', at.x - 110, at.y + dy, { rotation: 1 }); addB('fence', at.x + 110, at.y + dy, { rotation: 1 }); }
+  run(1);
+  assert.equal(stuck(), false, 'not inside anything');
+  // 被抓着的时候不行
+  e.gx.grab = { z: null }; e._mendWhy = null;
+  context.open('pause'); assert.ok(html().includes(T.why.grabbed), 'grabbed: free yourself first'); click('close');
+  e.gx.grab = null; e._mendWhy = null;
+  context.open('pause'); clean();
+  assert.doesNotMatch(html(), /data-action="mendUnstuck" disabled/, 'walled in: the button can be pressed');
+  assert.ok(html().includes(T.row.desc));
+  click('mendUnstuck');
+  assert.equal(context.inspect().menu, null, 'the page closes');
+  assert.ok(dist(e.s.player, at) > 60, 'moved out of the ring');
+  assert.equal(stuck(), false);
+  assert.ok(toasts().includes(T.moved), 'and says so');
+  context.open('pause'); assert.ok(html().includes(T.why.cool), 'a few seconds before the next one'); click('close');
+  e._mendAt = 0; e._mendWhy = null;
+  assert.equal(e.unstuckReason(), T.why.free, 'where it put you reaches the exit');
+  // 再回到圈里，从手机的快捷菜单挪
+  Object.assign(e.s.player, at); e.navCache = null; e._mendWhy = null;
+  click('xView', 'phone');
+  assert.doesNotMatch(html(), /data-action="mendUnstuck" disabled/);
+  click('mendUnstuck');
+  assert.equal(context.inspect().menu, null);
+  assert.ok(dist(e.s.player, at) > 60 && !stuck());
+  e.s.buildings = e.s.buildings.filter((b) => !added.includes(b.id)); e.navRevision++; added.length = 0;
+  // ---------- 站进新放的床里：自己挪出来 ----------
+  // （提示栏里同一句话 45 秒内第二遍只飘字，所以看引擎说了没有）
+  const said = [], say = e.toast; e.toast = function (t, tone) { said.push(t); return say.call(this, t, tone); };
+  Object.assign(e.s.player, at); e.navCache = null; e._mendSaid = 0; e._mendAt = 0;
+  addB('bed', at.x, at.y);
+  assert.ok(stuck(), 'standing inside the bed');
+  run(8);
+  assert.equal(stuck(), false, 'moved out by itself');
+  assert.ok(dist(e.s.player, at) < 90, 'to somewhere close');
+  assert.ok(said.includes(T.pushed), 'and says so'); e.toast = say;
+  e.s.buildings = e.s.buildings.filter((b) => !added.includes(b.id)); e.navRevision++; added.length = 0;
+  // ---------- 触屏：精英身边的“部位”按钮 ----------
+  const aim = () => document.querySelector('[data-action="touchAim"]');
+  context.hud();
+  assert.equal(aim().hidden, true, 'no elite near: no button');
+  const g = e.enemy('elite', e.s.player.x + 220, e.s.player.y);
+  e.enemies.push(g);
+  e.f.aimPart = 'armor'; context.hud();
+  assert.equal(aim().hidden, false, 'an elite near: the button shows');
+  assert.equal(aim().textContent, T.aim + '·装甲');
+  click('touchAim');
+  assert.equal(e.f.aimPart, 'legs', 'one tap switches the part');
+  assert.equal(aim().textContent, T.aim + '·腿');
+  g.dead = true; context.hud();
+  assert.equal(aim().hidden, true, 'gone with the elite');
+  e.f.aimPart = 'armor';
+  // ---------- 过了半夜回农舍：睡到当天早上 8 点 ----------
+  e.advanceMinutes(1440 - e.s.minute + 2 * 60); closeCards();
+  if (e.dy) e.dy.pending = null;
+  const day = e.s.day;
+  const napWhy = () => JSON.stringify({ region: e.s.region, minute: e.s.minute, day: e.s.day, lnNap: e.lnNapOk?.(), finalNap: e.finalNapOk?.(), lnNight: !!e.ln?.night, lnPending: e.lnPending?.(), final: e.tg?.final, daily: !!(e.dy && e.dailyCard?.()), deferred: e.dailyDeferred?.(), horde: e.s.horde?.phase, raid: e.raidState?.()?.phase, echo: e.activeEvents?.().map((d) => d.id) });
+  assert.ok(e.mendNapOk(), 'a quiet night past midnight ' + napWhy());
+  context.open('home'); clean();
+  assert.ok(html().includes(T.napButton) && html().includes(T.napNote), 'the farmhouse says so');
+  click('sleep');
+  assert.equal(e.s.day, day, 'the same day');
+  assert.equal(e.s.minute, M.napUntil, 'at eight in the morning');
+  if (context.inspect().menu) click('close');
+  closeCards(); run(2);
+  // ---------- 存不进去：记录对不上照实说；浏览器满了才说空间 ----------
+  const keep = e.s.buildings;
+  e.s.buildings = keep.concat(Array.from({ length: 301 - keep.length > 0 ? 301 - keep.length : 1 }, (_, i) => ({ id: 'mend-x' + i, type: 'fence', x: 200 + (i % 40) * 4, y: 1000, rotation: 0, hp: Data.BUILDINGS.fence.hp, open: false })));
+  click('save');
+  assert.equal(context.inspect().menu, 'saveFail'); clean();
+  assert.ok(html().includes('存档里有一处记录对不上') && html().includes('（存档超出当前版本支持范围）'), 'a data problem is named as one');
+  assert.ok(!html().includes('浏览器的空间不够'), 'not blamed on the browser');
+  assert.ok(html().includes('不要清理浏览器的数据'));
+  click('close');
+  e.s.buildings = keep; e.navRevision++;
+  failSave = true; click('save');
+  assert.equal(context.inspect().menu, 'saveFail'); assert.ok(html().includes('浏览器的空间不够'), 'a full browser still says so');
+  failSave = false; click('close');
+  // 存档：没有新字段，读回来还是一样
+  click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
+  const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(back.region, e.s.region);
+  assert.ok(!Object.values(back.enemies || {}).some((list) => Array.isArray(list) && list.some((q) => q.dead)), 'no dead infected saved');
+  assert.ok(!('mend' in back), 'no new save field');
+  console.log('Mend controller passed: the settings row and the phone 脱困 tile cannot be pressed while you can walk out and say why (被抓着 too), a ring of fences makes them pressable and one press moves you to where the exit is reachable and closes the page (then 稍等), standing inside a new bed moves you out by itself, the touch 部位 button shows next to an elite and switches the part, 睡到早上 8 点 after midnight wakes at eight the same day, a save refused for a data reason says so (a full browser still says the space ran out), and save/parse.');
 }
