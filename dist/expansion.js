@@ -132,7 +132,7 @@ export class Engine extends CoreEngine {
       if(this.automationBlocked?.(b))continue;
       if(b.type==='solar'&&s.minute>=360&&s.minute<1110)this.c.energy=Math.min(100,this.c.energy+(s.weather==='高温'?5:s.weather==='暴雨'?1:3));
       if(b.type==='irrigation'&&!this.waterNetOn?.()&&this.irrigationConnected(b))for(const p of s.plots)if(p.crop&&distance(p,b)<300&&!this.plotWatered(p))this.waterPlot(p);
-      if(b.type==='drone'&&this.c.energy>=2&&(this.droneHarvests?.()??true)){if((b.wear||0)>=this.droneServiceLimit()&&!this.serviceAutomation(b,false))continue;const p=s.plots.find(p=>p.crop&&p.growth>=CROPS[p.crop].grow&&distance(p,b)<300&&(this.workerMayHarvest?.(p)??true));if(p){const crop=p.crop,trait=p.trait;this.harvest(p,true);this.c.energy-=2;b.wear=(b.wear||0)+1;const seed=trait?'seed_'+crop+'_'+trait:CROPS[crop].seed;if(!p.crop&&CROPS[crop]?.seed&&this.takeFarm({[seed]:1})){p.crop=crop;p.trait=trait;p.growth=0;this.waterPlot(p);p.qualityRoll=s.stats.planted++%5;}}}
+      if(b.type==='drone'&&this.c.energy>=2&&(this.droneHarvests?.()??true)){if((b.wear||0)>=this.droneServiceLimit()&&!this.serviceAutomation(b,false))continue;const p=s.plots.find(p=>p.crop&&p.growth>=CROPS[p.crop].grow&&distance(p,b)<300&&(this.workerMayHarvest?.(p)??true));if(p){const crop=p.crop,trait=p.trait;this.harvest(p,true);this.c.energy-=2;b.wear=(b.wear||0)+1;const seed=trait?'seed_'+crop+'_'+trait:CROPS[crop].seed;if(!p.crop&&!this.plotDebris?.(p)&&!this.g?.plots?.[p.id]?.w&&CROPS[crop]?.seed&&this.takeFarm({[seed]:1})){p.crop=crop;p.trait=trait;p.growth=0;this.waterPlot(p);p.qualityRoll=s.stats.planted++%5;}}}
     }
     const guardAssignments=new Set();
     for(const r of this.c.residents){

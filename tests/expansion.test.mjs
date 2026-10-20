@@ -90,7 +90,7 @@ test('rescued animals produce after feeding and output claims cannot repeat',()=
   const e=stocked();e.travel('residential');const chicken=e.objects.find(o=>o.type==='animalRescue');e.s.player.x=chicken.x;e.s.player.y=chicken.y;e.interact();assert.ok(e.c.animals.chicken);e.travel('farm');facility(e,'coop');e.c.reputation=40;assert.ok(e.buyGoat());assert.ok(e.feedAnimals());assert.equal(e.feedAnimals(),false);e.advanceMinutes(240);assert.ok(e.collectAnimals());assert.equal(e.qty('egg'),2);assert.equal(e.qty('milk'),1);assert.equal(e.collectAnimals(),false);
 });
 test('irrigation needs a source and drone harvest uses generated power and real seeds',()=>{
-  const e=stocked(),p=e.s.plots[0];Object.assign(p,{crop:'radish',growth:120,wateredDay:0});facility(e,'rain',p.x+100,p.y);facility(e,'irrigation',p.x+80,p.y);facility(e,'solar',800,720);facility(e,'drone',p.x+70,p.y);
+  const e=stocked(),p=e.s.plots[0];e.s.debris=e.s.debris.filter(d=>d.id!==p.id);Object.assign(p,{tilled:true,crop:'radish',growth:120,wateredDay:0});facility(e,'rain',p.x+100,p.y);facility(e,'irrigation',p.x+80,p.y);facility(e,'solar',800,720);facility(e,'drone',p.x+70,p.y);
   const seeds=e.qty('seedRadish');e.workHour();assert.equal(p.wateredDay,e.s.day);assert.equal(p.crop,'radish');assert.equal(p.growth,0);assert.equal(e.c.energy,1);assert.equal(e.qty('seedRadish'),seeds-1);assert.ok((e.s.storage.radish||0)+(e.s.storage.fine_radish||0)>=3);
   e.s.minute=1140;const energy=e.c.energy;e.workHour();assert.equal(e.c.energy,energy);
 });

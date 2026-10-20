@@ -114,7 +114,8 @@ function place(e, type, near) {
     for (let a = 0; a < 6.28; a += 0.25) {
       const x = Math.round((near.x + Math.cos(a) * r) / 8) * 8,
         y = Math.round((near.y + Math.sin(a) * r) / 8) * 8;
-      Object.assign(e.s.player, { x: x + 30, y: y + 30 });
+      // v0.38：建东西不能罩住自己，人站在外框下边一点
+      Object.assign(e.s.player, { x, y: y + Math.max(40, e.buildingRect(type, x, y).h / 2 + 24) });
       if (!e.buildReason(type, x, y)) {
         assert.equal(e.placeBuilding(x, y), true, "placing " + type);
         e.buildMode = null;

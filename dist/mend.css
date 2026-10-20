@@ -1,0 +1,30 @@
+/* v0.38.0「修缮」 */
+
+/* 触屏上不写键盘的说法：底栏那一行“WASD 移动 · E 交互 · 左键使用 · 空格翻滚”收起来（按钮上都写着字） */
+@media (pointer: coarse) {
+  .dock-hints {
+    display: none !important;
+  }
+}
+
+/* 大屏手机横着拿（宽过 850、高不过 500）：蹲行、投石、推开、建造照“横着拿手机”那样竖排一列（可上下滑），
+   不再横着摊开、和翻滚 / 使用 / 交互叠在一起 */
+@media (pointer: coarse) and (max-height: 500px) and (min-width: 851px) {
+  .touch-extras {
+    display: grid;
+    grid-template-columns: 1fr;
+    flex: 0 0 50px;
+    max-width: 50px;
+    max-height: 74px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .touch-extras button {
+    flex: none;
+  }
+}
+
+/* 设置里“卡住走不动了”那一行：按钮不换行 */
+.mend-row button {
+  white-space: nowrap;
+}

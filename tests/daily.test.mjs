@@ -755,7 +755,11 @@ test("going to bed after midnight first asks for today's card; long errands neve
   e.chooseDaily(free);
   assert.equal(e.sleep(), true);
   assert.equal(e.dy.history.filter((h) => h.day === 10).length, 1);
-  // 21:30 接下“你亲自跑一趟”
+  // v0.38：半夜以后睡，睡到当天早上 8 点（不把第 10 天睡过去）
+  assert.equal(e.s.day, 10);
+  assert.equal(e.s.minute, 8 * 60);
+  // 21:30 接下“你亲自跑一趟”（换一天）
+  nextDay(e);
   e.s.minute = 21.5 * 60;
   setCard(e, "V08");
   e.dy.claimed = e.dy.claimed.filter((x) => !x.startsWith("card:"));

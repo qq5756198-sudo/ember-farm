@@ -4,7 +4,7 @@ import { MOMENT, MOMENT_KINDS, TOUCH_WORDS } from "./zest-data.js";
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
 // ================= 手机上的说法 =================
-const KEYISH = /[A-Z]|空格/;
+const KEYISH = /[A-Z]|空格|左键|右键|数字键/;
 const touchCache = new Map();
 export function touchWords(text) {
   const src = String(text ?? "");
@@ -50,7 +50,7 @@ export function touchifyDom(root) {
   let n = 0;
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     const t = node.nodeValue;
-    if (!t || !/[A-Z]|空格|（J）/.test(t)) continue;
+    if (!t || !/[A-Z]|空格|（J）|左键|右键|数字键/.test(t)) continue;
     const next = touchWords(t);
     if (next !== t) {
       node.nodeValue = next;

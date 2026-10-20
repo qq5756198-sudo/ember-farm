@@ -30,6 +30,7 @@ import {
   FIXED_KEYS,
   validKey,
 } from "./farlands-data.js";
+import { MEND_TEXT } from "./mend-data.js";
 
 const esc = (v) =>
   String(v ?? "").replace(
@@ -193,6 +194,13 @@ function viewDog(e) {
       : "";
   return `<header class="npc-head">${portrait("maisui", "麦穗")}<div><b>麦穗</b><small>前哨的狗</small><p class="npc-line">默契 ${d.bond}/${DOG_MAX}</p><div class="bond-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${DOG_MAX}" aria-valuenow="${d.bond}"><span style="width:${pct}%"></span></div></div></header><p class="dog-today">${today.map(esc).join("　")}</p><div class="button-row">${act("xDog", "feed", "喂一份干粮（默契 +1）", e.feedReason(), true)}${act("xDog", "pet", "摸摸它（默契 +1）", e.petReason())}</div><p class="muted">带它出一趟远门（农场和集市以外的地方），每天也能默契 +1。</p><h4>本事</h4><ul class="dog-skills">${skills}</ul>${orders}`;
 }
+// v0.38：快捷菜单里的“脱困”：用不着的时候按不了，格子里写一句为什么
+function unstuckTile(e) {
+  const why = e.unstuckReason(),
+    key = why ? Object.keys(MEND_TEXT.why).find((k) => MEND_TEXT.why[k] === why) : "",
+    note = key ? MEND_TEXT.short[key] || "" : "";
+  return `<button class="phone-tile" data-action="mendUnstuck"${why ? ' disabled title="' + esc(why) + '"' : ""}><span aria-hidden="true">⇱</span>${esc(MEND_TEXT.tile)}${note ? "<small>" + esc(note) + "</small>" : ""}</button>`;
+}
 function viewPhone(e) {
   const tile = (attrs, glyph, label) => `<button class="phone-tile" ${attrs}><span aria-hidden="true">${glyph}</span>${esc(label)}</button>`;
   const tiles = [
@@ -207,6 +215,8 @@ function viewPhone(e) {
     e.dogReady?.() ? tile('data-action="xView" data-id="dog"', "✿", "麦穗") : "",
     tile('data-action="oView" data-id="shipping"', "⇪", "出货"),
     tile('data-action="oView" data-id="log"', "✉", "消息"),
+    // v0.38：被卡住、被围死走不出去时挪出来（不需要时按不了，说为什么）
+    e.unstuckReason ? unstuckTile(e) : "",
     tile('data-menu="pause"', "⚙", "设置"),
   ];
   return `<div class="phone-grid">${tiles.join("")}</div>`;

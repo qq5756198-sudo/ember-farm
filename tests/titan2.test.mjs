@@ -699,15 +699,19 @@ test("on the final night the towers shoot what they can hurt — the lights, the
   e.enemies = e.s.enemies.farm = e.enemies.filter((q) => !q.dead);
   Object.assign(body, { hidden: false, heart: true, act: null });
   assert.equal(e.tShielded(body), false);
-  // 平常（不是最后一夜）还是先用身上的
+  // v0.38 起平常（不是最后一夜）也先用仓库的，仓库没有了才用身上的
   e.finalEnd("dawn");
   e._tDef = true;
   try {
     assert.ok(e.takeFarm({ ammo: 1 }));
+    assert.equal(e.s.storage.ammo, 1, "other nights: the storage first too");
+    assert.equal(e.s.inventory.ammo, 20);
+    e.s.storage.ammo = 0;
+    assert.ok(e.takeFarm({ ammo: 1 }));
   } finally {
     e._tDef = false;
   }
-  assert.equal(e.s.inventory.ammo, 19, "other nights as before");
+  assert.equal(e.s.inventory.ammo, 19, "the storage empty: yours");
 });
 
 test("the one you live with stands by you on the final night too, as on a long night", () => {

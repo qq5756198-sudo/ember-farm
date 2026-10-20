@@ -117,7 +117,7 @@ export class Engine extends FrontierEngine {
   workHour(){
     super.workHour();const farmer=this.resident('farmer'),doctor=this.resident('medic');
     if(this.r.arcs.farmer>=2&&farmer&&farmer.priorities.farmer>0&&this.residentActive(farmer)&&['farmer','rest'].includes(farmer.workRole)){
-      const p=this.s.plots.find(p=>p.tilled&&!p.crop&&!this.plotDebris(p));const crop=this.r.farmPlan,seed=CROPS[crop].seed;
+      const p=this.s.plots.find(p=>p.tilled&&!p.crop&&!this.plotDebris(p)&&!this.g?.plots?.[p.id]?.w);const crop=this.r.farmPlan,seed=CROPS[crop].seed;
       const snapshot=this.workSnapshot?.();if(p&&this.takeFarm({[seed]:1})){Object.assign(p,{crop,trait:null,growth:0,soilCharged:false,qualityRoll:this.s.stats.planted++%5,care:0});this.chargeSoil(p);this.waterPlot(p);farmer.status='按计划补种'+CROPS[crop].name+' · 种子-1';this.recordResidentWork?.(farmer,snapshot,this.workSnapshot?.(),false);}
     }
     const snapshot=this.workSnapshot?.();if(this.r.arcs.medic>=2&&doctor&&doctor.priorities.medic>0&&this.residentActive(doctor)&&this.r.medicineDay!==this.s.day&&this.takeFarm({herb:2,cloth:1})){
