@@ -22,6 +22,8 @@ import * as FrontierUI from '../dist/frontier-ui.js';
 import * as FrontierActions from '../dist/frontier-actions.js';
 import * as FrontierData from '../dist/frontier-data.js';
 import * as Version from '../dist/version.js';
+// v0.38：卡位逃脱、触屏切换精英部位的字
+import * as MendData from '../dist/mend-data.js';
 import * as Atlas from '../dist/atlas.js';
 import {Renderer} from '../dist/campaign-renderer.js';
 import * as Visual from '../dist/visual-renderer.js';
@@ -91,7 +93,7 @@ for(const key of Session.HISTORY_KEYS.slice(0,8))storage.set(key,'historic '+key
 class Image{set src(path){this.path=path;loadImage(dir+'/'+path).then(img=>{this.native=img;this.width=img.width;this.height=img.height;this.complete=true;this.onload?.();}).catch(e=>this.onerror?.(e));}get src(){return this.path;}}
 globalThis.document=document;
 let raf;
-const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...Atlas,...Clarity,...ZestUI,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},clearTimeout:()=>{},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
+const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...MendData,...Atlas,...Clarity,...ZestUI,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},clearTimeout:()=>{},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
 script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo,moments});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.hud=updateHUD;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
@@ -351,10 +353,10 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   press('e'); run(1); assert.equal(e.w.forecast, true); assert.equal(e.s.storage.seedRye, 6);
   press('e'); run(1); assert.equal(e.s.storage.seedRye, 6, 'a second E gives nothing');
   if (context.inspect().menu) { clean(); click('close'); }
-  // 火炉：正常建造流程
+  // 火炉：正常建造流程（v0.38 起建东西不能罩住自己：人站在外框下边一点）
   e.s.storage.wood = 60; e.s.storage.stone = 20; e.s.storage.scrap = 20; e.s.storage.bread = 30;
   e.buildMode = 'stove'; let spot = null;
-  for (let r = 60; r < 400 && !spot; r += 16) for (let a = 0; a < 6.28 && !spot; a += 0.3) { const x = Math.round((430 + Math.cos(a) * r) / 8) * 8, y = Math.round((520 + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x: x + 30, y: y + 30 }); if (!e.buildReason('stove', x, y)) spot = { x, y }; }
+  for (let r = 60; r < 400 && !spot; r += 16) for (let a = 0; a < 6.28 && !spot; a += 0.3) { const x = Math.round((430 + Math.cos(a) * r) / 8) * 8, y = Math.round((520 + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x, y: y + Math.max(40, e.buildingRect('stove', x, y).h / 2 + 24) }); if (!e.buildReason('stove', x, y)) spot = { x, y }; }
   run(2);
   assert.ok(e.placeBuilding(spot.x, spot.y)); e.buildMode = null;
   e.s.minute = 9 * 60 - 0.05; e.c.workClock = 59.95; run(3);
@@ -547,7 +549,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   context.open('build'); clean(); assert.match(html(), /贺满仓垫付/);
   click('xAdvance', type); assert.equal(e.buildMode, type); assert.equal(context.inspect().menu, null);
   let placed = false;
-  for (let r = 60; r < 600 && !placed; r += 16) for (let a = 0; a < 6.28 && !placed; a += 0.3) { const x = Math.round((760 + Math.cos(a) * r) / 8) * 8, y = Math.round((620 + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x: x + 30, y: y + 30 }); if (!e.buildReason(type, x, y)) placed = e.placeBuilding(x, y); }
+  for (let r = 60; r < 600 && !placed; r += 16) for (let a = 0; a < 6.28 && !placed; a += 0.3) { const x = Math.round((760 + Math.cos(a) * r) / 8) * 8, y = Math.round((620 + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x, y: y + Math.max(40, e.buildingRect(type, x, y).h / 2 + 24) }); if (!e.buildReason(type, x, y)) placed = e.placeBuilding(x, y); }
   assert.ok(placed); assert.ok(e.fr.hemc.debt);
   context.open('journey'); clean(); assert.match(html(), /还这一期/); click('close');
   // 设置：无障碍、改键（真按键）
@@ -611,7 +613,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   click('dView', 'dlog'); clean(); assert.match(html(), /已经做过 1 次抉择/); assert.match(html(), /种子换口粮|连贯事件/); click('close');
   assert.equal(context.inspect().menu, null);
   // 睡一觉：平安的早上不弹日终总结（一行提示，全文在消息记录里），卡片直接弹出（v0.23）
-  goRegion('farm'); e.s.player.hunger = 80; e.s.storage.bread = 20;
+  // v0.38：天亮前睡只睡到当天 8 点，这里是晚上睡
+  goRegion('farm'); e.s.player.hunger = 80; e.s.storage.bread = 20; e.s.minute = Math.max(e.s.minute, 20 * 60);
   context.open('home'); click('sleep'); run(2);
   assert.equal(e.s.day, 3); assert.ok(e.dailyCard(), 'a fresh card for day three');
   assert.equal(context.inspect().menu, 'outpost', 'a quiet night: the card shows without the summary page'); clean(); assert.match(html(), /class="daily-card/);
@@ -1629,7 +1632,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const AL = await import('../dist/almanac-data.js');
   const Bustle = await import('../dist/bustle.js');
   const B = (e, type, x, y, extra = {}) => { const b = { id: 'al-' + type + '-' + e.s.idCounter++, type, x, y, rotation: 0, hp: Data.BUILDINGS[type].hp, ...extra }; e.s.buildings.push(b); e.navRevision++; return b; };
-  const spotFor = (e, type, cx = 760, cy = 620) => { for (let r = 60; r < 600; r += 16) for (let a = 0; a < 6.28; a += 0.3) { const x = Math.round((cx + Math.cos(a) * r) / 8) * 8, y = Math.round((cy + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x: x + 30, y: y + 30 }); if (!e.buildReason(type, x, y)) return { x, y }; } return null; };
+  const spotFor = (e, type, cx = 760, cy = 620) => { for (let r = 60; r < 600; r += 16) for (let a = 0; a < 6.28; a += 0.3) { const x = Math.round((cx + Math.cos(a) * r) / 8) * 8, y = Math.round((cy + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x, y: y + Math.max(40, e.buildingRect(type, x, y).h / 2 + 24) }); if (!e.buildReason(type, x, y)) return { x, y }; } return null; };
   // ---------- 一份 v0.28 的旧档，从文件恢复 ----------
   const old = new Bustle.Engine(Bustle.newGameState(), () => {});
   const sc = old.sc;
@@ -1964,7 +1967,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // 交互那一行由 HUD 每 0.12 秒刷一次，两帧（0.1 秒）不一定刷得到：读之前先刷一下
   const ctxLine = () => (context.hud(), document.querySelector('#context').innerHTML);
   const goTo = (e, region, x, y) => { e.s.visited = { ...(e.s.visited || {}), [region]: true }; e.s.region = region; e.enemies = e.s.enemies[region] = []; e.assignRegion(); if (x != null) Object.assign(e.s.player, { x, y }); };
-  const spotFor = (e, type, cx = 760, cy = 640) => { for (let r = 60; r < 640; r += 16) for (let a = 0; a < 6.28; a += 0.3) { const x = Math.round((cx + Math.cos(a) * r) / 8) * 8, y = Math.round((cy + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x: x + 30, y: y + 46 }); if (!e.buildReason(type, x, y)) return { x, y }; } return null; };
+  const spotFor = (e, type, cx = 760, cy = 640) => { for (let r = 60; r < 640; r += 16) for (let a = 0; a < 6.28; a += 0.3) { const x = Math.round((cx + Math.cos(a) * r) / 8) * 8, y = Math.round((cy + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x, y: y + Math.max(46, e.buildingRect(type, x, y).h / 2 + 24) }); if (!e.buildReason(type, x, y)) return { x, y }; } return null; };
   const sizes = (list = [[1366, 600], [1920, 900], [390, 480], [844, 240]]) => { for (const [w, hh] of list) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); } context.inspect().renderer.resize(1366, 600, 1); };
   dailyOn = false;
   const RD = await import('../dist/relight-data.js');

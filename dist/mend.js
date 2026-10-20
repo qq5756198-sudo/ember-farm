@@ -171,8 +171,58 @@ export class Engine extends TitanEngine {
     this.navCache = null;
     if (this.gx) this.gx.down = 0;
   }
+  // 一个跟着走的（麦穗、农场上的居民）站在障碍里：挪到它旁边最近一处能站的地方（找不到就挪到你身边）
+  mendFree(q, near = q) {
+    const R = MEND.r + MEND.pad;
+    for (let r = 0; r <= 160; r += 6)
+      for (let k = 0, n = Math.max(1, Math.round((r * Math.PI * 2) / 8)); k < n; k++) {
+        const a = (k / n) * Math.PI * 2,
+          x = near.x + Math.cos(a) * r,
+          y = near.y + Math.sin(a) * r;
+        if (!this.blocked(x, y, false, R)) return { x, y };
+      }
+    return null;
+  }
+  mendFollowers() {
+    let n = 0;
+    const d = this.f?.dog,
+      p = this.s.player;
+    if (d?.rescued && this.s.region !== "market" && this.blocked(d.x, d.y, false, MEND.r)) {
+      const q = this.mendFree(d) || this.mendFree(d, p);
+      if (q) {
+        Object.assign(d, q);
+        const o = this.objects?.find((x) => x.type === "partnerDog");
+        if (o) Object.assign(o, q);
+        n++;
+      }
+    }
+    // 农场上走来走去的人：居民、援建队员、营地的帮手、长夜里守在你身边的那个人
+    if (this.s.region === "farm") {
+      const groups = [
+        [this.c?.residents, this.residentPaths],
+        [this.o?.crew, this._crewPaths],
+        [this.sc?.helpers, this._helperPaths],
+        [this._kinAlly ? [this._kinAlly] : null, null],
+      ];
+      for (const [list, paths] of groups)
+        for (const r of list || []) {
+          if (!r || !Number.isFinite(r.x) || !Number.isFinite(r.y) || !this.blocked(r.x, r.y, false, MEND.r)) continue;
+          const q = this.mendFree(r);
+          if (!q) continue;
+          Object.assign(r, q);
+          if (r.id != null) paths?.delete?.(r.id);
+          n++;
+        }
+    }
+    return n;
+  }
   // 自己挪：站在障碍里过了一小会儿
   mendTick(dt) {
+    this._mendF = (this._mendF || 0) + dt;
+    if (this._mendF >= 0.5) {
+      this._mendF = 0;
+      this.mendFollowers();
+    }
     const p = this.s.player;
     if (!p || p.hp <= 0 || !this.mendStuckNow()) {
       this._mendT = 0;
@@ -239,6 +289,8 @@ export class Engine extends TitanEngine {
         const q = this.mendSpot(false) || this.mendSpot(true);
         if (q) this.mendMove(q);
       }
+      // 麦穗跟着进图：落在你左下方（废弃居民区、旧医院、工业仓库那里是一排房子），挪到旁边能走的地方
+      this.mendFollowers();
     }
     return ok;
   }
@@ -267,8 +319,12 @@ export class Engine extends TitanEngine {
     const here = this.s.region;
     let n = 0;
     for (const [id, list] of Object.entries(this.s.enemies || {})) {
-      if (id === here || !Array.isArray(list) || !list.some(dead)) continue;
-      this.s.enemies[id] = list.filter((z) => !dead(z));
+      if (!Array.isArray(list) || !list.some(dead)) continue;
+      // 人在的这张图：别的系统这一帧可能还拿着这份名单，攒多了（一直待在农场睡觉过日子）才换
+      if (id === here && list.filter(dead).length < MEND.deadKeep) continue;
+      const keep = list.filter((z) => !dead(z));
+      this.s.enemies[id] = keep;
+      if (id === here) this.enemies = keep;
       n++;
     }
     return n;

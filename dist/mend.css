@@ -28,3 +28,16 @@
 .mend-row button {
   white-space: nowrap;
 }
+
+/* 手机竖着拿打开菜单：底下的提示条两条并排，前一条被挤成一个字一行；跟场景里一样只留最要紧的一条（警告排在最后） */
+@media (max-width: 850px) {
+  #menu-toasts .toast:not(:last-child) {
+    display: none;
+  }
+}
+
+/* 快捷菜单里“脱困”那一格：按不了时写的那句小一点 */
+.phone-tile small {
+  font-size: 11px;
+  color: #c9c2a8;
+}

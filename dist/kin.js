@@ -1989,7 +1989,8 @@ function validateKin(s) {
     CATS = ["fav", "like", "meh", "hate"];
   if (!int(t.schema, 1, 99)) bad("版本");
   if (!obj(t.know) || Object.keys(t.know).length > 200) bad("喜好");
-  for (const [k, v] of Object.entries(t.know)) if (!key(k) || !obj(v) || Object.keys(v).length > 60 || Object.entries(v).some(([i, c]) => !ITEMS[i] || !CATS.includes(c))) bad("喜好");
+  // v0.38：一个人知道的喜好按东西记（送过什么就记一样，“不太在乎”的也记），玩久了会过 60 样；样数最多也就是东西的种数
+  for (const [k, v] of Object.entries(t.know)) if (!key(k) || !obj(v) || Object.keys(v).length > Object.keys(ITEMS).length || Object.entries(v).some(([i, c]) => !ITEMS[i] || !CATS.includes(c))) bad("喜好");
   if (!obj(t.gifts) || Object.entries(t.gifts).some(([k, v]) => !key(k) || !Array.isArray(v) || v.length > GIFT.per || v.some((d) => !int(d)))) bad("送礼");
   if (!obj(t.half) || Object.entries(t.half).some(([k, v]) => !key(k) || !int(v, 1, 2))) bad("信任");
   if (!obj(t.talked) || Object.entries(t.talked).some(([k, v]) => !key(k) || !int(v))) bad("夜谈");

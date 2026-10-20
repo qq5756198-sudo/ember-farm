@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { Engine, freshState } from "../dist/campaign.js";
-import { BUILDINGS, REGIONS, WORLD } from "../dist/data.js";
+import { BUILDINGS, REGIONS, WORLD, ITEMS } from "../dist/data.js";
 import { MEND, MEND_TEXT } from "../dist/mend-data.js";
 import { FORAGE_SPOTS } from "../dist/almanac-data.js";
 import { PEDDLER_SPOT, BUYER } from "../dist/hope-data.js";
@@ -352,6 +352,15 @@ test("on a phone, where only one notice shows, a warning is not pushed out by a 
   assert.ok(i > 0 && css.lastIndexOf("@media(max-width:850px)", i) > 0);
 });
 
+// ================= 22. 手机竖着拿打开菜单时的提示条 =================
+test("on a phone held upright, the notice strip under a menu shows one notice instead of squeezing the first into a column", () => {
+  const css = readFileSync(new URL("../dist/mend.css", import.meta.url), "utf8");
+  assert.match(css, /@media \(max-width: 850px\) \{\s*#menu-toasts \.toast:not\(:last-child\) \{\s*display: none;/);
+  // 场景里那条（只显示最后一条）本来就这样
+  const clarity = readFileSync(new URL("../dist/clarity.css", import.meta.url), "utf8");
+  assert.ok(clarity.includes("#toasts .toast:not(:last-child){display:none}"));
+});
+
 // ================= 15. 大屏手机横着拿 =================
 test("large phones held sideways keep the small touch buttons in their own column instead of under 翻滚 / 使用 / 交互", () => {
   const css = readFileSync(new URL("../dist/mend.css", import.meta.url), "utf8");
@@ -404,6 +413,60 @@ test("麦穗 walking at your heel no longer turns every press next to something 
   e.objects.push(box, box2);
   assert.equal(e.pickCandidates().length, 2);
   assert.ok(!e.pickCandidates().includes(dog));
+});
+
+// ================= 18. 麦穗在三处废墟里卡在墙里 =================
+test("麦穗 follows you in the abandoned district, the old hospital and the warehouse (it used to arrive inside the row of houses and stay there)", () => {
+  const { e } = make();
+  e.f.dog.rescued = true;
+  for (const id of ["residential", "hospital", "warehouse"]) {
+    e.travel(id);
+    for (const z of e.enemies) z.dead = true;
+    const d = e.f.dog;
+    assert.equal(e.blocked(d.x, d.y, false, MEND.r), false, id + ": arrives where it can walk");
+    for (let t = 0; t < 6; t += DT) e.update(DT, { x: 1, y: 0 });
+    for (let t = 0; t < 3; t += DT) e.update(DT, { x: 0, y: 0 });
+    assert.ok(dist(d, e.s.player) < 120, id + ": it came along (" + Math.round(dist(d, e.s.player)) + ")");
+    e.travel("farm");
+  }
+});
+test("someone on the farm caught inside a new building (a resident, a helper) is moved out instead of standing there for good", () => {
+  const { e } = make();
+  e.recruit("farmer");
+  const r = e.resident("farmer");
+  Object.assign(r, { x: 1000, y: 760 });
+  addB(e, "bed", 1000, 760);
+  assert.ok(e.blocked(r.x, r.y, false, MEND.r));
+  run(e, 0.8);
+  assert.equal(e.blocked(r.x, r.y, false, MEND.r), false);
+  assert.ok(Math.hypot(r.x - 1000, r.y - 760) < 90);
+});
+
+// ================= 20. 存不进去的时候怎么说 =================
+test("when a save cannot be written for a reason other than a full browser, the page says so instead of telling you to clear the browser", () => {
+  const game = readFileSync(new URL("../dist/game.js", import.meta.url), "utf8");
+  assert.match(game, /catch\(err\)\{saveError=err\|\|null;/);
+  assert.match(game, /function saveFull\(err\)\{/);
+  assert.match(game, /\$\{saveFull\(saveError\)\?'浏览器的空间不够/);
+  assert.match(MEND_TEXT.saveBad, /不要清理浏览器的数据/);
+  assert.match(MEND_TEXT.saveBad, /\{why\}/);
+  // 读不回来的原因（比如以前死了的感染者攒过 200 条）写进去
+  const saveFull = new Function("err", game.match(/function saveFull\(err\)\{([\s\S]*?)\}\nfunction unstuckRow/)[1]);
+  assert.equal(saveFull({ name: "QuotaExceededError", message: "The quota has been exceeded." }), true);
+  assert.equal(saveFull(new Error("敌人数据损坏。")), false);
+});
+
+// ================= 21. 一个人知道的喜好过了 60 样 =================
+test("knowing more than sixty of one person's likes and dislikes (every gift is remembered) no longer breaks the save", () => {
+  const { e } = make();
+  const id = Object.keys(e.kin.know)[0] || "jiang";
+  const items = Object.keys(ITEMS).filter((i) => !i.startsWith("prime_")).slice(0, 90);
+  e.kin.know[id] = Object.fromEntries(items.map((i) => [i, "meh"]));
+  assert.ok(Object.keys(e.kin.know[id]).length > 60);
+  assert.doesNotThrow(() => Engine.parse(e.serialize()));
+  // 不是东西的、不认识的类别照样当成损坏
+  e.kin.know[id] = { notAThing: "meh" };
+  assert.throws(() => Engine.parse(e.serialize()));
 });
 
 // ================= 存档 =================
