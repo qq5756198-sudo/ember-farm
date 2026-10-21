@@ -85,8 +85,10 @@ export class Engine extends MendEngine {
   }
   // ---------- 按交互：一样东西一件事 ----------
   interact(...args) {
-    // 被抓着、撬锁、翻滚、钓鱼时照原来的来
-    if (this.paused || this.c?.fishing || this.gx?.grab || this.ux?.pry || this.fx?.roll) return super.interact(...args);
+    // 被抓着（感染者、十凶）、撬锁、翻滚、钓鱼、收线时照原来的来
+    if (this.sxBusy()) return super.interact(...args);
+    // 蹲着走到人背后（学过顺手牵羊）：按交互是“下手”
+    if (this.f?.crouch && this.hasTalent?.("pickpocket") && this.targetNear?.()) return super.interact(...args);
     // 脚边的爬行者照旧先踩；躺着的比面前的东西近时才踩它
     const p = this.s.player;
     let crawler = null,
@@ -112,6 +114,10 @@ export class Engine extends MendEngine {
       if (r !== undefined) return r;
     }
     return super.interact(...args);
+  }
+  // 这时候按交互是挣脱、收线、不撬了……不是对着面前的东西
+  sxBusy() {
+    return !!(this.paused || this.c?.fishing || this._reel || this.gx?.grab || this.tx?.hold || this.ux?.pry || this.fx?.roll);
   }
   // 返回 undefined：交给原来的那一套
   simpleAct(o) {
@@ -233,7 +239,7 @@ export class Engine extends MendEngine {
   simpleLabel(o) {
     if (!o) return "";
     // 正在钓鱼、撬锁、被抓着：照那一套提示（按交互是收线、不撬了、挣脱）
-    if (this.c?.fishing || this.ux?.pry || this.gx?.grab) return super.context(o) || "";
+    if (this.c?.fishing || this._reel || this.ux?.pry || this.gx?.grab || this.tx?.hold) return super.context(o) || "";
     let old = "";
     try {
       old = String(super.context(o) || "");

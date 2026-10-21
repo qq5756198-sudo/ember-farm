@@ -154,6 +154,27 @@ test("a district gate goes straight in once the road is open, and shows the repa
   assert.equal(e.s.region, DISTRICTS[gate.district].parent, "came back out");
 });
 
+test("held by a titan beside an open gate, E struggles free instead of walking through (the line says so too)", () => {
+  const { e } = make();
+  goRegion(e, "farm");
+  const gate = e.objects.find((o) => o.type === "districtGate");
+  e.d.unlocked[gate.district] = true;
+  e.nearestObject = () => gate;
+  e.tx.hold = { escape: 0 };
+  e.events.length = 0;
+  e.interact();
+  assert.equal(e.s.region, "farm", "did not go through the gate");
+  assert.ok(e.tx.hold && e.tx.hold.escape > 0, "struggled");
+  assert.doesNotMatch(e.simpleLabel(gate), /进去$/, "the line is not the gate's while held");
+  e.interact();
+  e.interact();
+  assert.equal(e.tx.hold, null, "free");
+  assert.equal(e.s.region, "farm");
+  assert.deepEqual(menus(e), []);
+  delete e.nearestObject;
+  assert.match(e.simpleLabel(gate), /· 进去$/);
+});
+
 test("麦穗: E gives her a pat (feeding and orders are on the people page)", () => {
   const { e } = make();
   e.s.day = 30;

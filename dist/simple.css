@@ -3,16 +3,24 @@
 /* ---------- 说明卡：名字、做什么、好处、现在、一个按钮 ---------- */
 .sx-card {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px 14px;
   align-items: start;
-  background: #192b24;
-  border: 1px solid #506044;
-  border-left: 3px solid #b7ba79;
+  background: #251d17;
+  border: 1px solid #4a3627;
+  border-left: 3px solid #c4ab68;
   padding: 14px 16px;
   margin: 4px 0 14px;
 }
+/* 有图标时：图标一列，字一列 */
+.sx-card.sx-with-icon {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.sx-card.sx-with-icon > :not(.sx-icon):not(.sx-act) {
+  grid-column: 2;
+}
 .sx-card .sx-icon {
+  grid-column: 1;
   grid-row: span 4;
   width: 40px;
   height: 40px;
@@ -22,22 +30,22 @@
 .sx-card h3 {
   margin: 0;
   font-size: 16px;
-  color: #eed8a3;
+  color: #efe2b4;
 }
 .sx-card .sx-does {
   margin: 0;
   font-size: 14px;
-  color: #e6e5c7;
+  color: #f1e3c2;
 }
 .sx-card .sx-good,
 .sx-card .sx-now {
   margin: 0;
   font-size: 13px;
-  color: #bfccb1;
+  color: #ddc98c;
 }
 .sx-card .sx-good b,
 .sx-card .sx-now b {
-  color: #dce4be;
+  color: #e9dcc0;
   font-weight: 600;
   margin-right: 6px;
 }
@@ -54,7 +62,7 @@
   font-size: 12px;
 }
 .sx-card.sx-plain {
-  border-left-color: #6d7a5c;
+  border-left-color: #7d6a3a;
 }
 
 /* ---------- 菜单十项 ---------- */
@@ -74,11 +82,11 @@
 }
 .sx-menus button b {
   font-size: 15px;
-  color: #eed8a3;
+  color: #efe2b4;
 }
 .sx-menus button small {
   font-size: 12px;
-  color: #bfccb1;
+  color: #ddc98c;
   line-height: 1.4;
 }
 
@@ -87,18 +95,18 @@
   position: fixed;
   z-index: 40;
   max-width: min(360px, calc(100vw - 32px));
-  background: #13221cf2;
-  border: 1px solid #6d7a5c;
-  border-left: 3px solid #b7ba79;
+  background: #1c140ff2;
+  border: 1px solid #5a4030;
+  border-left: 3px solid #c4ab68;
   padding: 12px 14px;
   box-shadow: 0 6px 18px #0008;
-  color: #e6e5c7;
+  color: #f1e3c2;
   font-size: 13px;
 }
 #sx-pop h3 {
   margin: 0 0 4px;
   font-size: 15px;
-  color: #eed8a3;
+  color: #efe2b4;
 }
 #sx-pop p {
   margin: 0 0 4px;
@@ -111,15 +119,23 @@
   padding: 2px 8px;
   font-size: 14px;
 }
+/* 菜单十项的入口：大屏也有（原来只在窄屏上） */
+.hud-phone {
+  display: block;
+}
 .hud-top [data-sx],
 .alert-bar [data-sx] {
   cursor: pointer;
 }
 
 @media (max-width: 520px) {
-  .sx-card {
-    grid-template-columns: 1fr;
+  .sx-card,
+  .sx-card.sx-with-icon {
+    grid-template-columns: minmax(0, 1fr);
     padding: 12px;
+  }
+  .sx-card.sx-with-icon > :not(.sx-icon):not(.sx-act) {
+    grid-column: 1;
   }
   .sx-card .sx-icon {
     display: none;
@@ -139,29 +155,28 @@
 .sx-sub {
   margin: 18px 0 8px;
   font-size: 14px;
-  color: #dce4be;
-  border-bottom: 1px solid #3c4c38;
+  color: #ddc98c;
+  border-bottom: 1px solid #4a3627;
   padding-bottom: 4px;
 }
 /* 消息页每一段可以收起 */
 .sx-msg {
   margin: 0 0 10px;
-  border: 1px solid #3c4c38;
+  border: 1px solid #4a3627;
   padding: 6px 10px;
 }
 .sx-msg > summary {
   cursor: pointer;
-  color: #eed8a3;
+  color: #efe2b4;
   font-size: 14px;
 }
 /* 这一层自己的几页（菜单、来信、消息、修通路）和别的页一样宽 */
 .sx-page {
-  width: min(900px, calc(100vw - 64px));
+  max-width: 900px;
   box-sizing: border-box;
 }
 @media (max-width: 520px) {
   .sx-page {
-    width: auto;
-    padding: 10px 4px 16px;
+    padding: 10px 8px 16px;
   }
 }

@@ -16,7 +16,7 @@ export function cardHtml(c = {}) {
   const btn = b
     ? `<div class="sx-act"><button class="${escH(b.cls || "primary")}" data-action="${escH(b.action)}"${b.id != null ? ` data-id="${escH(b.id)}"` : ""}${b.disabled ? " disabled" : ""}>${escH(b.label)}</button>${b.disabled && b.why ? `<small>${escH(b.why)}</small>` : ""}</div>`
     : "";
-  return `<div class="sx-card${b ? "" : " sx-plain"}" data-sx-card="${escH(c.key || "")}">${c.icon ? `<span class="sx-icon">${c.icon}</span>` : ""}<h3>${escH(c.name)}</h3><p class="sx-does">${escH(c.does)}</p>${c.good ? `<p class="sx-good"><b>好处</b>${escH(c.good)}</p>` : ""}${c.now ? `<p class="sx-now"><b>现在</b>${escH(c.now)}</p>` : ""}${btn}${c.extra || ""}</div>`;
+  return `<div class="sx-card${b ? "" : " sx-plain"}${c.icon ? " sx-with-icon" : ""}" data-sx-card="${escH(c.key || "")}">${c.icon ? `<span class="sx-icon">${c.icon}</span>` : ""}<h3>${escH(c.name)}</h3><p class="sx-does">${escH(c.does)}</p>${c.good ? `<p class="sx-good"><b>好处</b>${escH(c.good)}</p>` : ""}${c.now ? `<p class="sx-now"><b>现在</b>${escH(c.now)}</p>` : ""}${btn}${c.extra || ""}</div>`;
 }
 
 // ---------- 设施的说明卡（按交互打开、建造页里点开都是这一张）----------
