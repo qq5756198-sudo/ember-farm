@@ -98,7 +98,7 @@ globalThis.document=document;
 let raf;
 const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...MendData,...SimpleUI,...SimpleData,...Atlas,...Clarity,...ZestUI,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},clearTimeout:()=>{},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
-script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo,moments});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.hud=updateHUD;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
+script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,menuArgs,outpostUI,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo,moments});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.hud=updateHUD;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
 for(let i=0;i<150&&!document.querySelector('#loading').hidden;i++)await new Promise(resolve=>setTimeout(resolve,20));
 if(!document.querySelector('#loading').hidden)console.log('Loading details:',document.querySelector('#loading').innerHTML);assert.equal(document.querySelector('#loading').hidden,true,'all game assets should finish loading');
@@ -2885,4 +2885,230 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.ok(!Object.values(back.enemies || {}).some((list) => Array.isArray(list) && list.some((q) => q.dead)), 'no dead infected saved');
   assert.ok(!('mend' in back), 'no new save field');
   console.log('Mend controller passed: the settings row and the phone 脱困 tile cannot be pressed while you can walk out and say why (被抓着 too), a ring of fences makes them pressable and one press moves you to where the exit is reachable and closes the page (then 稍等), standing inside a new bed moves you out by itself, the touch 部位 button shows next to an elite and switches the part, 睡到早上 8 点 after midnight wakes at eight the same day, a save refused for a data reason says so (a full browser still says the space ran out), and save/parse.');
+}
+
+// v0.39.0「一物一用」: one thing, one job, through the real pages — the phone opens the ten menus (each with its line; 拍照 and 脱困
+// kept), a tile opens its page with the card on top (人 has 麦穗's button), the top-bar numbers open their cards (a second click or a
+// click elsewhere closes them; the date card's button opens the calendar), the terminal via E opens only the letters, a damaged tower
+// via E shows its card with 修好它 (repaired by the button), the build page in four groups with 拆掉一样设施 (the next click on a
+// building opens its card with 拆掉它; Esc or empty ground cancels), the craft page lists only hand recipes and a workbench only its own,
+// the farmhouse only rests, an item's card, a locked gate via E opens 修通路 (the button opens the road, then E goes in and the exit
+// brings you back), the touch button says what E does, a drop on the farm and a finished batch go into storage by themselves, one line
+// over the thing you face (no other thing's name drawn) at four sizes by day and night, and save/parse.
+{
+  let clock = 39000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const closeCards = () => { const m = context.inspect().moments; m.queue.length = 0; m.close(); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  const toasts = () => document.querySelector('#toasts').innerHTML;
+  const ui = () => context.inspect();
+  const D = SimpleData;
+  const e = ui().engine;
+  dailyOn = false;
+  if (e.s.region !== 'farm') e.travel('farm');
+  e.paused = false; if (e.dy) e.dy.pending = null; closeCards(); run(2);
+  e.invulnerable = 999;
+  const keysBefore = Object.keys(JSON.parse(e.serialize()));
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  // 面前就是这一样（别的东西不挡着）
+  const face = (o) => { e.nearestObject = () => o; Object.assign(e.s.player, { x: o.x, y: o.y + 24 }); };
+  const unface = () => { delete e.nearestObject; };
+  const ctxLine = () => document.querySelector('#context').innerHTML;
+  // ---------- 手机：菜单十项 ----------
+  click('xView', 'phone'); clean();
+  assert.equal(ui().menu, 'sx'); assert.equal(ui().menuArgs.view, 'menus');
+  assert.equal(D.MENUS.length, 10);
+  for (const [name, line] of D.MENUS) assert.ok(html().includes('<b>' + name + '</b><small>' + line + '</small>'), 'menu ' + name);
+  assert.match(html(), /data-action="fPhoto"/); assert.match(html(), /data-action="mendUnstuck"/);
+  // 人：最上面一张卡，麦穗那一格
+  e.f.dog.rescued = true;
+  const people = D.MENUS.find(([n]) => n === '人')[2];
+  click(people.action, people.id); clean();
+  assert.equal(ui().menu, 'outpost'); assert.equal(ui().outpostUI.view, 'people');
+  assert.match(html(), /data-sx-card="page:people"/);
+  assert.ok(e.dogReady?.(), '麦穗 is home'); assert.match(html(), /data-action="xView" data-id="dog"/);
+  click('close');
+  // ---------- 顶栏的数：点一下看卡 ----------
+  context.hud();
+  if (!document.body.appendChild) document.body.appendChild = (el) => { document.body.append(el); return el; };
+  const tap = (el) => listeners.click({ target: el, detail: 1 });
+  const date = document.querySelector('#date');
+  tap(date);
+  const pop = document.querySelector('#sx-pop');
+  assert.ok(pop && !pop.hidden, 'the date opens its card');
+  assert.ok(pop.innerHTML.includes('<h3>' + D.HUD_CARD.date[0] + '</h3>'));
+  tap(date); assert.equal(pop.hidden, true, 'a second click closes it');
+  for (const key of ['time', 'weather', 'money', 'food', 'cold', 'noise', 'hp', 'stamina', 'hunger']) {
+    const el = document.querySelector('[data-sx="' + key + '"]');
+    assert.ok(el, 'the ' + key + ' number can be clicked');
+    tap(el); assert.equal(pop.hidden, false, key);
+    assert.ok(pop.innerHTML.includes('<h3>' + D.HUD_CARD[key][0] + '</h3>'), key);
+    assert.doesNotMatch(pop.innerHTML, /undefined|NaN/);
+  }
+  tap(document.querySelector('#world')); assert.equal(pop.hidden, true, 'a click elsewhere closes it');
+  tap(date); tap(pop.querySelector('[data-action="sView"]'));
+  assert.equal(ui().menu, 'outpost'); assert.equal(ui().outpostUI.view, 'calendar'); assert.equal(pop.hidden, true, 'the card goes when its page opens');
+  click('close');
+  // ---------- 联盟终端：只读来信 ----------
+  const sign = e.objects.find((o) => o.type === 'sign');
+  face(sign); context.hud();
+  const signVerb = e.simpleLabel(sign).split(' · ')[1];
+  assert.ok(ctxLine().includes('联盟终端 · ' + signVerb));
+  assert.match(signVerb, /来信|回信/);
+  press('e'); run(2);
+  assert.equal(ui().menu, 'sx'); assert.equal(ui().menuArgs.view, 'letters'); clean();
+  assert.match(html(), /data-sx-card="sign"/);
+  assert.doesNotMatch(html(), /journal-options|outpost-strip|收到的消息/);
+  click('close');
+  unface();
+  // ---------- 农场上一处空地 ----------
+  let at = null;
+  const Wd = Data.WORLD || { w: 2400, h: 1400 };
+  for (const room of [170, 130]) for (let y = 200; y < Wd.h - 160 && !at; y += 20) for (let x = 200; x < Wd.w - 200 && !at; x += 20) {
+    const p = { x, y };
+    if (e.blocked(x, y, false, 70) || e.blocked(x, y + 60, false, 30) || e.s.plots.some((q) => dist(q, p) < room) || e.objects.some((o) => dist(o, p) < room) || e.s.buildings.some((b) => dist(b, p) < room)) continue;
+    if (dist(p, Data.REGIONS.farm.exit) < 260) continue;
+    at = p;
+  }
+  assert.ok(at, 'an open spot on the farm');
+  // ---------- 坏了的塔：按交互看卡，“修好它” ----------
+  const tower = { id: 'sx-tower', type: 'tower', x: at.x, y: at.y, rotation: 0, hp: 20, open: false };
+  e.s.buildings.push(tower); e.navRevision = (e.navRevision || 0) + 1;
+  Object.assign(e.s.player, { x: at.x, y: at.y + 60 }); e.navCache = null; context.hud();
+  const near = e.nearestObject();
+  assert.equal(near?.building, tower, 'the tower is what you face');
+  assert.equal(e.context(near), Data.BUILDINGS.tower.name.split(' · ')[0].slice(0, D.NAME_CUT) + ' · 修好它');
+  assert.ok(ctxLine().includes('修好它'));
+  press('e'); run(1);
+  assert.equal(ui().menu, 'building'); assert.equal(ui().menuArgs.buildingId, 'sx-tower'); clean();
+  assert.match(html(), /data-action="repair" data-id="sx-tower"[^>]*>修好它/);
+  e.s.inventory.wood = (e.s.inventory.wood || 0) + 10; e.s.inventory.scrap = (e.s.inventory.scrap || 0) + 10;
+  click('repair', 'sx-tower');
+  assert.ok(tower.hp > 20, 'repaired');
+  click('close');
+  // ---------- 建造页：四组；拆掉一样设施 ----------
+  context.open('build'); clean();
+  for (const t of ['种地', '吃住', '防守', '摆件']) assert.ok(html().includes('<h3 class="sx-group">' + t + '</h3>'), t);
+  assert.match(html(), /data-action="rOpen" data-id="frontier:rooms"/);
+  click('sxDismantle'); assert.equal(ui().menu, null); context.hud();
+  const banner = document.querySelector('#building-banner');
+  assert.equal(banner.hidden, false); assert.match(banner.textContent, /拆东西/);
+  press('Escape'); context.hud();
+  assert.equal(banner.hidden, true, 'Esc: not dismantling'); assert.equal(ui().menu, null, 'and Esc did not open the settings');
+  const R = ui().renderer, world = document.querySelector('#world');
+  const pointAt = (pt) => { R.worldPoint = () => pt; world.events.pointerdown({ clientX: 683, clientY: 356, button: 0 }); delete R.worldPoint; listeners.pointerup?.(); };
+  context.open('build'); click('sxDismantle');
+  pointAt({ x: at.x + 420, y: at.y + 300 });
+  assert.equal(ui().menu, null); assert.ok(toasts().includes('没点在设施上，不拆了'), 'empty ground: nothing pulled down');
+  assert.ok(e.s.buildings.includes(tower));
+  context.open('build'); click('sxDismantle');
+  pointAt({ x: tower.x + 10, y: tower.y });
+  assert.equal(ui().menu, 'building'); assert.equal(ui().menuArgs.confirm, true); clean();
+  assert.match(html(), /data-action="dismantle" data-id="sx-tower"[^>]*>拆掉它/);
+  const cost = Object.keys(Data.BUILDINGS.tower.cost || {}), had = cost.reduce((n, k) => n + e.qty(k), 0);
+  click('dismantle', 'sx-tower');
+  assert.ok(!e.s.buildings.includes(tower), 'the tower is gone');
+  assert.ok(cost.reduce((n, k) => n + e.qty(k), 0) > had, 'half its materials back');
+  // ---------- 制作：只有随手做的；工作台只有它的 ----------
+  context.open('craft'); clean();
+  for (const r of Data.RECIPES) assert.equal(html().includes('data-action="craft" data-id="' + r.id + '"'), !r.station, 'craft menu: ' + r.id);
+  click('close');
+  const bench = { id: 'sx-bench', type: 'workbench', x: at.x, y: at.y, rotation: 0, hp: Data.BUILDINGS.workbench.hp, open: false };
+  e.s.buildings.push(bench);
+  context.open('station', { buildingId: 'sx-bench' }); clean();
+  assert.match(html(), /data-sx-card="b:workbench"/);
+  for (const r of Data.RECIPES) assert.equal(html().includes('data-action="craft" data-id="' + r.id + '"'), r.station === 'workbench', 'workbench: ' + r.id);
+  click('close'); e.s.buildings = e.s.buildings.filter((b) => b !== bench); e.navRevision++;
+  // ---------- 农舍：只休息 ----------
+  context.open('home'); clean();
+  const acts = [...new Set([...html().matchAll(/data-action="([^"]+)"/g)].map((m) => m[1]))].filter((a) => a !== 'close').sort();
+  assert.deepEqual(acts, ['sleep', 'waitUntilNight'], 'the farmhouse: sleep or wait for the night');
+  click('close');
+  // ---------- 背包里一样东西：说明卡 ----------
+  e.s.inventory.radish = Math.max(1, e.s.inventory.radish || 0);
+  context.open('inventory'); click('item', 'radish'); clean();
+  assert.match(html(), /class="sx-does"/); assert.match(html(), /<b>现在：<\/b>身上 \d+ 份 · 仓库 \d+ 份/);
+  click('close');
+  // ---------- 入口：没修通是“修通路”那张卡；修通了按交互就进去，出口按交互就回来 ----------
+  const gate = e.objects.find((o) => o.type === 'districtGate');
+  assert.ok(gate, 'a district gate on the farm');
+  const gid = gate.district, gdef = DistrictData.DISTRICTS[gid];
+  e.d.unlocked[gid] = false;
+  face(gate); context.hud();
+  assert.ok(ctxLine().includes('· 修通路'));
+  press('e'); run(1);
+  assert.equal(ui().menu, 'sx'); assert.equal(ui().menuArgs.view, 'gate'); clean();
+  assert.match(html(), new RegExp('data-action="dUnlock" data-id="' + gid + '"'));
+  // 还差一步（这一档里还没收过菜）：卡上写着为什么，按钮按不了
+  if (e.districtUnlockReason(gid)) {
+    assert.ok(html().includes(e.districtUnlockReason(gid)), 'the card says what is missing');
+    assert.match(html(), new RegExp('data-action="dUnlock" data-id="' + gid + '" disabled'));
+    if (gid === 'valley') e.s.stats.harvested = Math.max(1, e.s.stats.harvested || 0);
+    context.open('sx', { view: 'gate', id: gid, kind: 'district' }); clean();
+  }
+  assert.doesNotMatch(html(), new RegExp('data-action="dUnlock" data-id="' + gid + '" disabled'), 'ready: the button can be pressed');
+  for (const [k, n] of Object.entries(gdef.cost || {})) e.s.inventory[k] = (e.s.inventory[k] || 0) + n;
+  Object.assign(e.s.player, gdef.gate);
+  click('dUnlock', gid); assert.ok(e.d.unlocked[gid], 'the road is open');
+  if (ui().menu) click('close');
+  face(gate); context.hud(); assert.ok(ctxLine().includes('· 进去'));
+  press('e'); run(1); unface();
+  assert.equal(e.s.region, gid, 'E goes straight in');
+  const exit = e.objects.find((o) => o.type === 'districtExit');
+  face(exit); press('e'); run(1); unface();
+  assert.equal(e.s.region, gdef.parent, 'and the exit straight back');
+  if (e.s.region !== 'farm') e.travel('farm');
+  closeCards(); if (ui().menu) click('close');
+  // ---------- 触屏的交互键写着按下去做什么 ----------
+  const ship = e.objects.find((o) => o.type === 'outpostShipping');
+  assert.ok(ship, 'the shipping box');
+  face(ship); context.hud();
+  const want = e.context(ship).split(' · ').slice(1).join(' · ');
+  assert.equal(document.querySelector('#touch-interact').textContent, want.length <= 8 && !/E|键/.test(want) ? want : '交互', 'the touch button: ' + want);
+  unface(); Object.assign(e.s.player, at); e.navCache = null; context.hud();
+  assert.ok(!e.nearestObject(), 'nothing in front'); assert.equal(document.querySelector('#touch-interact').textContent, '交互', 'nothing in front: 交互');
+  // ---------- 掉在农场上的、做好的：自己进仓库 ----------
+  const scrap0 = e.s.storage.scrap || 0;
+  e.s.drops.push({ region: 'farm', x: at.x, y: at.y, items: { scrap: 2 } });
+  run(1);
+  assert.equal(e.s.storage.scrap, scrap0 + 2); assert.ok(!e.s.drops.some((d) => d.region === 'farm'));
+  assert.ok(toasts().includes('掉的东西直接送进了仓库'));
+  const rec = Data.RECIPES.find((x) => x.id === 'trailBread'), out = Object.keys(rec.out)[0], had2 = e.s.storage[out] || 0;
+  e.c.production.push({ id: 'sx-job', recipe: rec.id, out: { ...rec.out }, cost: {}, station: rec.station || 'cook', remaining: 0, ready: true });
+  run(1);
+  assert.ok(!e.c.production.some((j) => j.id === 'sx-job')); assert.equal(e.s.storage[out], had2 + rec.out[out]);
+  assert.ok(toasts().includes('做好了，放进了仓库'));
+  // ---------- 场景里只写面前那一样 ----------
+  const P = Object.getPrototypeOf(Renderer.prototype), baseText = P.text, baseBadge = P.badge;
+  const ownText = Object.prototype.hasOwnProperty.call(P, 'text'), ownBadge = Object.prototype.hasOwnProperty.call(P, 'badge');
+  const drawn = [];
+  P.text = function (label, ...a) { drawn.push({ label: String(label), gate: !!this._sl }); return baseText.call(this, label, ...a); };
+  P.badge = function (label, ...a) { drawn.push({ label: String(label), gate: !!this._sl }); return baseBadge.call(this, label, ...a); };
+  const minute = e.s.minute;
+  try {
+    face(ship);
+    const line = e.simpleLabel(ship);
+    const others = e.objects.filter((o) => o !== ship && o.name && !['exit', 'districtExit', 'beyondExit'].includes(o.type) && o.name !== ship.name).map((o) => o.name);
+    for (const night of [false, true]) {
+      e.s.minute = night ? 22 * 60 + 30 : 10 * 60;
+      for (const [w, h] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) {
+        R.resize(w, h, 1); drawn.length = 0;
+        R.draw(e, { x: w / 2, y: h / 2 }, 0.05);
+        assert.ok(drawn.some((d) => d.label === line), 'the line over the thing you face at ' + w + 'x' + h + (night ? ' by night' : ''));
+        const shown = others.filter((n) => drawn.some((d) => d.gate && d.label === n));
+        assert.deepEqual(shown, [], 'no other thing\'s name at ' + w + 'x' + h);
+      }
+    }
+  } finally {
+    if (ownText) P.text = baseText; else delete P.text;
+    if (ownBadge) P.badge = baseBadge; else delete P.badge;
+    e.s.minute = minute; unface();
+  }
+  R.resize(1366, 600, 1); run(1);
+  // 存档：没有新字段
+  click('save'); assert.notEqual(ui().menu, 'saveFail');
+  const back = JSON.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.deepEqual(Object.keys(back).filter((k) => !keysBefore.includes(k)), [], 'no new save field');
+  Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  console.log('Simple controller passed: the phone opens the ten menus (拍照 and 脱困 kept) and 人 opens its page with the card and 麦穗\'s button, the top-bar numbers open their cards (a second click or a click elsewhere closes them, the date card opens the calendar), the terminal via E opens only the letters, a damaged tower via E shows its card and 修好它 repairs it, the build page in four groups, 拆掉一样设施 then a click on the tower opens 拆掉它 (Esc and empty ground cancel), the craft page lists only hand recipes and the workbench only its own, the farmhouse only rests, an item card, a locked gate via E opens 修通路 (opened by the button, E goes in, the exit brings you back), the touch button says what E does, a drop and a finished batch go into storage, one line over the thing you face with no other name drawn at four sizes by day and night, and save/parse.');
 }

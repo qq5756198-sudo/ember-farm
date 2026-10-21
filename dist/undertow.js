@@ -546,7 +546,10 @@ export class Engine extends FeelEngine {
     if (ev.id === "pile") {
       if (!ev.spawned) {
         ev.spawned = true;
-        if (this.phase() >= 1) {
+        // v0.39：清晨抉择“清掉了”的那片废墟今天、明天都安静——尸堆里装死的也算清掉了（箱子照样在）
+        const cl = this.dy?.clear,
+          quiet = !!cl && cl.region === this.s.region && cl.until >= day;
+        if (this.phase() >= 1 && !quiet) {
           const r = rngOf(hashOf(this.ut.seed, "pile", day)),
             n = EVENT_RULES.pile.fakers[0] + Math.floor(r() * (EVENT_RULES.pile.fakers[1] - EVENT_RULES.pile.fakers[0] + 1));
           for (let i = 0; i < n; i++) {

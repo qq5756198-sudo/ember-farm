@@ -251,7 +251,7 @@ export class Engine extends MendEngine {
   simpleName(o) {
     if (o.type === "building") return shortName(BUILDINGS[o.building?.type]?.name || o.name);
     if (o.type === "plot") return o.plot && o.name && o.name !== "农田" ? shortName(o.name) : "农田";
-    if (o.type === "drop") return "待领取物资";
+    if (o.type === "drop") return "掉在地上的物资";
     if (o.type === "grave") return "遗落的背包";
     if (o.type === "clue") return String(o.name || "").replace(/\s*·\s*/g, " ").slice(0, 16);
     return shortName(o.name || o.label || o.title || "");
@@ -291,7 +291,20 @@ export class Engine extends MendEngine {
     if (o.type === "seasonPlaza") {
       const act = fromOld(old, name);
       if (act && !/节庆与食堂/.test(act)) return act;
+      // 食堂今晚能开张的时候（每周两晚 19:00–21:00）
+      let can = "x";
+      try {
+        can = typeof this.canteenReason === "function" ? this.canteenReason() : "x";
+      } catch {
+        can = "x";
+      }
+      if (!can) return "开张食堂";
       return VERB.seasonPlaza;
+    }
+    // 机床：每天自己做一样东西进仓库，写着现在做什么
+    if (o.type === "outpostLathe") {
+      const mode = (cleanCtx(old).match(/优先([^·\s]+)/) || [])[1];
+      return mode ? "每天做" + mode : "排产";
     }
     if (o.type === "btOrders") {
       const n = (old.match(/(\d+)\s?张/) || [])[1];

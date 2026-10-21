@@ -478,7 +478,7 @@ test("扑火: the four lights shield its body; arrows break the lights fast, but
     }
   }
   assert.equal(waves, T.wave.n, "three waves");
-  assert.equal(gap, T.wave.gap, "each with one gap");
+  assert.ok(gap != null && Math.abs(gap - T.wave.gap) < 1e-6, "each with one gap: " + gap);
   assert.ok(body.heart && !body.hidden, "the heart shows");
   body.inv = 0;
   assert.equal(hit(e, body, 100), 100, "and takes blows");

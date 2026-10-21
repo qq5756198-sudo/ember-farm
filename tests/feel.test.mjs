@@ -532,7 +532,10 @@ test("a put-off card shows one reminder at the top, not two, even in the middle 
 
 // ================= 平安的早上不弹日终总结 =================
 test("a quiet night gives a one-line note and a log entry instead of the summary page; a hungry night still shows the page", () => {
-  const e = make();
+  // 固定种子：平安的晚上约 4% 会出一件夜里的好事（候鸟、残骸……），那天的账本写的是那件事
+  const st = freshState();
+  st.undertow.seed = 39017;
+  const e = make(st);
   e.s.storage.bread = 40;
   e.s.minute = 1200;
   e.events.length = 0;

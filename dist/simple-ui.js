@@ -189,6 +189,7 @@ const STRIP = {
     ".outpost-links",
     '[data-action="oView"][data-id="lnight"]',
   ],
+  inventory: ['[data-action="skills"]', '[data-action="quests"]'],
   "outpost:shipping": [".g-station"],
   "outpost:gBoard": ['[data-action="gJournal"]', '[data-action="gScare"]', '[data-action="gShow"]', ".bt-water .button-row"],
   "outpost:museum": ['[data-action="wView"][data-id="collection"]'],
