@@ -930,7 +930,7 @@ test("UI: water, compost and order pages, the plot card's new lines and buttons,
   Object.assign(e.s.player, { x: ORDERS.spot.x, y: ORDERS.spot.y + 20 });
   e.interact();
   assert.deepEqual(shown[0], ["menu", { menu: "outpost", view: "bOrders", id: "" }]);
-  assert.match(e.context(e.nearestObject()), /订单板 · 3 张单子/);
+  assert.match(e.context(e.nearestObject()), /订单板 · 交订单（3 张）/);
 });
 
 test("thirty random days with the network, the drone, compost, chickens and raids stay finite and keep loading", () => {

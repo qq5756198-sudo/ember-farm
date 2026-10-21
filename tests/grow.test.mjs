@@ -606,7 +606,7 @@ test("crowbar in hand: a locked cabinet gives one more thing; fire axe in hand c
   arm(f, "axe");
   stand(f, door.x, door.y + 30);
   f._picked = door;
-  assert.match(f.context(door), /劈开 · 储藏室的铁门（4 秒/);
+  assert.match(f.context(door), /劈开（4 秒/);
   f.interact();
   f._picked = null;
   assert.equal(f.ux.pry?.max, WEAPON_FX.axe.door);

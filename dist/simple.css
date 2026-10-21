@@ -1,0 +1,167 @@
+/* v0.39.0「一物一用」：说明卡、菜单十项、顶栏数字的卡 */
+
+/* ---------- 说明卡：名字、做什么、好处、现在、一个按钮 ---------- */
+.sx-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
+  align-items: start;
+  background: #192b24;
+  border: 1px solid #506044;
+  border-left: 3px solid #b7ba79;
+  padding: 14px 16px;
+  margin: 4px 0 14px;
+}
+.sx-card .sx-icon {
+  grid-row: span 4;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+}
+.sx-card h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #eed8a3;
+}
+.sx-card .sx-does {
+  margin: 0;
+  font-size: 14px;
+  color: #e6e5c7;
+}
+.sx-card .sx-good,
+.sx-card .sx-now {
+  margin: 0;
+  font-size: 13px;
+  color: #bfccb1;
+}
+.sx-card .sx-good b,
+.sx-card .sx-now b {
+  color: #dce4be;
+  font-weight: 600;
+  margin-right: 6px;
+}
+.sx-card .sx-act {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.sx-card .sx-act small {
+  align-self: center;
+  color: #e6b483;
+  font-size: 12px;
+}
+.sx-card.sx-plain {
+  border-left-color: #6d7a5c;
+}
+
+/* ---------- 菜单十项 ---------- */
+.sx-menus {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.sx-menus button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  padding: 12px 14px;
+  min-height: 72px;
+}
+.sx-menus button b {
+  font-size: 15px;
+  color: #eed8a3;
+}
+.sx-menus button small {
+  font-size: 12px;
+  color: #bfccb1;
+  line-height: 1.4;
+}
+
+/* ---------- 顶栏、提醒点开的卡（浮在顶栏下面） ---------- */
+#sx-pop {
+  position: fixed;
+  z-index: 40;
+  max-width: min(360px, calc(100vw - 32px));
+  background: #13221cf2;
+  border: 1px solid #6d7a5c;
+  border-left: 3px solid #b7ba79;
+  padding: 12px 14px;
+  box-shadow: 0 6px 18px #0008;
+  color: #e6e5c7;
+  font-size: 13px;
+}
+#sx-pop h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  color: #eed8a3;
+}
+#sx-pop p {
+  margin: 0 0 4px;
+  line-height: 1.5;
+}
+#sx-pop .sx-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  padding: 2px 8px;
+  font-size: 14px;
+}
+.hud-top [data-sx],
+.alert-bar [data-sx] {
+  cursor: pointer;
+}
+
+@media (max-width: 520px) {
+  .sx-card {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+  .sx-card .sx-icon {
+    display: none;
+  }
+  .sx-menus {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 提醒一次最多两条 */
+#alert-bar > :nth-child(n + 3) {
+  display: none !important;
+}
+
+/* 建造页的分组标题、菜单页的小标题 */
+.sx-group,
+.sx-sub {
+  margin: 18px 0 8px;
+  font-size: 14px;
+  color: #dce4be;
+  border-bottom: 1px solid #3c4c38;
+  padding-bottom: 4px;
+}
+/* 消息页每一段可以收起 */
+.sx-msg {
+  margin: 0 0 10px;
+  border: 1px solid #3c4c38;
+  padding: 6px 10px;
+}
+.sx-msg > summary {
+  cursor: pointer;
+  color: #eed8a3;
+  font-size: 14px;
+}
+/* 这一层自己的几页（菜单、来信、消息、修通路）和别的页一样宽 */
+.sx-page {
+  width: min(900px, calc(100vw - 64px));
+  box-sizing: border-box;
+}
+@media (max-width: 520px) {
+  .sx-page {
+    width: auto;
+    padding: 10px 4px 16px;
+  }
+}

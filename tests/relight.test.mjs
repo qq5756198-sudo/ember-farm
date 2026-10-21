@@ -233,7 +233,7 @@ test("station: built once on the farm, E opens its page; lists take things from 
   bag(e, { wood: 2, scrap: 1 });
   Object.assign(e.s.player, { x: sb.x, y: sb.y + 50 });
   assert.equal(e.startBuild("rlStation"), false, "only one station, even broken");
-  assert.match(e.context(e.nearestObject()), /被打坏了，按 E 修/);
+  assert.match(e.context(e.nearestObject()), /修好它/);
   e.interact();
   assert.equal(sb.hp, 160);
   assert.ok(e.wallOn("water") && e.listDone("w_pond"), "the lists are kept");
@@ -439,7 +439,7 @@ test("pages: cabinets, the fallen and the hook all turn some up; a diary marks t
   const spot = e.objects.find((o) => o.type === "rlDig");
   assert.ok(spot && spot.dig === "d5");
   Object.assign(e.s.player, { x: spot.x, y: spot.y + 10 });
-  assert.match(e.context(e.nearestObject()), /松的/);
+  assert.match(e.context(e.nearestObject()), /松土 · 挖/);
   const gold = e.s.money;
   e.interact();
   assert.ok(e.rl.dug.includes("d5"));

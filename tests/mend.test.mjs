@@ -431,11 +431,11 @@ test("麦穗 walking at your heel no longer turns every press next to something 
   // 身边只有它：还是摸它
   e.objects = e.objects.filter((o) => o !== box);
   assert.equal(e.nearestObject(), dog);
-  // 两样东西挨着：照样让你选（不算它）
+  // 两样东西挨着：v0.39 起不再弹“选一个”，按的就是头上写着字的那一样（最近的）
   const box2 = { ...box, id: "t-box2", x: at.x + 46, y: at.y + 6 };
   e.objects.push(box, box2);
-  assert.equal(e.pickCandidates().length, 2);
-  assert.ok(!e.pickCandidates().includes(dog));
+  assert.equal(e.pickCandidates().length, 0);
+  assert.equal(e.nearestObject(), box);
 });
 
 // ================= 18. 麦穗在三处废墟里卡在墙里 =================
@@ -499,8 +499,8 @@ test("saves: nothing new is written; a v0.37 save loads as it was, and the versi
   const back = new Engine(Engine.parse(text), () => {});
   assert.deepEqual(Object.keys(JSON.parse(back.serialize())).sort(), Object.keys(JSON.parse(text)).sort());
   const v = readFileSync(new URL("../dist/version.js", import.meta.url), "utf8");
-  assert.match(v, /GAME_VERSION='v0\.38\.0'/);
-  assert.match(v, /GAME_EDITION='修缮'/);
+  // v0.39 起版本号在最新那一版的测试里查；这里只查写法
+  assert.match(v, /GAME_VERSION='v0\.\d+\.\d+'/);
   const html = readFileSync(new URL("../dist/index.html", import.meta.url), "utf8");
-  assert.match(html, /<title>余烬农场 v0\.38\.0 · 修缮<\/title>/);
+  assert.match(html, /<title>余烬农场 v0\.\d+\.\d+ · [^<]+<\/title>/);
 });

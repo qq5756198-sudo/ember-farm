@@ -657,16 +657,16 @@ test("E near two equally close objects opens a chooser; picking runs that object
   const lod = e.objects.find((o) => o.type === "seasonLodger");
   Object.assign(lod, { x: SSPOTS.jiang.x + 40, y: SSPOTS.jiang.y });
   Object.assign(e.s.player, { x: SSPOTS.jiang.x + 20, y: SSPOTS.jiang.y + 10 });
-  assert.ok(e.pickCandidates().length >= 2);
-  assert.match(e.context(e.nearestObject()), /^选择：/);
+  // v0.39「一物一用」：不再弹“选一个”，按交互就是离你最近、头上写着字的那一样
+  assert.equal(e.pickCandidates().length, 0);
+  const near = e.nearestObject();
+  assert.equal(near.type, "seasonJiang");
+  assert.match(e.context(near), /^江伯 · /);
   e.interact();
-  assert.equal(menu?.view, "pick");
-  const list = e._pickList;
-  const i = list.findIndex((o) => o.type === "seasonJiang");
-  assert.match(view(e, { view: "pick" }), /data-hotkey="1"/);
-  e.pick(i);
-  assert.equal(e.ss.jiang.phase, "c1", "the chosen object really acted");
-  assert.equal(e._picked, null);
+  assert.notEqual(menu?.view, "pick");
+  assert.equal(e.ss.jiang.phase, "c1", "the nearest object really acted");
+  // “选一个”那一页留着（旧的调用还认得），只是没有人再打开它
+  assert.match(view(e, { view: "pick" }), /outpost-page|没有|选/);
 });
 
 // ---------- 界面 ----------

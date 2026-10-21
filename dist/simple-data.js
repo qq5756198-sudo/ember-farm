@@ -1,0 +1,242 @@
+// v0.39.0「一物一用」的数据：每样东西头上那一行“名字 · 做什么”、说明卡上那一句、菜单十项、顶栏六个数。
+// 玩家看得到的字都在这里，不写键名（键名由界面按键位和触屏补上）。
+
+// ---------- 东西：做什么（动词开头，越短越好）----------
+// 值可以是一句话，也可以是 (engine, o) => 一句话（状态不同说法不同，但还是同一件事）
+export const VERB = {
+  home: "休息",
+  well: "灌满水壶",
+  sign: "读来信",
+  exit: "出门",
+  pond: "钓鱼",
+  kinWater: "钓鱼",
+  resident: "说话",
+  kinPerson: "说话",
+  allianceHelper: "说话",
+  frontierBoard: "这几天种什么",
+  waterGate: "开闸放水",
+  ecoBoard: "整修空地",
+  partnerDog: "摸摸它",
+  radioStation: "听广播",
+  districtGate: "进去",
+  beyondGate: "进去",
+  allianceCamp: "派活",
+  allianceSite: "搭起援建营地",
+  outpostShipping: "卖东西",
+  outpostLathe: "做小发明",
+  outpostMule: "跑商",
+  winterMuseum: "捐展品",
+  seasonPlaza: "办节庆",
+  btOrders: "交订单",
+  hnJiang: "问鱼汛",
+  alForage: "捡起来",
+  trader: "买卖",
+  outpostCai: "说话",
+  btGarden: "看看",
+  rlDig: "挖一挖",
+  crate: "翻一翻",
+  salvage: "拆下零件",
+  gearCrate: "翻一翻",
+  poi: "换东西",
+  encounter: "撬开",
+  annexDoor: "撬开",
+  circuit: "修好它",
+  clue: "捡起来读",
+  sample: "采下来",
+  outpost: "修好它",
+  rebuildFind: "拿走",
+  allianceNeighbors: "送口粮",
+  farHazard: "拿补给",
+  alOldTree: "剪枝条",
+  districtExit: "回去",
+  beyondExit: "回去",
+  districtStore: "存取 · 休整",
+  beyondStore: "存取 · 休整",
+  districtPoint: "看看",
+  beyondPoint: "看看",
+  tGift: "捡起来",
+  winterEvidence: "交证据",
+  winterAmo: "说话",
+  seasonAli: "说话",
+  seasonAdou: "说话",
+  seasonLodger: "说话",
+  seasonHe: "说话",
+  seasonJiang: "说话",
+  seasonSheet: "捡起来",
+  farPeng: "说话",
+  farHemc: "说话",
+  hpTraveler: "说话",
+  hpPeddler: "买东西",
+  hpBuyer: "卖给他",
+  hpSurvivor: "带他走",
+  hpTruck: "看看",
+  rlShaft: "下隧道",
+  drop: "捡起来",
+  grave: "捡回来",
+  rescue: "带他走",
+};
+
+// ---------- 设施：做什么 ----------
+export const BVERB = {
+  field: "种菜",
+  chest: "存东西",
+  cook: "做饭",
+  rain: "接雨水",
+  workbench: "做工具和药",
+  weaponbench: "做武器",
+  breeder: "换种子",
+  fence: "挡感染者",
+  gate: "开门 / 关门",
+  trap: "绊住感染者",
+  bed: "住一个人",
+  tower: "派人守塔",
+  lure: "拉响，引开感染者",
+  repairpost: "守夜时修防线",
+  irrigation: "每天浇旁边的田",
+  solar: "白天存电",
+  drone: "照看田",
+  greenhouse: "里面种菜不怕天气",
+  coop: "下蛋",
+  floor: "摆着好看",
+  chair: "摆着好看",
+  lamp: "摆着好看",
+  bookshelf: "摆着好看",
+  table: "摆着好看",
+  harvestTrophy: "摆着好看",
+  stove: "寒潮时取暖",
+  scarecrow: "赶走乌鸦",
+  compost: "沤肥",
+  medCabinet: "治伤",
+  hnKeepsake: "摆旧物",
+  alPickleJar: "腌菜",
+  alWineJar: "酿酒",
+  alTree_mulberry: "结果子",
+  alTree_peach: "结果子",
+  alTree_apple: "结果子",
+  alTree_persimmon: "结果子",
+  alDecor: "摆着好看",
+  rlStation: "交清单修墙",
+  rlWatch: "摆着好看",
+};
+
+// 坏了的设施：头上写“修好它”
+export const BROKEN_VERB = "修好它";
+
+// 名字太长的（带着一串说明的）只留前一截
+export const NAME_CUT = 12;
+
+// ---------- 设施的说明卡：做什么（一句话）、好处（带数）----------
+export const BCARD = {
+  field: ["开垦好的一块田，种菜用", "多一块田"],
+  chest: ["存东西：背包放不下的都放这里", "做东西时直接用箱子里的材料"],
+  cook: ["做饭：炖汤、罐头、干粮、料理", "吃了回体力和生命；干粮给居民当工作餐"],
+  rain: ["接雨水；按交互灌满水壶", "每天出 4 份水（雨天 12、高温 0），浇 220 以内的田"],
+  workbench: ["做弹药、药、布料这些", "随手做不了的东西在这里做"],
+  weaponbench: ["做武器、修武器", "有了精密蓝图，还能做长枪"],
+  breeder: ["一份菜换两颗种子", "稀有的种子也能这样多起来"],
+  fence: ["挡住感染者", "给你和瞭望塔争取开枪的时间"],
+  gate: ["人过得去，关上了感染者过不去", "按交互开门、关门"],
+  trap: ["绊住踩上来的感染者", "每踩一次掉 45 血；陷阱自己掉 10 耐久"],
+  bed: ["多住一个人", "每张床多 1 个居民（农舍自带 1 张）"],
+  tower: ["派一个人守塔，自动打感染者", "打 320 以内的，每发用 1 发弹药"],
+  lure: ["拉响它，把感染者引过去", "引 350 以内、离你远的感染者；它会挨打，要修"],
+  repairpost: ["守夜时慢慢修旁边的防线", "居民修东西也快一些"],
+  irrigation: ["每个钟点浇旁边没浇的田", "浇 300 以内的田，每块用 1 份水网的水"],
+  solar: ["白天存电", "每小时 3 电（高温 5、暴雨 1），最多存 100"],
+  drone: ["照看旁边的田：浇水、捉虫、拔草", "每个钟点照看 300 以内的 4 块田，每块 1 电"],
+  greenhouse: ["罩住旁边的田，不怕坏天气", "220 以内的田长快 10%；寒潮里只有这里的田能长"],
+  coop: ["养鸡，每天下蛋", "用玉米换鸡蛋；白天鸡能下田吃虫拔草"],
+  floor: ["房间的中心，家具围着它摆", "75 步以内算一间房"],
+  chair: ["摆在地板旁边", "和地板、别的家具凑成一间房"],
+  lamp: ["摆在地板旁边", "和地板、别的家具凑成一间房"],
+  bookshelf: ["摆在地板旁边", "和地板、别的家具凑成一间房"],
+  table: ["摆在地板旁边", "和地板、别的家具凑成一间房"],
+  harvestTrophy: ["收获展得的奖杯，摆着看", "摆在房间里算一样家具"],
+  stove: ["寒潮时取暖", "220 以内是暖区；那几天每天早上烧 2 份木材"],
+  scarecrow: ["赶走乌鸦", "160 以内（大约 4 块田）的熟菜不会被啄"],
+  compost: ["把草料、虫、鸡粪、多的菜沤成肥", "5 份过一夜出 1 袋肥"],
+  medCabinet: ["治伤员", "和床、地板凑成医务室：1 条绷带，伤员 1 天就好"],
+  hnKeepsake: ["摆旧物的柜子", "放进房间算一样家具"],
+  alPickleJar: ["腌菜", "装 4 份菜，3 天出腌菜；放到 7 天贵将近一倍"],
+  alWineJar: ["酿酒", "装 4 份粮或果子，4 天出 2 份土酒；放到 10 天价钱翻倍"],
+  alTree_mulberry: ["结桑葚，按交互摘", "14 天长成，回暖时节每天结 1 个（最多挂 3 个）"],
+  alTree_peach: ["结桃子，按交互摘", "14 天长成，酷暑时节每天结 1 个（最多挂 3 个）"],
+  alTree_apple: ["结苹果，按交互摘", "14 天长成，秋收时节每天结 1 个（最多挂 3 个）"],
+  alTree_persimmon: ["结柿子，按交互摘", "14 天长成，寒潮时节每天结 1 个（最多挂 3 个）"],
+  alDecor: ["摆着好看", "屋外大家心情好一点；放进房间算一样家具"],
+  rlStation: ["交清单修墙", "28 份清单、6 面墙，交满一面，余烬地区恢复一样"],
+  rlWatch: ["摆着看", "全营心情 +3"],
+};
+
+// ---------- 建造页的四组 ----------
+export const BUILD_GROUPS = [
+  ["farm", "种地", ["field", "irrigation", "rain", "greenhouse", "scarecrow", "compost", "breeder", "drone", "solar", "coop", "alTree_mulberry", "alTree_peach", "alTree_apple", "alTree_persimmon"]],
+  ["live", "吃住", ["chest", "cook", "workbench", "weaponbench", "bed", "stove", "medCabinet", "alPickleJar", "alWineJar", "rlStation"]],
+  ["guard", "防守", ["fence", "gate", "trap", "tower", "lure", "repairpost"]],
+  ["decor", "摆件", ["floor", "chair", "lamp", "bookshelf", "table", "harvestTrophy", "alDecor", "hnKeepsake", "rlWatch"]],
+];
+
+// ---------- 菜单十项：每项一句话 ----------
+// open：{ menu } 直接打开那一页；{ action, id } 走那个按钮
+export const MENUS = [
+  ["任务手记", "今天要做的、主线下一步", { menu: "rebuild" }],
+  ["背包", "身上带的东西，点一样看它做什么", { menu: "inventory" }],
+  ["制作", "不用设施、随手就能做的东西", { menu: "craft" }],
+  ["建造", "在农场上建新设施，或者拆掉", { menu: "build" }],
+  ["地图", "去哪里", { menu: "map" }],
+  ["人", "认识的人：是谁、干什么、喜欢什么", { action: "sView", id: "people" }],
+  ["成就册", "收集了多少、拿到了什么", { action: "wView", id: "collection" }],
+  ["消息", "发生过的事：战报、抉择、账本、来往消息", { action: "sxOpen", id: "messages" }],
+  ["技能", "四项技能的等级和学到的本事", { menu: "skills" }],
+  ["设置", "声音、画面、存档、卡住走不动", { menu: "pause" }],
+];
+
+// ---------- 顶栏的数：点开的卡 ----------
+// [名字, 是什么, 怎么涨 / 怎么掉]
+export const HUD_CARD = {
+  hp: ["生命", "被感染者打到会掉，掉光了会倒下，被人送回农舍。", "吃药包、绷带，或者回农舍睡一觉能回。"],
+  stamina: ["体力", "干活、翻滚、跑步都要用，用光了动作变慢。", "睡觉、吃东西、摸摸麦穗能回。"],
+  hunger: ["饥饿", "饱的程度，一直在往下掉，掉到 0 会饿晕。", "吃东西就涨：背包里点吃的，或者在篝火灶做饭。"],
+  money: ["金币", "买种子、工具，请人做事都要花钱。", "出货箱卖东西、交订单、跑商能挣。"],
+  date: ["日子", "今天是第几天、什么时节。", "点「看日历」看节庆和长夜在哪天。"],
+  weather: ["天气", "下雨田都算浇过；坏天气菜长得慢，出门也难些。", "菜地告示牌上能看这三天的天气。"],
+  food: ["口粮", "仓库和背包里的口粮够营地吃几天。", "做干粮、种菜补上；不够了居民会饿着干活。"],
+  cold: ["寒潮", "寒潮来的那几天外面冷，田里不长。", "建火炉取暖，温室里的田照样长。"],
+  noise: ["动静", "营地今天闹出的动静，到半夜结算。", "动静大了，半夜会招来一小股感染者。"],
+  daily: ["今日抉择", "每天会有一件事等你决定。", "点开看还没决定的和以前的。"],
+  time: ["时间", "现在几点。", "19:00 天黑，夜里感染者多。"],
+};
+
+// ---------- 按交互打开的那一页，最上面那张卡：名字、做什么、好处 ----------
+export const PAGE_CARD = {
+  shipping: ["出货箱", "把东西放进去，第二天 0 点按收购价卖掉", "钱直接入账；0 点以前随时能取回"],
+  gBoard: ["菜地告示牌", "看这个时节、这三天种什么好", "当季的菜长得快，每收多 1 份"],
+  radio: ["通信站", "听今天的广播，选今晚播的节目", "节目让营地心情好一些"],
+  lathe: ["机床", "每天自己出零件；请尤可做小发明", "零件修东西、做武器都要用"],
+  museum: ["档案馆", "把找到的东西捐进展柜", "每个展柜捐满都有回礼"],
+  plaza: ["前哨广场", "节庆那天在这里办节庆", "节庆让全营心情好，还有回礼"],
+  bOrders: ["订单板", "交订单：按单子凑齐东西交上去", "比直接卖多挣一半，还给材料或种子"],
+  hnJiang: ["江伯", "问鱼汛：哪几天、哪里的鱼多", "鱼汛那几天钓鱼收获多"],
+  dog: ["麦穗", "喂它、摸它、叫它跟着你或者看家", "默契高了，它会帮你叼东西、报信"],
+  talk: ["营火", "晚上和营地的人坐一会儿", "聊开心了，第二天大家心情好"],
+  people: ["人", "认识的人：是谁、干什么、喜欢什么", "送对了礼物信任涨得快"],
+  collection: ["成就册", "收集了多少、拿到了什么", ""],
+  log: ["消息", "发生过的事", ""],
+};
+export const REBUILD_CARD = {
+  residents: ["援建营地", "给营地里的人派活：谁种地、谁修东西、谁守夜", "每个人做自己擅长的，干得快"],
+};
+export const DISTRICT_CARD = {
+  storage: ["地区仓库", "把东西存在这个地区，或者在这里歇一小时", "这里的仓库只在这个地区能用"],
+};
+
+// ---------- 设施里做好的东西自己进仓库：原来叫你“领取”的那几句换个说法 ----------
+export const WORDING = [
+  [/领取一次加工好的干粮或料理/g, "做好一份干粮或料理"],
+  [/领取一次加工好的绷带或药包/g, "做好一份绷带或药包"],
+  [/等待完成后领取一次成品/g, "做好了会自己进仓库"],
+  [/完成并领取3份干粮/g, "做好 3 份干粮"],
+  [/加工绷带或药包并领取/g, "加工绷带或药包（做好了自己进仓库）"],
+  [/成品留在农场，请回家领取。?/g, "做好了会自己进仓库。"],
+  [/加工完成，可回营地领取/g, "加工完成，已经放进仓库"],
+];

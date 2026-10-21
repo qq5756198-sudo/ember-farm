@@ -906,10 +906,11 @@ test("interact next to 麦穗 opens her page instead of an empty one; no map obj
   for (const o of e.objects) if (o !== d && Math.hypot(o.x - d.x, o.y - d.y) < 120) o.x += 400;
   Object.assign(e.s.player, { x: d.x + 20, y: d.y + 10 });
   assert.equal(e.nearestObject().type, "partnerDog");
-  assert.match(e.context(e.nearestObject()), /麦穗 · 看看它/);
+  // v0.39：按交互就是摸摸它（喂它、叫它做事在“人”那一页麦穗那一格）
+  assert.match(e.context(e.nearestObject()), /麦穗 · 摸摸它/);
   e.events.length = 0;
   e.interact();
-  assert.ok(e.events.some((x) => x.type === "menu" && x.menu === "outpost" && x.view === "dog"));
+  assert.equal(e.fr.dog.petDay, e.s.day, "petted");
   // 每张图上每样东西按一下：没有一样落到最底下、打开一个没有名字的页面
   for (const region of Object.keys(REGIONS)) {
     e.s.region = region;

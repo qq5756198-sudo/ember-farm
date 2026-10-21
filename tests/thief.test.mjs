@@ -310,7 +310,7 @@ test("without the opener nothing can be stolen; crouched E on a person opens the
   e.events = [];
   e.interact();
   assert.ok(e.events.some((ev) => ev.type === "menu" && ev.view === "stealPrep" && ev.id === "farmer"));
-  assert.match(e.context(ob), /下手 · 阿禾/);
+  assert.match(e.context(ob), /阿禾 · 下手/);
   e.f.crouch = false;
   assert.doesNotMatch(e.context(ob), /下手/);
 });

@@ -797,7 +797,7 @@ test("trees: cut a branch off an old fruit tree in the residential yards (once a
   assert.deepEqual(olds.map((o) => o.tree).sort(), [...TREE_IDS].sort());
   const peach = olds.find((o) => o.tree === "peach");
   Object.assign(e.s.player, { x: peach.x, y: peach.y + 20 });
-  assert.match(e.context(peach), /按 E 剪一根枝条/);
+  assert.match(e.context(peach), /剪枝条/);
   e.interact();
   assert.equal(stock(e, cuttingId("peach")), 1);
   assert.equal(e.cutTree("peach"), false);

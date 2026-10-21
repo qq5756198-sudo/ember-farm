@@ -24,6 +24,9 @@ import * as FrontierData from '../dist/frontier-data.js';
 import * as Version from '../dist/version.js';
 // v0.38：卡位逃脱、触屏切换精英部位的字
 import * as MendData from '../dist/mend-data.js';
+// v0.39：一物一用的界面
+import * as SimpleUI from '../dist/simple-ui.js';
+import * as SimpleData from '../dist/simple-data.js';
 import * as Atlas from '../dist/atlas.js';
 import {Renderer} from '../dist/campaign-renderer.js';
 import * as Visual from '../dist/visual-renderer.js';
@@ -93,7 +96,7 @@ for(const key of Session.HISTORY_KEYS.slice(0,8))storage.set(key,'historic '+key
 class Image{set src(path){this.path=path;loadImage(dir+'/'+path).then(img=>{this.native=img;this.width=img.width;this.height=img.height;this.complete=true;this.onload?.();}).catch(e=>this.onerror?.(e));}get src(){return this.path;}}
 globalThis.document=document;
 let raf;
-const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...MendData,...Atlas,...Clarity,...ZestUI,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},clearTimeout:()=>{},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
+const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...MendData,...SimpleUI,...SimpleData,...Atlas,...Clarity,...ZestUI,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},clearTimeout:()=>{},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
 script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo,moments});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.hud=updateHUD;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
@@ -196,7 +199,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   context.open('journey'); assert.match(html(), /修好水井的辘轳和水槽/); clean();
   click('aStoryMark'); assert.equal(context.inspect().menu, null); assert.equal(e.guidance.target.label, '旧水井');
   Object.assign(e.s.player, { x: 880, y: 330 }); run(2);
-  assert.match(document.querySelector('#context').innerHTML, /修好水井辘轳/);
+  assert.match(document.querySelector('#context').innerHTML, /旧水井 · 修好辘轳/);
   press('e'); assert.ok(e.sc.flags.well);
   const site = e.campSite(); Object.assign(e.s.player, { x: site.x, y: site.y + 30 });
   context.open('journey'); assert.match(html(), /就地搭起营地/); click('aStoryDo', 'camp'); assert.ok(e.sc.camp);
@@ -210,9 +213,11 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   e.advanceMinutes(25); click('gCollect', e.c.production[0].id);
   assert.ok(e.r.claimed.includes('meal')); assert.match(html(), /到联盟终端回信/); clean();
   click('close'); Object.assign(e.s.player, { x: 754, y: 374 }); run(2);
-  assert.match(document.querySelector('#context').innerHTML, /回信报告/);
+  assert.match(document.querySelector('#context').innerHTML, /联盟终端 · 回信/);
   press('e'); run(2);
-  assert.equal(e.sc.act, 2); assert.equal(e.sc.helpers.length, 1); assert.equal(context.inspect().menu, 'journey');
+  assert.equal(e.sc.act, 2); assert.equal(e.sc.helpers.length, 1);
+  // v0.39：终端只读来信——回信以后打开的是“来信”那一页，信里那一步（挑哪一包）就在这一页上
+  assert.equal(context.inspect().menu, 'sx'); assert.equal(context.inspect().menuArgs?.view ?? 'letters', 'letters');
   assert.match(html(), /要这一包/); clean();
   click('aStoryChoose', 'cotton'); click('aStoryChoose', 'ration'); assert.equal(e.sc.choice, 'cotton');
   assert.match(html(), /在住宅区救回阿禾/);
@@ -472,10 +477,10 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   e.assignRegion();
   const lod = e.objects.find((o) => o.type === 'seasonLodger'); Object.assign(lod, { x: SD.SSPOTS.jiang.x + 40, y: SD.SSPOTS.jiang.y });
   Object.assign(e.s.player, { x: SD.SSPOTS.jiang.x + 20, y: SD.SSPOTS.jiang.y + 10 }); run(6);
-  assert.match(document.querySelector('#context').innerHTML, /选择：/);
-  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /data-hotkey="1"/);
-  const pickIndex = e._pickList.findIndex((o) => o.type === 'seasonJiang');
-  click('sPick', String(pickIndex)); assert.equal(e.ss.jiang.phase, 'c1');
+  // v0.39：两样挨着也不弹“选一个”：底栏写着离你最近的那一样，按下去就是它
+  assert.doesNotMatch(document.querySelector('#context').innerHTML, /选择：/);
+  assert.match(document.querySelector('#context').innerHTML, /江伯 · /);
+  press('e'); run(1); assert.equal(e.ss.jiang.phase, 'c1');
   if (context.inspect().menu) { clean(); click('close'); }
   // 物品来源与用途
   e.s.inventory.potato = 2; context.open('inventory'); click('item', 'potato'); clean(); assert.match(html(), /能做：/); assert.match(html(), /种土豆种子/); click('close');
@@ -509,8 +514,9 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   Object.assign(e.s.player, { x: 830, y: 460 }); run(3);
   // 手机式快捷菜单
   assert.equal(document.querySelector('.hud-phone').dataset.action, 'xView');
-  click('xView', 'phone'); assert.equal(context.inspect().menu, 'outpost'); clean();
-  assert.match(html(), /data-menu="inventory"/); assert.match(html(), /麦穗/); click('close');
+  // v0.39：“☰ 菜单”是十个菜单，每个一句话（麦穗那一格挪到“人”那一页）
+  click('xView', 'phone'); assert.equal(context.inspect().menu, 'sx'); clean();
+  assert.match(html(), /data-menu="inventory"/); assert.match(html(), /data-id="people"/); assert.equal((html().match(/<small>/g) || []).length >= 10, true); click('close');
   // 夜里的抉择：19:00 → 走到废墟 → E → 选择 → 任务手记里补救
   toHour(19); const n = e.fr.night; assert.equal(n.kind, 'ruin');
   goRegion(n.region); const spot = FD.NIGHT_SPOTS[n.region];
@@ -701,7 +707,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const behind = (ob) => Object.assign(e.s.player, { x: ob.x + 4, y: ob.y - 46 });
   press('v'); assert.equal(e.f.crouch, true);
   let ob = who('farmer'); assert.ok(ob); behind(ob); run(2); ob = who('farmer'); behind(ob); run(1);
-  assert.match(document.querySelector('#context').innerHTML, /下手 · /);
+  assert.match(document.querySelector('#context').innerHTML, /· 下手/);
   // E → 下手之前
   behind(who('farmer')); press('e'); run(1);
   assert.equal(context.inspect().menu, 'outpost'); clean();
@@ -816,7 +822,9 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   click('rOpen', 'frontier:kitchen'); assert.match(html(), /<h2 id="modal-title">料理<\/h2>/); click('close');
   // v0.27：出货箱上的“每日订单”换成出货箱旁边的订单板
   context.open('outpost', { view: 'shipping' }); clean(); assert.doesNotMatch(html(), /每日订单/); click('bView', 'bOrders'); assert.match(html(), /<h2 id="modal-title">订单板<\/h2>/); click('close');
-  context.open('home'); assert.match(html(), /房间与家具/); click('rOpen', 'frontier:rooms'); assert.match(html(), /<h2 id="modal-title">房间与家具<\/h2>/); click('close');
+  // v0.39：农舍只管休息；房间与家具挪到建造页“摆件”那一组
+  context.open('home'); assert.doesNotMatch(html(), /房间与家具|保存存档|家园计划/); assert.match(html(), /data-action="sleep"/);
+  context.open('build'); assert.match(html(), /房间与家具/); click('rOpen', 'frontier:rooms'); assert.match(html(), /<h2 id="modal-title">房间与家具<\/h2>/); click('close');
   // 池塘按 E：只开钓鱼与养殖那一页
   const pond = e.objects.find((o) => o.type === 'pond');
   if (pond) { Object.assign(e.s.player, { x: pond.x, y: pond.y + 30 }); run(1); Object.assign(e.s.player, { x: pond.x, y: pond.y + 30 }); press('e'); run(1); if (context.inspect().menu) { assert.doesNotMatch(html(), /manual-nav|camp-tabs|返回营地手册/); click('close'); } }
@@ -1093,10 +1101,11 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const goods = e.objects.filter((o) => o.type === 'uGood'); assert.equal(goods.length, 2, 'two goods');
   e.s.inventory.bread = 6; e.s.inventory.bandage = 3;
   const before = Object.fromEntries(Object.keys(goods[0].bundle).map((k) => [k, e.qty(k, true)]));
-  Object.assign(e.s.player, { x: (goods[0].x + goods[1].x) / 2, y: goods[0].y }); run(1);
+  // v0.39：不再弹“选一个”——站到哪一样跟前（头上写着它），按下去就是它
+  Object.assign(e.s.player, { x: goods[0].x + (goods[0].x < goods[1].x ? -6 : 6), y: goods[0].y + 4 }); run(1);
+  assert.equal(e.nearestObject(), goods[0]); assert.doesNotMatch(document.querySelector('#context').innerHTML, /选择：/);
   press('e'); run(1);
-  assert.equal(context.inspect().menu, 'outpost'); assert.match(html(), /pick-list/); clean();
-  click('sPick', String(e._pickList.indexOf(goods[0]))); run(1);
+  if (context.inspect().menu) { clean(); click('close'); }
   assert.equal(e.ut.ev.bits & 1, 1, 'bought the first good');
   for (const [k, n] of Object.entries(goods[0].bundle)) assert.ok(e.qty(k, true) - before[k] >= Math.min(1, n), 'got ' + k);
   // 档案馆：第六个展柜（头目战利品）
@@ -1328,7 +1337,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const B = (type, x, y) => { const b = { id: 'td-' + type + '-' + e.s.idCounter++, type, x, y, rotation: 0, hp: Data.BUILDINGS[type].hp }; e.s.buildings.push(b); e.navRevision++; return b; };
   const solar = B('solar', 420, 880);
   Object.assign(e.s.player, { x: solar.x, y: solar.y + 40 }); run(2);
-  assert.match(document.querySelector('#context').innerHTML, /太阳能板 · 看看情况/);
+  assert.match(document.querySelector('#context').innerHTML, /太阳能板 · /);
   press('e'); run(1);
   assert.equal(context.inspect().menu, 'building'); clean(); assert.match(html(), /营地的电/); click('close');
   const lure = B('lure', 300, 620); e.c.energy = 40;
@@ -1516,7 +1525,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   e.s.region = 'farm'; e.assignRegion();
   e.c.energy = 30;
   Object.assign(e.s.player, { x: 1220, y: 420 }); run(4);
-  assert.match(document.querySelector('#context').innerHTML, /通信站 · 电台节目和电台指令/);
+  assert.match(document.querySelector('#context').innerHTML, /通信站 · 听广播/);
   press('e'); run(1);
   assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /电台指令/); assert.doesNotMatch(html(), /满了会引来尸群/);
   click('hnCmd', 'scout'); assert.equal(e.c.energy, 30 - BustleData.RADIO_CMDS.scout.power); assert.match(html(), /今天的侦察/);
@@ -1571,7 +1580,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   run(2); press('e'); run(1); clean(); click('sCanteen'); assert.ok(e.ss.canteen.night); assert.match(html(), /不开菜单/); click('close');
   const stove = e.objects.find((o) => o.type === 'hnStove');
   Object.assign(e.s.player, { x: stove.x, y: stove.y + 16 }); run(4);
-  assert.match(document.querySelector('#context').innerHTML, /何大勺的灶台 · 按 E 端菜/);
+  assert.match(document.querySelector('#context').innerHTML, /何大勺的灶台 · 端菜/);
   press('e'); run(1); assert.ok(e.hn.carry, 'a dish in hand'); assert.equal(context.inspect().menu, null);
   const g = e.ss.canteen.night.customers.find((x) => x.id === e.hn.carry.guest), gi = e.ss.canteen.night.customers.indexOf(g), seat = e.guestSeat(gi);
   Object.assign(e.s.player, { x: seat.x, y: seat.y + 12 }); run(2);
@@ -1691,7 +1700,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   e.s.region = 'residential'; e.enemies = e.s.enemies.residential ||= []; for (const z of e.enemies) z.dead = true; e.enemies = e.s.enemies.residential = []; e.assignRegion();
   const oldPeach = e.objects.find((o) => o.type === 'alOldTree' && o.tree === 'peach'); assert.ok(oldPeach);
   Object.assign(e.s.player, { x: oldPeach.x, y: oldPeach.y + 20 }); run(4);
-  assert.match(document.querySelector('#context').innerHTML, /老桃树 · 按 E 剪一根枝条/);
+  assert.match(document.querySelector('#context').innerHTML, /老桃树 · 剪枝条/);
   press('e'); run(1); assert.equal(e.qty(AL.cuttingId('peach'), true), 1);
   for (const [w, hh] of [[1366, 600], [390, 480]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
   context.inspect().renderer.resize(1366, 600, 1);
@@ -1712,7 +1721,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   e.forageSpawn(e.s.day); if (!e.al.forage.spots.some((p) => p.region === 'farm')) Object.assign(e.al.forage.spots[0], { region: 'farm', i: 0 }); e.forageObjects();
   const fo = e.objects.find((o) => o.type === 'alForage'); assert.ok(fo);
   Object.assign(e.s.player, { x: fo.x, y: fo.y + 4 }); run(3);
-  assert.match(document.querySelector('#context').innerHTML, /按 E 捡起来/);
+  assert.match(document.querySelector('#context').innerHTML, /捡起来/);
   const had = e.qty(fo.item, true); press('e'); run(1); assert.ok(e.qty(fo.item, true) > had);
   // ---------- 许医生认蘑菇 ----------
   e.recruit('medic'); e.add({ [AL.MUSHROOM.raw]: 3 });
@@ -1840,7 +1849,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   run(2);
   assert.match(document.querySelector('#alert-bar').innerHTML, /阿禾在田边，像是有话想说/);
   Object.assign(e.s.player, { x: rf.x, y: rf.y + 22 }); run(2);
-  assert.match(ctxLine(), /阿禾 · 像是有话想说（按 E）/);
+  assert.match(ctxLine(), /阿禾 · 像是有话想说/); assert.doesNotMatch(ctxLine(), /（）/);
   press('e'); run(1);
   assert.equal(context.inspect().menu, 'outpost'); clean(); assert.ok(html().includes(KS.HEARTS.farmer[0].title));
   click('kinHeartPick', 'farmer:0'); clean(); assert.match(html(), /替我记着/); assert.equal(e.heart('farmer').seg, 1); click('close');
@@ -1851,7 +1860,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   goTo(e, 'residential');
   const cache = e.objects.find((o) => o.type === 'kinCache'); assert.ok(cache, 'the cupboard is marked');
   Object.assign(e.s.player, { x: cache.x, y: cache.y + 18 }); run(3);
-  assert.match(ctxLine(), /阿禾家的橱柜 · 按 E 翻一翻/);
+  assert.match(ctxLine(), /阿禾家的橱柜 · 翻一翻/);
   press('e'); run(1); assert.equal(e.qty('kinSeedTin', true), 1);
   for (const [w, hh] of [[1366, 600], [390, 480]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
   context.inspect().renderer.resize(1366, 600, 1);
@@ -1863,21 +1872,21 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   e.assignRegion();
   const ask = e.objects.find((o) => o.type === 'kinKidAsk'); assert.ok(ask);
   Object.assign(e.s.player, { x: ask.x, y: ask.y + 22 }); run(3);
-  assert.match(ctxLine(), /刘婶和孩子 · 按 E 答复/);
+  assert.match(ctxLine(), /刘婶和孩子 · 答复/);
   press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /留下他/);
   click('kinKid', 'yes'); assert.equal(e.kin.kids.length, 1); assert.equal(e.kin.kids[0].name, '石榴'); assert.equal(context.inspect().menu, null);
   // ---------- 灯火夜：按 E 点亮路灯 ----------
   e.s.day = 28 + 14; e.s.minute = 16 * 60 + 30; run(2);
   const lamp = e.objects.find((o) => o.type === 'kinLamp' && o.lamp === 0); assert.ok(lamp, 'the lamps are up on the lantern night');
   Object.assign(e.s.player, { x: lamp.x, y: lamp.y + 20 }); run(3);
-  assert.match(ctxLine(), /路灯 · 按 E 点亮（0\/6）/);
+  assert.match(ctxLine(), /路灯 · 点亮（0\/6）/);
   press('e'); run(1); assert.deepEqual(e.kin.fest.lamps, [0]);
   // ---------- 收线钓鱼：溪谷的河 ----------
   e.s.day = 28 + 15; e.s.minute = 9 * 60;
   goTo(e, 'valley');
   const stake = e.objects.find((o) => o.type === 'kinWater' && o.water === 'river'); assert.ok(stake);
   Object.assign(e.s.player, { x: stake.x, y: stake.y + 16 }); run(3);
-  assert.match(ctxLine(), /溪谷的河 · 按 E 抛竿/);
+  assert.match(ctxLine(), /溪谷的河 · 钓鱼/);
   press('e'); run(1); assert.equal(e.kin.cast?.water, 'river');
   for (let i = 0; i < 200 && e.c.fishing?.phase !== 'bite'; i++) run(1);
   assert.equal(e.c.fishing?.phase, 'bite');
@@ -1890,7 +1899,9 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   listeners.keyup({ key: 'e' }); run(2);
   Object.assign(e._reel, { prog: 0.995, pull: 0, tense: 0.2, next: 9 });
   keydown('e'); run(1); listeners.keyup({ key: 'e' }); run(1);
-  assert.ok(!e.reeling(), 'landed'); assert.equal(card.hidden, true); assert.equal(ti.textContent, '交互');
+  assert.ok(!e.reeling(), 'landed'); assert.equal(card.hidden, true);
+  // v0.39：触屏的交互按钮写着面前那一样做什么（站在河边就是“钓鱼”）
+  assert.notEqual(ti.textContent, '收线'); assert.match(ti.textContent, /^(交互|钓鱼)$/);
   assert.equal(Object.values(e.kin.fish).reduce((a, b) => a + b, 0), 1);
   assert.equal(e.qty(KD.SAMPLES.river, true), 1, 'a water sample with the first river fish');
   // 手机：点「交互」提竿，按住「收线」
@@ -1920,7 +1931,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   Object.assign(rm, { x: f.x + 64, y: f.y + 70, target: { x: f.x + 64, y: f.y + 70 } });
   Object.assign(e.s.player, { x: f.x + 64, y: f.y + 50 }); run(2);
   Object.assign(rm, { x: f.x + 64, y: f.y + 70 }); run(1);
-  assert.match(ctxLine(), /许医生 · 按 E 说开/);
+  assert.match(ctxLine(), /许医生 · 说开/);
   press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /就这么过下去吧/);
   click('kinConfess', 'medic:yes'); assert.equal(e.kin.partner.stage, 'set'); assert.equal(context.inspect().menu, null);
   e.s.day++; e.s.minute = 12 * 60; Object.assign(e.s.storage, { stew: 3, bread: 66 });
@@ -2005,7 +2016,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const sp = spotFor(e, 'rlStation'); assert.ok(sp); assert.ok(e.placeBuilding(sp.x, sp.y)); e.buildMode = null;
   const st = e.rlStationB(); assert.ok(st);
   Object.assign(e.s.player, { x: st.x, y: st.y + 40 }); run(3);
-  assert.match(ctxLine(), /重建站 · 按 E 看清单（0\/28）/);
+  assert.match(ctxLine(), /重建站 · 看清单（0\/28）/);
   press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean();
   assert.match(html(), /通水/); assert.match(html(), /池塘里的鱼/); assert.match(html(), /data-action="rlGive" data-id="w_pond\|fish"/);
   click('rlGive', 'w_pond|fish'); assert.equal(e.listGot('w_pond', 'fish'), 3); assert.equal(e.qty('fish', true), 1);
@@ -2028,7 +2039,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // ---------- 检修平台：升降井旁边按 E；主线没打完时下不去 ----------
   goTo(e, 'shelter', RL.SHAFT.x, RL.SHAFT.y + 30); run(3);
   const shaft = e.objects.find((o) => o.type === 'rlShaft'); assert.ok(shaft, 'the platform is there');
-  assert.match(ctxLine(), /检修平台 · 按 E 往下/);
+  assert.match(ctxLine(), /检修平台 · 下隧道/);
   const claimed = [...e.sc.claimed]; e.sc.claimed = claimed.filter((x) => x !== 'act8'); e.sc.act = 8;
   press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean();
   assert.match(html(), /主线打完以后，联盟的检修队才来接通检修平台/); click('close');
@@ -2044,7 +2055,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // 检修梯按 E：往下一层
   const lad = e.tunnelLayoutNow().ladders[0];
   Object.assign(e.s.player, { x: lad.x, y: lad.y + 10 }); run(3);
-  assert.match(ctxLine(), /按 E/);
+  assert.match(ctxLine(), /往下|下一层|下去/);
   press('e'); run(1); assert.equal(e.tunnelFloor(), 2, 'down the ladder with E');
   e.enemies.forEach((z) => (z.dead = true));
   // 深一点的样子（第 24 层）
@@ -2061,7 +2072,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.ok(dig, 'the riddle opened a dig spot');
   context.open('journey'); clean(); assert.match(html(), /残页 \d+\/24/); assert.ok(html().includes(e.pageTitle('p09'))); click('close');
   goTo(e, dig[1].region, dig[1].x, dig[1].y + 20); run(3);
-  assert.match(ctxLine(), /这里的土是松的 · 按 E 挖/);
+  assert.match(ctxLine(), /松土 · 挖一挖/);
   press('e'); run(1); assert.ok(e.rl.dug.includes(dig[0]), 'dug with E');
   // ---------- 年终评定：守夜纪念日 21:00 ----------
   goTo(e, 'farm', 760, 640);
