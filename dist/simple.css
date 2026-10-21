@@ -180,3 +180,72 @@
     padding: 10px 8px 16px;
   }
 }
+
+/* 一页最上面那张卡、下面挪过来的按钮：和这一页的正文对齐（同样宽、同样留边） */
+.sx-around {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 18px 22px 0;
+  box-sizing: border-box;
+}
+.sx-around.sx-bottom {
+  padding: 0 22px 18px;
+}
+.sx-around + .outpost-page {
+  padding-top: 4px;
+}
+.sx-around .sx-card {
+  margin-bottom: 8px;
+}
+@media (max-width: 520px) {
+  .sx-around {
+    padding: 12px 12px 0;
+  }
+  .sx-around.sx-bottom {
+    padding: 0 12px 12px;
+  }
+}
+
+/* 手机竖着拿：顶栏三列放不下时（第 200 天、口粮那一格很长），右边的 ☰ 菜单 被挤出屏幕、点不到。
+   中间那一列可以收窄，左边只留 ✦（“余烬农场”四个字收起来，任务手记在底下那个大按钮），时间的像素字小一号 */
+@media (max-width: 600px) {
+  body .hud-top {
+    grid-template-columns: auto minmax(0, 1fr) 44px;
+  }
+  body .hud-brand {
+    min-width: 0;
+  }
+  body .hud-time {
+    min-width: 0;
+    overflow: hidden;
+    justify-content: flex-end;
+  }
+  body.vis-on #time {
+    font-size: 16px;
+  }
+}
+@media (max-width: 480px) {
+  body .hud-brand span:last-child {
+    display: none;
+  }
+}
+
+/* 手机竖着拿：翻滚 / 使用 / 交互那一排有时被挤出屏幕右边（交互键上现在写着做什么）——左边蹲行、投石那几个小按钮让出地方 */
+@media (pointer: coarse) and (max-width: 600px) {
+  .touch-controls {
+    min-width: 0;
+  }
+  .touch-extras {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .touch-extras button {
+    min-width: 0;
+    padding-left: 2px;
+    padding-right: 2px;
+    font-size: 11px;
+  }
+  .touch-actions {
+    flex: none;
+  }
+}

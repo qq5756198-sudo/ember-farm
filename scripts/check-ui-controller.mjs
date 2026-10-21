@@ -3005,6 +3005,12 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   pointAt({ x: tower.x + 10, y: tower.y });
   assert.equal(ui().menu, 'building'); assert.equal(ui().menuArgs.confirm, true); clean();
   assert.match(html(), /data-action="dismantle" data-id="sx-tower"[^>]*>拆掉它/);
+  // 手指抬起来时浏览器补发的那一下点击落在刚打开的卡上：不算（不然正好落在“拆掉它”上就直接拆了）
+  const ghost = document.querySelector('[data-action="dismantle"]');
+  assert.ok(ghost, 'the 拆掉它 button is on the card');
+  listeners.click({ target: ghost, detail: 1 });
+  assert.ok(e.s.buildings.includes(tower), 'the click that comes with the tap does not pull it down');
+  assert.equal(ui().menu, 'building');
   const cost = Object.keys(Data.BUILDINGS.tower.cost || {}), had = cost.reduce((n, k) => n + e.qty(k), 0);
   click('dismantle', 'sx-tower');
   assert.ok(!e.s.buildings.includes(tower), 'the tower is gone');
