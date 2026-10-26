@@ -17,6 +17,11 @@ html.desk {
   --c-card-hi: #2e241c;
   --c-line: #4a3627;
   --c-line-hi: #6b4e37;
+  /* 几种描边：暗边（格子）、主按钮边、危险边、警告边 */
+  --c-line-lo: #3a2a1e;
+  --c-ember-line: #a8501f;
+  --c-danger-line: #8e2a20;
+  --c-warn-line: #6e5520;
   --c-ink: #f1e3c2;
   --c-ink-2: #c9b48a;
   --c-ink-3: #a8946c;
@@ -151,7 +156,7 @@ html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment)
 html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button:disabled {
   color: var(--c-ink-3);
   background: var(--c-panel-2);
-  border-color: #33261c;
+  border-color: var(--c-line);
   box-shadow: none;
   cursor: not-allowed;
   opacity: 1;
@@ -165,32 +170,50 @@ html.desk :where(#modal, .hud-top, .hud-dock) button:is(.active, .selected, .on,
 /* 主按钮：橙底深字，每页最多一个 */
 html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button:is(.primary, .sx-primary) {
   background: var(--c-ember);
-  border-color: #a8501f;
+  border-color: var(--c-ember-line);
   color: var(--c-on-ember);
   box-shadow: inset 0 1px 0 #ffd0a050, 0 2px 0 #5a2a10;
 }
 html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button:is(.primary, .sx-primary):hover:not(:disabled) {
-  background: var(--c-ember-hi);
-  border-color: #c06a2a;
+  /* 悬停、按下都还是主色，只是亮一点、暗一点（底色不多出一种） */
+  background: var(--c-ember);
+  border-color: var(--c-ember-hi);
+  filter: brightness(1.1);
 }
 html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button:is(.primary, .sx-primary):active:not(:disabled) {
-  background: #c96a2a;
+  background: var(--c-ember);
+  filter: brightness(0.9);
   box-shadow: inset 0 2px 0 #0004;
 }
 html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button:is(.primary, .sx-primary):disabled {
-  background: #3b2c20;
-  border-color: #4a3627;
+  background: var(--c-panel-2);
+  border-color: var(--c-line);
   color: var(--c-ink-3);
   box-shadow: none;
 }
+/* 主按钮每页最多一个：一排卡片里各自的“做一个”“今晚播这个”“发出”，设置里的“手动保存”，消息里各封战报自己的按钮，用次按钮 */
+html.desk #modal :is(.recipe-grid .recipe, .story-choice article, .settings-section, details.sx-msg) button:is(.primary, .sx-primary):not(:disabled) {
+  background: var(--c-card);
+  border-color: var(--c-line-hi);
+  color: var(--c-ink);
+  box-shadow: inset 0 1px 0 #ffffff10, 0 2px 0 #0b0806;
+  filter: none;
+}
+html.desk #modal :is(.recipe-grid .recipe, .story-choice article, .settings-section, details.sx-msg) button:is(.primary, .sx-primary):not(:disabled):hover {
+  background: var(--c-card-hi);
+  border-color: var(--c-ember);
+}
+html.desk #modal :is(.recipe-grid .recipe, .story-choice article, .settings-section, details.sx-msg) button:is(.primary, .sx-primary):not(:disabled):active {
+  background: var(--c-panel);
+}
 /* 危险（拆掉、放弃） */
 html.desk :where(#modal) button:is(.danger, .warn, .sx-danger, [data-action="sxRemove"], [data-action="dismantleIt"]) {
-  border-color: #8e2a20;
+  border-color: var(--c-danger-line);
   color: var(--c-danger);
 }
 html.desk :where(#modal) button:is(.danger, .sx-danger):hover:not(:disabled) {
   background: var(--c-danger-bg);
-  color: #ffd2c8;
+  color: var(--c-ink);
 }
 /* 文字按钮：页脚、“看所有”这一类 */
 html.desk #modal :is(.modal-foot, .link-row) button,
@@ -350,7 +373,7 @@ html.desk .hud-top .hud-vitals .bar {
   margin: 0;
   padding: 0;
   background: #0d0a08;
-  border: 1px solid #3a2a1e;
+  border: 1px solid var(--c-line-lo);
   border-radius: 0;
   box-shadow: none;
   position: relative;
@@ -382,7 +405,7 @@ html.desk .hud-top .hud-vitals .stat.low .stat-value {
   color: var(--c-danger);
 }
 html.desk .hud-top .hud-vitals .stat.low .bar {
-  border-color: #8e2a20;
+  border-color: var(--c-danger-line);
   animation: look-pulse 1s steps(2, jump-none) infinite;
 }
 @keyframes look-pulse {
@@ -446,11 +469,11 @@ html.desk .hud-top .hud-time .hud-food {
 }
 html.desk .hud-top .hud-time .hud-food:is(.warn, .cold) {
   color: var(--c-warn);
-  border-color: #6e5520;
+  border-color: var(--c-warn-line);
 }
 html.desk .hud-top .hud-time .hud-food.danger {
   color: var(--c-danger);
-  border-color: #8e2a20;
+  border-color: var(--c-danger-line);
 }
 /* 在哪 + 菜单 */
 html.desk .hud-top .hud-location {
@@ -506,7 +529,7 @@ html.desk .look-coin {
   color: var(--c-warn);
   background: var(--c-card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Cpath fill='%23140f0b' d='M2 0h4v1h-4zM1 1h1v1h-1zM6 1h1v1h-1zM0 2h1v1h-1zM3 2h2v1h-2zM7 2h1v1h-1zM0 3h1v1h-1zM3 3h1v1h-1zM7 3h1v1h-1zM0 4h1v1h-1zM4 4h1v1h-1zM7 4h1v1h-1zM0 5h1v1h-1zM3 5h2v1h-2zM7 5h1v1h-1zM1 6h1v1h-1zM6 6h1v1h-1zM2 7h4v1h-4z'/%3E%3Cpath fill='%23fff1b0' d='M2 1h1v1h-1zM1 2h1v1h-1z'/%3E%3Cpath fill='%23e9c05a' d='M3 1h3v1h-3zM2 2h1v1h-1zM5 2h2v1h-2zM1 3h2v1h-2zM4 3h3v1h-3zM1 4h3v1h-3zM5 4h2v1h-2zM1 5h2v1h-2zM5 5h2v1h-2zM2 6h4v1h-4z'/%3E%3C/svg%3E") 8px center / 12px 12px no-repeat;
   image-rendering: pixelated;
-  border: 1px solid #6e5520;
+  border: 1px solid var(--c-warn-line);
   pointer-events: none;
   animation: look-coin 2.4s var(--ease-out) forwards;
   z-index: 4;
@@ -562,7 +585,7 @@ html.desk #alert-bar .alert-item {
   color: var(--c-warn);
   background: var(--c-panel) var(--i-warn) 10px center / 18px 16px no-repeat;
   image-rendering: pixelated;
-  border: 2px solid #6e5520;
+  border: 2px solid var(--c-warn-line);
   border-left-width: 4px;
   box-shadow: 0 2px 0 #0a0705;
   max-width: 340px;
@@ -573,7 +596,7 @@ html.desk #alert-bar .alert-item::before {
 }
 html.desk #alert-bar .alert-item.danger {
   color: var(--c-danger);
-  border-color: #8e2a20;
+  border-color: var(--c-danger-line);
   background-image: var(--i-danger);
   background-size: 18px 14px;
 }
@@ -687,7 +710,7 @@ html.desk .hud-dock .hot-slot {
   place-items: center;
   position: relative;
   background: var(--c-card);
-  border: 2px solid #3a2a1e;
+  border: 2px solid var(--c-line-lo);
   border-radius: 0;
   box-shadow: inset 0 -3px 0 #0006;
 }
@@ -740,7 +763,7 @@ html.desk .hud-dock .hot-slot .hot-dur.low {
   background: var(--c-danger);
 }
 html.desk .hud-dock .hot-slot.broken {
-  border-color: #8e2a20;
+  border-color: var(--c-danger-line);
 }
 /* 临时状态：长夜、钓鱼、建造、远征、增益 */
 html.desk .hud-dock .dock-feedback {
@@ -772,8 +795,8 @@ html.desk .hud-dock .dock-feedback > :is(#horde-warning, #fishing-status, #build
   text-align: left;
 }
 html.desk .hud-dock .dock-feedback > #horde-warning:not([hidden]) {
-  color: #ffd2c8;
-  border-color: #8e2a20;
+  color: var(--c-ink);
+  border-color: var(--c-danger-line);
   border-left-color: var(--c-danger);
   background: var(--c-danger-bg);
 }
@@ -818,7 +841,7 @@ html.desk :is(#toasts, #menu-toasts) .toast {
 }
 html.desk :is(#toasts, #menu-toasts) .toast.warn {
   border-left-color: var(--c-danger);
-  color: #ffd2c8;
+  color: var(--c-ink);
 }
 html.desk :is(#toasts, #menu-toasts) .toast.gold {
   border-left-color: var(--c-warn);
@@ -1150,7 +1173,7 @@ html.desk #modal .cost span {
 }
 html.desk #modal .cost .missing {
   color: var(--c-danger);
-  border-color: #8e2a20;
+  border-color: var(--c-danger-line);
 }
 /* 进度条 */
 html.desk #modal :is(progress, meter) {
@@ -1237,7 +1260,7 @@ html.desk #modal.welcome h1#modal-title {
   color: var(--c-ink);
   letter-spacing: 6px;
   text-shadow:
-    4px 4px 0 #a8501f,
+    4px 4px 0 var(--c-ember-line),
     8px 8px 0 #0a0705;
 }
 html.desk #modal.welcome .title-motto {
@@ -1514,7 +1537,7 @@ html.desk #modal[data-page="inventory"] .gear-slot .gear-dur i {
   background: var(--c-good);
 }
 html.desk #modal[data-page="inventory"] .gear-slot.broken {
-  border-color: #8e2a20;
+  border-color: var(--c-danger-line);
 }
 html.desk #modal[data-page="inventory"] .gear-slot.broken .gear-slot-body b {
   color: var(--c-danger);
@@ -1554,14 +1577,14 @@ html.desk #modal[data-page="inventory"] .inventory-cell {
   gap: 2px;
   position: relative;
   background: var(--c-card);
-  border: 2px solid #3a2a1e;
+  border: 2px solid var(--c-line-lo);
   border-radius: 0;
   box-shadow: inset 0 -3px 0 #0006;
 }
 html.desk #modal[data-page="inventory"] div.inventory-cell {
   background: var(--c-panel-2);
   border-style: dashed;
-  border-color: #33261c;
+  border-color: var(--c-line-lo);
   box-shadow: none;
 }
 html.desk #modal[data-page="inventory"] button.inventory-cell:hover {
@@ -1690,7 +1713,7 @@ html.desk #modal .look-build-list .recipe {
   padding: var(--sp3) var(--sp2) var(--sp2);
   text-align: center;
   cursor: pointer;
-  border-color: #3a2a1e;
+  border-color: var(--c-line-lo);
   transition: border-color var(--t-hover) linear, background-color var(--t-hover) linear, transform var(--t-press) linear;
 }
 html.desk #modal .look-build-list .recipe:hover {

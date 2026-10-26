@@ -76,6 +76,22 @@ test("styles: the rules — tokens, 14 px floor, contrast of every token on ever
   for (const s of sels) for (const part of splitSelectors(s)) assert.match(part.trim(), /^html(\.desk|:not\(\.desk\))/, part.trim());
 });
 
+test("styles: eight surfaces — button states never add a background colour, one primary per page (actions inside a row of cards are secondary)", () => {
+  const css = read("ui.css");
+  // 八种面
+  for (const t of ["panel-2", "panel", "card", "card-hi", "ember", "danger-bg"]) assert.match(css, new RegExp("--c-" + t + ":\\s*#[0-9a-f]{6};"), t);
+  // 主按钮悬停、按下还是主色（亮一点、暗一点），不能按的和次按钮不能按的一个样子；去掉的几种颜色不再出现
+  assert.doesNotMatch(css, /#3b2c20|#c96a2a|#ffd2c8|#c06a2a/i);
+  const primaryHover = css.match(/button:is\(\.primary, \.sx-primary\):hover:not\(:disabled\) \{([^}]*)\}/)[1];
+  assert.match(primaryHover, /background: var\(--c-ember\);/);
+  const primaryOff = css.match(/button:is\(\.primary, \.sx-primary\):disabled \{([^}]*)\}/)[1];
+  assert.match(primaryOff, /background: var\(--c-panel-2\);/);
+  // 一排卡片里各自的主按钮降成次按钮
+  assert.match(css, /:is\(\.recipe-grid \.recipe, \.story-choice article, \.settings-section, details\.sx-msg\) button:is\(\.primary, \.sx-primary\):not\(:disabled\) \{\s*background: var\(--c-card\);/);
+  // 描边也有名字
+  for (const t of ["line-lo", "ember-line", "danger-line", "warn-line"]) assert.match(css, new RegExp("--c-" + t + ":\\s*#[0-9a-f]{6};"), t);
+});
+
 // ---------- 放大、页名 ----------
 test("zoom: the interface grows with the window — 1366 ×1, 1920 ×1.25, 2560 ×1.7, never under 1 or over 2; phones and small windows keep the old look", () => {
   assert.equal(uiZoom(1366, 768), 1);
