@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { legacyCss, LEGACY } from "../scripts/build-legacy-css.mjs";
 import { floorCss, inkOf, parseColor, surfOf, splitSelectors, INK } from "../scripts/build-ui-floor.mjs";
-import { isDesk, uiZoom, applyLook, pageOf, statusRows, lookHud, resetLookHud } from "../dist/look-ui.js";
+import { isDesk, uiZoom, applyLook, pageOf, statusRows, lookHud, resetLookHud, spreadBoxes, legendKind } from "../dist/look-ui.js";
 import { Renderer as LookRenderer, CAMERA_MAX } from "../dist/look-renderer.js";
 import { Renderer as CampaignRenderer } from "../dist/campaign-renderer.js";
 import { Engine, freshState } from "../dist/campaign.js";
@@ -206,6 +206,35 @@ test("top bar: a bar under a quarter blinks, gold changes float a chip next to t
   lookHud(e, doc);
   assert.equal(made.at(-1).textContent, "−10 金");
   assert.equal(made.at(-1).className, "look-coin minus");
+});
+
+// ---------- 地图 ----------
+test("map: the two legends move to the side panel, labels on the map step aside from the places they would cover (nearest free spot, danger first, never off the map)", () => {
+  assert.deepEqual(["实线：通路开放", "虚线：尚待开通", "亮灯的路：两端都已安全", "淡圈：安全范围"].map(legendKind), ["solid", "dash", "lit", "ring"]);
+  const place = { x: 100, y: 100, w: 128, h: 90 };
+  const over = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  // 不压着就不动
+  assert.deepEqual(spreadBoxes([place], [{ x: 400, y: 120, w: 100, h: 26 }], 1000, 700), [[0, 0]]);
+  // 压着：挪到最近的空处，挪完不压任何地点
+  const [m] = spreadBoxes([place], [{ x: 200, y: 120, w: 100, h: 26 }], 1000, 700);
+  assert.ok(m && (m[0] || m[1]));
+  assert.ok(!over({ x: 200 + m[0], y: 120 + m[1], w: 100, h: 26 }, place));
+  assert.ok(Math.hypot(m[0], m[1]) <= 100, "stays close to where it was");
+  // 两块牌子叠在一起：危险的那块先占最近的位置，另一块再让开，两块也不互相压
+  const two = spreadBoxes([place], [{ x: 200, y: 120, w: 100, h: 26 }, { x: 200, y: 120, w: 100, h: 26, danger: true }], 1000, 700);
+  const a = { x: 200 + two[0][0], y: 120 + two[0][1], w: 100, h: 26 },
+    b = { x: 200 + two[1][0], y: 120 + two[1][1], w: 100, h: 26 };
+  assert.deepEqual(two[1], m);
+  assert.ok(!over(a, b) && !over(a, place) && !over(b, place));
+  // 没地方挪：原地不动（null），也不挪到图外面
+  assert.deepEqual(spreadBoxes([{ x: 0, y: 0, w: 1000, h: 700 }], [{ x: 400, y: 120, w: 100, h: 26 }], 1000, 700), [null]);
+  for (const [dx, dy] of spreadBoxes([{ x: 0, y: 0, w: 120, h: 700 }], [{ x: 2, y: 2, w: 100, h: 26 }], 1000, 700)) {
+    assert.ok(2 + dx >= 2 && 2 + dy >= 2);
+  }
+  // 接上了：地图页排一遍；样式里有图例和拖动的样子
+  assert.match(read("look-ui.js"), /if \(page === "map"\) atlasTidy\(modal\);/);
+  const css = read("ui.css");
+  for (const sel of [".look-atlas-legend", ".lg-dash", ".lg-lit", ".lg-ring", ".atlas-scroll.look-dragging", ".far-pin.look-route-pin"]) assert.ok(css.includes(sel), sel);
 });
 
 // ---------- 接线 ----------

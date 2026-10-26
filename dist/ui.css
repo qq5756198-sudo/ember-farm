@@ -560,7 +560,7 @@ html.desk #alert-bar .alert-item {
   font-size: var(--fs-s);
   font-weight: 600;
   color: var(--c-warn);
-  background: #1b1410f0 var(--i-warn) 10px center / 18px 16px no-repeat;
+  background: var(--c-panel) var(--i-warn) 10px center / 18px 16px no-repeat;
   image-rendering: pixelated;
   border: 2px solid #6e5520;
   border-left-width: 4px;
@@ -808,7 +808,7 @@ html.desk :is(#toasts, #menu-toasts) .toast {
   padding: 7px 14px 7px 14px;
   font: 600 var(--fs-s) / 1.45 var(--f-body);
   color: var(--c-ink);
-  background: #1b1410f2;
+  background: var(--c-panel);
   border: 2px solid var(--c-line);
   border-left: 4px solid var(--c-line-hi);
   box-shadow: 0 3px 0 #0a0705;
@@ -1258,7 +1258,7 @@ html.desk #modal.welcome .title-actions {
   flex-direction: column;
   gap: var(--sp2);
   padding: var(--sp5);
-  background: #1b1410e6;
+  background: var(--c-panel);
   border: 2px solid var(--c-line);
   box-shadow: 0 0 0 2px #0a0705, 0 8px 0 #0a0705;
 }
@@ -1906,4 +1906,163 @@ html.desk #modal .look-keys span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+/* 地图：字变大以后地点挨得太近，地图本身放宽一点（横着可以滚） */
+html.desk #modal .atlas-land {
+  min-width: 1120px;
+}
+html.desk #modal .atlas-node {
+  width: 128px;
+  min-height: 64px;
+}
+html.desk #modal .atlas-node strong {
+  font-size: var(--fs-s);
+}
+/* 地图的框和右栏、地点牌子：用规范里的面板、卡片、选中色（图本身的山水颜色不动） */
+html.desk #modal .atlas-layout {
+  background: var(--c-card);
+}
+html.desk #modal .atlas-toolbar {
+  border-bottom: 2px solid var(--c-line);
+}
+html.desk #modal .atlas-scroll {
+  background: var(--c-panel-2);
+}
+html.desk #modal .atlas-info {
+  background: var(--c-panel);
+  border-left: 2px solid var(--c-line);
+}
+html.desk #modal .atlas-node {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+html.desk #modal .atlas-node:hover {
+  background: transparent;
+  filter: none;
+}
+html.desk #modal .atlas-node .atlas-symbol {
+  background: var(--c-panel);
+  border: 2px solid var(--c-line-hi);
+  box-shadow: 0 2px 0 #0a0705;
+}
+html.desk #modal .atlas-node strong {
+  background: var(--c-panel);
+  border: 1px solid var(--c-line-hi);
+  color: var(--c-ink);
+}
+html.desk #modal .atlas-node small {
+  background: var(--c-panel);
+  color: var(--c-ink-2);
+  text-shadow: none;
+}
+html.desk #modal .atlas-node:hover strong,
+html.desk #modal .atlas-node:focus-visible strong {
+  background: var(--c-card-hi);
+  border-color: var(--c-ink-3);
+}
+html.desk #modal .atlas-node.here .atlas-symbol {
+  background: #3a2414;
+  border-color: var(--c-ember);
+  color: var(--c-ember-hi);
+}
+html.desk #modal .atlas-node.selected strong {
+  background: #3a2414;
+  border-color: var(--c-ember);
+  color: var(--c-ember-hi);
+  box-shadow: 0 0 0 2px #0a0705;
+}
+html.desk #modal .atlas-node.locked .atlas-symbol {
+  background: var(--c-panel-2);
+  border-color: var(--c-line);
+  color: var(--c-ink-3);
+}
+html.desk #modal .atlas-node.locked strong {
+  border-color: var(--c-line);
+  color: var(--c-ink-2);
+}
+
+/* 打开页面时焦点落在关闭键上：用暗一点的框，不抢眼（键盘、手柄往下走时别的东西还是亮框） */
+html.desk #modal .modal-header button.close:focus-visible {
+  outline-color: var(--c-line-hi);
+}
+/* 两个字的按钮不折行 */
+html.desk :where(#modal .modal-content) button {
+  min-width: 4.5em;
+}
+
+/* 同时弹出的提示最多 2 条：大事卡在的时候，下面的消息只留最新一条 */
+html.desk body:has(#zest-moment:not([hidden])) .hud-dock #toasts .toast:nth-last-child(n + 2) {
+  display: none;
+}
+
+/* 地图图例：在右栏最下面，每条前面画一小段样子（颜色就是图上那几种路和圈） */
+html.desk #modal .look-atlas-legend {
+  display: grid;
+  gap: 6px;
+  margin-top: var(--sp4);
+  padding-top: var(--sp3);
+  border-top: 1px solid var(--c-line);
+}
+html.desk #modal .look-atlas-legend p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: var(--fs-s);
+  line-height: 1.4;
+  color: var(--c-ink-2);
+}
+html.desk #modal .look-atlas-legend i {
+  flex: none;
+  width: 28px;
+  height: 0;
+  border-top: 3px solid #c3b68d;
+}
+html.desk #modal .look-atlas-legend i.lg-dash {
+  border-top: 3px dashed #809384;
+}
+html.desk #modal .look-atlas-legend i.lg-lit {
+  height: 6px;
+  border: 0;
+  background: linear-gradient(90deg, #f6d98a 0 3px, transparent 3px 9px) 2px 1px / 9px 4px repeat-x, rgba(243, 210, 122, 0.3);
+}
+html.desk #modal .look-atlas-legend i.lg-ring {
+  width: 18px;
+  height: 18px;
+  margin: 0 5px;
+  border: 1px dashed rgba(207, 224, 168, 0.55);
+  border-radius: 50%;
+  background: rgba(207, 224, 168, 0.12);
+}
+/* 路上的小牌子：和险地牌子一个样子 */
+html.desk #modal .far-pin.look-route-pin {
+  z-index: 4;
+}
+/* 地图可以按住空地拖着看 */
+html.desk #modal .atlas-scroll {
+  cursor: grab;
+}
+html.desk #modal .atlas-scroll.look-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+html.desk #modal .atlas-scroll .atlas-node {
+  cursor: pointer;
+}
+
+/* “现在这一步”“这一档”：浅底换成选中色（橙边、亮橙字），和别处的选中一个样子 */
+html.desk #modal :is(.story-progress li.current, .journal-steps li.current > span, .ladder li.on) {
+  background: #3a2414;
+  border-color: var(--c-ember);
+  color: var(--c-ember-hi);
+}
+html.desk #modal :is(.story-progress li.current, .journal-steps li.current > span, .ladder li.on) * {
+  color: inherit;
+}
+/* “新”字小牌：主色底、深字 */
+html.desk :is(.new-badge, .handbook-entry.has-new::after) {
+  background: var(--c-ember);
+  color: var(--c-on-ember);
 }

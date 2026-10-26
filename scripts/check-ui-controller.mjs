@@ -3122,3 +3122,50 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
   console.log('Simple controller passed: the phone opens the ten menus (拍照 and 脱困 kept) and 人 opens its page with the card and 麦穗\'s button, the top-bar numbers open their cards (a second click or a click elsewhere closes them, the date card opens the calendar), the terminal via E opens only the letters, a damaged tower via E shows its card and 修好它 repairs it, the build page in four groups, 拆掉一样设施 then a click on the tower opens 拆掉它 (Esc and empty ground cancel), the craft page lists only hand recipes and the workbench only its own, the farmhouse only rests, an item card, a locked gate via E opens 修通路 (opened by the button, E goes in, the exit brings you back), the touch button says what E does, a drop and a finished batch go into storage, one line over the thing you face with no other name drawn at four sizes by day and night, and save/parse.');
 }
+// ================= v0.40.0「一套」：Esc 开菜单十项、换手里的东西当场就画、页名、顶栏分左中右 =================
+{
+  const ui = () => context.inspect();
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  for (let i = 0; i < 6 && ui().menu; i++) click('close');
+  assert.equal(ui().menu, null);
+  const e = ui().engine;
+  e.paused = false;
+  // Esc：没开页面时开菜单十项，开着时关上
+  press('Escape');
+  assert.equal(ui().menu, 'sx', 'Esc opens the ten menus');
+  assert.equal(ui().menuArgs.view, 'menus');
+  const modal = document.querySelector('#modal');
+  assert.equal(modal.dataset.page, 'sx');
+  assert.equal(modal.dataset.view, 'menus');
+  assert.match(html(), /data-action="sxOpen" data-id="messages"/);
+  press('Escape');
+  assert.equal(ui().menu, null, 'a second Esc closes it');
+  // 换手里的东西：按 2，快捷栏当场换（不等下一次刷新）
+  e.paused = false;
+  press('3');
+  press('2');
+  assert.equal(e.s.slot, 1);
+  const slots = document.querySelectorAll('.hot-slot');
+  assert.equal(slots.findIndex((b) => b.className.split(' ').includes('active')), 1, 'the hotbar shows the new slot at once');
+  // 每一页标上是哪一页（样式按页排）
+  context.open('inventory');
+  assert.equal(document.querySelector('#modal').dataset.page, 'inventory');
+  click('close');
+  context.open('build');
+  assert.equal(document.querySelector('#modal').dataset.page, 'build');
+  assert.match(html(), /data-action="build"/, 'the build buttons are still on the page');
+  click('close');
+  context.open('outpost', { view: 'people' });
+  assert.equal(document.querySelector('#modal').dataset.page, 'outpost');
+  assert.equal(document.querySelector('#modal').dataset.view, 'people');
+  click('close');
+  // 顶栏分左中右，原来的那些数还在（手机上照旧排）
+  assert.ok(document.querySelector('.hud-left'));
+  assert.ok(document.querySelector('.hud-right'));
+  for (const id of ['stat-bars', 'date', 'time', 'weather', 'money', 'food-days', 'region-label']) assert.ok(document.querySelector('#' + id), id);
+  // 存档：没有新字段
+  const keys0 = Object.keys(JSON.parse(e.serialize()));
+  click('save');
+  assert.deepEqual(Object.keys(JSON.parse(storage.get(Session.CAMPAIGN_SAVE))).filter((k) => !keys0.includes(k)), [], 'no new save field');
+  console.log('Look controller passed: Esc opens the ten menus and closes them, a number key switches the hotbar at once, each page is marked with its name (inventory, build, people), the top bar split left / middle / right with every old number still there, and save/parse.');
+}

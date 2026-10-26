@@ -164,6 +164,10 @@ export function splitSelectors(head) {
   return out;
 }
 
+// 面的代号 → 写进样式里的值（选中、好事底没有单独的变量）
+export function surfValue(k) {
+  return k === "sel" ? "#3a2414" : k === "good-bg" ? "#1f3320" : "var(--c-" + k + ")";
+}
 export function floorCss(dir = root) {
   const picked = new Set(),
     inks = {},
@@ -179,11 +183,20 @@ export function floorCss(dir = root) {
         ci = mi && parseColor(mi[1]);
       if (ci && !Object.values(INK).some((t) => same(t, ci))) strong.push([sels, "color", "var(--c-" + inkOf(ci) + ")"]);
       if (/font-size\s*:[^;]*!\s*important/i.test(body) && tooSmall(body.replace(/!\s*important/gi, ""))) strong.push([sels, "font-size", "var(--fs-s, 14px)"]);
+      // 带 !important 的深色底：也换成规范里的面
+      const mbi = body.match(/(?:^|;|\s)background(?:-color)?\s*:\s*(#[0-9a-f]{3,8}|rgba?\([^)]*\))\s*!\s*important/i),
+        cbi = mbi && parseColor(mbi[1]);
+      if (cbi && (cbi[3] ?? 1) > 0.55 && !Object.values(SURF).some((t) => same(t, cbi) && (cbi[3] ?? 1) >= 0.99)) {
+        const k = surfOf(cbi),
+          live = sels.filter((sel) => !PICTURE.test(sel));
+        if (k && live.length) strong.push([live, "background-color", surfValue(k)]);
+      }
       const mb = body.match(/(?:^|;|\s)background(?:-color)?\s*:\s*(#[0-9a-f]{3,8}|rgba?\([^)]*\))\s*(?:;|$)/i),
         cb = mb && parseColor(mb[1]);
       if (cb && (cb[3] ?? 1) > 0.55) {
         const k = surfOf(cb);
-        if (k && !Object.values(SURF).some((t) => same(t, cb))) for (const sel of sels) if (!PICTURE.test(sel)) (surfs[k] ||= new Set()).add(sel);
+        // 半透明的也算不一样（叠在别的面上会变出新颜色）：一律换成不透明的那一种
+        if (k && !Object.values(SURF).some((t) => same(t, cb) && (cb[3] ?? 1) >= 0.99)) for (const sel of sels) if (!PICTURE.test(sel)) (surfs[k] ||= new Set()).add(sel);
       }
       const m = body.match(/(?:^|;|\s)color\s*:\s*([^;!}]+)/i);
       const c = m && parseColor(m[1]);
@@ -214,11 +227,11 @@ export function floorCss(dir = root) {
   for (const k of Object.keys(SURF)) {
     const all = [...(surfs[k] || [])].sort(),
       pl = all.filter((x) => !/::|:(before|after|placeholder|marker)\b/.test(x));
-    const v = k === "sel" ? "#3a2414" : k === "good-bg" ? "#1f3320" : "var(--c-" + k + ")";
+    const v = surfValue(k);
     for (const part of chunk(pl, 40)) lines.push(`html.desk :where(${part.join(", ")}) {\n  background-color: ${v};\n}`);
   }
   if (strong.length) {
-    lines.push("/* 旧样式里带 !important 的字色、字号（层在 legacy 前面，所以压得过） */\n@layer ui-important {");
+    lines.push("/* 旧样式里带 !important 的字色、字号、底色（层在 legacy 前面，所以压得过） */\n@layer ui-important {");
     for (const [sels, prop, val] of strong) lines.push(`  ${sels.map((x) => "html.desk " + x).join(", ")} {\n    ${prop}: ${val} !important;\n  }`);
     lines.push("}");
   }
