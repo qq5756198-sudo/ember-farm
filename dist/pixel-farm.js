@@ -956,11 +956,11 @@ export function farmQueries(map) {
 }
 
 // 下雨时路面会积水：只在公路、土路、小路上，返回水洼位置（美术像素）
-export function puddleSpots(map) {
+export function puddleSpots(map, n = 68, tries = 1800) {
   const out = [],
     r = rng(808);
-  // v0.41：水洼多一倍
-  for (let i = 0; i < 1800 && out.length < 68; i++) {
+  // v0.41：水洼多一倍（原来 34 个、试 900 回）
+  for (let i = 0; i < tries && out.length < n; i++) {
     const x = Math.floor(r() * FARM_W),
       y = Math.floor(r() * FARM_H),
       t = map[y * FARM_W + x];

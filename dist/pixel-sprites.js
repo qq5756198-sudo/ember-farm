@@ -1,15 +1,21 @@
 // 新画面的小图：人物（四个方向、走路 4 帧、干活）、作物（四个阶段）、耕地、杂物堆、影子、状态小图标。
 // 每张小图都按美术像素画（1 像素 = 地图 2×2），画一次存起来。
-import { PAL, OUTLINE, Pix, cached, rng, seedOf, mix, hash2, dither } from "./pixel-kit.js";
+// v0.41「看得清」改的几处（影子、主角的围巾、人不穿绿、守卫的制服、感染者的破衣摆）只对电脑（LOOK41.on），
+// 手机、小窗口照旧；两种画好的小图各存各的（pixel-kit.js 的 cached）。
+import { PAL, OUTLINE, Pix, cached, rng, seedOf, mix, hash2, dither, LOOK41 } from "./pixel-kit.js";
 
 const canvasOf = (P) => P.toCanvas();
 
 // ---------- 影子 ----------
 export function shadowSprite(rx, ry = Math.max(2, Math.round(rx * 0.32))) {
   return cached(`shadow:${rx}:${ry}`, () => {
-    // v0.41：脚下一块实影（实心深色、不透明度 35%），人、感染者、动物、东西都一样
     const P = new Pix(rx * 2 + 2, ry * 2 + 2);
-    P.ellipse(rx + 1, ry + 1, rx, ry, "#140f0b", 0.35);
+    // v0.41：脚下一块实影（实心深色、不透明度 35%），人、感染者、动物、东西都一样
+    if (LOOK41.on) P.ellipse(rx + 1, ry + 1, rx, ry, "#140f0b", 0.35);
+    else {
+      P.ellipse(rx + 1, ry + 1, rx, ry, "#140f0b", 0.38);
+      P.ellipse(rx + 1, ry + 1, rx - 1.2, ry - 0.8, "#140f0b", 0.18);
+    }
     return canvasOf(P);
   });
 }
@@ -61,7 +67,10 @@ export const PLAYER_LOOK = {
   top: TOPS[0],
   pants: PANTS[0],
   boots: [PAL.soil[0], PAL.ash[1]],
-  scarf: [PAL.ember[3], PAL.ember[2]],
+  // 手机、小窗口照旧是红围巾
+  get scarf() {
+    return LOOK41.on ? [PAL.ember[3], PAL.ember[2]] : [PAL.cloth[1], PAL.cloth[0]];
+  },
   bag: [PAL.soil[2], PAL.soil[1]],
 };
 // 按名字或身份给每个人一套固定的长相
@@ -82,14 +91,15 @@ export function lookFor(key, role = null) {
     hat: r() > 0.75 ? pick(["cap", "straw", "beanie"]) : null,
   };
   look.hairLight = mix(look.hair, "#ffffff", 0.18);
-  // v0.41：人不穿绿（绿是感染者的皮肤）；抽到绿衣绿裤的换一件，按名字定，别的长相不变
-  const h = seedOf(key);
-  if (look.top === TOPS[0]) look.top = TOPS[1 + (h % (TOPS.length - 1))];
-  if (look.pants === PANTS[3]) look.pants = PANTS[h % 3];
+  // v0.41：人不穿绿（绿是感染者的皮肤）；抽到绿衣绿裤的换一件，按名字定，别的长相不变（手机、小窗口照旧）
+  const v41 = LOOK41.on,
+    h = seedOf(key);
+  if (v41 && look.top === TOPS[0]) look.top = TOPS[1 + (h % (TOPS.length - 1))];
+  if (v41 && look.pants === PANTS[3]) look.pants = PANTS[h % 3];
   if (role === "farmer") Object.assign(look, { hat: "straw", top: TOPS[3] });
   if (role === "mechanic") Object.assign(look, { hat: "cap", top: TOPS[1], pants: PANTS[0] });
   if (role === "medic") Object.assign(look, { top: [PAL.cloth[5], PAL.stone[4], "#f6f0de"], hat: null });
-  if (role === "guard") Object.assign(look, { hat: "helmet", top: [PAL.soil[2], PAL.soil[1], PAL.soil[3]], pants: PANTS[1] });
+  if (role === "guard") Object.assign(look, v41 ? { hat: "helmet", top: [PAL.soil[2], PAL.soil[1], PAL.soil[3]], pants: PANTS[1] } : { hat: "helmet", top: TOPS[0], pants: PANTS[3] });
   if (role === "trader") Object.assign(look, { bag: [PAL.straw[1], PAL.straw[0]], hat: "straw" });
   if (role === "helper") Object.assign(look, { hat: "hardhat", vest: [PAL.ember[3], PAL.straw[4]], top: TOPS[1] });
   if (role === "raider") Object.assign(look, { hat: "hood", top: [PAL.ash[2], PAL.ash[1], PAL.ash[3]], mask: PAL.ash[0], pants: PANTS[2], scarf: null });
@@ -196,7 +206,7 @@ function drawPerson(L, dir, frame, pose) {
   }
   P.hline(bx, bx + bw - 1, legTop - 1, L.belt || PAL.soil[0]);
   // v0.41：感染者的衣摆是破的，一条条耷拉下来，剪影边上参差不齐
-  if (L.blood) for (let x = bx; x < bx + bw; x++) if ((x * 5 + (L.bloodSeed || "").length) % 3 === 0) P.set(x, legTop + 1, td);
+  if (L.blood && LOOK41.on) for (let x = bx; x < bx + bw; x++) if ((x * 5 + (L.bloodSeed || "").length) % 3 === 0) P.set(x, legTop + 1, td);
   if (AR) {
     const H = legTop - bodyTop;
     // 保温衣：长到大腿，一道道绗线

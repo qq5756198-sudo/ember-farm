@@ -10,10 +10,10 @@ import { Engine as SimpleEngine } from "../dist/simple.js";
 import { Renderer as CampaignRenderer } from "../dist/campaign-renderer.js";
 import { Renderer as ClearRenderer, hideAlpha, lightAt, attacking, cursorKind, shapeInto, HIDE_MIN, LIGHT_FULL, C41, FX_T, HALO } from "../dist/clear-renderer.js";
 import { Renderer as LookRenderer } from "../dist/look-renderer.js";
-import { skyColor, liftedSky, moonness, nightness, ambientFor, fogColor, MOON, MOON_FLOOR, NIGHT_MAX, RINGS, RINGS_SMALL } from "../dist/pixel-light.js";
+import { skyColor, liftedSky, moonness, nightness, ambientFor, fogColor, moonFloor, MOON, MOON_FLOOR, NIGHT_MAX, RINGS, RINGS_SMALL, RINGS_40, RINGS_SMALL_40 } from "../dist/pixel-light.js";
 import { lookFor, PLAYER_LOOK, zombiePix, ZOMBIE_LOOKS } from "../dist/pixel-sprites.js";
 import { puddlesOn } from "../dist/pixel-build.js";
-import { PAL } from "../dist/pixel-kit.js";
+import { PAL, LOOK41, deskLook, cached } from "../dist/pixel-kit.js";
 import { CROPS } from "../dist/data.js";
 
 const read = (f) => readFileSync(new URL("../dist/" + f, import.meta.url), "utf8");
@@ -91,9 +91,29 @@ test("lights: 12 fine rings give about the same light as the old 6 hard ones (in
   for (let i = 1; i < RINGS.length; i++) assert.ok(RINGS[i][0] < RINGS[i - 1][0]);
   // 光晕：路灯、灯笼、火、日光灯、小灯泡、信号灯
   for (const k of ["lamp", "lantern", "fire", "fluoro", "bulb", "beacon"]) assert.ok(HALO[k][0] >= 3, k);
+  // 月光底：结果和整屏“滤色”一层 #0C111D 一样（暗处抬起来、亮处几乎不变），只是画法省一些：
+  // 光照图每个通道乘 1−F，再整屏“加”一层 F
+  for (const moon of [1, 0.6, 0.2]) {
+    const f = moonFloor(moon);
+    for (const x of [0, 0.05, 0.2, 0.5, 0.9]) {
+      for (let i = 0; i < 3; i++) {
+        const F = (MOON_FLOOR[i] / 255) * moon,
+          screen = x + F - x * F,
+          cheap = x * f.scale[i] + f.add[i] / 255;
+        assert.ok(Math.abs(screen - cheap) < 0.003, moon + " " + x + " " + i + ": " + screen + " vs " + cheap);
+      }
+    }
+    assert.ok(f.add.every((v) => v >= 0 && v <= 29) && f.scale.every((v) => v <= 1 && v > 0.88));
+  }
+  assert.equal(moonFloor(0), null, "no floor by day");
   const vr = read("visual-renderer.js");
-  assert.match(vr, /MOON_OP = "screen"/, "the moonlight floor is screened on (lifts the darks, keeps the lights)");
-  assert.match(vr, /this\.vMap = false;\s*c\.fillStyle = `rgba\(\$\{MOON_FLOOR\[0\]\}/, "the floor colour is not snapped to the palette");
+  assert.match(vr, /floor = moonFloor\(moon \* MOON_FLOOR_K\)/);
+  assert.match(vr, /this\.lightMap\.render\(view, amb, lights, floor\?\.scale \|\| null\)/);
+  assert.match(vr, /c\.globalCompositeOperation = "lighter";\s*\/\/[^\n]*\n\s*const vm = this\.vMap;\s*this\.vMap = false;\s*c\.fillStyle = `rgb\(\$\{floor\.add\[0\]\}/, "the floor colour is not snapped to the palette");
+  // 12 圈画成一张小图（同样的圈、同样的中心）再贴上去
+  const pl = read("pixel-light.js");
+  assert.match(pl, /if \(LOOK41\.on\) return this\.render41\(/);
+  assert.match(pl, /export function ringSprite\(r, flat, small, col\)/);
 });
 
 // ---------- 光外的感染者 ----------
@@ -288,7 +308,7 @@ test("scene: titan telegraph stripes fill from the edge inward (the lanes along 
   const src = read("clear-renderer.js");
   assert.match(src, /c\.fill\(P, "evenodd"\)/);
   // 普通感染者：斜纹在它身子下面画（drawEnemy 里先画），光照之后只描边、最后 0.2 秒闪白
-  assert.match(src, /drawEnemy\(z, e\) \{\s*if \(this\.v && this\.cTellable\(z\)\)/);
+  assert.match(src, /drawEnemy\(z, e\) \{\s*if \(this\.v && LOOK41\.on && this\.cTellable\(z\)\)/);
   // 奔跑者扑人、重甲冲撞的预兆最后 0.2 秒也闪白
   const gear = read("gear-renderer.js");
   assert.match(gear, /z\.lunge\.t < 0\.2 &&/);
@@ -342,17 +362,17 @@ test("sprites: you wear one bit of ember; people never wear the infected's green
   let diff = 0;
   for (let x = 0; x < torn.w; x++) if (String(torn.get(x, row)) !== String(whole.get(x, row))) diff++;
   assert.ok(diff >= 2, "tatters under the belt: " + diff);
-  assert.match(read("pixel-sprites.js"), /P\.ellipse\(rx \+ 1, ry \+ 1, rx, ry, "#140f0b", 0\.35\);\n\s*return canvasOf\(P\);/);
+  assert.match(read("pixel-sprites.js"), /if \(LOOK41\.on\) P\.ellipse\(rx \+ 1, ry \+ 1, rx, ry, "#140f0b", 0\.35\);/);
 });
 
 // ---------- 雨雪、隧道 ----------
 test("weather: rain twice as dense, a wet sheen and far greying in storms, twice the puddles; snow caps on things", () => {
   const pl = read("pixel-light.js");
-  assert.match(pl, /n = calm \? 120 : storm \? 520 : 300/);
+  assert.match(pl, /n = \(calm \? 60 : storm \? 260 : 150\) \* \(LOOK41\.on \? 2 : 1\)/);
   assert.match(pl, /drawSheen\(ctx, view, weather, time, calm\)/);
   assert.match(read("visual-renderer.js"), /this\.wx\.drawSheen\(c, view, weather, this\.time, this\.calm\)/);
   assert.match(read("pixel-maps.js"), /region === "courtyard" \? 92 : 68/);
-  assert.match(read("pixel-farm.js"), /out\.length < 68/);
+  assert.match(read("pixel-farm.js"), /export function puddleSpots\(map, n = 68, tries = 1800\)/);
   // 水洼的找法：数够了就停，同一个种子前面那些不变
   const W = 768,
     H = 512,
@@ -403,4 +423,103 @@ test("rim light: at night a person or infected next to a warm lamp or fire gets 
   assert.equal(rim(me([lamp], 0)), null, "not by day");
   assert.equal(rim(me([lamp], 1, true)), null, "not with reduce-flashing");
   assert.equal(rim(me([lamp]), 600, 128), null, "far from the lamp");
+});
+
+// ---------- 只对电脑 ----------
+test("only on computers: phones, tablets and small windows keep the v0.40 picture (light, sprites, puddles, rain, effects, text)", () => {
+  // 哪里算电脑：和 v0.40 的界面同一条线（鼠标、窗口宽 ≥ 1280、高 ≥ 680）；没有页面（测试、台子、后台线程）当是电脑
+  const win = (w, h, coarse = false) => ({ document: {}, innerWidth: w, innerHeight: h, matchMedia: () => ({ matches: coarse }) });
+  assert.equal(deskLook(win(1366, 768)), true);
+  assert.equal(deskLook(win(1920, 1080)), true);
+  assert.equal(deskLook(win(1180, 660)), false, "small window");
+  assert.equal(deskLook(win(1366, 650)), false, "too short");
+  assert.equal(deskLook(win(1024, 768, true)), false, "tablet");
+  assert.equal(deskLook(win(1366, 1024, true)), false, "big tablet");
+  assert.equal(deskLook({}), true, "no page");
+  assert.equal(LOOK41.on, true);
+  const was = LOOK41.on;
+  try {
+    LOOK41.on = false;
+    // 天色、灯光的台阶、雨、湿光：照原来的
+    for (const m of [0, 300, 1140, 1260, 1380]) assert.deepEqual(ambientFor(m, "晴朗"), ambientFor(m, "晴朗", false));
+    assert.deepEqual(RINGS_40, [[1, 0.1], [0.84, 0.11], [0.68, 0.13], [0.52, 0.15], [0.36, 0.18], [0.22, 0.22]]);
+    assert.deepEqual(RINGS_SMALL_40, [[1, 0.16], [0.6, 0.22], [0.3, 0.3]]);
+    const pl = read("pixel-light.js");
+    assert.match(pl, /if \(LOOK41\.on\) return this\.render41\(/);
+    assert.match(pl, /for \(const \[k, a\] of l\.small \? RINGS_SMALL_40 : RINGS_40\)/);
+    assert.match(pl, /drawSheen\(ctx, view, weather, time, calm\) \{\s*if \(!LOOK41\.on\) return;/);
+    const vr = read("visual-renderer.js");
+    assert.match(vr, /const moon = this\.indoor \|\| !LOOK41\.on \? 0 : moonness\(this\.vMinute\),/);
+    assert.match(vr, /LOOK41\.on \? EXPLORE_DIM : 0\.25/);
+    assert.match(vr, /LOOK41\.on \? this\.art\?\.puddles : this\.art\?\.puddles40 \|\| this\.art\?\.puddles/);
+    // 水洼：原来那些（数、试几回都照原来）
+    assert.match(read("pixel-maps.js"), /puddles40: codes\.length \? puddlesOn\(art\.map, codes, region === "courtyard" \? 46 : 34, seed, 1600\)/);
+    assert.match(read("pixel-maps.js"), /puddles40: puddleSpots\(f\.map, 34, 900\)/);
+    // 小图：红围巾、绿衣服照旧、守卫原来的制服、感染者没有破衣摆、影子两层；两种小图各存各的
+    assert.deepEqual(PLAYER_LOOK.scarf, [PAL.cloth[1], PAL.cloth[0]]);
+    assert.deepEqual({ ...PLAYER_LOOK }.scarf, [PAL.cloth[1], PAL.cloth[0]]);
+    const green = new Set(PAL.leaf);
+    let greens = 0;
+    for (let i = 0; i < 200; i++) if (green.has(lookFor("person" + i).top[0])) greens++;
+    assert.ok(greens > 0, "some people still wear green on phones");
+    assert.equal(lookFor("guard1", "guard").pants[0], lookFor("x", "guard").pants[0]);
+    assert.ok(green.has(lookFor("guard1", "guard").top[0]), "guard keeps the old uniform");
+    const look = ZOMBIE_LOOKS.slow,
+      torn = zombiePix(look, "down", 0),
+      whole = zombiePix({ ...look, blood: 0 }, "down", 0);
+    let diff = 0;
+    for (let x = 0; x < torn.w; x++) if (String(torn.get(x, 26)) !== String(whole.get(x, 26))) diff++;
+    assert.equal(diff, 0, "no torn hem on phones");
+    const a = cached("probe-mode", () => ({ mode: 40 }));
+    LOOK41.on = true;
+    const b = cached("probe-mode", () => ({ mode: 41 }));
+    assert.equal(a.mode, 40);
+    assert.equal(b.mode, 41);
+    LOOK41.on = false;
+    // 最上面那一层：光外的感染者照常画、没有亮边、场景里的字照原来的像素体
+    const R = ClearRenderer.prototype;
+    assert.equal(R.foeAlpha.call({ v: true, indoor: false, lit: { lifted: true, amb: [100, 114, 162], old: [84, 96, 150], lights: [], moon: 1 } }, { x: 0, y: 0 }), 1);
+    assert.equal(R.cRim.call({ v: true, calm: false, indoor: false, lit: { moon: 1, lights: [{ x: 100, y: 100, r: 120, color: [255, 214, 140], power: 0.95 }] } }, 160, 128), null);
+    let base = 0;
+    const me = { _deferText: false, cTextScale: () => 1, ctx: {} };
+    const parent = Object.getPrototypeOf(R);
+    const keep = parent._pixelText;
+    parent._pixelText = function () {
+      base++;
+    };
+    try {
+      R._pixelText.call(me, "旧医院 · 进去", 0, 0, "#e6e5c7", 12);
+    } finally {
+      parent._pixelText = keep;
+    }
+    assert.equal(base, 1, "pixel font as before");
+    const src = read("clear-renderer.js");
+    for (const re of [/if \(!this\.v \|\| !LOOK41\.on \|\| night <= 0\.3 \|\| !this\.art\) return;/, /super\.drawNight\(e\);\s*if \(!this\.v \|\| !LOOK41\.on \|\| !e\) return;/, /if \(!this\.v \|\| !LOOK41\.on \|\| this\.calm \|\| z\.crawl/, /const d = this\.v && LOOK41\.on \? this\._cDrop\.get\(b\.id\) : null;/, /if \(on\) this\.cTake\(list\);/]) assert.match(src, re);
+  } finally {
+    LOOK41.on = was;
+  }
+});
+
+test("boxed words: the word inside a resident's bubble (饿, 困, ♪…), a station's sign (起火, 成品, minutes left), a visitor's ? and the caravan's sign are written; the one-line rule used to cut them and leave empty boxes", () => {
+  const R = ClearRenderer.prototype;
+  const g = { things: [{ x: 100, y: 200, type: "resident" }], foes: [], big: new Set(), target: null, tgt: null };
+  // 气泡在居民头上（x + 16，y − 98）：只写一行的规矩把它算成这个居民的字，拦下了
+  assert.equal(R.slAllow.call({ _sl: g, _slOwn: null, v: true }, "饿", 116, 102, 12), false);
+  assert.equal(R.slAllow.call({ _sl: g, _slOwn: null, v: true, _cBubble: true }, "饿", 116, 102, 12), true);
+  // 访客头上的“？”、货郎车顶的招牌：画那样东西时写的，照写；别的字照旧拦
+  const visitor = { x: 100, y: 200, type: "outpostVisitor" },
+    g2 = { ...g, things: [visitor] };
+  assert.equal(R.slAllow.call({ _sl: g2, _slOwn: visitor, v: true }, "?", 100, 104, 13), true);
+  assert.equal(R.slAllow.call({ _sl: g2, _slOwn: visitor, v: true }, "访客", 100, 122, 12), false);
+  const was = LOOK41.on;
+  try {
+    LOOK41.on = false;
+    assert.equal(R.slAllow.call({ _sl: g2, _slOwn: visitor, v: true }, "?", 100, 104, 13), false, "phones as before");
+  } finally {
+    LOOK41.on = was;
+  }
+  const src = read("clear-renderer.js");
+  assert.match(src, /drawNeeds\(e\) \{\s*return this\.cBubbles\(\(\) => super\.drawNeeds\(e\)\);/);
+  assert.match(src, /drawStationBubbles\(e\) \{\s*return this\.cBubbles\(\(\) => super\.drawStationBubbles\(e\)\);/);
+  assert.match(src, /cBubbles\(fn\) \{\s*if \(!this\.v \|\| !LOOK41\.on\) return fn\(\);/);
 });

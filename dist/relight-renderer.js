@@ -45,7 +45,8 @@ export class Renderer extends KinRenderer {
     const lm = this.lightMap;
     if (lm?.render) {
       const render = lm.render.bind(lm);
-      lm.render = (view, amb, lights) => render(view, this._rlDepth ? amb.map((v) => Math.round(v * this.tunnelDim())) : amb, lights);
+      // 后面多出来的参数照传（v0.41 月光底要光照图每个通道乘一点）
+      lm.render = (view, amb, lights, ...rest) => render(view, this._rlDepth ? amb.map((v) => Math.round(v * this.tunnelDim())) : amb, lights, ...rest);
     }
   }
   tunnelDim() {

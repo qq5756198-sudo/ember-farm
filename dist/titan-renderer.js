@@ -604,7 +604,9 @@ export class Renderer extends NfRenderer {
     // 几条慢慢飘的雾带
     if (this.wx?.drawFog && !F.white) {
       c.save();
-      this.wx.drawFog(c, view, this.time || 0, this.calm, rgba(this.fogTint ? this.fogTint([142, 154, 150]) : [142, 154, 150], 1), 1.1);
+      // v0.41：夜里跟着天色（没变的时候照旧用原来那个颜色）
+      const band = this.fogTint ? this.fogTint([142, 154, 150]) : null;
+      this.wx.drawFog(c, view, this.time || 0, this.calm, band && (band[0] !== 142 || band[1] !== 154 || band[2] !== 150) ? rgba(band, 1) : "#8e9a96", 1.1);
       c.restore();
     }
   }

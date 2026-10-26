@@ -2,7 +2,10 @@
 // 闪电、篝火的火星和烟、夜里的萤火虫和余烬。
 // v0.41「看得清」：夜里留月光（显示用的天色深夜不低于 #6472A2，暗处再“滤色”一层 #0C111D 的底）；灯光 12 圈细台阶。
 // “天黑没有”（灯亮不亮、萤火虫、感染者的眼睛）照旧按原来的天色算，别处的规矩不跟着变。
-import { makeCanvas, hash2, PAL, rgb } from "./pixel-kit.js";
+// 只对电脑（LOOK41.on）；手机、小窗口照旧是原来的天色、6 圈灯光、原来的雨。
+// 电脑上为了不掉帧：每盏灯的 12 圈先画成一张小图存起来，再贴到光照图上；没被灯照到的块用环境色整块乘（multiplyLight）；
+// 月光底不用“滤色”整屏叠，改成光照图每个通道乘一点、再整屏“加”一层（同样的结果，省一些，见 moonFloor）。
+import { makeCanvas, hash2, PAL, rgb, LOOK41 } from "./pixel-kit.js";
 
 // 环境色：乘到整个画面上（白 = 原色，越暗越像夜里）
 const SKY = [
@@ -54,8 +57,8 @@ export function fogColor(col, amb, moon) {
   const t = Math.max(0, Math.min(1, moon || 0));
   return col.map((v, i) => Math.max(0, Math.min(255, Math.round(v * (1 - t + (t * (amb?.[i] ?? 255)) / 255)))));
 }
-// lifted：显示用（有月光）；false 是 v0.40 的算法（光外的感染者还按它画）
-export function ambientFor(minute, weather, lifted = true) {
+// lifted：显示用（有月光）；false 是 v0.40 的算法（光外的感染者还按它画；手机、小窗口照旧用它）
+export function ambientFor(minute, weather, lifted = LOOK41.on) {
   let c = lifted ? liftedSky(minute) : skyColor(minute);
   const day = minute >= 420 && minute <= 1080;
   if (weather === "小雨") c = blend(c, [158, 174, 200], day ? 0.45 : 0.2);
@@ -73,9 +76,11 @@ export function nightness(minute) {
 }
 
 // ---------- 光照图 ----------
-// v0.41：12 圈细台阶（原来 6 圈硬边），加起来和原来一样亮
+// v0.41：12 圈细台阶（原来 6 圈硬边），加起来和原来一样亮；RINGS_40 是原来的（手机、小窗口照旧用它）
 export const RINGS = [[1, 0.082], [0.91, 0.055], [0.82, 0.062], [0.73, 0.071], [0.64, 0.074], [0.55, 0.084], [0.46, 0.085], [0.38, 0.096], [0.3, 0.091], [0.23, 0.086], [0.16, 0.079], [0.1, 0.024]],
-  RINGS_SMALL = [[1, 0.13], [0.8, 0.093], [0.6, 0.119], [0.42, 0.148], [0.26, 0.14], [0.14, 0.05]];
+  RINGS_SMALL = [[1, 0.13], [0.8, 0.093], [0.6, 0.119], [0.42, 0.148], [0.26, 0.14], [0.14, 0.05]],
+  RINGS_40 = [[1, 0.1], [0.84, 0.11], [0.68, 0.13], [0.52, 0.15], [0.36, 0.18], [0.22, 0.22]],
+  RINGS_SMALL_40 = [[1, 0.16], [0.6, 0.22], [0.3, 0.3]];
 // 光照图按美术像素画（地图 2 个单位一格），放大后自然是一块块的像素光
 export class LightMap {
   constructor() {
@@ -89,8 +94,8 @@ export class LightMap {
     }
     return !!this.ctx;
   }
-  // lights: [{x,y,r,color:[r,g,b],power}] 地图坐标
-  render(view, ambient, lights) {
+  // lights: [{x,y,r,color:[r,g,b],power}] 地图坐标；scale：月光底那一步要光照图每个通道乘多少（见 moonFloor），没有就是 null
+  render(view, ambient, lights, scale = null) {
     const ART = 2,
       w = Math.ceil(view.w / ART) + 2,
       h = Math.ceil(view.h / ART) + 2;
@@ -98,6 +103,7 @@ export class LightMap {
     const c = this.ctx,
       ox = Math.floor(view.x / ART),
       oy = Math.floor(view.y / ART);
+    if (LOOK41.on) return this.render41(c, w, h, ox, oy, ambient, lights, scale);
     c.globalCompositeOperation = "source-over";
     c.fillStyle = `rgb(${ambient[0]},${ambient[1]},${ambient[2]})`;
     c.fillRect(0, 0, w, h);
@@ -110,7 +116,7 @@ export class LightMap {
       // 一圈圈色阶：外圈淡、内圈亮
       const [cr, cg, cb] = l.color,
         p = l.power ?? 1;
-      for (const [k, a] of l.small ? RINGS_SMALL : RINGS) {
+      for (const [k, a] of l.small ? RINGS_SMALL_40 : RINGS_40) {
         c.fillStyle = `rgba(${cr},${cg},${cb},${a * p})`;
         c.beginPath();
         c.ellipse(Math.round(lx), Math.round(ly), Math.max(1, Math.round(r * k)), Math.max(1, Math.round(r * k * (l.flat ?? 0.82))), 0, 0, Math.PI * 2);
@@ -120,6 +126,139 @@ export class LightMap {
     c.globalCompositeOperation = "source-over";
     return { canvas: this.canvas, x: ox * ART, y: oy * ART, w: w * ART, h: h * ART };
   }
+  // v0.41：12 圈画成一张小图（同样的圈、同样的位置），按灯的强弱贴上去；scale 每个通道乘一点（都不大于 1）
+  render41(c, w, h, ox, oy, ambient, lights, scale) {
+    const ART = 2,
+      amb = (scale ? ambient.map((v, i) => v * scale[i]) : ambient).map((v) => Math.max(0, Math.min(255, Math.round(v)))),
+      // 哪几块被灯照到（一块 TILE×TILE 个光照图像素）：没照到的地方光照图就是环境色，乘的时候用一种颜色整块乘，快得多
+      nx = Math.ceil(w / TILE),
+      ny = Math.ceil(h / TILE),
+      lit = new Uint8Array(nx * ny);
+    c.globalCompositeOperation = "source-over";
+    c.globalAlpha = 1;
+    c.fillStyle = `rgb(${amb[0]},${amb[1]},${amb[2]})`;
+    c.fillRect(0, 0, w, h);
+    c.globalCompositeOperation = "lighter";
+    c.imageSmoothingEnabled = false;
+    for (const l of lights) {
+      const lx = l.x / ART - ox,
+        ly = l.y / ART - oy,
+        r = l.r / ART;
+      if (lx < -r || ly < -r || lx > w + r || ly > h + r) continue;
+      const col = scale ? l.color.map((v, i) => Math.min(255, Math.round(v * scale[i]))) : l.color,
+        spr = ringSprite(r, l.flat ?? 0.82, !!l.small, col);
+      if (!spr) continue;
+      // “变亮”是加上去的：强过 1 的分两次贴
+      let p = l.power ?? 1;
+      const X = Math.round(lx) - spr.cx,
+        Y = Math.round(ly) - spr.cy;
+      while (p > 0.001) {
+        c.globalAlpha = Math.min(1, p);
+        c.drawImage(spr.canvas, X, Y);
+        p -= 1;
+      }
+      // 这张小图盖到的块（多算一圈，边上那一列一定还是环境色）
+      const x0 = Math.max(0, Math.floor((X - 1) / TILE)),
+        x1 = Math.min(nx - 1, Math.floor((X + spr.canvas.width) / TILE)),
+        y0 = Math.max(0, Math.floor((Y - 1) / TILE)),
+        y1 = Math.min(ny - 1, Math.floor((Y + spr.canvas.height) / TILE));
+      for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) lit[ty * nx + tx] = 1;
+    }
+    c.globalAlpha = 1;
+    c.globalCompositeOperation = "source-over";
+    return { canvas: this.canvas, x: ox * ART, y: oy * ART, w: w * ART, h: h * ART, tiles: { T: TILE, nx, ny, lit, pw: w, ph: h }, amb };
+  }
+}
+// 光照图分块（光照图像素）
+const TILE = 16;
+// 光照图乘到画面上（“正片叠底”）：被灯照到的块照常贴光照图；没照到的块光照图就是环境色，用一种颜色整块乘（一样的结果，快得多）。
+// 块的边按屏幕像素取整：照到的块最外一圈一定是环境色，取整差一个屏幕像素也一样。c 的变换是地图坐标（只放大、平移）
+export function multiplyLight(c, lit) {
+  const t = lit.tiles;
+  let m = null;
+  try {
+    m = c.getTransform();
+  } catch {
+    m = null;
+  }
+  if (!t || !m || m.b || m.c || typeof Path2D !== "function") {
+    c.drawImage(lit.canvas, lit.x, lit.y, lit.w, lit.h);
+    return false;
+  }
+  const ART = lit.w / t.pw,
+    X = (i) => Math.round(m.a * (lit.x + Math.min(t.pw, i * t.T) * ART) + m.e),
+    Y = (j) => Math.round(m.d * (lit.y + Math.min(t.ph, j * t.T) * ART) + m.f),
+    lit2 = new Path2D();
+  let any = false;
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.fillStyle = `rgb(${lit.amb[0]},${lit.amb[1]},${lit.amb[2]})`;
+  for (let ty = 0; ty < t.ny; ty++) {
+    const y0 = Y(ty),
+      y1 = Y(ty + 1);
+    if (y1 <= y0) continue;
+    for (let tx = 0; tx < t.nx; ) {
+      const on = t.lit[ty * t.nx + tx];
+      let end = tx + 1;
+      while (end < t.nx && t.lit[ty * t.nx + end] === on) end++;
+      const x0 = X(tx),
+        x1 = X(end);
+      if (x1 > x0) {
+        if (on) {
+          lit2.rect(x0, y0, x1 - x0, y1 - y0);
+          any = true;
+        } else c.fillRect(x0, y0, x1 - x0, y1 - y0);
+      }
+      tx = end;
+    }
+  }
+  if (any) {
+    c.clip(lit2);
+    c.setTransform(m);
+    c.drawImage(lit.canvas, lit.x, lit.y, lit.w, lit.h);
+  }
+  c.restore();
+  return true;
+}
+// 一盏灯的 12 圈（或小灯 6 圈）画成一张小图：圈的大小按原来那样取整，中心落在整像素上，贴上去和直接画一样
+const ringCache = new Map();
+export function ringSprite(r, flat, small, col) {
+  const rings = small ? RINGS_SMALL : RINGS,
+    radii = rings.map(([k]) => [Math.max(1, Math.round(r * k)), Math.max(1, Math.round(r * k * flat))]),
+    key = (small ? "s" : "") + radii.map(([a, b]) => a + "x" + b).join(",") + "|" + col.join(",");
+  let spr = ringCache.get(key);
+  if (spr !== undefined) {
+    ringCache.delete(key);
+    ringCache.set(key, spr);
+    return spr;
+  }
+  const R = Math.max(...radii.map(([a]) => a)),
+    Ry = Math.max(...radii.map(([, b]) => b)),
+    cv = makeCanvas(R * 2 + 3, Ry * 2 + 3),
+    g = cv?.getContext?.("2d");
+  spr = null;
+  if (g) {
+    g.globalCompositeOperation = "lighter";
+    rings.forEach(([, a], i) => {
+      g.fillStyle = `rgba(${col[0]},${col[1]},${col[2]},${a})`;
+      g.beginPath();
+      g.ellipse(R + 1, Ry + 1, radii[i][0], radii[i][1], 0, 0, Math.PI * 2);
+      g.fill();
+    });
+    spr = { canvas: cv, cx: R + 1, cy: Ry + 1 };
+  }
+  ringCache.set(key, spr);
+  if (ringCache.size > 320) ringCache.delete(ringCache.keys().next().value);
+  return spr;
+}
+// v0.41 月光底：本来是光照乘上去以后整屏“滤色”一层 F（out = x + F − x·F = x·(1−F) + F）。整屏滤色很费，换成一样的结果：
+// 光照图每个通道先乘 1−F（scale），乘完再整屏“加”一层 F（add，0–255）：x·(1−F) + F。
+// moon 是月光掺了几成（0 白天，1 深夜）；没有月光时返回 null
+export function moonFloor(moon, floor = MOON_FLOOR) {
+  if (!(moon > 0.01)) return null;
+  const F = floor.map((v) => (v / 255) * Math.min(1, moon));
+  if (!F.some((f) => f > 0.5 / 255)) return null;
+  return { scale: F.map((f) => 1 - f), add: F.map((f) => Math.round(f * 255)) };
 }
 
 // ---------- 粒子 ----------
@@ -195,8 +334,8 @@ export class Weather {
     if (!["小雨", "暴雨", "酸雨"].includes(weather)) return;
     const storm = weather === "暴雨",
       acid = weather === "酸雨",
-      // v0.41：加密一倍（雨丝本来就是 1 个美术像素宽）
-      n = calm ? 120 : storm ? 520 : 300,
+      // v0.41：加密一倍（雨丝本来就是 1 个美术像素宽；手机、小窗口照旧）
+      n = (calm ? 60 : storm ? 260 : 150) * (LOOK41.on ? 2 : 1),
       fall = storm ? 680 : 460,
       slant = storm ? 0.34 : 0.16,
       len = storm ? 16 : 12,
@@ -218,6 +357,7 @@ export class Weather {
   // v0.41：地上湿了起一层湿光——一点点蓝白的反光一闪一闪（不整片提亮，湿地面本来该暗一点）；
   // 暴雨时远处（画面上边）发灰。画在光照之前，夜里跟着暗
   drawSheen(ctx, view, weather, time, calm) {
+    if (!LOOK41.on) return;
     const wet = this.wet;
     if (wet > 0.05 && !calm) {
       const slot = Math.floor(time * 2),
@@ -235,11 +375,16 @@ export class Weather {
       ctx.globalAlpha = 1;
     }
     if (weather === "暴雨") {
-      const g = ctx.createLinearGradient(0, view.y, 0, view.y + view.h * 0.5);
-      g.addColorStop(0, "rgba(150,164,178,0.26)");
-      g.addColorStop(1, "rgba(150,164,178,0)");
-      ctx.fillStyle = g;
-      ctx.fillRect(view.x, view.y, view.w, view.h * 0.5);
+      // 一条条横带，越往上越灰（像素画的台阶，也比渐变省得多）
+      const N = 8,
+        top = Math.floor(view.y / 2) * 2,
+        step = Math.max(2, Math.round(view.h / 2 / N / 2) * 2);
+      ctx.fillStyle = "rgb(150,164,178)";
+      for (let i = 0; i < N; i++) {
+        ctx.globalAlpha = 0.26 * (1 - (i + 0.5) / N);
+        ctx.fillRect(view.x - 2, top + i * step, view.w + 4, step);
+      }
+      ctx.globalAlpha = 1;
     }
   }
   // 暴雨和酸雨时一层层飘过的雾

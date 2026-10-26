@@ -6,6 +6,7 @@ import { Renderer as GardenRenderer } from "./garden-renderer.js";
 import { personSprite, dirFromAngle, crawlerSprite, zombieSprite, lookFor } from "./pixel-sprites.js";
 import { gearLook, heldSprite, swingPose, meleeKind, trapSprite, fireSprite, gearCrateSprite, gearIconSheet, gearIconIndex } from "./gear-sprites.js";
 import { RULES, RANGED, MELEE, ARMOR } from "./gear-data.js";
+import { LOOK41 } from "./pixel-kit.js";
 import { FIRE, nightness } from "./pixel-light.js";
 import { keyLabel } from "./farlands-ui.js";
 
@@ -99,8 +100,9 @@ export class Renderer extends VisualRenderer {
 
   // ---------- 主角 ----------
   playerLook(e) {
+    // 围巾的颜色手机、小窗口照旧（LOOK41），换了就重新拼一次
     const g = e.gr?.slots || {},
-      key = ["head", "body", "hands", "legs", "feet"].map((k) => g[k] || "").join("|");
+      key = (LOOK41.on ? "41|" : "40|") + ["head", "body", "hands", "legs", "feet"].map((k) => g[k] || "").join("|");
     if (this._lookKey !== key) {
       this._lookKey = key;
       this._look = gearLook(g);
@@ -318,7 +320,7 @@ export class Renderer extends VisualRenderer {
         const a = z.lunge.a,
           len = lunge.dist,
           k0 = 1 - Math.max(0, z.lunge.t) / lunge.crouch,
-          danger = z.lunge.t < 0.2 && (calm || Math.floor(t * 30) % 2 === 0) ? "#ffffff" : this.dangerColor;
+          danger = LOOK41.on && z.lunge.t < 0.2 && (calm || Math.floor(t * 30) % 2 === 0) ? "#ffffff" : this.dangerColor;
         c.globalAlpha = 0.95 * pulse(10);
         // 虚线从脚下伸到它要落下的地方，越接近出手伸得越长
         for (let k = 14; k < len * Math.max(0.35, Math.min(1, k0 + 0.35)); k += 12) mark(z.x + Math.cos(a) * k - 3, z.y + Math.sin(a) * k - 2, 6, 4, danger);
@@ -332,7 +334,7 @@ export class Renderer extends VisualRenderer {
       if (z.charge?.phase === "stomp") {
         const a = z.charge.a,
           len = charge.len,
-          danger = z.charge.t < 0.2 && (calm || Math.floor(t * 30) % 2 === 0) ? "#ffffff" : this.dangerColor;
+          danger = LOOK41.on && z.charge.t < 0.2 && (calm || Math.floor(t * 30) % 2 === 0) ? "#ffffff" : this.dangerColor;
         c.globalAlpha = 0.85 * pulse(12);
         // 两条边线 + 箭头：冲撞会扫过的那条路
         for (let k = 0; k < len; k += 10) {

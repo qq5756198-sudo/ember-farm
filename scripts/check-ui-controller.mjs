@@ -9,6 +9,8 @@ import * as GuidanceData from '../dist/guidance-data.js';
 import * as Session from '../dist/player-session.js';
 import * as Journey from '../dist/player-journey.js';
 import * as Data from '../dist/data.js';
+import * as ClearR from '../dist/clear-renderer.js';
+import * as PixelSprites from '../dist/pixel-sprites.js';
 import * as Frontier from '../dist/frontier.js';
 import * as Rebuild from '../dist/districts.js';
 import * as EchoUI from '../dist/echoes-ui.js';
@@ -3237,6 +3239,37 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
     } finally {
       ctx.fillText = fillText;
     }
+    // 居民头上的小气泡：里面的字写上了（原来被“只写一行”拦下，只剩空白）
+    e.s.minute = 19 * 60;
+    R.resize(1366, 600, 1);
+    const fake = { id: 'probe41', name: '试', x: p.x + 60, y: p.y, fed: false, fatigue: 0, morale: 60 };
+    e.c.residents.push(fake);
+    {
+      const words = [], ft = R.ctx.fillText;
+      R.ctx.fillText = function (t, ...a) {
+        words.push(String(t));
+        return ft.call(this, t, ...a);
+      };
+      try {
+        for (let k = 0; k < 7; k++) {
+          R.time = k + 0.3;
+          R.draw(e, { x: -999, y: -999 }, 0);
+        }
+      } finally {
+        R.ctx.fillText = ft;
+        e.c.residents.splice(e.c.residents.indexOf(fake), 1);
+      }
+      assert.ok(words.includes('饿'), 'the word inside the needs bubble is written');
+    }
+    // 感染者前倾：小图一行行往前错开，脚下那一行不动
+    const spr = PixelSprites.zombieSprite('runner', 'side', 0), sh = ClearR.shearSprite(spr, 0.27);
+    assert.ok(sh && sh.extra === Math.ceil(0.27 * (spr.height - 1)) && sh.anchor === 0, 'a leaning sprite');
+    const rowOf = (cv, y, w) => Array.from(cv.getContext('2d').getImageData(0, y, w, 1).data).join(',');
+    const W0 = spr.width, H0 = spr.height, wide = sh.canvas.width;
+    assert.equal(rowOf(sh.canvas, H0 - 1, W0), rowOf(spr, H0 - 1, W0), 'the feet stay where they were');
+    const top = rowOf(spr, 0, W0), shift = Math.round(0.27 * (H0 - 1)), topRow = sh.canvas.getContext('2d').getImageData(shift, 0, W0, 1).data;
+    assert.equal(Array.from(topRow).join(','), top, 'the top row moved forward');
+    assert.ok(wide === W0 + sh.extra);
   } finally {
     e.s.minute = minute; e.s.weather = weather;
     R.resize(1366, 600, 1);
@@ -3245,5 +3278,5 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   click('save');
   assert.deepEqual(Object.keys(JSON.parse(storage.get(Session.CAMPAIGN_SAVE))).filter((k) => !keys0.includes(k)), [], 'no new save field');
   Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
-  console.log('Clear controller passed: moonlight at night (never darker than before), an infected out of the light drawn fainter but as usual in your light, when striking and by day, the hit flash and the harvest pop start the next frame, the scene takes every effect, cream corners on the thing in front of you, no scene text under 14 px at 1366 and 1920, and save/parse.');
+  console.log('Clear controller passed: moonlight at night (never darker than before), an infected out of the light drawn fainter but as usual in your light, when striking and by day, the hit flash and the harvest pop start the next frame, the scene takes every effect, cream corners on the thing in front of you, no scene text under 14 px at 1366 and 1920, the word inside a resident\'s needs bubble, a leaning infected moved row by row with its feet in place, and save/parse.');
 }

@@ -289,9 +289,25 @@ export class Pix {
   }
 }
 
-// 画好的小图按名字存起来，只画一次
+// v0.41「看得清」的画面只对电脑（和 v0.40 的界面同一条线：鼠标、窗口宽 ≥ 1280、高 ≥ 680）；
+// 手机、平板、小窗口照旧是 v0.40 的画面。画面那一层每一帧定一次（deskLook）；没有页面的地方（测试、台子、后台线程）当是电脑。
+const coarseQ = new WeakMap();
+export function deskLook(win = globalThis) {
+  try {
+    if (!win?.document || typeof win.matchMedia !== "function") return true;
+    let q = coarseQ.get(win);
+    if (!q) coarseQ.set(win, (q = win.matchMedia("(pointer: coarse)")));
+    return !q?.matches && (win.innerWidth || 0) >= 1280 && (win.innerHeight || 0) >= 680;
+  } catch {
+    return true;
+  }
+}
+export const LOOK41 = { on: deskLook() };
+
+// 画好的小图按名字存起来，只画一次（v0.41 的画面和原来的画面各存各的）
 const sprites = new Map();
 export function cached(key, build) {
+  if (!LOOK41.on) key = "v40|" + key;
   if (sprites.has(key)) return sprites.get(key);
   let v = null;
   try {

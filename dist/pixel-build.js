@@ -257,11 +257,11 @@ export function paintWater(sc, test = (x, y) => sc.code(x, y) === S.water, ramp 
 }
 
 // 下雨时积水的地方：在给定的几种地面上挑一些点（美术像素）
-export function puddlesOn(map, codes, n = 34, seed = 808) {
+export function puddlesOn(map, codes, n = 34, seed = 808, tries = 3200) {
   const out = [],
     r = rng(seed);
-  // v0.41：水洼多一倍，多试几回才找得到地方
-  for (let i = 0; i < 3200 && out.length < n; i++) {
+  // v0.41：水洼多一倍，多试几回才找得到地方（原来试 1600 回）
+  for (let i = 0; i < tries && out.length < n; i++) {
     const x = 6 + Math.floor(r() * (MAP_W - 12)),
       y = 30 + Math.floor(r() * (MAP_H - 60)),
       t = map[y * MAP_W + x];

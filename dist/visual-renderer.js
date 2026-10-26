@@ -3,7 +3,7 @@
 // v0.22.0 起只有这一套画面（原来的“新/旧画面”开关去掉了；以前存下的“旧画面”偏好不再生效，存档不受影响）。
 import { Renderer as GardenRenderer } from "./garden-renderer.js";
 import { CROPS, BUILDINGS, ITEMS, WORLD, REGIONS } from "./data.js";
-import { PAL, makeCanvas, nearestPal, Pix, cached } from "./pixel-kit.js";
+import { PAL, makeCanvas, nearestPal, Pix, cached, LOOK41 } from "./pixel-kit.js";
 import { RAMP, pine } from "./pixel-build.js";
 import { boat } from "./pixel-things.js";
 import { bakeMap, hasMapArt } from "./pixel-maps.js";
@@ -11,15 +11,14 @@ import { farmQueries } from "./pixel-farm.js";
 import { pixelSheets } from "./pixel-sheets.js";
 import { personSprite, lookFor, PLAYER_LOOK, dirFromAngle, cropSprite, soilSprite, iconSprite, debrisSprite, shadowSprite, gardenSprite, zombieSprite } from "./pixel-sprites.js";
 import { buildingArt, objectArt, flameArt, carryArt } from "./pixel-props.js";
-import { LightMap, Particles, Weather, ambientFor, nightness, moonness, fogColor, MOON_FLOOR, FIRE, LAMP, WARM, SCREEN, EMBER, FIREFLY } from "./pixel-light.js";
+import { LightMap, Particles, Weather, ambientFor, nightness, moonness, moonFloor, multiplyLight, fogColor, MOON_FLOOR, FIRE, LAMP, WARM, SCREEN, EMBER, FIREFLY } from "./pixel-light.js";
 
 export const VIS = Object.freeze({ on: true });
 const FONT = '"Fusion Pixel", "Microsoft YaHei", sans-serif';
 const RAIN = ["小雨", "暴雨", "酸雨"];
 // v0.41：夜里出门探索比农场暗多少（原来 25%，有月光以后暗一档就够了）；月光底的浓淡
 export const EXPLORE_DIM = 0.12,
-  MOON_FLOOR_K = 1,
-  MOON_OP = "screen";
+  MOON_FLOOR_K = 1;
 const SNOW = ["小雪", "大雪"];
 const ZOMBIE_ICONS = new Set([16, 17, 18, 19, 20, 21, 22, 23, 58, 59]);
 // 田的编号：农场是数字，溪谷是字符串（valley-0-3），动画和变化要用数字
@@ -736,9 +735,10 @@ export class Renderer extends GardenRenderer {
     }
   }
   // v0.41：后面各层画的雾（大雾险地、黑瞎子的雾、白毛风、长夜的雾）跟着天色走：夜里是蓝灰，不再发白；浓淡和看得见的那一圈不变
+  // （手机、小窗口没有月光，moon 是 0，雾照旧）
   fogTint(col) {
     const L = this.lit,
-      m = this.v && !this.indoor ? L?.moon || 0 : 0;
+      m = this.v && !this.indoor && LOOK41.on ? L?.moon || 0 : 0;
     return m > 0.01 && L?.amb ? fogColor(col, L.amb, m) : col;
   }
   // 寒潮里火炉要点着才有火（和原来的条件一样）
@@ -1007,11 +1007,13 @@ export class Renderer extends GardenRenderer {
     }
   }
   drawPuddles() {
-    if (this.indoor || !this.art?.puddles?.length) return;
+    // v0.41 水洼多一倍；手机、小窗口照旧是原来那些
+    const list = LOOK41.on ? this.art?.puddles : this.art?.puddles40 || this.art?.puddles;
+    if (this.indoor || !list?.length) return;
     const w = this.wx,
       saved = w.wet;
     if (this.mood.wet) w.wet = Math.max(w.wet, 0.85);
-    w.drawPuddles(this.ctx, this.art.puddles, this.time, ambientFor(this.vMinute, this.vWeather), RAIN.includes(this.vWeather));
+    w.drawPuddles(this.ctx, list, this.time, ambientFor(this.vMinute, this.vWeather), RAIN.includes(this.vWeather));
     w.wet = saved;
   }
   // 菜地的状态：肥力边、盖布、杂草、菜青虫、乌鸦爪印（和原来的一样，只是画成像素）。
@@ -1256,9 +1258,9 @@ export class Renderer extends GardenRenderer {
     // v0.41：显示用的天色夜里留月光；old 是 v0.40 的算法（光外的感染者还按它画，夜里不变容易）
     let amb = this.indoor ? [146, 152, 168] : ambientFor(this.vMinute, weather),
       old = this.indoor ? amb : ambientFor(this.vMinute, weather, false);
-    // 夜里在外面探索：四周更黑，手电筒照到的地方才看得清（有月光以后也比农场暗一档）
+    // 夜里在外面探索：四周更黑，手电筒照到的地方才看得清（有月光以后也比农场暗一档；手机、小窗口照旧暗 25%）
     if (!this.indoor && night > 0.3 && !["farm", "market"].includes(s.region)) {
-      amb = amb.map((v) => Math.round(v * (1 - EXPLORE_DIM * night)));
+      amb = amb.map((v) => Math.round(v * (1 - (LOOK41.on ? EXPLORE_DIM : 0.25) * night)));
       old = old.map((v) => Math.round(v * (1 - 0.25 * night)));
     }
     // 后面的层可以给天色上一层颜色（v0.25 长夜那天天边发红）
@@ -1270,24 +1272,35 @@ export class Renderer extends GardenRenderer {
       amb = amb.map((v) => Math.round(v + (255 - v) * this.wx.flash * 0.45));
       old = old.map((v) => Math.round(v + (255 - v) * this.wx.flash * 0.45));
     }
-    const lights = this.collectLights(e, night),
-      lit = this.lightMap.render(view, amb, lights);
+    // v0.41：暗处留一层月光底（光照乘上去以后“滤色”一层 #0C111D），夜里不是一团黑；屋里、隧道里没有，手机、小窗口也没有。
+    // 画法：光照图每个通道乘一点，乘完再整屏“加”一层（和整屏滤色一样的结果，省一些，见 pixel-light.js 的 moonFloor）
+    const moon = this.indoor || !LOOK41.on ? 0 : moonness(this.vMinute),
+      floor = moonFloor(moon * MOON_FLOOR_K),
+      lights = this.collectLights(e, night),
+      lit = this.lightMap.render(view, amb, lights, floor?.scale || null);
     if (lit) {
       c.save();
       c.imageSmoothingEnabled = false;
       c.globalCompositeOperation = "multiply";
-      c.drawImage(lit.canvas, lit.x, lit.y, lit.w, lit.h);
+      // v0.41：没被灯照到的块用环境色整块乘（一样的结果，快得多）；手机、小窗口照旧整张贴
+      if (lit.tiles) {
+        const vm = this.vMap;
+        this.vMap = false;
+        try {
+          multiplyLight(c, lit);
+        } finally {
+          this.vMap = vm;
+        }
+      } else c.drawImage(lit.canvas, lit.x, lit.y, lit.w, lit.h);
       c.restore();
     }
-    // v0.41：暗处留一层月光底（加在整个画面上），夜里不是一团黑；屋里、隧道里没有
-    const moon = this.indoor ? 0 : moonness(this.vMinute);
-    if (moon > 0.01) {
+    if (floor) {
       c.save();
-      c.globalCompositeOperation = MOON_OP;
+      c.globalCompositeOperation = "lighter";
       // 这是光不是东西的颜色：不换成调色板里最近的颜色（换了就只剩几档，调不细）
       const vm = this.vMap;
       this.vMap = false;
-      c.fillStyle = `rgba(${MOON_FLOOR[0]},${MOON_FLOOR[1]},${MOON_FLOOR[2]},${(moon * MOON_FLOOR_K).toFixed(3)})`;
+      c.fillStyle = `rgb(${floor.add[0]},${floor.add[1]},${floor.add[2]})`;
       this.vMap = vm;
       c.fillRect(view.x, view.y, view.w, view.h);
       c.restore();

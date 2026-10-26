@@ -7,9 +7,11 @@
 // · 收、捡、建、打、升级的那一下（引擎那一层 clear.js 记的）；下雪时东西顶上积白；隧道里墙和轨道一道极暗的轮廓；
 // · 场景里的字在屏幕上不小于 14 像素。
 // 都只是画法：玩法、数值、存档一样没动。“减少闪烁”打开时不闪白、不抖、不一顿一顿。
+// 只对电脑（和 v0.40 的界面同一条线：鼠标、窗口宽 ≥ 1280、高 ≥ 680）：手机、平板、小窗口照旧是 v0.40 的画面，
+// 每一帧按窗口定一次（LOOK41，pixel-kit.js），月光、灯光、小图、水洼、雨这些下面几层也跟着它。
 import { Renderer as LookRenderer } from "./look-renderer.js";
 import { RINGS, RINGS_SMALL, MOON_FLOOR, LAMP, FIRE } from "./pixel-light.js";
-import { makeCanvas } from "./pixel-kit.js";
+import { makeCanvas, LOOK41, deskLook } from "./pixel-kit.js";
 import { buildingArt, objectArt } from "./pixel-props.js";
 import { gearIcon } from "./gear-sprites.js";
 import { BUILDINGS } from "./data.js";
@@ -192,6 +194,31 @@ export function stripeTile(color) {
   return cv;
 }
 
+// ================= 感染者前倾：一行行往前错开 =================
+// s > 0 往右倾（上面的行往右挪）：第 y 行挪 round(s × 离脚多高) 个美术像素；画布加宽 extra，脚下那一行从 anchor 开始
+const shearCache = new WeakMap();
+export function shearSprite(img, s) {
+  if (!img || !(img.width > 0) || !s) return null;
+  let m = shearCache.get(img);
+  if (!m) shearCache.set(img, (m = new Map()));
+  if (m.has(s)) return m.get(s);
+  const W = img.width,
+    H = img.height,
+    extra = Math.ceil(Math.abs(s) * (H - 1)),
+    anchor = s < 0 ? extra : 0;
+  let out = null;
+  const cv = makeCanvas(W + extra, H),
+    g = cv?.getContext?.("2d");
+  if (g) {
+    g.imageSmoothingEnabled = false;
+    const src = img.native || img;
+    for (let y = 0; y < H; y++) g.drawImage(src, 0, y, W, 1, anchor + Math.round(s * (H - 1 - y)), y, W, 1);
+    out = { canvas: cv, extra, anchor };
+  }
+  m.set(s, out);
+  return out;
+}
+
 // ================= 下雪：东西顶上积一层白 =================
 // 每一列最上面那个不透明的像素描白，一半的列再往下多一格
 const capCache = new WeakMap();
@@ -325,6 +352,8 @@ export function shapeInto(P, sh, k = 1) {
 }
 
 const NO_TELL = new Set(["screamer", "raider", "brute", "nurse", "spitter"]);
+// 画在一样东西身上、自己带着框的字（框是那样东西的一部分）：照写
+const BOXED = { outpostVisitor: ["?"], outpostCaravan: ["全城最低价"] };
 const BODY_FONT = '"PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", system-ui, sans-serif';
 const lightness = (color) => {
   const m = /^#([0-9a-f]{6})/i.exec(color || "");
@@ -348,10 +377,22 @@ export class Renderer extends LookRenderer {
   // ---------- 每一帧 ----------
   draw(engine, mouse, dt) {
     this._cE = engine;
-    if (engine?.takeVfx) this.cTake(engine.takeVfx());
+    const on = deskLook();
+    if (on !== LOOK41.on) this.cSwitch(on);
+    // 引擎那一层记的每一帧都取走；手机、小窗口不画
+    const list = engine?.takeVfx ? engine.takeVfx() : null;
+    if (on) this.cTake(list);
     const out = super.draw(engine, mouse, dt);
     this.cCursorUpdate(engine, mouse);
     return out;
+  }
+  // 窗口在电脑和小窗口之间换了：v0.41 的画面开或关，正在演的动作都停
+  cSwitch(on) {
+    LOOK41.on = !!on;
+    this._cFx.length = 0;
+    this._cFlash.clear();
+    this._cDrop.clear();
+    this._cWind = new WeakMap();
   }
   // 引擎那一层记的“这一下”：变成画面上的动作
   cTake(list) {
@@ -393,7 +434,7 @@ export class Renderer extends LookRenderer {
   // 找这一点最亮的那盏暖色灯（灯光够亮才有）：亮边往灯那边挪 1 个美术像素
   cRim(x, y) {
     const L = this.lit;
-    if (!this.v || this.calm || this.indoor || !L || (L.moon || 0) < 0.3) return null;
+    if (!this.v || !LOOK41.on || this.calm || this.indoor || !L || (L.moon || 0) < 0.3) return null;
     let best = null,
       bv = RIM_MIN;
     for (const l of L.lights || []) {
@@ -438,16 +479,40 @@ export class Renderer extends LookRenderer {
   drawHelper(o, e) {
     return this.cWithRim(o.x, o.y, () => super.drawHelper(o, e));
   }
+  // 框里的字：居民头上的小气泡（饿、困、♪、愁、累、冷、…）、加工站头上的小牌（起火、卡料、成品、还要几分钟）、
+  // 访客头上的“？”、货郎车顶的招牌。框照画，里面的字原来被“面前那一样只写一行”拦下了，只剩一块空框；字照写
+  cBubbles(fn) {
+    if (!this.v || !LOOK41.on) return fn();
+    const was = this._cBubble;
+    this._cBubble = true;
+    try {
+      return fn();
+    } finally {
+      this._cBubble = was;
+    }
+  }
+  drawNeeds(e) {
+    return this.cBubbles(() => super.drawNeeds(e));
+  }
+  drawStationBubbles(e) {
+    return this.cBubbles(() => super.drawStationBubbles(e));
+  }
+  slAllow(label, x, y, size) {
+    if (this._cBubble) return true;
+    const own = this._slOwn;
+    if (this.v && LOOK41.on && own && typeof own === "object" && (BOXED[own.type] || []).includes(label)) return true;
+    return super.slAllow(label, x, y, size);
+  }
 
   // ================= 感染者 =================
   // 这个感染者画几成
   foeAlpha(z) {
     const L = this.lit;
-    if (!this.v || this.indoor || !L?.lifted || attacking(z)) return 1;
+    if (!this.v || !LOOK41.on || this.indoor || !L?.lifted || attacking(z)) return 1;
     return hideAlpha(L.amb, L.old, lightAt(L.lights, z.x, z.y - 24), (L.moon || 0) * FLOOR_Y);
   }
   drawEnemy(z, e) {
-    if (this.v && this.cTellable(z)) {
+    if (this.v && LOOK41.on && this.cTellable(z)) {
       const vm = this.vMap;
       this.vMap = false;
       try {
@@ -458,7 +523,7 @@ export class Renderer extends LookRenderer {
     }
     const k = this.foeAlpha(z),
       until = this._cFlash.get(z.id),
-      white = until != null && (this.time || 0) < until && !this.calm && this.v;
+      white = until != null && (this.time || 0) < until && !this.calm && this.v && LOOK41.on;
     if (until != null && !white) this._cFlash.delete(z.id);
     const rim = this.cRim(z.x, z.y);
     if ((k >= 0.995 && !white && !rim) || !installCtx(this.ctx)) return super.drawEnemy(z, e);
@@ -493,7 +558,7 @@ export class Renderer extends LookRenderer {
   // 感染者的剪影：侧面前倾（奔跑者更多），走路一顿一顿，隔一会儿抽一下
   drawZombie(z, x, y, alpha = 1) {
     const e = this._cE;
-    if (!this.v || this.calm || z.crawl || z.lying || z.titan || z.stunT > 0 || z.stagger > 0 || attacking(z) || (e?.reactOf && e.reactOf(z))) return super.drawZombie(z, x, y, alpha);
+    if (!this.v || !LOOK41.on || this.calm || z.crawl || z.lying || z.titan || z.stunT > 0 || z.stagger > 0 || attacking(z) || (e?.reactOf && e.reactOf(z))) return super.drawZombie(z, x, y, alpha);
     const f = z.facing ?? Math.PI / 2,
       side = Math.abs(Math.cos(f)) > 0.7071,
       lean = side ? (z.type === "runner" || z.type === "stalker" ? 0.27 : z.type === "elite" || z.type === "brute" ? 0.14 : 0.2) * (Math.cos(f) >= 0 ? 1 : -1) : 0,
@@ -504,23 +569,27 @@ export class Renderer extends LookRenderer {
       fr = u - Math.floor(u),
       jerk = (Math.floor(u) + (fr < 0.5 ? fr * 0.4 : 0.2 + (fr - 0.5) * 1.6)) * P - off,
       tw = ((z.id || 0) * 13 + Math.floor((T + off) / 1.7)) % 5 === 0 && (T + off) % 1.7 < 0.08 ? (((z.id || 0) % 2) * 2 - 1) * 2 : 0,
-      c = this.ctx;
-    c.save();
-    c.translate(x + tw, y);
-    if (lean) c.transform(1, 0, -lean, 1, 0, 0);
-    c.translate(-x, -y);
+      c = this.ctx,
+      was = this._cLean;
+    // 前倾：小图按美术像素一行行往前错开（先画好存起来，见 px）；抽一下：整个挪两个单位
+    if (tw) {
+      c.save();
+      c.translate(tw, 0);
+    }
+    this._cLean = lean;
     this.time = jerk;
     try {
       return super.drawZombie(z, x, y, alpha);
     } finally {
       this.time = T;
-      c.restore();
+      this._cLean = was;
+      if (tw) c.restore();
     }
   }
 
   // ================= 设施落下来 =================
   drawBuilding(b, e) {
-    const d = this.v ? this._cDrop.get(b.id) : null;
+    const d = this.v && LOOK41.on ? this._cDrop.get(b.id) : null;
     if (!d) return this.cSnowy(() => super.drawBuilding(b, e));
     const u = ((this.time || 0) - d.t0) / FX_T.drop;
     if (u >= 1) return this.cSnowy(() => super.drawBuilding(b, e));
@@ -539,7 +608,7 @@ export class Renderer extends LookRenderer {
   }
   // 下雪天画设施、物件时，每张小图顶上积一层白
   cSnowy(fn) {
-    const snow = this.v && !this.indoor && (this.vWeather === "小雪" || this.vWeather === "大雪");
+    const snow = this.v && LOOK41.on && !this.indoor && (this.vWeather === "小雪" || this.vWeather === "大雪");
     if (!snow) return fn();
     const was = this._cCap;
     this._cCap = true;
@@ -550,6 +619,16 @@ export class Renderer extends LookRenderer {
     }
   }
   px(canvas, x, y, opts = {}) {
+    // 前倾的感染者：换成错开的那张，脚下那一行还在原来的地方
+    const lean = this._cLean;
+    if (lean && canvas && canvas.height >= 24 && !this._mute) {
+      const flip = !!opts?.flip,
+        sh = shearSprite(canvas, flip ? -lean : lean);
+      if (sh) {
+        canvas = sh.canvas;
+        x += flip ? 2 * sh.anchor - sh.extra : sh.extra - 2 * sh.anchor;
+      }
+    }
     const out = super.px(canvas, x, y, opts);
     if (this._cCap && canvas && !this._mute) {
       const cap = snowCap(canvas);
@@ -578,7 +657,7 @@ export class Renderer extends LookRenderer {
   // 发光的那一层之后：灯芯外的光晕（夜里才有）
   drawEmissive(e, night, view) {
     super.drawEmissive(e, night, view);
-    if (!this.v || night <= 0.3 || !this.art) return;
+    if (!this.v || !LOOK41.on || night <= 0.3 || !this.art) return;
     const k = Math.min(1, (night - 0.3) / 0.3),
       c = this.ctx,
       t = this.time || 0,
@@ -619,7 +698,7 @@ export class Renderer extends LookRenderer {
   // 光照、预兆都画完以后：隧道的轮廓、预兆的斜纹、四角框、收捡建升级的动作
   drawNight(e) {
     super.drawNight(e);
-    if (!this.v || !e) return;
+    if (!this.v || !LOOK41.on || !e) return;
     const vm = this.vMap;
     // 这一层的颜色都是规范里有意思的颜色，不换成调色板里最近的
     this.vMap = false;
@@ -907,7 +986,7 @@ export class Renderer extends LookRenderer {
   tStrike(S) {
     super.tStrike(S);
     const sh = S?.shape;
-    if (!this.v || !sh || !this.tShapePath || sh.k === "ring") return;
+    if (!this.v || !LOOK41.on || !sh || !this.tShapePath || sh.k === "ring") return;
     const c = this.ctx,
       k = clamp(1 - S.t / Math.max(0.01, S.max), 0, 1);
     if (k <= 0) return;
@@ -945,7 +1024,7 @@ export class Renderer extends LookRenderer {
     }
   }
   _pixelText(label, x, y, color = "#e6e5c7", size = 12, center = true) {
-    if (this._deferText || size > 15) return super._pixelText(label, x, y, color, size, center);
+    if (this._deferText || size > 15 || !LOOK41.on) return super._pixelText(label, x, y, color, size, center);
     const k = this.cTextScale();
     if (12 * k >= 13.99) return super._pixelText(label, x, y, color, size, center);
     const c = this.ctx;
@@ -965,7 +1044,7 @@ export class Renderer extends LookRenderer {
     c.fillText(label, X, Y);
   }
   _pixelBadge(label, x, y, color = "#d8cb92") {
-    if (this._deferText) return super._pixelBadge(label, x, y, color);
+    if (this._deferText || !LOOK41.on) return super._pixelBadge(label, x, y, color);
     const k = this.cTextScale();
     if (12 * k >= 13.99) return super._pixelBadge(label, x, y, color);
     const c = this.ctx;
@@ -986,22 +1065,27 @@ export class Renderer extends LookRenderer {
   }
 
   // ================= 光标小图 =================
+  // 鼠标、镜头都没动时不重新找（东西自己会走，最多隔 0.4 秒再找一次）
   cCursorUpdate(engine, mouse) {
     const cv = this.ctx?.canvas;
     if (!cv?.style) return;
     let kind = "";
     const t = this.time || 0;
     if (t - this._cHoverAt < 0.08) return;
-    this._cHoverAt = t;
     try {
-      if (this.v && engine && !engine.paused && !engine.buildMode && mouse && Number.isFinite(mouse.x) && Number.isFinite(mouse.y) && document?.documentElement?.classList?.contains("desk")) {
+      if (this.v && LOOK41.on && engine && !engine.paused && !engine.buildMode && mouse && Number.isFinite(mouse.x) && Number.isFinite(mouse.y) && document?.documentElement?.classList?.contains("desk")) {
+        const cam = this.camera || {},
+          key = Math.round(mouse.x) + "," + Math.round(mouse.y) + "," + Math.round((cam.x || 0) / 4) + "," + Math.round((cam.y || 0) / 4) + "," + engine.s?.region;
+        if (key === this._cHoverKey && t - this._cHoverAt < 0.4) return;
+        this._cHoverKey = key;
         const wp = this.worldPoint(mouse.x, mouse.y),
           o = this.cHover(engine, wp);
         if (o) kind = cursorKind(engine.simpleLabel ? engine.simpleLabel(o) : "");
-      }
+      } else this._cHoverKey = "";
     } catch {
       kind = "";
     }
+    this._cHoverAt = t;
     if (kind !== this._cCursor) {
       this._cCursor = kind;
       cv.style.cursor = kind ? cursorCss(kind) : "";
@@ -1010,22 +1094,21 @@ export class Renderer extends LookRenderer {
   // 鼠标下面那一样能按的东西（离鼠标最近的那个）
   cHover(e, wp) {
     const s = e.s,
-      list = [];
-    for (const o of e.objects || []) if (o && Number.isFinite(o.x)) list.push(o);
-    if (s.region === "farm") for (const b of s.buildings || []) if (b && Number.isFinite(b.x)) list.push({ ...b, type: "building", building: b, name: BUILDINGS[b.type]?.name });
-    for (const d of s.drops || []) if (d && d.region === s.region) list.push({ type: "drop", drop: d, x: d.x, y: d.y });
+      near = (o) => o && Number.isFinite(o.x) && Number.isFinite(o.y) && Math.abs(o.x - wp.x) <= 140 && o.y - wp.y <= 40 && wp.y - o.y <= 180;
     let best = null,
       bd = Infinity;
-    for (const o of list) {
-      if (Math.abs(o.x - wp.x) > 140 || o.y - wp.y > 40 || wp.y - o.y > 180) continue;
+    const take = (o) => {
       const box = this.cBox(o, e);
-      if (!box || wp.x < box.x0 || wp.x > box.x1 || wp.y < box.y0 || wp.y > box.y1) continue;
+      if (!box || wp.x < box.x0 || wp.x > box.x1 || wp.y < box.y0 || wp.y > box.y1) return;
       const d = Math.hypot(o.x - wp.x, o.y - 20 - wp.y);
       if (d < bd) {
         bd = d;
         best = o;
       }
-    }
+    };
+    for (const o of e.objects || []) if (near(o)) take(o);
+    if (s.region === "farm") for (const b of s.buildings || []) if (near(b)) take({ ...b, type: "building", building: b, name: BUILDINGS[b.type]?.name });
+    for (const d of s.drops || []) if (d && d.region === s.region && near(d)) take({ type: "drop", drop: d, x: d.x, y: d.y });
     return best;
   }
 }

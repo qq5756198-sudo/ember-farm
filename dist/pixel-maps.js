@@ -29,7 +29,9 @@ export function bakeMap(region, { keepPix = false } = {}) {
     out = {
       ...f,
       chimneys: [f.chimney].filter(Boolean),
+      // v0.41 水洼多一倍；puddles40 是原来那些（手机、小窗口照旧用它）
       puddles: puddleSpots(f.map),
+      puddles40: puddleSpots(f.map, 34, 900),
       mood: {},
     };
   } else if (parseTunnelKey(region)) {
@@ -41,7 +43,13 @@ export function bakeMap(region, { keepPix = false } = {}) {
     if (!make) return null;
     const art = make();
     const codes = region === "shelter" ? [] : [S.road, S.paving, S.dirt, S.wood];
-    out = { ...art, puddles: codes.length ? puddlesOn(art.map, codes, region === "courtyard" ? 92 : 68, 900 + region.length * 13) : [], mood: MAP_MOOD[region] || {} };
+    const seed = 900 + region.length * 13;
+    out = {
+      ...art,
+      puddles: codes.length ? puddlesOn(art.map, codes, region === "courtyard" ? 92 : 68, seed) : [],
+      puddles40: codes.length ? puddlesOn(art.map, codes, region === "courtyard" ? 46 : 34, seed, 1600) : [],
+      mood: MAP_MOOD[region] || {},
+    };
   }
   if (!keepPix) delete out.pix;
   return out;
