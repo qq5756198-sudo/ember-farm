@@ -1081,7 +1081,7 @@ html.desk #modal h4 {
   font-size: var(--fs-b);
 }
 html.desk #modal .modal-content h2:not(#modal-title) {
-  font: 700 22px / 1.35 var(--f-body);
+  font: 700 var(--fs-h) / 1.4 var(--f-body);
   color: var(--c-ink);
   letter-spacing: 0;
 }
@@ -1264,7 +1264,7 @@ html.desk #modal.welcome h1#modal-title {
     8px 8px 0 #0a0705;
 }
 html.desk #modal.welcome .title-motto {
-  font-size: 22px;
+  font-size: var(--fs-h);
   font-weight: 700;
   color: var(--c-ember-hi);
   margin: 0 0 var(--sp4);
@@ -2088,4 +2088,19 @@ html.desk #modal :is(.story-progress li.current, .journal-steps li.current > spa
 html.desk :is(.new-badge, .handbook-entry.has-new::after) {
   background: var(--c-ember);
   color: var(--c-on-ember);
+}
+
+/* 字号只用规范里的几种：小标题 18、正文 15、像素体大数字 24 */
+html.desk #modal .atlas-node .atlas-symbol {
+  font-size: var(--fs-h);
+}
+html.desk #modal .phone-tile > span {
+  font-size: var(--fs-px);
+  line-height: 1;
+}
+html.desk #modal .collection li.rl-pct > b {
+  font-size: var(--fs-b);
+}
+html.desk #modal .g-stat b {
+  font: 400 var(--fs-px) / 1.2 var(--f-px);
 }

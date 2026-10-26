@@ -90,6 +90,11 @@ test("styles: eight surfaces — button states never add a background colour, on
   assert.match(css, /:is\(\.recipe-grid \.recipe, \.story-choice article, \.settings-section, details\.sx-msg\) button:is\(\.primary, \.sx-primary\):not\(:disabled\) \{\s*background: var\(--c-card\);/);
   // 描边也有名字
   for (const t of ["line-lo", "ember-line", "danger-line", "warn-line"]) assert.match(css, new RegExp("--c-" + t + ":\\s*#[0-9a-f]{6};"), t);
+  // 字号只用规范里的几种：14 / 15 / 18 / 像素体 24（标题页的大字 96）；不跟着对话框放大的小卡按放大倍数乘上去
+  const body = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const m of body.matchAll(/font-size:\s*([^;]+);/g)) assert.match(m[1].trim(), /^(var\(--fs-(s|b|h|px)(, 14px)?\)|calc\(var\(--fs-(s|b|h|px)\) \* var\(--uiz\)\)|14px|24px)$/, m[0]);
+  // font 简写里的字号（斜杠前面那个；斜杠后面是行高，不算）
+  for (const m of body.matchAll(/font:\s*([^;]+);/g)) assert.match(m[1].split("/")[0], /var\(--fs-(s|b|h|px)\)|\b(24|96)px\b/, m[0]);
 });
 
 // ---------- 放大、页名 ----------
