@@ -1,5 +1,6 @@
 // v0.39.0「一物一用」：一样东西只做一件事，按下去做的就是头上写着的那件事；说明卡、菜单十项、顶栏数字的卡。
 import test from "node:test";
+import { styleOrder } from "./style-order.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { Engine, freshState } from "../dist/campaign.js";
@@ -417,11 +418,11 @@ test("saves: nothing new is written (old saves load as they were); version 0.39.
   const back = new Engine(Engine.parse(text), () => {});
   assert.deepEqual(Object.keys(JSON.parse(back.serialize())).sort(), Object.keys(JSON.parse(text)).sort());
   const v = readFileSync(new URL("../dist/version.js", import.meta.url), "utf8");
-  assert.match(v, /GAME_VERSION='v0\.39\.0'/);
-  assert.match(v, /GAME_EDITION='一物一用'/);
+  assert.match(v, /GAME_VERSION='v0\.\d+\.\d+'/);
+  assert.match(v, /GAME_EDITION='[^']+'/);
   const html = readFileSync(new URL("../dist/index.html", import.meta.url), "utf8");
-  assert.match(html, /<title>余烬农场 v0\.39\.0 · 一物一用<\/title>/);
-  assert.match(html, /href="simple\.css"/);
+  assert.match(html, /<title>余烬农场 v0\.\d+\.\d+ · [^<]+<\/title>/);
+  assert.ok(styleOrder().includes("simple.css"));
   for (const key of ["shipping", "gBoard", "radio", "museum", "plaza", "bOrders"]) assert.ok(PAGE_CARD[key]?.[1], key);
   for (const [k, v2] of Object.entries(VERB)) assert.ok(typeof v2 === "string" ? v2.length <= 12 : true, k);
   assert.ok(ITEMS.bread);

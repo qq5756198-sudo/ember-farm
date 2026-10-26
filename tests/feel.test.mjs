@@ -376,6 +376,11 @@ test("career record: every trip out is one line — where, phase, gear, result, 
   e.damagePlayer(0, { eff: 10, from: z });
   e.fx.roll = null;
   e.fx.rollCd = 0;
+  // 这一下要滚得出去：刚才那一秒里被扑倒、被抓住（随机的）就先放开（v0.40：约 1/40 的时候会这样，测试时好时坏）
+  e.gx.grab = null;
+  e.gx.down = 0;
+  if (e.tx) e.tx.hold = null;
+  p.stamina = Math.max(p.stamina, 60);
   e.dodge({ x: -1, y: 0 });
   for (const x of e.enemies) x.dead = true;
   e.s.stats.kills += 2;

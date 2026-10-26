@@ -1,0 +1,1909 @@
+/* v0.40.0「一套」：界面规范。只对电脑生效（<html class="desk">，鼠标、窗口宽 ≥ 1280）。
+   v0.39 以前的样式全在 legacy.css 的 legacy 层里；这个文件不进任何一层，所以和旧规则冲突时以这里为准。
+   规范见《余烬农场：画面与界面大升级方案》的「界面规范」一节：
+   8 像素一格；字最小 14、正文 15、小标题 18、像素体只用 24/36/48；字和底的对比度 ≥ 4.5:1；
+   常驻 7 块；按钮只有 主 / 次 / 文字 / 危险 四种；悬停 80 毫秒、按下 60 毫秒、打开 160 毫秒。 */
+
+html.desk {
+  /* 界面整体放大：ui.js 按窗口大小算（1366 → 1，1920 → 1.25，2560 → 1.7） */
+  --uiz: 1;
+  --vw-z: 100vw;
+  --vh-z: 100vh;
+  /* 颜色：只用这些 */
+  --c-mask: rgba(12, 9, 7, 0.82);
+  --c-panel: #1b1410;
+  --c-panel-2: #16100c;
+  --c-card: #251d17;
+  --c-card-hi: #2e241c;
+  --c-line: #4a3627;
+  --c-line-hi: #6b4e37;
+  --c-ink: #f1e3c2;
+  --c-ink-2: #c9b48a;
+  --c-ink-3: #a8946c;
+  --c-ember: #e5823a;
+  --c-ember-hi: #ffb45e;
+  --c-on-ember: #1a0f08;
+  --c-danger: #f26a55;
+  --c-danger-bg: #5a1e16;
+  --c-warn: #e9c05a;
+  --c-good: #8fd07a;
+  --c-focus: #fff1c8;
+  /* 字 */
+  --f-body: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", system-ui, sans-serif;
+  --f-px: "Fusion Pixel", "Microsoft YaHei", sans-serif;
+  --fs-s: 14px;
+  --fs-b: 15px;
+  --fs-h: 18px;
+  --fs-px: 24px;
+  /* 间距、边、动效 */
+  --sp1: 4px;
+  --sp2: 8px;
+  --sp3: 12px;
+  --sp4: 16px;
+  --sp5: 24px;
+  --sp6: 32px;
+  --r-btn: 2px;
+  --r-card: 4px;
+  --t-hover: 80ms;
+  --t-press: 60ms;
+  --t-open: 160ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.6, 0, 0.8, 0.4);
+  /* 像素小图标（9×9 左右的格子，显示时放大成整数倍） */
+  --i-heart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9' shape-rendering='crispEdges'%3E%3Cpath fill='%23140f0b' d='M2 0h2v1h-2zM5 0h2v1h-2zM1 1h1v1h-1zM4 1h1v1h-1zM7 1h1v1h-1zM0 2h1v1h-1zM8 2h1v1h-1zM0 3h1v1h-1zM8 3h1v1h-1zM0 4h1v1h-1zM8 4h1v1h-1zM1 5h1v1h-1zM7 5h1v1h-1zM2 6h1v1h-1zM6 6h1v1h-1zM3 7h1v1h-1zM5 7h1v1h-1zM4 8h1v1h-1z'/%3E%3Cpath fill='%23e04a3a' d='M2 1h2v1h-2zM5 1h2v1h-2zM1 2h1v1h-1zM3 2h5v1h-5zM1 3h1v1h-1zM3 3h5v1h-5zM1 4h7v1h-7zM2 5h5v1h-5zM3 6h3v1h-3zM4 7h1v1h-1z'/%3E%3Cpath fill='%23ff8a6e' d='M2 2h1v1h-1zM2 3h1v1h-1z'/%3E%3C/svg%3E");
+  --i-bolt: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 10' shape-rendering='crispEdges'%3E%3Cpath fill='%23140f0b' d='M4 0h3v1h-3zM3 1h1v1h-1zM6 1h1v1h-1zM2 2h1v1h-1zM5 2h1v1h-1zM1 3h1v1h-1zM4 3h1v1h-1zM0 4h1v1h-1zM6 4h1v1h-1zM1 5h2v1h-2zM5 5h1v1h-1zM2 6h1v1h-1zM4 6h1v1h-1zM1 7h1v1h-1zM3 7h1v1h-1zM0 8h1v1h-1zM2 8h1v1h-1zM0 9h2v1h-2z'/%3E%3Cpath fill='%239fcf5a' d='M4 1h2v1h-2zM3 2h2v1h-2zM3 3h1v1h-1zM1 4h5v1h-5zM3 5h2v1h-2zM3 6h1v1h-1zM2 7h1v1h-1zM1 8h1v1h-1z'/%3E%3Cpath fill='%23d8f08a' d='M2 3h1v1h-1z'/%3E%3C/svg%3E");
+  --i-bread: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 7' shape-rendering='crispEdges'%3E%3Cpath fill='%23140f0b' d='M2 0h5v1h-5zM1 1h1v1h-1zM7 1h1v1h-1zM0 2h1v1h-1zM8 2h1v1h-1zM0 3h1v1h-1zM8 3h1v1h-1zM0 4h1v1h-1zM8 4h1v1h-1zM0 5h1v1h-1zM8 5h1v1h-1zM1 6h7v1h-7z'/%3E%3Cpath fill='%23f8d488' d='M2 1h2v1h-2zM1 2h1v1h-1z'/%3E%3Cpath fill='%23e0a848' d='M4 1h3v1h-3zM2 2h6v1h-6zM1 3h7v1h-7zM1 4h7v1h-7zM1 5h7v1h-7z'/%3E%3C/svg%3E");
+  --i-warn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 8' shape-rendering='crispEdges'%3E%3Cpath fill='%23140f0b' d='M4 0h1v1h-1zM3 1h1v1h-1zM5 1h1v1h-1zM2 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM2 3h1v1h-1zM4 3h1v1h-1zM6 3h1v1h-1zM1 4h1v1h-1zM4 4h1v1h-1zM7 4h1v1h-1zM1 5h1v1h-1zM7 5h1v1h-1zM0 6h1v1h-1zM4 6h1v1h-1zM8 6h1v1h-1zM0 7h9v1h-9z'/%3E%3Cpath fill='%23e9c05a' d='M4 1h1v1h-1zM3 2h1v1h-1zM5 2h1v1h-1zM3 3h1v1h-1zM5 3h1v1h-1zM2 4h2v1h-2zM5 4h2v1h-2zM2 5h5v1h-5zM1 6h3v1h-3zM5 6h3v1h-3z'/%3E%3C/svg%3E");
+  --i-danger: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 7' shape-rendering='crispEdges'%3E%3Cpath fill='%23140f0b' d='M2 0h5v1h-5zM1 1h1v1h-1zM7 1h1v1h-1zM0 2h1v1h-1zM3 2h1v1h-1zM5 2h1v1h-1zM8 2h1v1h-1zM0 3h1v1h-1zM4 3h1v1h-1zM8 3h1v1h-1zM0 4h1v1h-1zM3 4h1v1h-1zM5 4h1v1h-1zM8 4h1v1h-1zM1 5h1v1h-1zM7 5h1v1h-1zM2 6h5v1h-5z'/%3E%3Cpath fill='%23ec5a48' d='M2 1h5v1h-5zM1 2h2v1h-2zM4 2h1v1h-1zM6 2h2v1h-2zM1 3h3v1h-3zM5 3h3v1h-3zM1 4h2v1h-2zM4 4h1v1h-1zM6 4h2v1h-2zM2 5h5v1h-5z'/%3E%3C/svg%3E");
+}
+
+/* ======================================================================
+   底：字体、滚动条、焦点、选中
+   ====================================================================== */
+html.desk body {
+  font-family: var(--f-body);
+  color: var(--c-ink);
+  background: #0c0907;
+}
+html.desk body.vis-on,
+html.desk body {
+  /* 旧样式用的颜色变量，统一到规范里的颜色 */
+  --ink: var(--c-ink);
+  --dim: var(--c-ink-2);
+  --panel: var(--c-card);
+  --border: var(--c-line);
+  --gold: var(--c-ember-hi);
+  --green: var(--c-good);
+  --red: var(--c-danger);
+}
+html.desk #game {
+  font-family: var(--f-body);
+  font-size: var(--fs-b);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+/* 三行各放各的（标题页上顶栏底栏藏起来时，场景照样占满） */
+html.desk #game > .hud-top {
+  grid-row: 1;
+}
+html.desk #game > #world-viewport {
+  grid-row: 2;
+}
+html.desk #game > .hud-dock {
+  grid-row: 3;
+}
+html.desk :is(#game, #sx-pop, #radial) ::selection {
+  background: var(--c-ember);
+  color: var(--c-on-ember);
+}
+html.desk :is(#modal, .hud-dock, .hud-top) * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-line-hi) transparent;
+}
+html.desk :is(#modal, .hud-top, .hud-dock, #sx-pop, #alert-bar) :focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+html.desk kbd {
+  display: inline-block;
+  min-width: 20px;
+  padding: 0 4px;
+  border: 1px solid var(--c-line-hi);
+  border-bottom-width: 2px;
+  border-radius: 2px;
+  background: var(--c-card);
+  color: var(--c-ink);
+  font: 600 var(--fs-s) / 18px var(--f-body);
+  text-align: center;
+}
+
+/* ======================================================================
+   按钮：主 / 次 / 文字 / 危险，六种状态
+   ====================================================================== */
+html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button {
+  font-family: var(--f-body);
+  font-size: var(--fs-s);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--c-ink);
+  background: var(--c-card);
+  border: 2px solid var(--c-line);
+  border-radius: var(--r-btn);
+  box-shadow: inset 0 1px 0 #ffffff10, 0 2px 0 #0b0806;
+  text-shadow: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition:
+    background-color var(--t-hover) linear,
+    border-color var(--t-hover) linear,
+    color var(--t-hover) linear,
+    transform var(--t-press) linear,
+    box-shadow var(--t-press) linear;
+}
+html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button:hover:not(:disabled) {
+  background: var(--c-card-hi);
+  border-color: var(--c-line-hi);
+}
+html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 0 #0006, 0 1px 0 #0b0806;
+  background: var(--c-panel);
+}
+html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button:disabled {
+  color: var(--c-ink-3);
+  background: var(--c-panel-2);
+  border-color: #33261c;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 1;
+}
+/* 选中（页签、开着的那一格） */
+html.desk :where(#modal, .hud-top, .hud-dock) button:is(.active, .selected, .on, [aria-pressed="true"], [aria-selected="true"]) {
+  border-color: var(--c-ember);
+  background: #3a2414;
+  color: var(--c-ember-hi);
+}
+/* 主按钮：橙底深字，每页最多一个 */
+html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button:is(.primary, .sx-primary) {
+  background: var(--c-ember);
+  border-color: #a8501f;
+  color: var(--c-on-ember);
+  box-shadow: inset 0 1px 0 #ffd0a050, 0 2px 0 #5a2a10;
+}
+html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button:is(.primary, .sx-primary):hover:not(:disabled) {
+  background: var(--c-ember-hi);
+  border-color: #c06a2a;
+}
+html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button:is(.primary, .sx-primary):active:not(:disabled) {
+  background: #c96a2a;
+  box-shadow: inset 0 2px 0 #0004;
+}
+html.desk :where(#modal, .hud-top, .hud-dock, #alert-bar, #sx-pop, #zest-moment) button:is(.primary, .sx-primary):disabled {
+  background: #3b2c20;
+  border-color: #4a3627;
+  color: var(--c-ink-3);
+  box-shadow: none;
+}
+/* 危险（拆掉、放弃） */
+html.desk :where(#modal) button:is(.danger, .warn, .sx-danger, [data-action="sxRemove"], [data-action="dismantleIt"]) {
+  border-color: #8e2a20;
+  color: var(--c-danger);
+}
+html.desk :where(#modal) button:is(.danger, .sx-danger):hover:not(:disabled) {
+  background: var(--c-danger-bg);
+  color: #ffd2c8;
+}
+/* 文字按钮：页脚、“看所有”这一类 */
+html.desk #modal :is(.modal-foot, .link-row) button,
+html.desk #modal button:is(.link, .ghost, .text-button) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--c-ink-2);
+  text-decoration: underline transparent;
+}
+html.desk #modal :is(.modal-foot, .link-row) button:hover,
+html.desk #modal button:is(.link, .ghost, .text-button):hover {
+  background: transparent;
+  color: var(--c-ink);
+  text-decoration-color: currentColor;
+}
+/* 关闭 */
+html.desk #modal .modal-header button.close {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  font: 400 24px / 1 var(--f-body);
+  color: var(--c-ink-2);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+html.desk #modal .modal-header button.close:hover {
+  color: var(--c-ink);
+  background: var(--c-card);
+  border-color: var(--c-line);
+}
+
+/* 输入框、下拉、滑块、勾选 */
+html.desk #modal :is(input[type="text"], input[type="search"], input[type="number"], select, textarea) {
+  font: var(--fs-s) / 1.4 var(--f-body);
+  color: var(--c-ink);
+  background: var(--c-panel-2);
+  border: 2px solid var(--c-line);
+  border-radius: var(--r-btn);
+  padding: 6px 10px;
+  min-height: 36px;
+}
+html.desk #modal :is(input, select, textarea):focus {
+  border-color: var(--c-ember);
+  outline: none;
+}
+html.desk #modal input[type="range"] {
+  accent-color: var(--c-ember);
+}
+html.desk #modal input[type="checkbox"] {
+  accent-color: var(--c-ember);
+  width: 18px;
+  height: 18px;
+}
+
+/* ======================================================================
+   顶栏：你自己（左）· 时间（中）· 在哪 + 菜单（右）
+   ====================================================================== */
+html:not(.desk) :is(.hud-left, .hud-right) {
+  display: contents;
+}
+html.desk body:not(.title-screen) .hud-top {
+  zoom: var(--uiz);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp4);
+  height: 52px;
+  min-height: 52px;
+  padding: 0 var(--sp4);
+  background: var(--c-panel);
+  border-bottom: 2px solid var(--c-line);
+  box-shadow: 0 2px 0 #0a0705;
+  position: relative;
+  z-index: 3;
+}
+html.desk .hud-top :is(.hud-brand, .hud-settings, .hud-coins, #food-days, #noise-chip:not(.warn):not(.danger)) {
+  display: none;
+}
+html.desk .hud-left {
+  display: flex;
+  align-items: center;
+  gap: var(--sp3);
+  min-width: 0;
+}
+html.desk .hud-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp2);
+  min-width: 0;
+}
+/* 你自己：三条 */
+html.desk .hud-top .hud-vitals {
+  display: flex;
+  align-items: center;
+  gap: var(--sp4);
+  min-width: 0;
+  max-width: none;
+  flex: 0 1 auto;
+}
+html.desk .hud-top .hud-vitals .stat {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-rows: 18px 8px;
+  column-gap: 6px;
+  row-gap: 3px;
+  width: 148px;
+  min-width: 0;
+  font-size: var(--fs-s);
+  cursor: pointer;
+  padding: 2px 0;
+}
+html.desk .hud-top .hud-vitals .stat::before {
+  content: "";
+  grid-row: 1 / span 2;
+  grid-column: 1;
+  align-self: center;
+  width: 18px;
+  height: 18px;
+  background: var(--i-heart) center / contain no-repeat;
+  image-rendering: pixelated;
+}
+html.desk .hud-top .hud-vitals .stat[data-sx="stamina"]::before {
+  background-image: var(--i-bolt);
+  width: 14px;
+  height: 20px;
+  justify-self: center;
+}
+html.desk .hud-top .hud-vitals .stat[data-sx="hunger"]::before {
+  background-image: var(--i-bread);
+  height: 14px;
+}
+html.desk .hud-top .hud-vitals .stat-name {
+  grid-row: 1;
+  grid-column: 2;
+  font-size: var(--fs-s);
+  line-height: 18px;
+  color: var(--c-ink-2);
+  white-space: nowrap;
+}
+html.desk .hud-top .hud-vitals .stat-value {
+  grid-row: 1;
+  grid-column: 3;
+  font: var(--fs-s) / 18px var(--f-body);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-ink);
+  text-align: right;
+}
+html.desk .hud-top .hud-vitals .bar {
+  grid-row: 2;
+  grid-column: 2 / span 2;
+  height: 8px;
+  margin: 0;
+  padding: 0;
+  background: #0d0a08;
+  border: 1px solid #3a2a1e;
+  border-radius: 0;
+  box-shadow: none;
+  position: relative;
+  overflow: hidden;
+}
+html.desk .hud-top .hud-vitals .bar i {
+  display: block;
+  height: 100%;
+  background: #d9533f;
+  border-radius: 0;
+  box-shadow: inset 0 1px 0 #ffffff40;
+  transition: width 300ms var(--ease-out);
+}
+html.desk .hud-top .hud-vitals .stat[data-sx="stamina"] .bar i {
+  background: #8fbf4f;
+}
+html.desk .hud-top .hud-vitals .stat[data-sx="hunger"] .bar i {
+  background: #d9a441;
+}
+/* 每 10% 一道刻 */
+html.desk .hud-top .hud-vitals .bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), #0d0a0899 calc(10% - 1px) 10%);
+  pointer-events: none;
+}
+html.desk .hud-top .hud-vitals .stat.low .stat-value {
+  color: var(--c-danger);
+}
+html.desk .hud-top .hud-vitals .stat.low .bar {
+  border-color: #8e2a20;
+  animation: look-pulse 1s steps(2, jump-none) infinite;
+}
+@keyframes look-pulse {
+  50% {
+    border-color: var(--c-danger);
+  }
+}
+html.desk #gear-status {
+  font-size: var(--fs-s);
+  color: var(--c-warn);
+  min-width: 0;
+}
+/* 时间 */
+html.desk .hud-top .hud-time {
+  display: flex;
+  align-items: center;
+  gap: var(--sp3);
+  min-width: 0;
+  white-space: nowrap;
+  font-size: var(--fs-s);
+  color: var(--c-ink-2);
+}
+html.desk .hud-top .hud-time .hud-date {
+  font-size: var(--fs-s);
+  font-weight: 600;
+  min-height: 32px;
+  padding: 4px 10px;
+  color: var(--c-ink-2);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+html.desk .hud-top .hud-time .hud-date:hover {
+  color: var(--c-ink);
+  background: var(--c-card);
+  border-color: var(--c-line);
+}
+html.desk .hud-top .hud-time .hud-date.ln-day {
+  color: var(--c-danger);
+}
+html.desk .hud-top #time {
+  font: 400 var(--fs-px) / 1 var(--f-px);
+  color: var(--c-ink);
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+html.desk .hud-top #weather {
+  font-size: var(--fs-s);
+  color: var(--c-ink-2);
+  cursor: pointer;
+}
+html.desk .hud-top .hud-time .hud-food {
+  font-size: var(--fs-s);
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--c-line);
+  background: var(--c-card);
+  color: var(--c-ink-2);
+  min-height: 0;
+}
+html.desk .hud-top .hud-time .hud-food:is(.warn, .cold) {
+  color: var(--c-warn);
+  border-color: #6e5520;
+}
+html.desk .hud-top .hud-time .hud-food.danger {
+  color: var(--c-danger);
+  border-color: #8e2a20;
+}
+/* 在哪 + 菜单 */
+html.desk .hud-top .hud-location {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp2);
+  min-height: 36px;
+  padding: 4px 12px 4px 30px;
+  background: var(--c-card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 7' shape-rendering='crispEdges'%3E%3Cpath fill='%23140f0b' d='M1 0h4v1h-4zM0 1h1v1h-1zM5 1h1v1h-1zM0 2h1v1h-1zM3 2h1v1h-1zM5 2h1v1h-1zM0 3h1v1h-1zM5 3h1v1h-1zM1 4h1v1h-1zM4 4h1v1h-1zM1 5h1v1h-1zM4 5h1v1h-1zM2 6h2v1h-2z'/%3E%3Cpath fill='%23ffb45e' d='M1 1h1v1h-1z'/%3E%3Cpath fill='%23e5823a' d='M2 1h3v1h-3zM1 2h2v1h-2zM4 2h1v1h-1zM1 3h4v1h-4zM2 4h2v1h-2zM2 5h2v1h-2z'/%3E%3C/svg%3E") 10px center / 12px 14px no-repeat;
+  image-rendering: pixelated;
+  white-space: nowrap;
+}
+html.desk .hud-top .hud-location #region-label {
+  font-size: var(--fs-b);
+  font-weight: 700;
+  color: var(--c-ink);
+}
+html.desk .hud-top .hud-location span:last-child {
+  font-size: var(--fs-s);
+  font-weight: 400;
+  color: var(--c-ink-3);
+}
+html.desk .hud-top .hud-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp2);
+  min-height: 36px;
+  padding: 4px 14px;
+  font-size: var(--fs-b);
+  position: relative;
+  white-space: nowrap;
+}
+html.desk .hud-top .hud-phone.has-dot::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: var(--c-ember-hi);
+  box-shadow: 0 0 0 2px var(--c-panel);
+}
+
+/* 金币变动：状态块旁边飘一下 */
+html.desk .look-coin {
+  position: absolute;
+  left: calc(16px + 3 * 148px + 3 * 16px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 2px 10px 2px 26px;
+  font: 700 var(--fs-s) / 22px var(--f-body);
+  color: var(--c-warn);
+  background: var(--c-card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Cpath fill='%23140f0b' d='M2 0h4v1h-4zM1 1h1v1h-1zM6 1h1v1h-1zM0 2h1v1h-1zM3 2h2v1h-2zM7 2h1v1h-1zM0 3h1v1h-1zM3 3h1v1h-1zM7 3h1v1h-1zM0 4h1v1h-1zM4 4h1v1h-1zM7 4h1v1h-1zM0 5h1v1h-1zM3 5h2v1h-2zM7 5h1v1h-1zM1 6h1v1h-1zM6 6h1v1h-1zM2 7h4v1h-4z'/%3E%3Cpath fill='%23fff1b0' d='M2 1h1v1h-1zM1 2h1v1h-1z'/%3E%3Cpath fill='%23e9c05a' d='M3 1h3v1h-3zM2 2h1v1h-1zM5 2h2v1h-2zM1 3h2v1h-2zM4 3h3v1h-3zM1 4h3v1h-3zM5 4h2v1h-2zM1 5h2v1h-2zM5 5h2v1h-2zM2 6h4v1h-4z'/%3E%3C/svg%3E") 8px center / 12px 12px no-repeat;
+  image-rendering: pixelated;
+  border: 1px solid #6e5520;
+  pointer-events: none;
+  animation: look-coin 2.4s var(--ease-out) forwards;
+  z-index: 4;
+}
+html.desk .look-coin.minus {
+  color: var(--c-ink-2);
+  border-color: var(--c-line);
+}
+@keyframes look-coin {
+  0% {
+    opacity: 0;
+    transform: translate(-6px, -50%);
+  }
+  8% {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, -80%);
+  }
+}
+
+/* ======================================================================
+   提醒：左上，最多 2 条
+   ====================================================================== */
+html.desk #alert-bar {
+  zoom: var(--uiz);
+  top: var(--sp3);
+  left: var(--sp4);
+  gap: var(--sp2);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+html.desk #alert-bar[hidden] {
+  display: none;
+}
+html.desk #alert-bar .alert-item:nth-child(n + 3) {
+  display: none;
+}
+html.desk #alert-bar .alert-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp2);
+  min-height: 34px;
+  padding: 4px 14px 4px 34px;
+  font-size: var(--fs-s);
+  font-weight: 600;
+  color: var(--c-warn);
+  background: #1b1410f0 var(--i-warn) 10px center / 18px 16px no-repeat;
+  image-rendering: pixelated;
+  border: 2px solid #6e5520;
+  border-left-width: 4px;
+  box-shadow: 0 2px 0 #0a0705;
+  max-width: 340px;
+  text-align: left;
+}
+html.desk #alert-bar .alert-item::before {
+  display: none;
+}
+html.desk #alert-bar .alert-item.danger {
+  color: var(--c-danger);
+  border-color: #8e2a20;
+  background-image: var(--i-danger);
+  background-size: 18px 14px;
+}
+html.desk #alert-bar .alert-item.normal,
+html.desk #alert-bar .alert-item.good {
+  color: var(--c-ink);
+  border-color: var(--c-line-hi);
+}
+
+/* ======================================================================
+   底栏：目标（左）· 手里（中）· 临时状态（右）
+   ====================================================================== */
+html.desk body:not(.title-screen) .hud-dock {
+  zoom: var(--uiz);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: auto;
+  align-items: end;
+  gap: 0 var(--sp5);
+  padding: var(--sp2) var(--sp4) var(--sp3);
+  min-height: 0;
+  background: var(--c-panel);
+  border-top: 2px solid var(--c-line);
+  box-shadow: 0 -2px 0 #0a0705;
+  position: relative;
+  z-index: 3;
+}
+html.desk .hud-dock :is(.dock-menu, #context, .dock-hints, #event-entry, .touch-controls, #buff-summary:empty) {
+  display: none;
+}
+/* 目标 */
+html.desk .hud-dock .dock-objective {
+  grid-row: 1;
+  grid-column: 1;
+  justify-self: start;
+  align-self: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  width: min(340px, 100%);
+  min-height: 64px;
+  padding: 8px 14px 8px 16px;
+  text-align: left;
+  background: var(--c-card);
+  border: 2px solid var(--c-line);
+  border-left: 4px solid var(--c-ember);
+}
+html.desk .hud-dock .dock-objective > span {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp2);
+}
+html.desk .hud-dock .dock-objective > span > small {
+  display: inline;
+  font-size: var(--fs-s);
+  font-weight: 400;
+  color: var(--c-ink-3);
+}
+html.desk .hud-dock .dock-objective > b {
+  font-size: var(--fs-b);
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--c-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: none;
+}
+html.desk .hud-dock .dock-objective > small {
+  display: none;
+}
+/* 手里：快捷栏 */
+html.desk .hud-dock .dock-tools {
+  grid-row: 1;
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  min-width: 0;
+}
+html.desk .hud-dock #selected-label {
+  height: auto;
+  min-height: 22px;
+  max-width: 640px;
+  font: 700 var(--fs-b) / 22px var(--f-body);
+  color: var(--c-ink);
+  text-align: center;
+}
+html.desk .hud-dock #selected-label span {
+  margin-left: var(--sp3);
+  font-size: var(--fs-s);
+  font-weight: 400;
+  color: var(--c-ink-3);
+}
+html.desk .hud-dock .hotbar {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: var(--c-panel-2);
+  border: 2px solid var(--c-line);
+}
+html.desk .hud-dock .hot-slot {
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  min-height: 56px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  position: relative;
+  background: var(--c-card);
+  border: 2px solid #3a2a1e;
+  border-radius: 0;
+  box-shadow: inset 0 -3px 0 #0006;
+}
+html.desk .hud-dock .hot-slot:hover:not(:disabled) {
+  border-color: var(--c-line-hi);
+  background: var(--c-card-hi);
+}
+html.desk .hud-dock .hot-slot.active {
+  border-color: var(--c-ember-hi);
+  background: #3a2414;
+  box-shadow: 0 0 0 2px var(--c-panel-2), 0 0 0 4px var(--c-ember);
+  z-index: 1;
+}
+html.desk .hud-dock .hot-slot .item-icon {
+  width: 40px;
+  height: 40px;
+  background-size: 320px 320px;
+}
+html.desk .hud-dock .hot-slot.empty .item-icon {
+  opacity: 0.35;
+}
+html.desk .hud-dock .hot-slot .key {
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  font: 700 var(--fs-s) / 16px var(--f-body);
+  color: var(--c-ink-2);
+  text-shadow: 1px 1px 0 #0b0806;
+}
+html.desk .hud-dock .hot-slot.active .key {
+  color: var(--c-ember-hi);
+}
+html.desk .hud-dock .hot-slot .qty {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font: 700 var(--fs-s) / 16px var(--f-body);
+  color: var(--c-ink);
+  text-shadow: 1px 1px 0 #0b0806, -1px 0 0 #0b0806;
+}
+html.desk .hud-dock .hot-slot .hot-dur {
+  position: absolute;
+  left: 4px;
+  bottom: 3px;
+  height: 3px;
+  max-width: calc(100% - 8px);
+  background: var(--c-good);
+}
+html.desk .hud-dock .hot-slot .hot-dur.low {
+  background: var(--c-danger);
+}
+html.desk .hud-dock .hot-slot.broken {
+  border-color: #8e2a20;
+}
+/* 临时状态：长夜、钓鱼、建造、远征、增益 */
+html.desk .hud-dock .dock-feedback {
+  grid-row: 1;
+  grid-column: 3;
+  justify-self: end;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  overflow: visible;
+  font-size: var(--fs-s);
+}
+html.desk .hud-dock .dock-feedback > :is(#horde-warning, #fishing-status, #building-banner, #frontier-status, #expedition-status, #buff-summary):not([hidden]):not(:empty) {
+  display: block;
+  max-width: 380px;
+  padding: 6px 12px;
+  font-size: var(--fs-s);
+  line-height: 1.45;
+  color: var(--c-ink);
+  background: var(--c-card);
+  border: 2px solid var(--c-line);
+  border-left: 4px solid var(--c-line-hi);
+  white-space: normal;
+  text-align: left;
+}
+html.desk .hud-dock .dock-feedback > #horde-warning:not([hidden]) {
+  color: #ffd2c8;
+  border-color: #8e2a20;
+  border-left-color: var(--c-danger);
+  background: var(--c-danger-bg);
+}
+html.desk .hud-dock .dock-feedback > #building-banner:not([hidden]) {
+  border-left-color: var(--c-ember);
+}
+/* 消息：快捷栏上方，最多 2 条 */
+html.desk .hud-dock #toasts {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  max-width: 640px;
+  pointer-events: none;
+}
+html.desk .hud-dock #toasts:empty {
+  display: none;
+}
+html.desk .hud-dock #toasts .toast {
+  display: none;
+}
+html.desk .hud-dock #toasts .toast:nth-last-child(-n + 2) {
+  display: block;
+}
+html.desk :is(#toasts, #menu-toasts) .toast {
+  max-width: 640px;
+  padding: 7px 14px 7px 14px;
+  font: 600 var(--fs-s) / 1.45 var(--f-body);
+  color: var(--c-ink);
+  background: #1b1410f2;
+  border: 2px solid var(--c-line);
+  border-left: 4px solid var(--c-line-hi);
+  box-shadow: 0 3px 0 #0a0705;
+  white-space: normal;
+  text-align: left;
+  animation: look-toast-in 180ms var(--ease-out) both;
+}
+html.desk :is(#toasts, #menu-toasts) .toast.warn {
+  border-left-color: var(--c-danger);
+  color: #ffd2c8;
+}
+html.desk :is(#toasts, #menu-toasts) .toast.gold {
+  border-left-color: var(--c-warn);
+}
+html.desk :is(#toasts, #menu-toasts) .toast.good {
+  border-left-color: var(--c-good);
+}
+@keyframes look-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+html.desk #menu-toasts {
+  zoom: var(--uiz);
+  position: fixed;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  pointer-events: none;
+}
+html.desk #menu-toasts:empty {
+  display: none;
+}
+html.desk #menu-toasts .toast:nth-last-child(n + 3) {
+  display: none;
+}
+
+/* 头目血条、长夜、教学提示、钓鱼收线、每日账本 */
+html.desk :is(#boss-bar, #coach, #ledger, #reel, #cues) {
+  zoom: var(--uiz);
+}
+html.desk #boss-bar {
+  font-size: var(--fs-s);
+}
+
+/* 大事卡：上方居中，一张木牌，左边一条颜色说是什么事 */
+html.desk #zest-moment {
+  zoom: var(--uiz);
+  top: 72px;
+  width: min(calc(var(--vw-z) - 48px), 560px);
+  gap: var(--sp4);
+  padding: var(--sp4) var(--sp5) var(--sp4) var(--sp4);
+  font-family: var(--f-body);
+  color: var(--c-ink);
+  background: var(--c-panel);
+  border: 2px solid var(--c-line);
+  border-left: 4px solid var(--c-ember);
+  box-shadow: 0 0 0 2px #0a0705, 0 6px 0 #0a0705, 0 12px 28px #0008;
+}
+html.desk #zest-moment:is(.k-harvest, .k-fish) {
+  border-left-color: var(--c-good);
+}
+html.desk #zest-moment.k-boss {
+  border-left-color: var(--c-danger);
+}
+html.desk #zest-moment .zm-icon {
+  width: 48px;
+  height: 48px;
+  padding: 4px;
+  background: var(--c-panel-2);
+  border: 2px solid var(--c-line);
+  box-sizing: content-box;
+}
+html.desk #zest-moment small {
+  font-size: var(--fs-s);
+  letter-spacing: 2px;
+  color: var(--c-ember-hi);
+}
+html.desk #zest-moment h3 {
+  margin: 4px 0 6px;
+  font: 400 var(--fs-px) / 1.25 var(--f-px);
+  color: var(--c-ink);
+}
+html.desk #zest-moment p {
+  margin: 2px 0;
+  font-size: var(--fs-b);
+  line-height: 1.6;
+  color: var(--c-ink-2);
+}
+html.desk #zest-moment .zm-hint {
+  margin-top: var(--sp2);
+  font-size: var(--fs-s);
+  letter-spacing: 0;
+  color: var(--c-ink-3);
+}
+
+/* 顶栏的数点开的卡（不放大，按 --uiz 算字号，位置由脚本算） */
+html.desk #sx-pop {
+  max-width: calc(380px * var(--uiz));
+  padding: calc(14px * var(--uiz)) calc(16px * var(--uiz));
+  font-size: calc(var(--fs-b) * var(--uiz));
+  line-height: 1.55;
+  color: var(--c-ink);
+  background: var(--c-panel);
+  border: 2px solid var(--c-line);
+  border-left: 4px solid var(--c-ember);
+  box-shadow: 0 6px 0 #0a0705, 0 10px 24px #0009;
+  animation: look-open var(--t-open) var(--ease-out) both;
+}
+html.desk #sx-pop h3 {
+  font: 700 calc(var(--fs-h) * var(--uiz)) / 1.35 var(--f-body);
+  color: var(--c-ink);
+  margin: 0 0 calc(6px * var(--uiz));
+}
+html.desk #sx-pop :is(p, li, small, b, span) {
+  font-size: calc(var(--fs-s) * var(--uiz));
+}
+html.desk #sx-pop button {
+  font-size: calc(var(--fs-s) * var(--uiz));
+  min-height: calc(32px * var(--uiz));
+  padding: calc(4px * var(--uiz)) calc(12px * var(--uiz));
+}
+
+/* ======================================================================
+   对话框：遮罩、三种宽、头、身、脚
+   ====================================================================== */
+html.desk .modal-backdrop {
+  background: var(--c-mask);
+  backdrop-filter: none;
+  padding: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  justify-items: center;
+  align-items: center;
+}
+html.desk .modal-backdrop > .modal {
+  zoom: var(--uiz);
+  --mw: 1180px;
+  width: min(var(--mw), calc(var(--vw-z) - 48px));
+  max-width: none;
+  height: auto;
+  max-height: calc(var(--vh-z) - 72px);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--c-ink);
+  background: var(--c-panel);
+  border: 2px solid var(--c-line);
+  border-radius: var(--r-card);
+  box-shadow: 0 0 0 2px #0a0705, 0 8px 0 #0a0705, 0 18px 48px #000a;
+  animation: look-open var(--t-open) var(--ease-out) both;
+}
+@keyframes look-open {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+/* 中、小两种宽 */
+html.desk .modal-backdrop > .modal:is([data-page="home"], [data-page="building"], [data-page="confirmTitle"], [data-page="confirmImport"], [data-page="saveFail"], [data-page="death"], [data-page="credits"]) {
+  --mw: 560px;
+}
+html.desk .modal-backdrop > .modal:is([data-page="pause"], [data-page="craft"], [data-page="station"], [data-page="confirmRestart"], [data-page="trade"], [data-page="storage"], [data-page="sx"]) {
+  --mw: 900px;
+}
+html.desk .modal-backdrop > .modal[data-page="sx"][data-view="menus"] {
+  --mw: 980px;
+}
+/* 需要整页高的（地图、地区、边境、任务手记） */
+html.desk .modal-backdrop > .modal:is([data-page="map"], [data-page="districts"], [data-page="beyond"]) {
+  height: calc(var(--vh-z) - 72px);
+}
+html.desk .modal-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp3);
+  min-height: 60px;
+  padding: 0 var(--sp3) 0 var(--sp5);
+  background: var(--c-panel-2);
+  border-bottom: 2px solid var(--c-line);
+  flex: none;
+}
+html.desk .modal-header h2 {
+  margin: 0;
+  font: 400 var(--fs-px) / 1.2 var(--f-px);
+  color: var(--c-ink);
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0 #0a0705;
+}
+html.desk .modal-header small {
+  font-size: var(--fs-s);
+  color: var(--c-ink-3);
+  margin-right: auto;
+}
+html.desk .modal-header .close {
+  margin-left: auto;
+}
+html.desk .modal-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--sp5);
+  font-size: var(--fs-b);
+  line-height: 1.6;
+  color: var(--c-ink);
+}
+html.desk .modal-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp4);
+  min-height: 40px;
+  padding: 0 var(--sp5);
+  font-size: var(--fs-s);
+  color: var(--c-ink-3);
+  background: var(--c-panel-2);
+  border-top: 2px solid var(--c-line);
+  flex: none;
+}
+html.desk .modal-foot span {
+  font-size: var(--fs-s);
+  color: var(--c-ink-3);
+}
+
+/* ======================================================================
+   页里的通用件：标题、段落、小字、卡片、列表、标签、进度条、表格、折叠
+   ====================================================================== */
+html.desk #modal :is(h3, h4) {
+  font-family: var(--f-body);
+  font-size: var(--fs-h);
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--c-ink);
+  letter-spacing: 0;
+  text-shadow: none;
+}
+html.desk #modal h4 {
+  font-size: var(--fs-b);
+}
+html.desk #modal .modal-content h2:not(#modal-title) {
+  font: 700 22px / 1.35 var(--f-body);
+  color: var(--c-ink);
+  letter-spacing: 0;
+}
+html.desk #modal :is(p, li, dd, td, label, summary) {
+  font-size: var(--fs-b);
+  line-height: 1.6;
+}
+html.desk #modal :is(small, .muted, .small, .hint, .note-small, dt, th, figcaption, caption, .tag, .chip, .badge, .key, .count, .qty, .worn-tag, .journal-eyebrow, .title-eyebrow, .title-section, .title-save-note, .story-progress li, .eyebrow, .sub, .meta, .label) {
+  font-size: var(--fs-s);
+}
+html.desk #modal :is(.muted, small, .hint, dt, th, figcaption, .meta, .sub) {
+  color: var(--c-ink-3);
+}
+html.desk #modal :is(.muted, small) b {
+  color: var(--c-ink-2);
+}
+/* 页面最上面那张“这一页做什么”的卡（v0.39） */
+html.desk #modal :is(.sx-card, .sx-around .sx-card) {
+  background: var(--c-card);
+  border: 2px solid var(--c-line);
+  border-left: 4px solid var(--c-ember);
+  border-radius: var(--r-card);
+  padding: var(--sp3) var(--sp4);
+}
+/* 卡片：旧版里各种名字的卡，统一成一种 */
+html.desk #modal :is(.recipe, .rebuild-card, .camp-card, .frontier-card, .map-card, .story-card, .task-card, .journal-recipe, .daily-strip, .far-strip, .journal-today, .card, .panel-card, .feature-purpose, .note, .item-detail, .ship-card, .person-card, .kin-card, .relight-card, .hope-card, .grow-card, .bounty-card, .bustle-card, .almanac-card, .tidy-card, .titan-card, .mend-card, .outpost-card, .alliance-card, .beyond-card, .district-card, .echo-card, .supply-card, .winter-card, .season-card, .farlands-card, .thief-card, .garden-card, .gear-card, .feel-card, .undertow-card, .longnight-card, .zest-card) {
+  background: var(--c-card);
+  border: 2px solid var(--c-line);
+  border-radius: var(--r-card);
+  box-shadow: none;
+  color: var(--c-ink);
+}
+html.desk #modal :is(.recipe, .rebuild-card, .camp-card, .frontier-card, .map-card, .card, .person-card, .ship-card):has(button:not(:disabled)):hover {
+  border-color: var(--c-line-hi);
+}
+/* 页签 */
+html.desk #modal :is(.tabs, .tab-row, .b-tabs, .far-tabs, .journal-tabs, .outpost-tabs, .atlas-tabs) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 2px solid var(--c-line);
+  padding-bottom: 0;
+  margin-bottom: var(--sp4);
+}
+html.desk #modal :is(.tabs, .tab-row, .b-tabs, .far-tabs, .journal-tabs, .outpost-tabs, .atlas-tabs) > button {
+  min-height: 40px;
+  padding: 6px 16px;
+  margin-bottom: -2px;
+  border-radius: var(--r-btn) var(--r-btn) 0 0;
+  border-bottom-color: var(--c-line);
+  background: var(--c-panel-2);
+  color: var(--c-ink-2);
+  box-shadow: none;
+}
+html.desk #modal :is(.tabs, .tab-row, .b-tabs, .far-tabs, .journal-tabs, .outpost-tabs, .atlas-tabs) > button:is(.active, .selected, [aria-selected="true"]) {
+  background: var(--c-panel);
+  color: var(--c-ember-hi);
+  border-color: var(--c-line);
+  border-top: 3px solid var(--c-ember);
+  border-bottom-color: var(--c-panel);
+}
+/* 一排按钮 */
+html.desk #modal :is(.button-row, .journal-actions, .sx-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp2);
+  align-items: center;
+}
+html.desk #modal :where(.button-row, .journal-actions, .sx-actions) button,
+html.desk #modal .modal-content :where(button:not(.close, .inventory-cell, .gear-slot, .hot-slot, .atlas-node)) {
+  min-height: 36px;
+  padding: 6px 14px;
+}
+/* 花费：一个个小格子，不够的标红 */
+html.desk #modal .cost {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--fs-s);
+  font-variant-numeric: tabular-nums;
+}
+html.desk #modal .cost span {
+  padding: 2px 8px;
+  font-size: var(--fs-s);
+  color: var(--c-ink-2);
+  background: var(--c-panel-2);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-btn);
+}
+html.desk #modal .cost .missing {
+  color: var(--c-danger);
+  border-color: #8e2a20;
+}
+/* 进度条 */
+html.desk #modal :is(progress, meter) {
+  accent-color: var(--c-ember);
+}
+/* 表格 */
+html.desk #modal table {
+  border-collapse: collapse;
+}
+html.desk #modal :is(th, td) {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--c-line);
+  text-align: left;
+}
+html.desk #modal th {
+  font-weight: 600;
+}
+/* 折叠 */
+html.desk #modal details > summary {
+  cursor: pointer;
+  color: var(--c-ink-2);
+  font-weight: 600;
+  padding: 4px 0;
+}
+html.desk #modal details > summary:hover {
+  color: var(--c-ink);
+}
+html.desk #modal details[open] > summary {
+  color: var(--c-ink);
+  margin-bottom: var(--sp2);
+}
+/* 有意思的颜色：只用规范里的 */
+html.desk #modal :is(.good, .ok, .gain, .plus, .green) {
+  color: var(--c-good);
+}
+html.desk #modal :is(.bad, .lose, .minus, .red, .danger:not(button), .missing) {
+  color: var(--c-danger);
+}
+html.desk #modal :is(.gold, .warn:not(button), .hot) {
+  color: var(--c-warn);
+}
+/* 物品小图：像素放大不糊 */
+html.desk :is(#modal, .hud-dock, #sx-pop) :is(.item-icon, canvas.item-icon, canvas[data-frontier], canvas[data-atlas]) {
+  image-rendering: pixelated;
+}
+
+/* ======================================================================
+   标题页
+   ====================================================================== */
+html.desk .title-screen .modal-backdrop {
+  background:
+    radial-gradient(ellipse at 30% 40%, #2a160c00 0%, #0c0907cc 70%),
+    linear-gradient(90deg, #0c0907f2 0%, #0c0907b0 46%, #0c090740 100%);
+}
+html.desk .modal-backdrop > #modal.welcome {
+  --mw: 1040px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+html.desk #modal.welcome .title-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  grid-template-rows: auto auto;
+  gap: var(--sp6) 72px;
+  padding: var(--sp6);
+  overflow: visible;
+}
+html.desk #modal.welcome .title-story {
+  align-self: center;
+}
+html.desk #modal.welcome .title-eyebrow {
+  font-size: var(--fs-s);
+  letter-spacing: 4px;
+  color: var(--c-ember-hi);
+}
+html.desk #modal.welcome .title-emblem {
+  display: none;
+}
+html.desk #modal.welcome h1#modal-title {
+  margin: var(--sp3) 0 var(--sp4);
+  font: 400 96px / 1 var(--f-px);
+  color: var(--c-ink);
+  letter-spacing: 6px;
+  text-shadow:
+    4px 4px 0 #a8501f,
+    8px 8px 0 #0a0705;
+}
+html.desk #modal.welcome .title-motto {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--c-ember-hi);
+  margin: 0 0 var(--sp4);
+}
+html.desk #modal.welcome .title-copy {
+  font-size: var(--fs-b);
+  line-height: 1.9;
+  color: var(--c-ink-2);
+  margin: 0;
+}
+html.desk #modal.welcome .title-actions {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+  padding: var(--sp5);
+  background: #1b1410e6;
+  border: 2px solid var(--c-line);
+  box-shadow: 0 0 0 2px #0a0705, 0 8px 0 #0a0705;
+}
+html.desk #modal.welcome .title-actions .title-section {
+  font-size: var(--fs-s);
+  color: var(--c-ink-3);
+  margin-bottom: var(--sp1);
+}
+html.desk #modal.welcome .title-actions button {
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 16px;
+  font-size: var(--fs-b);
+  text-align: left;
+}
+html.desk #modal.welcome .title-actions button.primary {
+  min-height: 64px;
+  font-size: var(--fs-h);
+}
+html.desk #modal.welcome .title-actions button.primary small {
+  display: block;
+  font-size: var(--fs-s);
+  font-weight: 400;
+  color: var(--c-on-ember);
+}
+html.desk #modal.welcome .title-save-note {
+  font-size: var(--fs-s);
+  color: var(--c-ink-3);
+  margin: var(--sp1) 0 0;
+}
+html.desk #modal.welcome .title-footer {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-s);
+  color: var(--c-ink-3);
+  border-top: 2px solid #4a362780;
+  padding-top: var(--sp3);
+}
+html.desk #modal.welcome .title-footer span {
+  font-size: var(--fs-s);
+}
+
+/* ======================================================================
+   菜单（十项）：大方块，带按键
+   ====================================================================== */
+html.desk #modal .sx-page {
+  max-width: none;
+}
+html.desk #modal .sx-menus {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--sp3);
+}
+html.desk #modal .sx-menus > button {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  align-content: start;
+  gap: 6px;
+  min-height: 112px;
+  padding: var(--sp4);
+  text-align: left;
+  position: relative;
+}
+html.desk #modal .sx-menus > button b {
+  font-size: var(--fs-h);
+  color: var(--c-ink);
+}
+html.desk #modal .sx-menus > button small {
+  font-size: var(--fs-s);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--c-ink-3);
+}
+html.desk #modal .sx-menus > button[data-key]::after {
+  content: attr(data-key);
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  min-width: 22px;
+  padding: 0 5px;
+  font: 600 var(--fs-s) / 20px var(--f-body);
+  text-align: center;
+  color: var(--c-ink-2);
+  border: 1px solid var(--c-line-hi);
+  border-bottom-width: 2px;
+  background: var(--c-panel-2);
+}
+html.desk #modal .sx-menus > button:hover b {
+  color: var(--c-ember-hi);
+}
+html.desk #modal .sx-sub {
+  font: 700 var(--fs-h) / 1.4 var(--f-body);
+  color: var(--c-ink-2);
+  margin: var(--sp5) 0 var(--sp3);
+}
+html.desk #modal .look-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp2);
+  margin: 0 0 var(--sp4);
+}
+html.desk #modal .look-status button {
+  font-weight: 600;
+}
+html.desk #modal .look-status button b {
+  color: var(--c-ink);
+  margin-left: 6px;
+}
+html.desk #modal .look-status button.danger b {
+  color: var(--c-danger);
+}
+
+/* ======================================================================
+   背包：装备（左）· 格子（中）· 详情（右）
+   ====================================================================== */
+html.desk #modal[data-page="inventory"] .modal-content {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 280px;
+  grid-template-rows: auto auto auto auto;
+  column-gap: var(--sp5);
+  row-gap: var(--sp3);
+  align-items: start;
+}
+html.desk #modal[data-page="inventory"] .echo-storage-summary {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin: 0;
+  background: var(--c-card);
+  border: 2px solid var(--c-line);
+}
+html.desk #modal[data-page="inventory"] .echo-storage-summary > span {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp2);
+  padding: 4px 12px;
+  font-size: var(--fs-s);
+  line-height: 1.5;
+  color: var(--c-ink-3);
+  background: transparent;
+  border: 0;
+}
+html.desk #modal[data-page="inventory"] .echo-storage-summary > span + span {
+  border-top: 1px solid var(--c-line);
+}
+html.desk #modal[data-page="inventory"] .echo-storage-summary > span b {
+  font: 700 var(--fs-b) / 1.5 var(--f-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--c-ink);
+}
+html.desk #modal[data-page="inventory"] .origin-line {
+  grid-column: 1;
+  grid-row: 2;
+  margin: 0;
+  font-size: var(--fs-s);
+  color: var(--c-ink-3);
+}
+html.desk #modal[data-page="inventory"] .gear-panel {
+  grid-column: 1;
+  grid-row: 3 / span 2;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp3);
+  margin: 0;
+  padding: var(--sp3);
+  background: var(--c-card);
+  border: 2px solid var(--c-line);
+}
+html.desk #modal[data-page="inventory"] .gear-doll-wrap {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: var(--sp3);
+  align-items: start;
+  width: auto;
+}
+html.desk #modal[data-page="inventory"] .gear-sum {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: auto;
+}
+html.desk #modal[data-page="inventory"] .gear-sum span,
+html.desk #modal[data-page="inventory"] .gear-sum b {
+  font-size: var(--fs-s);
+  line-height: 1.45;
+  color: var(--c-ink-2);
+}
+html.desk #modal[data-page="inventory"] .gear-guard {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--fs-s);
+  line-height: 1.5;
+  color: var(--c-ink-3);
+}
+html.desk #modal[data-page="inventory"] .gear-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: auto;
+}
+html.desk #modal[data-page="inventory"] .gear-slot {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 36px auto auto;
+  justify-items: center;
+  align-content: start;
+  gap: 2px;
+  min-height: 92px;
+  height: auto;
+  padding: 18px 4px 6px;
+  position: relative;
+  text-align: center;
+}
+html.desk #modal[data-page="inventory"] .gear-slot .gear-slot-key {
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  font-size: var(--fs-s);
+  font-weight: 400;
+  color: var(--c-ink-3);
+}
+html.desk #modal[data-page="inventory"] .gear-slot :is(.item-icon, .gear-empty-icon) {
+  width: 36px;
+  height: 36px;
+}
+html.desk #modal[data-page="inventory"] .gear-slot .gear-slot-body {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+html.desk #modal[data-page="inventory"] .gear-slot .gear-slot-body b {
+  font-size: var(--fs-s);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+html.desk #modal[data-page="inventory"] .gear-slot .gear-dur-text {
+  display: none;
+}
+html.desk #modal[data-page="inventory"] .gear-slot .gear-dur {
+  height: 4px;
+  margin: 2px 6px 0;
+  background: #0d0a08;
+}
+html.desk #modal[data-page="inventory"] .gear-slot .gear-dur i {
+  height: 100%;
+  background: var(--c-good);
+}
+html.desk #modal[data-page="inventory"] .gear-slot.broken {
+  border-color: #8e2a20;
+}
+html.desk #modal[data-page="inventory"] .gear-slot.broken .gear-slot-body b {
+  color: var(--c-danger);
+}
+html.desk #modal[data-page="inventory"] .gear-tip {
+  margin: 0;
+  font-size: var(--fs-s);
+  color: var(--c-ink-3);
+}
+html.desk #modal[data-page="inventory"] .tabs {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+}
+html.desk #modal[data-page="inventory"] .inventory-workspace {
+  display: contents;
+}
+html.desk #modal[data-page="inventory"] .inventory-grid {
+  grid-column: 2;
+  grid-row: 2 / span 2;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 64px);
+  gap: 6px;
+  align-content: start;
+  max-height: none;
+  overflow: visible;
+}
+html.desk #modal[data-page="inventory"] .inventory-cell {
+  width: 64px;
+  height: 76px;
+  min-height: 76px;
+  padding: 6px 2px 4px;
+  display: grid;
+  grid-template-rows: 38px auto;
+  justify-items: center;
+  align-content: start;
+  gap: 2px;
+  position: relative;
+  background: var(--c-card);
+  border: 2px solid #3a2a1e;
+  border-radius: 0;
+  box-shadow: inset 0 -3px 0 #0006;
+}
+html.desk #modal[data-page="inventory"] div.inventory-cell {
+  background: var(--c-panel-2);
+  border-style: dashed;
+  border-color: #33261c;
+  box-shadow: none;
+}
+html.desk #modal[data-page="inventory"] button.inventory-cell:hover {
+  border-color: var(--c-line-hi);
+  background: var(--c-card-hi);
+}
+html.desk #modal[data-page="inventory"] button.inventory-cell:is(.active, .selected, [aria-pressed="true"]) {
+  border-color: var(--c-ember-hi);
+}
+html.desk #modal[data-page="inventory"] .inventory-cell .item-icon {
+  width: 36px;
+  height: 36px;
+}
+html.desk #modal[data-page="inventory"] .inventory-cell small {
+  max-width: 60px;
+  font-size: var(--fs-s);
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--c-ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+html.desk #modal[data-page="inventory"] .inventory-cell .count {
+  position: absolute;
+  right: 4px;
+  top: 2px;
+  font: 700 var(--fs-s) / 16px var(--f-body);
+  color: var(--c-ink);
+  text-shadow: 1px 1px 0 #0b0806;
+}
+html.desk #modal[data-page="inventory"] .inventory-cell .worn-tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0 4px;
+  font: 600 var(--fs-s) / 18px var(--f-body);
+  color: var(--c-on-ember);
+  background: var(--c-ember);
+}
+html.desk #modal[data-page="inventory"] .inventory-inspector {
+  grid-column: 3;
+  grid-row: 1 / span 4;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  min-height: 240px;
+  padding: var(--sp4);
+  background: var(--c-card);
+  border: 2px solid var(--c-line);
+  border-left: 4px solid var(--c-ember);
+}
+html.desk #modal[data-page="inventory"] .inventory-inspector .item-detail {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp2);
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+html.desk #modal[data-page="inventory"] .inventory-inspector .item-detail > .item-icon {
+  width: 64px;
+  height: 64px;
+  background-color: var(--c-panel-2);
+  border: 2px solid var(--c-line);
+}
+html.desk #modal[data-page="inventory"] .inventory-inspector h3 {
+  font: 400 var(--fs-px) / 1.2 var(--f-px);
+  color: var(--c-ink);
+  margin: 0;
+}
+html.desk #modal[data-page="inventory"] .inventory-inspector p {
+  margin: 0 0 6px;
+  font-size: var(--fs-s);
+  line-height: 1.6;
+}
+html.desk #modal[data-page="inventory"] .inventory-inspector .button-row {
+  margin-top: var(--sp2);
+}
+html.desk #modal[data-page="inventory"] .section-row {
+  grid-column: 2;
+  grid-row: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp3);
+  margin: 0;
+  font-size: var(--fs-s);
+}
+html.desk #modal[data-page="inventory"] .modal-content > .button-row {
+  grid-column: 1;
+  grid-row: 5;
+}
+
+/* ======================================================================
+   建造：图标格（左）· 详情卡（右，脚本填）
+   ====================================================================== */
+html.desk #modal[data-page="build"] .modal-content.look-build {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  column-gap: var(--sp5);
+  align-items: start;
+}
+html.desk #modal .look-build-list > p.muted:first-child {
+  margin: 0 0 var(--sp3);
+}
+html.desk #modal .look-build-list .sx-group {
+  font: 700 var(--fs-h) / 1.4 var(--f-body);
+  color: var(--c-ink-2);
+  margin: var(--sp4) 0 var(--sp2);
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--c-line);
+}
+html.desk #modal .look-build-list .recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+  gap: var(--sp2);
+}
+html.desk #modal .look-build-list .recipe {
+  display: grid;
+  grid-template-rows: 48px auto auto;
+  justify-items: center;
+  align-content: start;
+  gap: 4px;
+  min-height: 132px;
+  padding: var(--sp3) var(--sp2) var(--sp2);
+  text-align: center;
+  cursor: pointer;
+  border-color: #3a2a1e;
+  transition: border-color var(--t-hover) linear, background-color var(--t-hover) linear, transform var(--t-press) linear;
+}
+html.desk #modal .look-build-list .recipe:hover {
+  border-color: var(--c-line-hi);
+  background: var(--c-card-hi);
+}
+html.desk #modal .look-build-list .recipe:active {
+  transform: translateY(1px);
+}
+html.desk #modal .look-build-list .recipe.look-on {
+  border-color: var(--c-ember);
+  background: #3a2414;
+}
+html.desk #modal .look-build-list .recipe.look-poor .recipe-body h3 {
+  color: var(--c-ink-2);
+}
+html.desk #modal .look-build-list .recipe > :is(.item-icon, canvas.item-icon) {
+  width: 48px;
+  height: 48px;
+}
+html.desk #modal .look-build-list .recipe .recipe-body {
+  display: contents;
+}
+html.desk #modal .look-build-list .recipe .recipe-body h3 {
+  font-size: var(--fs-b);
+  line-height: 1.35;
+  margin: 0;
+}
+html.desk #modal .look-build-list .recipe .recipe-body > :not(h3):not(.cost) {
+  display: none;
+}
+html.desk #modal .look-build-list .recipe .cost {
+  justify-content: center;
+  gap: 4px;
+}
+html.desk #modal .look-build-list .recipe .cost span {
+  padding: 0 5px;
+}
+html.desk #modal .look-build-detail {
+  position: sticky;
+  top: 0;
+  padding: var(--sp4);
+  background: var(--c-card);
+  border: 2px solid var(--c-line);
+  border-left: 4px solid var(--c-ember);
+  min-height: 260px;
+}
+html.desk #modal .look-build-detail .look-bd-head {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: var(--sp3);
+  align-items: center;
+  margin-bottom: var(--sp3);
+}
+html.desk #modal .look-build-detail .look-bd-head > :is(.item-icon, canvas) {
+  width: 64px;
+  height: 64px;
+  background-color: var(--c-panel-2);
+  border: 2px solid var(--c-line);
+}
+html.desk #modal .look-build-detail h3 {
+  font: 400 var(--fs-px) / 1.2 var(--f-px);
+  margin: 0;
+}
+html.desk #modal .look-build-detail p {
+  font-size: var(--fs-s);
+  line-height: 1.6;
+  margin: 0 0 var(--sp2);
+}
+html.desk #modal .look-build-detail .item-purpose {
+  padding-left: 10px;
+  border-left: 3px solid var(--c-good);
+}
+html.desk #modal .look-build-detail .cost {
+  margin: var(--sp3) 0;
+}
+html.desk #modal .look-build-detail button.primary {
+  width: 100%;
+  min-height: 44px;
+  font-size: var(--fs-b);
+}
+html.desk #modal .look-build-detail .look-bd-why {
+  font-size: var(--fs-s);
+  color: var(--c-danger);
+  margin-top: var(--sp2);
+}
+
+/* ======================================================================
+   其他页：小修
+   ====================================================================== */
+/* 制作：配方卡两列 */
+html.desk #modal[data-page="craft"] .recipe-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp3);
+}
+html.desk #modal[data-page="craft"] .recipe {
+  padding: var(--sp4);
+}
+html.desk #modal[data-page="craft"] .recipe :is(.recipe-flow, details) {
+  font-size: var(--fs-s);
+}
+/* 设置：一行一项 */
+html.desk #modal[data-page="pause"] :is(.setting-row, .settings-row, .set-row, label) {
+  font-size: var(--fs-b);
+}
+/* 技能 */
+html.desk #modal[data-page="skills"] :is(.skill-card, .talent, .talent-card) {
+  background: var(--c-card);
+  border: 2px solid var(--c-line);
+}
+
+/* ======================================================================
+   减少动态：位移改成淡入
+   ====================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  html.desk *,
+  html.desk *::before,
+  html.desk *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}
+html.desk body.a11y-calm :is(.modal, #sx-pop, .toast, .look-coin) {
+  animation: none;
+}
+
+/* 主按钮上的小字、粗字跟着按钮的深字走 */
+html.desk #modal button:is(.primary, .sx-primary) :is(small, .muted, b, span, strong) {
+  color: inherit;
+}
+html.desk #modal button:is(.primary, .sx-primary):disabled :is(small, .muted, b, span, strong) {
+  color: var(--c-ink-3);
+}
+/* 物品小图：雪碧图一行 8 个，换大小时底图跟着换 */
+html.desk :is(#modal, .hud-dock) i.item-icon[data-icon] {
+  background-size: calc(var(--isz, 32px) * 8) calc(var(--isz, 32px) * 8);
+}
+html.desk .hud-dock .hot-slot i.item-icon {
+  --isz: 40px;
+}
+html.desk #modal[data-page="inventory"] .inventory-cell i.item-icon {
+  --isz: 36px;
+}
+html.desk #modal[data-page="inventory"] .gear-slot i.item-icon {
+  --isz: 36px;
+}
+html.desk #modal[data-page="inventory"] .inventory-inspector .item-detail > i.item-icon {
+  --isz: 64px;
+}
+html.desk #modal .look-build-list .recipe > i.item-icon {
+  --isz: 48px;
+}
+html.desk #modal .look-build-detail .look-bd-head > i.item-icon {
+  --isz: 64px;
+}
+/* 菜单里“金、口粮、动静”点开的说明 */
+html.desk #modal .look-status-card {
+  flex-basis: 100%;
+  padding: var(--sp3) var(--sp4);
+  background: var(--c-card);
+  border: 2px solid var(--c-line);
+  border-left: 4px solid var(--c-ember);
+}
+html.desk #modal .look-status-card h3 {
+  margin: 0 0 4px;
+}
+html.desk #modal .look-status-card p {
+  margin: 0 0 4px;
+  font-size: var(--fs-s);
+}
+html.desk #modal .look-status button[aria-expanded="true"] {
+  border-color: var(--c-ember);
+  color: var(--c-ember-hi);
+}
+
+/* 标题页：字直接压在农场的画上，按钮在右边一块木牌上 */
+html.desk #modal.welcome .title-content {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+/* 几处颜色太淡的小记号（空心的心、问号、圆圈、地图上的方块） */
+html.desk #modal .story-line dt {
+  color: var(--c-ink-2);
+}
+html.desk #modal .atlas-symbol {
+  color: var(--c-ink);
+  text-shadow: 1px 1px 0 #0a0705, -1px 0 0 #0a0705;
+}
+html.desk #modal :is(.ladder li span, .hearts b, .tag.quiet, .kin-q, .rl-old li b, .rl-cores li b) {
+  color: var(--c-ink-3);
+}
+html.desk #modal .hearts i {
+  color: #e8808e;
+}
+html.desk #modal svg text {
+  font-size: 14px;
+}
+
+/* 菜单十项下面：常用按键 */
+html.desk #modal .look-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: var(--sp5);
+  padding-top: var(--sp3);
+  border-top: 2px solid var(--c-line);
+  font-size: var(--fs-s);
+  color: var(--c-ink-3);
+}
+html.desk #modal .look-keys span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

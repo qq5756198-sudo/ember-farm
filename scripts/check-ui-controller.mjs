@@ -26,6 +26,7 @@ import * as Version from '../dist/version.js';
 import * as MendData from '../dist/mend-data.js';
 // v0.39：一物一用的界面
 import * as SimpleUI from '../dist/simple-ui.js';
+import * as LookUI from '../dist/look-ui.js';
 import * as SimpleData from '../dist/simple-data.js';
 import * as Atlas from '../dist/atlas.js';
 import {Renderer} from '../dist/campaign-renderer.js';
@@ -96,7 +97,7 @@ for(const key of Session.HISTORY_KEYS.slice(0,8))storage.set(key,'historic '+key
 class Image{set src(path){this.path=path;loadImage(dir+'/'+path).then(img=>{this.native=img;this.width=img.width;this.height=img.height;this.complete=true;this.onload?.();}).catch(e=>this.onerror?.(e));}get src(){return this.path;}}
 globalThis.document=document;
 let raf;
-const context=vm.createContext({...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...MendData,...SimpleUI,...SimpleData,...Atlas,...Clarity,...ZestUI,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},clearTimeout:()=>{},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
+const context=vm.createContext({...LookUI,...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...MendData,...SimpleUI,...SimpleData,...Atlas,...Clarity,...ZestUI,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},clearTimeout:()=>{},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
 script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,menuArgs,outpostUI,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo,moments});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.hud=updateHUD;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
@@ -3085,7 +3086,10 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.ok(!e.c.production.some((j) => j.id === 'sx-job')); assert.equal(e.s.storage[out], had2 + rec.out[out]);
   assert.ok(toasts().includes('做好了，放进了仓库'));
   // ---------- 场景里只写面前那一样 ----------
-  const P = Object.getPrototypeOf(Renderer.prototype), baseText = P.text, baseBadge = P.badge;
+  // v0.40 起最上面多了一层（镜头）：找到“场景里的字”那一层（有 slOwners 的），拦它下面那一层
+  let SP = Renderer.prototype;
+  while (SP && !Object.prototype.hasOwnProperty.call(SP, 'slOwners')) SP = Object.getPrototypeOf(SP);
+  const P = Object.getPrototypeOf(SP), baseText = P.text, baseBadge = P.badge;
   const ownText = Object.prototype.hasOwnProperty.call(P, 'text'), ownBadge = Object.prototype.hasOwnProperty.call(P, 'badge');
   const drawn = [];
   P.text = function (label, ...a) { drawn.push({ label: String(label), gate: !!this._sl }); return baseText.call(this, label, ...a); };

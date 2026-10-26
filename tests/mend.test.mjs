@@ -1,5 +1,6 @@
 // v0.38.0「修缮」：卡位逃脱（自己挪出来、设置和快捷菜单里的“挪到能走的地方”），和这一轮修好的毛病，每一条一个回归测试。
 import test from "node:test";
+import { styleOrder } from "./style-order.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { Engine, freshState } from "../dist/campaign.js";
@@ -374,9 +375,9 @@ test("on a phone held upright, the notice strip under a menu shows one notice in
 test("large phones held sideways keep the small touch buttons in their own column instead of under 翻滚 / 使用 / 交互", () => {
   const css = readFileSync(new URL("../dist/mend.css", import.meta.url), "utf8");
   assert.match(css, /@media \(pointer: coarse\) and \(max-height: 500px\) and \(min-width: 851px\) \{\s*\.touch-extras \{\s*display: grid;/);
-  const html = readFileSync(new URL("../dist/index.html", import.meta.url), "utf8");
-  assert.ok(html.indexOf('href="mend.css"') > html.indexOf('href="clarity.css"'), "loaded after the layout it fixes");
-  assert.ok(html.indexOf('href="mend.css"') > html.indexOf('href="titan.css"'));
+  const order = styleOrder();
+  assert.ok(order.indexOf("mend.css") > order.indexOf("clarity.css"), "loaded after the layout it fixes");
+  assert.ok(order.indexOf("mend.css") > order.indexOf("titan.css"));
 });
 
 // ================= 16. 过了半夜才睡 =================

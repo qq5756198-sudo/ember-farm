@@ -1,0 +1,281 @@
+/* 这个文件是 scripts/build-ui-floor.mjs 生成的，别直接改。
+   v0.40.0「一套」：旧样式里比 14 像素小的字，在电脑上一律 14 像素；写死的字色换成规范里最接近的那一种（ui.css 里写了的以 ui.css 为准）。 */
+html.desk :where(#buff-summary, #event-entry, #menu-toasts .toast, #selected-label, #selected-label span, #sx-pop, #toasts .toast, .adj-line, .al-season p, .alert-item, .atlas-info, .atlas-info h4, .atlas-info small, .atlas-landmark, .atlas-local p, .atlas-materials span, .atlas-node small, .atlas-node strong, .atlas-status, .atlas-toolbar button, .atlas-toolbar label, .atlas-toolbar select, .atlas-toolbar>span, .b-cost, .b-destination p, .b-destination small, .b-event-list small, .b-eyebrow, .b-nav button, .b-place small, .b-progress span, .b-reason, .b-storage p, .b-teaser span, .boss-bar .boss-name, .boss-bar .boss-name small, .boss-bar .boss-note, .boss-bar .t-armor span, .boss-bar .t-bar .boss-name, .boss-bar .t-pgroup b) {
+  font-size: var(--fs-s, 14px);
+}
+html.desk :where(.boss-bar .t-poise, .boss-bar .t-title, .bt-dex td.muted, .bt-ferts, .bt-list small, .bt-pay, .bt-plot .muted, .bt-res, .bt-route small, .bt-warn, .buff-list button, .button-row button, .calendar b, .camp-card small, .camp-summary span, .camp-tabs button, .canal-grid button, .canal-grid button small, .card-foot a, .care-dial small, .career-table, .claim-btn, .consequence, .consequence dt, .control-hints, .control-hints kbd, .cooking-actions small, .cost, .daily-opt dd, .daily-opt dt, .daily-stock, .daily-tag, .date-row, .demo-nav button, .demo-nav span, .demo-start small, .detail-heading small, .district-action p, .district-action small, .district-action-meta) {
+  font-size: var(--fs-s, 14px);
+}
+html.desk :where(.district-action>button, .district-caption, .district-chain, .district-detail-top button, .district-detail-top small, .district-empty p, .district-facts dd, .district-facts dt, .district-field, .district-filter button, .district-form button, .district-form label, .district-hud-link, .district-job p, .district-job>span, .district-kicker, .district-legend, .district-list .district-caption, .district-list-row b, .district-list-row small, .district-list-title p, .district-list>button:not(.district-list-row), .district-meter span, .district-metrics span, .district-nav button, .district-nav button small, .district-nav button span, .district-nav-caption, .district-nav-title small, .district-need button, .district-new small, .district-next, .district-note, .district-number, .district-origin b, .district-origin button, .district-origin>span, .district-pair .button-row button, .district-pair p, .district-pair-line) {
+  font-size: var(--fs-s, 14px);
+}
+html.desk :where(.district-pair>small, .district-power b, .district-power button, .district-power small, .district-power span, .district-reason, .district-report p, .district-result b, .district-result p, .district-scroll .button-row button, .district-source, .district-state, .district-table, .district-table button, .district-table td, .district-table th, .district-timeline b, .district-timeline small, .district-timeline span, .district-worker p, .district-world-head p, .district-world-head small, .dock-feedback, .dock-feedback #building-banner, .dock-feedback #context, .dock-feedback #horde-warning, .dock-feedback .toast, .dock-feedback button, .dock-feedback>*, .dock-menu>div button, .dock-objective small, .dock-objective>b, .dock-objective>span>small, .echo-badge, .echo-chapters span, .echo-metrics span, .echo-reason, .echo-storage-summary span, .echo-toolbar>span, .eco-grid button) {
+  font-size: var(--fs-s, 14px);
+}
+html.desk :where(.eco-grid button small, .event-list .echo-toolbar button, .event-list .manual-row .event-status, .exhibit, .exhibit-slots button, .exhibit-slots small, .far-pin, .feature-purpose>span, .fest-stars, .forecast small, .frontier-card .cost span, .frontier-tabs button, .frost-forecast, .g-days small, .g-facts, .g-stat, .g-table table, .g-tag, .g-today li, .gear-bench-body .button-row button, .gear-bp, .gear-chip, .gear-cmp, .gear-dur-text, .gear-guard, .gear-guard-row button, .gear-guard-row span, .gear-mod-row button, .gear-mods .button-row button, .gear-mods summary, .gear-slot-body b, .gear-slot-key, .gear-sum, .gear-tag, .gear-why, .gr-master > b, .gr-perk, .gr-use, .handbook-entry small, .help-grid) {
+  font-size: var(--fs-s, 14px);
+}
+html.desk :where(.hot-slot .key, .hot-slot .qty, .hud-brand, .hud-brand small, .hud-food, .hud-location, .hud-location span:last-child, .hud-phone, .hud-settings, .hud-time, .hud-vitals .stat, .hud-vitals .stat-value, .inventory-cell .count, .inventory-cell small, .item-detail p, .journal-catalog p, .journal-eyebrow, .journal-flow, .journal-options p, .journal-options small, .journal-outcome b, .journal-pay, .journal-steps li>span, .journal-top, .kin-fishbook li small, .kin-heart, .kin-partner, .kin-partner p, .kin-prefs, .kin-res, .kin-where, .kit-list button, .kit-list>span, .ladder li, .ledger, .ledger-card, .ledger-card small, .link-chip, .list-heading small, .manual .camp-summary span) {
+  font-size: var(--fs-s, 14px);
+}
+html.desk :where(.manual .echo-metrics span, .manual .manual-label, .manual .rebuild-report span, .manual .rebuild-source, .manual-label, .manual-nav-bottom a, .manual-nav-bottom button, .manual-nav>button, .manual-row small, .map-card .risk, .map-card button, .map-card p, .meal-row small, .modal-content, .modal-content small, .modal-foot, .modal-foot button, .modal-header small, .msg-log, .muted, .nav-index, .new-badge, .nf-list li span:not(.nf-season), .nf-notes li, .nf-season, .note, .odds-parts, .origin-card span, .outpost-food span, .pack-grid button, .people li p, .phone-tile small, .photo-grid small, .plant-guide small, .plot-stats, .pocket-no, .priority-grid label, .quest-copy, .quest-next, .quest-reward) {
+  font-size: var(--fs-s, 14px);
+}
+html.desk :where(.quest-title, .quest-track, .radial-item, .radial-item kbd, .rebuild-heading small, .recipe button, .recipe p, .recipe-flow, .reel-card, .reel-hint, .resident-line small, .respec small, .rl-old li small, .rl-reward, .rl-tag, .rush-row span, .search, .seed-main small, .seed-no, .seed-time, .selected-label, .selected-label span, .settings-row small, .skill-card p, .skill-col h3 span, .skill-col small, .skill-desc, .skill-spec, .soil-grid button, .soil-grid small, .species-list small, .stat, .steal-log, .storage-list button, .story-choice p, .story-lack, .story-line dt, .story-log, .story-progress li, .summary-grid dt) {
+  font-size: var(--fs-s, 14px);
+}
+html.desk :where(.supply-tag, .sx-card .sx-act small, .sx-card .sx-good, .sx-card .sx-now, .sx-menus button small, .t-card h4 small, .t-card p, .tabs button, .tag, .talent p, .talent small, .talent-done, .talent-meta, .td-who, .td-why, .tier-tag, .title-actions .title-section, .title-actions button small, .title-eyebrow, .title-footer, .title-section, .toast, .touch-actions button, .touch-controls button, .touch-extras button, .trade-item button, .trade-item h3, .trade-item small, .trade-item strong, .version, .welcome .difficulty, .welcome .echo-rule, .welcome .hint, .welcome .intro-stages, .welcome .save-notice, .welcome .subtitle, .welcome .title-copy, .welcome .title-save-note, .welcome p, .worn-tag) {
+  font-size: var(--fs-s, 14px);
+}
+html.desk :where(.zest-moment .zm-hint, .zest-moment p, .zest-moment small, .zest-radio, body.vis-on #time, body.vis-on .daily-chip, body.vis-on .dock-hints, body.vis-on .g-tag, body.vis-on .hot-slot .key, body.vis-on .hot-slot .qty, body.vis-on .hud-brand span:last-child, body.vis-on .hud-food, body.vis-on .hud-vitals .stat-name, body.vis-on .hud-vitals .stat-value, body.vis-on .inventory-cell .count, body.vis-on .modal-foot, body.vis-on .modal-header small) {
+  font-size: var(--fs-s, 14px);
+}
+html.desk .handbook-entry.has-new::after {
+  font-size: var(--fs-s, 14px);
+}
+/* 字色：换成规范里最接近的那一种 */
+html.desk :where(#context, #fishing-status, #season-chip.ok, #sx-pop h3, .a11y-color .alert-item.danger, .a11y-color .alert-item.gold, .a11y-color .alert-item.warn, .a11y-color .daily-opt .risk dd, .a11y-color .dog-skills li.on, .a11y-color .far-deadline, .a11y-color .far-pin.danger, .a11y-color .far-row.danger, .a11y-color .far-row.danger p, .a11y-color .fest-stars li.on, .a11y-color .g-tag.get, .a11y-color .g-tag.good, .a11y-color .g-today li.ok, .a11y-color .hud-food.danger, .a11y-color .story-lack, .a11y-color .toast.gold, .a11y-color .toast.warn, .al-board h3, .al-card h4, .al-radio h3, .al-season h4, .al-seasons h3, .alert-item, .alert-item.danger, .alert-item.gold, .alert-item.warn, .apprentice h3, .atlas-info h3, .atlas-landmark, .atlas-landmark.target, .atlas-node, .atlas-node.selected strong, .atlas-primary button:first-child, .b-lead, .b-progress span, .b-shell) {
+  color: var(--c-ink);
+}
+html.desk :where(.bt-head h3, .bt-head small, .bt-page h3, .calendar b, .camp-body h3, .camp-card select, .camp-tabs button.active, .canal-grid button.flowing, .care-dial b, .challenge-list button.active, .clue dd, .collection b, .consequence dd, .control-hints, .control-hints kbd, .daily-chip, .daily-head h3, .daily-opt dd, .daily-opt h4, .daily-text, .day-summary h3, .detail-heading h3, .district-action b, .district-facts dd, .district-list-title h3, .district-nav button span, .district-nav-title, .district-new h3, .district-scroll h2, .district-world-head h3, .dog-skills li.on, .echo-badge, .echo-chapters span, .echo-choice-grid dd, .echo-history li, .echo-rule, .echo-timeline li.done, .echo-work-grid dd, .exhibit, .far-pin) {
+  color: var(--c-ink);
+}
+html.desk :where(.far-pin.danger, .far-pin.night, .far-pin.u-pin.hazard, .forecast strong, .frontier-card h3, .frontier-card input, .frontier-card select, .frontier-tabs button.active, .frost-forecast, .g-board h3, .g-facts dd, .g-facts dt, .g-head h3, .g-stat b, .g-table tbody th, .g-tag, .g-tag.give, .g-today li, .gear-chip.good, .gear-intro ul, .gear-sum, .help-grid kbd, .hn-card h4, .hn-mule h3, .hn-radio h3, .hp-rows li > span, .hud-food.danger, .hud-vitals .stat-value, .intro-card, .item-detail h3, .journal-main h2, .journal-next h3, .journal-outcome p, .journal-steps li.current, .journal-why, .kin-fishbook h3, .kin-fishbook li b, .kin-kids h3, .kin-notes h3, .ladder-row > b) {
+  color: var(--c-ink);
+}
+html.desk :where(.ledger-card, .list-heading h3, .manual .frontier-card h3, .manual .rebuild-card h3, .manual-nav>button.active, .manual-row, .manual-row.selected, .map-card h3, .new-badge, .night-scene p, .note, .npc-head b, .npc-line, .offer h3, .outpost-alert, .primary, .qty-input, .quest-title, .raid-report h3, .rebuild-card h3, .rebuild-card h4, .rebuild-checklist li, .rebuild-crops b, .rebuild-heading strong, .rebuild-page button.active, .rebuild-page select, .rebuild-purpose b, .rebuild-status, .recipe .advance, .recipe h3, .reel-card, .reel-card b, .rl-group h4, .rl-list h4, .rl-old li.on b, .rl-oldworld h3, .rl-page b, .rl-tag, .rl-tag.warn, .rl-wall > summary b) {
+  color: var(--c-ink);
+}
+html.desk :where(.section-row h3, .settings-row select, .settings-section>summary, .skill-card h3, .skill-col h3, .stall-form input, .stall-form select, .stat-value, .station-rush h3, .steal-head h3, .steal-result h3, .story-choice h3, .story-line dd, .story-line dd b, .story-line.now dd, .summary-grid dd, .supply-form label, .supply-panel input, .supply-panel select, .supply-picker, .supply-planner select, .sx-card .sx-good b, .sx-card .sx-now b, .sx-card h3, .sx-menus button b, .sx-msg > summary, .tabs button.active, .tag.bday, .tag.caravan, .tag.cold, .tag.danger, .tag.fest, .talent-top b, .thief-strip p b, .tier-tag.tier-normal, .toast, .touch-actions #touch-use, .version, .view-hpBuyer .npc-line, .view-hpPeddler .npc-line) {
+  color: var(--c-ink);
+}
+html.desk :where(.view-hpTraveler .npc-line, .welcome .difficulty select, .welcome .save-notice, .welcome h1, .zest-moment, body.vis-on #season-chip.ok, body.vis-on .alert-item.danger, body.vis-on .alert-item.gold, body.vis-on .alert-item.warn, body.vis-on .apprentice h3, body.vis-on .atlas-info h3, body.vis-on .atlas-landmark, body.vis-on .atlas-landmark.target, body.vis-on .atlas-node small, body.vis-on .atlas-node.selected strong, body.vis-on .atlas-primary button:first-child, body.vis-on .b-lead, body.vis-on .b-progress span, body.vis-on .b-shell, body.vis-on .calendar b, body.vis-on .camp-body h3, body.vis-on .camp-card select, body.vis-on .camp-tabs button.active, body.vis-on .care-dial b, body.vis-on .challenge-list button.active, body.vis-on .clue dd, body.vis-on .collection b, body.vis-on .consequence dd, body.vis-on .control-hints, body.vis-on .control-hints kbd, body.vis-on .daily-chip, body.vis-on .daily-head h3, body.vis-on .daily-luck, body.vis-on .daily-opt dd, body.vis-on .daily-opt h4, body.vis-on .daily-prev, body.vis-on .daily-text, body.vis-on .day-summary h3, body.vis-on .detail-heading h3, body.vis-on .district-action b) {
+  color: var(--c-ink);
+}
+html.desk :where(body.vis-on .district-facts dd, body.vis-on .district-list-title h3, body.vis-on .district-nav-title, body.vis-on .district-new h3, body.vis-on .district-scroll h2, body.vis-on .district-world-head h3, body.vis-on .dog-skills li.on, body.vis-on .dog-today, body.vis-on .echo-chapters span, body.vis-on .echo-choice-grid dd, body.vis-on .echo-history li, body.vis-on .echo-rule, body.vis-on .echo-timeline li.done, body.vis-on .echo-work-grid dd, body.vis-on .exhibit, body.vis-on .far-pin, body.vis-on .far-pin.danger, body.vis-on .far-pin.night, body.vis-on .forecast strong, body.vis-on .frontier-card h3, body.vis-on .frontier-card input, body.vis-on .frontier-card p, body.vis-on .frontier-card select, body.vis-on .frontier-tabs button.active, body.vis-on .frost-forecast, body.vis-on .g-board h3, body.vis-on .g-days small, body.vis-on .g-facts dd, body.vis-on .g-head h3, body.vis-on .g-head p, body.vis-on .g-head small, body.vis-on .g-stat, body.vis-on .g-stat b, body.vis-on .g-table tbody th, body.vis-on .g-tag, body.vis-on .g-today li, body.vis-on .handbook-entry, body.vis-on .help-grid kbd, body.vis-on .hud-dock button.danger, body.vis-on .hud-dock button.primary) {
+  color: var(--c-ink);
+}
+html.desk :where(body.vis-on .hud-dock button:is(.active, .selected, .on, .current, .chosen):not(.hot-slot), body.vis-on .hud-food.danger, body.vis-on .hud-vitals .stat-value, body.vis-on .intro-card, body.vis-on .item-detail h3, body.vis-on .journal-main h2, body.vis-on .journal-next h3, body.vis-on .journal-outcome p, body.vis-on .journal-steps li.current, body.vis-on .journal-why, body.vis-on .ladder-row > b, body.vis-on .list-heading h3, body.vis-on .manual .frontier-card h3, body.vis-on .manual .rebuild-card h3, body.vis-on .manual summary, body.vis-on .manual-nav>button.active, body.vis-on .manual-row.selected, body.vis-on .map-card h3, body.vis-on .modal .primary, body.vis-on .modal button.danger:not(.atlas-node), body.vis-on .modal button.primary, body.vis-on .modal button:is(.active, .selected, .on, .current, .chosen, .target, .today):not(.atlas-node), body.vis-on .new-badge, body.vis-on .night-scene p, body.vis-on .npc-head b, body.vis-on .npc-line, body.vis-on .offer h3, body.vis-on .outpost-alert, body.vis-on .place-page .manual-purpose, body.vis-on .primary, body.vis-on .qty-input, body.vis-on .quest-title, body.vis-on .raid-report h3, body.vis-on .rebuild-card h3, body.vis-on .rebuild-card h4, body.vis-on .rebuild-checklist li, body.vis-on .rebuild-crops b, body.vis-on .rebuild-heading strong, body.vis-on .rebuild-page button.active, body.vis-on .rebuild-page label) {
+  color: var(--c-ink);
+}
+html.desk :where(body.vis-on .rebuild-page select, body.vis-on .rebuild-purpose b, body.vis-on .recipe .advance, body.vis-on .recipe h3, body.vis-on .seed-main small, body.vis-on .seed-time, body.vis-on .settings-row select, body.vis-on .settings-section>summary, body.vis-on .skill-card h3, body.vis-on .skill-col h3, body.vis-on .skill-head p, body.vis-on .stall-form input, body.vis-on .stall-form select, body.vis-on .stat-name, body.vis-on .stat-value, body.vis-on .station-rush h3, body.vis-on .steal-head h3, body.vis-on .steal-head p, body.vis-on .steal-head small, body.vis-on .steal-log, body.vis-on .steal-result h3, body.vis-on .story-choice h3, body.vis-on .story-line dd, body.vis-on .story-line dd b, body.vis-on .story-line.now dd, body.vis-on .summary-grid dd, body.vis-on .supply-form label, body.vis-on .supply-panel input, body.vis-on .supply-panel select, body.vis-on .supply-picker, body.vis-on .supply-planner select, body.vis-on .tabs button.active, body.vis-on .tag.bday, body.vis-on .tag.caravan, body.vis-on .tag.cold, body.vis-on .tag.danger, body.vis-on .tag.fest, body.vis-on .talent p, body.vis-on .talent-top b, body.vis-on .toast) {
+  color: var(--c-ink);
+}
+html.desk :where(body.vis-on .touch-actions #touch-use, body.vis-on .version, body.vis-on .welcome .difficulty select, body.vis-on .welcome .save-notice, body.vis-on .welcome h1, body.vis-on .welcome p, body.vis-on button[aria-pressed=true], body.vis-on.a11y-color .alert-item.danger, body.vis-on.a11y-color .alert-item.gold, body.vis-on.a11y-color .alert-item.warn, body.vis-on.a11y-color .daily-opt .risk dd, body.vis-on.a11y-color .dog-skills li.on, body.vis-on.a11y-color .far-deadline, body.vis-on.a11y-color .far-pin.danger, body.vis-on.a11y-color .far-row.danger, body.vis-on.a11y-color .far-row.danger p, body.vis-on.a11y-color .fest-stars li.on, body.vis-on.a11y-color .g-tag.get, body.vis-on.a11y-color .g-tag.good, body.vis-on.a11y-color .g-today li.ok, body.vis-on.a11y-color .hud-food.danger, body.vis-on.a11y-color .story-lack, body.vis-on.a11y-color .toast.gold, body.vis-on.a11y-color .toast.warn, button.active, button[aria-pressed=true]) {
+  color: var(--c-ink);
+}
+html.desk .handbook-entry.has-new::after,
+html.desk body.vis-on .handbook-entry.has-new::after {
+  color: var(--c-ink);
+}
+html.desk :where(#buff-summary, #building-banner, #context kbd, #event-entry, #horde-warning, #selected-label, #selected-label span, .a11y-color .gear-bench-body small.gear-next, .a11y-color .gear-cmp .up, .a11y-color .td-why li.up, .adj-line span, .al-season h4 small, .atlas-blocked, .atlas-conditions li, .atlas-info h4, .atlas-info small, .atlas-local p, .atlas-materials span, .atlas-node small, .atlas-node.locked strong, .atlas-risk, .atlas-status, .atlas-symbol, .atlas-toolbar>span, .b-cost, .b-destination small, .b-event-list small, .b-eyebrow, .b-log small, .b-muted, .b-nav small, .b-place small, .b-place>span, .b-promise small, .b-reason, .b-steps, .b-storage small, .b-teaser span, .boss-bar .t-armor span, .boss-bar .t-pgroup b) {
+  color: var(--c-ink-2);
+}
+html.desk :where(.bt-list small, .bt-mystery small, .bt-no, .bt-order header small, .bt-order.due header small, .bt-route small, .bt-warn li.bad, .bt-water h3, .camp-body p, .card-foot a, .care-dial small, .career-recent li small, .career-table th, .clue dt, .collection small, .confirm-text, .consequence dt, .cost, .cost .missing, .crew-list small, .daily-head small, .daily-later small, .daily-later-note, .daily-luck, .daily-opt .follow dd, .daily-opt .risk dd, .daily-opt dt, .daily-prev, .daily-result.lost .daily-head h3, .daily-stock, .daily-strip p b, .date-row, .demo-nav span, .demo-start small, .detail-heading small, .district-action-meta, .district-caption, .district-chain, .district-detail-top small, .district-empty p) {
+  color: var(--c-ink-2);
+}
+html.desk :where(.district-facts dt, .district-field, .district-form label, .district-legend, .district-list-title p, .district-meter span, .district-metrics b, .district-metrics span, .district-nav-caption, .district-nav-title small, .district-operation, .district-origin>span, .district-pair p, .district-pair>small, .district-power b, .district-reason, .district-scroll h3, .district-scroll p, .district-state, .district-table th, .district-world-head p, .district-world-head small, .dock-objective>b, .dog-skills li, .dog-today, .echo-choice-grid dt, .echo-details summary, .echo-history li.gold, .echo-history li.warn, .echo-history summary, .echo-reason, .echo-summary span, .echo-timeline li, .echo-toolbar>span, .echo-work-grid dt, .eco-grid .eco-polluted, .event-list .manual-row .event-status, .far-deadline, .far-row > small, .far-row.danger p) {
+  color: var(--c-ink-2);
+}
+html.desk :where(.far-row.nf-row b, .feature-num, .feature-purpose>span, .fest-stars, .forecast b, .forecast small, .frontier-card .muted, .frontier-card label, .frontier-card p, .frontier-note, .g-days small, .g-head p, .g-head small, .g-stat, .g-stat.warn b, .g-table thead th, .g-tag.bad, .gear-bench-body small, .gear-bp, .gear-cmp, .gear-dur-text, .gear-guard, .gear-guard-row span, .gr-ch, .gr-perk b, .gr-perk.on small, .gr-use, .gr-year2 h4 small, .guided-work>p, .help-grid, .help-more summary, .hn-cmd small, .hn-past .hn-shelf small, .hot-slot .key, .hp-expand h3 small, .hp-letter small, .hp-rows li small, .hud-brand small, .hud-coins, .hud-location span:last-child) {
+  color: var(--c-ink-2);
+}
+html.desk :where(.hud-vitals .stat-name, .inventory-cell small, .item-detail p, .item-purpose, .journal-catalog p, .journal-extra, .journal-eyebrow, .journal-flow i, .journal-next small, .journal-options p, .journal-options small, .journal-outcome b, .journal-pay, .journal-reason, .journal-steps li, .journal-top, .key-resource, .kin-fishbook li small, .ladder li.partial, .ladder-need, .ledger, .link-chip small, .list-heading p, .list-heading small, .loading .release-label, .loading p, .manual .camp-summary b, .manual .camp-summary span, .manual .echo-metrics b, .manual .echo-metrics span, .manual .echo-reason, .manual .rebuild-card p, .manual .rebuild-report b, .manual .rebuild-report span, .manual summary, .manual-nav button small, .manual-purpose, .manual-row.selected small, .manual-row>span, .map-card p) {
+  color: var(--c-ink-2);
+}
+html.desk :where(.missing, .modal-content .muted, .modal-content p, .modal-content small, .modal-foot, .modal-foot button, .modal-header .close, .modal-header small, .muted, .nf-list li span:not(.nf-season), .nf-phases > p b, .nf-phases h3, .nf-season, .noise-chip.danger, .npc-head small, .odds-parts .minus, .origin-card small, .origin-line small, .outpost-food span, .people li p, .people li small, .phone-tile small, .place-page .manual-purpose, .plant-guide small, .pocket small, .pocket.unknown, .quest-copy, .quest-next, .quest-track, .radial-item kbd, .rebuild-card .muted, .rebuild-card p, .rebuild-chapters b, .rebuild-chapters small, .rebuild-chapters span, .rebuild-contract b, .rebuild-crops p, .rebuild-crops small, .rebuild-find small, .rebuild-find>span) {
+  color: var(--c-ink-2);
+}
+html.desk :where(.rebuild-heading small, .rebuild-help summary, .rebuild-log li, .rebuild-log small, .rebuild-map-status, .rebuild-note, .rebuild-page label, .rebuild-purpose p, .rebuild-report span, .rebuild-result b, .rebuild-source, .rebuild-source a, .rebuild-tools>b, .recipe h3, .recipe p, .reel-hint, .release-label, .resident-line small, .rl-cores li small, .rl-list h4 small, .rl-list li small, .rl-old li small, .rl-page > small:first-child, .rl-wall > summary small, .rush-row span, .seed-main small, .seed-time, .selected-label span, .settings-row small, .ship-row small, .simple-site-header small, .skill-card p, .skill-col h3 span, .skill-col small, .skill-desc, .skill-head p, .skill-spec-row small, .soil-grid small, .stat-name, .steal-head p) {
+  color: var(--c-ink-2);
+}
+html.desk :where(.steal-head small, .steal-log, .steal-result.lost h3, .story b, .story-choice small, .story-letters .story-helper, .story-line dt, .story-log, .story-progress li, .summary-grid dt, .supply-materials small, .supply-panel summary, .swing small, .sx-card .sx-act small, .sx-card .sx-good, .sx-card .sx-now, .sx-group, .sx-menus button small, .sx-sub, .t-card .t-lore, .t-card .t-where, .t-card p, .tag, .talent p, .talent-meta, .tier-tag.tier-junk, .title-actions button.primary:disabled, .title-emblem, .title-eyebrow, .title-footer, .title-footer span:last-child, .title-section, .toast.gold, .toast.warn, .trade-item small, .version, .welcome .difficulty, .welcome .hint, .welcome .intro-stages, .welcome .release-label) {
+  color: var(--c-ink-2);
+}
+html.desk :where(.welcome .save-notice, .welcome .subtitle, .welcome .title-copy, .welcome .title-motto, .welcome .title-save-note, .welcome p, .zest-radio, a, body.vis-on #buff-summary, body.vis-on #building-banner, body.vis-on #context kbd, body.vis-on #event-entry, body.vis-on #horde-warning, body.vis-on #selected-label, body.vis-on .atlas-blocked, body.vis-on .atlas-conditions li, body.vis-on .atlas-info h4, body.vis-on .atlas-local p, body.vis-on .atlas-materials span, body.vis-on .atlas-node.locked strong, body.vis-on .atlas-risk, body.vis-on .atlas-status, body.vis-on .atlas-symbol, body.vis-on .atlas-toolbar>span, body.vis-on .b-cost, body.vis-on .b-destination small, body.vis-on .b-eyebrow, body.vis-on .b-log small, body.vis-on .b-place small, body.vis-on .b-place>span, body.vis-on .b-promise small, body.vis-on .b-reason, body.vis-on .b-storage small, body.vis-on .b-teaser span, body.vis-on .camp-body p, body.vis-on .card-foot a, body.vis-on .clue dt, body.vis-on .confirm-text, body.vis-on .consequence dt, body.vis-on .cost .missing) {
+  color: var(--c-ink-2);
+}
+html.desk :where(body.vis-on .daily-head small, body.vis-on .daily-opt .follow dd, body.vis-on .daily-opt .risk dd, body.vis-on .daily-result.lost .daily-head h3, body.vis-on .daily-strip p b, body.vis-on .date-row, body.vis-on .demo-nav span, body.vis-on .demo-start small, body.vis-on .district-action-meta, body.vis-on .district-chain, body.vis-on .district-empty p, body.vis-on .district-field, body.vis-on .district-form label, body.vis-on .district-legend, body.vis-on .district-list-title p, body.vis-on .district-meter span, body.vis-on .district-metrics b, body.vis-on .district-metrics span, body.vis-on .district-operation, body.vis-on .district-pair p, body.vis-on .district-pair>small, body.vis-on .district-reason, body.vis-on .district-scroll h3, body.vis-on .district-scroll p, body.vis-on .district-state, body.vis-on .district-world-head p, body.vis-on .district-world-head small, body.vis-on .dock-objective>b, body.vis-on .echo-choice-grid dt, body.vis-on .echo-details summary, body.vis-on .echo-history li.gold, body.vis-on .echo-history li.warn, body.vis-on .echo-history summary, body.vis-on .echo-reason, body.vis-on .echo-summary span, body.vis-on .echo-timeline li, body.vis-on .echo-toolbar>span, body.vis-on .echo-work-grid dt, body.vis-on .eco-grid .eco-polluted, body.vis-on .event-list .manual-row .event-status) {
+  color: var(--c-ink-2);
+}
+html.desk :where(body.vis-on .far-deadline, body.vis-on .far-row > small, body.vis-on .far-row.danger p, body.vis-on .feature-num, body.vis-on .feature-purpose>span, body.vis-on .forecast b, body.vis-on .forecast small, body.vis-on .frontier-card label, body.vis-on .frontier-note, body.vis-on .g-stat.warn b, body.vis-on .g-tag.bad, body.vis-on .guided-work>p, body.vis-on .help-grid, body.vis-on .hot-slot .key, body.vis-on .hud-brand small, body.vis-on .hud-coins, body.vis-on .hud-vitals .stat-name, body.vis-on .inventory-cell small, body.vis-on .item-detail p, body.vis-on .item-purpose, body.vis-on .journal-catalog p, body.vis-on .journal-extra, body.vis-on .journal-eyebrow, body.vis-on .journal-flow i, body.vis-on .journal-next small, body.vis-on .journal-options p, body.vis-on .journal-options small, body.vis-on .journal-outcome b, body.vis-on .journal-reason, body.vis-on .journal-top, body.vis-on .key-resource, body.vis-on .ladder li.partial, body.vis-on .ledger, body.vis-on .list-heading small, body.vis-on .loading .release-label, body.vis-on .loading p, body.vis-on .manual .camp-summary b, body.vis-on .manual .echo-metrics b, body.vis-on .manual .echo-reason, body.vis-on .manual .rebuild-card p) {
+  color: var(--c-ink-2);
+}
+html.desk :where(body.vis-on .manual .rebuild-report b, body.vis-on .manual-nav button small, body.vis-on .manual-purpose, body.vis-on .manual-row.selected small, body.vis-on .manual-row>span, body.vis-on .map-card p, body.vis-on .missing, body.vis-on .modal-content .muted, body.vis-on .modal-content p, body.vis-on .modal-content small, body.vis-on .modal-foot, body.vis-on .modal-foot button, body.vis-on .modal-header .close, body.vis-on .modal-header small, body.vis-on .odds-parts .minus, body.vis-on .people li p, body.vis-on .pocket small, body.vis-on .quest-copy, body.vis-on .quest-next, body.vis-on .quest-track, body.vis-on .rebuild-card p, body.vis-on .rebuild-chapters b, body.vis-on .rebuild-contract b, body.vis-on .rebuild-crops p, body.vis-on .rebuild-crops small, body.vis-on .rebuild-find small, body.vis-on .rebuild-find>span, body.vis-on .rebuild-heading small, body.vis-on .rebuild-log li, body.vis-on .rebuild-note, body.vis-on .rebuild-purpose p, body.vis-on .rebuild-report span, body.vis-on .rebuild-result b, body.vis-on .recipe h3, body.vis-on .recipe p, body.vis-on .release-label, body.vis-on .resident-line small, body.vis-on .rush-row span, body.vis-on .selected-label span, body.vis-on .ship-row small) {
+  color: var(--c-ink-2);
+}
+html.desk :where(body.vis-on .simple-site-header small, body.vis-on .skill-card p, body.vis-on .skill-col h3 span, body.vis-on .soil-grid small, body.vis-on .steal-result.lost h3, body.vis-on .story b, body.vis-on .story-choice small, body.vis-on .story-letters .story-helper, body.vis-on .story-line dt, body.vis-on .summary-grid dt, body.vis-on .supply-materials small, body.vis-on .supply-panel summary, body.vis-on .tag, body.vis-on .tier-tag.tier-junk, body.vis-on .title-emblem, body.vis-on .title-eyebrow, body.vis-on .title-footer span:last-child, body.vis-on .title-section, body.vis-on .toast.gold, body.vis-on .toast.warn, body.vis-on .trade-item small, body.vis-on .version, body.vis-on .welcome .difficulty, body.vis-on .welcome .intro-stages, body.vis-on .welcome .release-label, body.vis-on .welcome .save-notice, body.vis-on .welcome .subtitle, body.vis-on .welcome .title-copy, body.vis-on .welcome .title-motto, body.vis-on .welcome .title-save-note, body.vis-on a, body.vis-on button.primary:disabled, body.vis-on button:disabled, body.vis-on details>summary, button.primary:disabled, button:disabled, details>summary) {
+  color: var(--c-ink-2);
+}
+html.desk .frontier-card input::placeholder,
+html.desk .g-today li.bad::before,
+html.desk body.vis-on .g-today li.bad::before {
+  color: var(--c-ink-2);
+}
+html.desk :where(.a11y-color .odds-parts .plus, .atlas-node.locked .atlas-symbol, .bt-dex td, .district-empty>span, .district-pair-line, .district-source, .dock-hints, .far-row.muted p, .gear-slot.empty, .gr-perk, .gr-perk small, .hearts b, .kin-notes small, .kin-q, .ladder li, .ladder li span, .ledger-card small, .manual .rebuild-source, .manual-label, .manual-row small, .msg-log small, .nav-index, .quest-reward, .reel-row small, .rl-cores li b, .rl-old li b, .story-choice button[disabled], .tag.quiet, .zest-moment .zm-hint, body.vis-on .atlas-node.locked .atlas-symbol, body.vis-on .district-empty>span, body.vis-on .dock-hints, body.vis-on .hearts b, body.vis-on .hud-dock button:disabled, body.vis-on .hud-dock button:disabled:hover, body.vis-on .ladder li, body.vis-on .ladder li span, body.vis-on .modal button.primary:disabled, body.vis-on .modal button:disabled.primary, body.vis-on .modal button:not(.atlas-node):disabled) {
+  color: var(--c-ink-3);
+}
+html.desk :where(body.vis-on .modal button:not(.atlas-node):disabled:hover, body.vis-on .tag.quiet, body.vis-on button:disabled, body.vis-on.a11y-color .odds-parts .plus, button:disabled) {
+  color: var(--c-ink-3);
+}
+html.desk :where(.a11y-color .career-recent li.danger b, .a11y-color .gear-cmp .down, .a11y-color .odds-parts .minus, .a11y-color .pocket small, .brand-mark, .gear-bench-body small.gear-why, .gear-why, .ledger-card.warn h3, .reel-card.pull .reel-hint, .rl-cores li.on b, .supply-planner .missing, body.vis-on .brand-mark, body.vis-on .supply-planner .missing, body.vis-on.a11y-color .odds-parts .minus, body.vis-on.a11y-color .pocket small) {
+  color: var(--c-ember-hi);
+}
+html.desk .ln-case h3::before,
+html.desk .ln-report h3::before,
+html.desk .t-book h3::before,
+html.desk .u-trophies h3::before {
+  color: var(--c-ember-hi);
+}
+html.desk :where(.a11y-color .gear-bench-body small.gear-why, .a11y-color .gear-why, .a11y-color .hud-date.ln-day, .a11y-color .hud-food.warn, .a11y-color .td-why li.down, .adj-line b, .al-plot.gold, .al-radio b.gold, .atlas-node.here .atlas-symbol, .b-steps .current, .boss-bar .boss-name b, .boss-bar .t-poise, .boss-bar .t-title, .bt-dex tr.full th, .bt-warn li.good, .camp-summary b, .care-dial.top b, .career-recent li.warn b, .circuit-grid button, .coach, .collection li.rl-pct b, .daily-luck, .decree-grid article.current small:first-child, .echo-metrics b, .echo-number, .echo-storage-summary b, .far-row p b, .far-row.night p b, .fest-stars li.on, .fest-today, .g-good, .gear-chip.warn, .gear-h, .gear-intro h4, .gear-mods summary, .gear-pick h4, .gear-slot-key, .gear-sum b, .gr-perk.on b, .gr-year2 h4) {
+  color: var(--c-warn);
+}
+html.desk :where(.guest small, .hud-food.warn, .intro-card b, .inventory-cell .count, .journal-today > b, .kin-half, .kin-heart.ready, .kin-partner .gold, .kin-partner.gold, .ledger-card h3, .ln-ending h3, .ln-ending p:nth-of-type(3), .map-card .risk, .night-scene b, .noise-chip.warn, .origin-card b, .origin-line b, .outpost-food.warn b, .phone-tile span, .radial-center, .radial-item span, .rebuild-report b, .rl-old li.have b, .skill-col.gr-past5 h3 span, .skill-points, .summary-threats li, .supply-tag, .t-book h3, .t-card h4 small, .tag.canteen, .tag.gold, .tier-tag.tier-important, .tier-tag.tier-treasure, .trade-item strong, .view-rlReview table td:last-child, .view-rlStation .rl-head b, .zest-moment h3, .zest-radio b, body.vis-on #modal-title, body.vis-on #selected-label span) {
+  color: var(--c-warn);
+}
+html.desk :where(body.vis-on #time, body.vis-on .adj-line b, body.vis-on .adj-line span, body.vis-on .atlas-info small, body.vis-on .atlas-node.here .atlas-symbol, body.vis-on .b-event-list small, body.vis-on .b-muted, body.vis-on .b-nav small, body.vis-on .b-steps, body.vis-on .b-steps .current, body.vis-on .camp-summary b, body.vis-on .care-dial small, body.vis-on .care-dial.top b, body.vis-on .circuit-grid button, body.vis-on .collection small, body.vis-on .cost, body.vis-on .crew-list small, body.vis-on .daily-luck, body.vis-on .daily-opt dt, body.vis-on .daily-stock, body.vis-on .decree-grid article.current small:first-child, body.vis-on .detail-heading small, body.vis-on .district-caption, body.vis-on .district-detail-top small, body.vis-on .district-facts dt, body.vis-on .district-nav-caption, body.vis-on .district-nav-title small, body.vis-on .district-origin>span, body.vis-on .district-pair-line, body.vis-on .district-source, body.vis-on .district-table th, body.vis-on .district-timeline span, body.vis-on .dog-skills li, body.vis-on .echo-metrics b, body.vis-on .echo-number, body.vis-on .echo-storage-summary b, body.vis-on .far-row p b, body.vis-on .far-row.muted p, body.vis-on .far-row.night p b, body.vis-on .fest-stars) {
+  color: var(--c-warn);
+}
+html.desk :where(body.vis-on .fest-stars li.on, body.vis-on .fest-today, body.vis-on .frontier-card .muted, body.vis-on .g-good, body.vis-on .g-table thead th, body.vis-on .guest small, body.vis-on .hot-slot .key, body.vis-on .hot-slot .qty, body.vis-on .hud-brand span:last-child, body.vis-on .hud-food.warn, body.vis-on .hud-location span:last-child, body.vis-on .intro-card b, body.vis-on .inventory-cell .count, body.vis-on .journal-pay, body.vis-on .journal-steps li, body.vis-on .link-chip small, body.vis-on .list-heading p, body.vis-on .loading h1, body.vis-on .manual .camp-summary span, body.vis-on .manual .echo-metrics span, body.vis-on .manual .rebuild-report span, body.vis-on .manual .rebuild-source, body.vis-on .manual-label, body.vis-on .manual-row small, body.vis-on .map-card .risk, body.vis-on .modal h3, body.vis-on .modal-foot, body.vis-on .modal-header h2, body.vis-on .modal-header small, body.vis-on .msg-log small, body.vis-on .muted, body.vis-on .nav-index, body.vis-on .night-scene b, body.vis-on .npc-head small, body.vis-on .outpost-food span, body.vis-on .outpost-food.warn b, body.vis-on .people li small, body.vis-on .phone-tile span, body.vis-on .plant-guide small, body.vis-on .pocket.unknown) {
+  color: var(--c-warn);
+}
+html.desk :where(body.vis-on .quest-reward, body.vis-on .rebuild-card .muted, body.vis-on .rebuild-chapters small, body.vis-on .rebuild-chapters span, body.vis-on .rebuild-log small, body.vis-on .rebuild-report b, body.vis-on .rebuild-source, body.vis-on .settings-row small, body.vis-on .skill-col small, body.vis-on .skill-desc, body.vis-on .skill-points, body.vis-on .skill-spec-row small, body.vis-on .story-choice button[disabled], body.vis-on .story-log, body.vis-on .story-progress li, body.vis-on .summary-threats li, body.vis-on .supply-tag, body.vis-on .swing small, body.vis-on .tag.canteen, body.vis-on .talent-meta, body.vis-on .tier-tag.tier-important, body.vis-on .tier-tag.tier-treasure, body.vis-on .title-actions button.primary:disabled, body.vis-on .title-footer, body.vis-on .title-story #modal-title, body.vis-on .trade-item strong, body.vis-on .welcome .hint, body.vis-on .welcome h1, body.vis-on.a11y-color .hud-food.warn, td.gold) {
+  color: var(--c-warn);
+}
+html.desk body.vis-on .frontier-card input::placeholder {
+  color: var(--c-warn);
+}
+html.desk :where(.atlas-conditions .met, .atlas-materials .met, .b-steps .done, .bt-dex td.on, .bt-res, .circuit-grid button.powered, .collection li.done small, .daily-result.won .daily-head h3, .district-reason.done, .district-timeline span, .echo-chapters .done, .g-tag.get, .g-tag.good, .garden-strip p b, .gear-bench-body small.gear-next, .gear-cmp .up, .gr-ch.on, .gr-perk i, .hp-clues .rl-old li.on b, .hp-rows li.full > span, .hp-wall2.done, .hud-food, .journal-complete, .journal-steps .done, .kin-heart.done, .ladder li.on span, .odds-parts .plus, .origin-card .good, .outpost-food b, .raid-report.won h3, .ready, .rebuild-checklist li.done, .rl-effect, .rl-list li.full > span, .steal-result.won h3, .story-choice .story-pack, .story-progress li.done, .supply-done, .t-card .t-perk, .tag) {
+  color: var(--c-good);
+}
+html.desk :where(.tag.good, .talent-done, .td-why li.up, body.vis-on #context, body.vis-on #fishing-status, body.vis-on .alert-item, body.vis-on .atlas-conditions .met, body.vis-on .atlas-materials .met, body.vis-on .atlas-node, body.vis-on .b-steps .done, body.vis-on .canal-grid button.flowing, body.vis-on .circuit-grid button.powered, body.vis-on .collection li.done small, body.vis-on .cost, body.vis-on .daily-result.won .daily-head h3, body.vis-on .district-nav button span, body.vis-on .district-power b, body.vis-on .district-reason.done, body.vis-on .echo-badge, body.vis-on .echo-chapters .done, body.vis-on .g-facts dt, body.vis-on .g-tag.get, body.vis-on .g-tag.give, body.vis-on .g-tag.good, body.vis-on .garden-strip p b, body.vis-on .hud-food, body.vis-on .journal-complete, body.vis-on .journal-steps .done, body.vis-on .ladder li.on span, body.vis-on .note, body.vis-on .odds-parts .plus, body.vis-on .outpost-food b, body.vis-on .raid-report.won h3, body.vis-on .ready, body.vis-on .rebuild-checklist li.done, body.vis-on .rebuild-help summary, body.vis-on .rebuild-map-status, body.vis-on .rebuild-source a, body.vis-on .rebuild-status, body.vis-on .rebuild-tools>b) {
+  color: var(--c-good);
+}
+html.desk :where(body.vis-on .section-row h3, body.vis-on .steal-result.won h3, body.vis-on .story-choice .story-pack, body.vis-on .story-progress li.done, body.vis-on .supply-done, body.vis-on .tag, body.vis-on .tag.good, body.vis-on .talent-done, body.vis-on .thief-strip p b, body.vis-on .tier-tag.tier-normal, body.vis-on button.active, body.vis-on button[aria-pressed=true]) {
+  color: var(--c-good);
+}
+html.desk .g-today li.ok::before,
+html.desk .story-choice article.done > small:first-child::after,
+html.desk body.vis-on .g-today li.ok::before,
+html.desk body.vis-on .story-choice article.done > small:first-child::after {
+  color: var(--c-good);
+}
+html.desk :where(.boss-bar .boss-name small, .career-recent li.danger b, .cost .missing, .district-error, .gear-bench-row.broken .gear-dur-text, .gear-cmp .down, .gear-slot.broken .gear-dur-text, .hearts, .hearts i, .hud-date.ln-day, .ln-strip .far-row.danger p b, .origin-card .cost, .outpost-food.danger b, .raid-report.lost h3, .rush-row.incident b, .story-lack, .t-card .t-gone, .tag.bad, .td-who, .td-why li.down, .u-strip .far-row.danger p b, body.vis-on .cost .missing, body.vis-on .district-error, body.vis-on .hearts, body.vis-on .hearts i, body.vis-on .hud-date.ln-day, body.vis-on .outpost-food.danger b, body.vis-on .raid-report.lost h3, body.vis-on .rush-row.incident b, body.vis-on .story-lack, body.vis-on .tag.bad) {
+  color: var(--c-danger);
+}
+html.desk .t-case h3::before {
+  color: var(--c-danger);
+}
+html.desk :where(.gear-intro kbd, .gear-tag, .handbook-entry small, .journal-actions button:first-child, .journal-steps li.current>span, .ladder li.on, .radial-item.selected, .radial-item.selected span, .radial-item:focus-visible, .radial-item:hover, .radial-item:hover span, .story-choice button, .story-progress li.current, .title-actions button.primary, .worn-tag, body.vis-on .handbook-entry small, body.vis-on .journal-actions button:first-child, body.vis-on .journal-steps li.current>span, body.vis-on .ladder li.on, body.vis-on .story-choice button, body.vis-on .story-progress li.current, body.vis-on .title-actions button.primary, body.vis-on button.primary, button.primary) {
+  color: var(--c-on-ember);
+}
+html.desk .alert-item::before,
+html.desk body.vis-on .alert-item::before {
+  color: var(--c-on-ember);
+}
+/* 底色：深色的面换成规范里的几种 */
+html.desk :where(.coach, .cue-list span, .kin-scene, .ledger-card, .reel-card, .zest-moment, body.vis-on, body.vis-on .modal-backdrop) {
+  background-color: var(--c-panel-2);
+}
+html.desk :where(#sx-pop, .far-pin, .hp-wall2, .modal-backdrop, .rl-list, .t-face, body.vis-on, body.vis-on .far-pin, body.vis-on .modal-backdrop, body.vis-on .modal-foot) {
+  background-color: var(--c-panel);
+}
+html.desk :where(.district-nav, .gear-bench-row, .gear-chip, .gear-detail, .gear-guard-row, .gear-panel, .gear-pick, .gear-pick-row, .hot-slot, .hud-date.ln-day, .journal-today, .manual-nav, .modal-backdrop, .qty-input, .radial-item, .td-converted, .td-crew, .td-mood, .td-rush, body, body.vis-on, body.vis-on #context, body.vis-on #joystick, body.vis-on .alert-item, body.vis-on .b-cost span, body.vis-on .b-detail, body.vis-on .b-facts div, body.vis-on .b-nav, body.vis-on .b-place, body.vis-on .b-promise, body.vis-on .calendar li, body.vis-on .camp-card, body.vis-on .camp-card select, body.vis-on .camp-summary span, body.vis-on .care-dial.low, body.vis-on .care-dial.top, body.vis-on .care-dial:not(.top):not(.low), body.vis-on .collection li, body.vis-on .consequence div, body.vis-on .control-hints kbd) {
+  background-color: var(--c-card);
+}
+html.desk :where(body.vis-on .cost span, body.vis-on .daily-card, body.vis-on .daily-lines, body.vis-on .daily-text, body.vis-on .district-chain span:not(:nth-child(2)), body.vis-on .district-list, body.vis-on .district-metrics, body.vis-on .district-nav, body.vis-on .district-next, body.vis-on .district-note, body.vis-on .district-pair, body.vis-on .district-power, body.vis-on .district-report, body.vis-on .district-result, body.vis-on .district-table th, body.vis-on .echo-choice-grid>section, body.vis-on .echo-storage-summary span, body.vis-on .far-strip, body.vis-on .frontier-card input, body.vis-on .frontier-card select, body.vis-on .g-days li, body.vis-on .g-facts, body.vis-on .g-stat.warn, body.vis-on .g-stat:not(.warn), body.vis-on .g-today li.bad, body.vis-on .g-today li.ok, body.vis-on .g-today li:not(.ok):not(.bad), body.vis-on .garden-strip, body.vis-on .hot-slot, body.vis-on .hud-date.ln-day, body.vis-on .hud-dock, body.vis-on .hud-dock button:disabled, body.vis-on .hud-dock button:disabled:hover, body.vis-on .hud-top, body.vis-on .inventory-cell, body.vis-on .inventory-inspector, body.vis-on .item-detail, body.vis-on .journal-flow span, body.vis-on .journal-main, body.vis-on .journal-options article) {
+  background-color: var(--c-card);
+}
+html.desk :where(body.vis-on .journal-steps li>span, body.vis-on .ladder li, body.vis-on .manual .camp-summary, body.vis-on .manual .cost span, body.vis-on .manual .echo-metrics, body.vis-on .manual .echo-outcome, body.vis-on .manual .rebuild-report, body.vis-on .manual .rebuild-result, body.vis-on .manual-nav, body.vis-on .manual-shortcuts, body.vis-on .modal, body.vis-on .modal-backdrop, body.vis-on .modal-content, body.vis-on .modal-foot, body.vis-on .odds-parts, body.vis-on .outpost-strip, body.vis-on .pack-grid button, body.vis-on .people li, body.vis-on .portrait, body.vis-on .qty-input, body.vis-on .rebuild-card, body.vis-on .rebuild-chapters>div, body.vis-on .rebuild-page select, body.vis-on .rebuild-tool-panel, body.vis-on .recipe, body.vis-on .search, body.vis-on .section-row, body.vis-on .seed-opt, body.vis-on .selected-label, body.vis-on .settings-row, body.vis-on .settings-row select, body.vis-on .skill-card, body.vis-on .skill-spec, body.vis-on .stall-form input, body.vis-on .stall-form select, body.vis-on .supply-panel input, body.vis-on .supply-panel select, body.vis-on .supply-planner select, body.vis-on .toast, body.vis-on .trade-item) {
+  background-color: var(--c-card);
+}
+html.desk :where(body.vis-on input, body.vis-on select, body.vis-on textarea, input, select, textarea) {
+  background-color: var(--c-card);
+}
+html.desk :where(#joystick, #season-chip.ok, #world-viewport, .al-season, .al-season.now, .alert-item, .alert-item:focus-visible, .alert-item:hover, .b-card, .b-destination, .b-detail, .b-event-list .selected, .b-event-list button, .b-facts div, .b-nav, .b-nav button.selected, .b-nav-divider, .b-place, .b-promise, .b-teaser, .bt-order, .bt-water, .calendar li, .calendar li.today, .camp-card, .camp-card select, .camp-summary span, .chance i, .circuit-grid button, .clue, .collection li, .collection li.done, .consequence div, .control-hints kbd, .cost span, .daily-lines, .daily-opt, .daily-strip, .daily-text, .decree-grid article.current) {
+  background-color: var(--c-card-hi);
+}
+html.desk :where(.district-chain span:not(:nth-child(2)), .district-detail, .district-launch, .district-list, .district-list-row.selected, .district-mark, .district-metrics, .district-nav button span, .district-nav button[aria-current=page], .district-nav button[aria-pressed=true], .district-next, .district-note, .district-pair, .district-power, .district-report, .district-result, .district-table th, .echo-choice-grid section, .echo-choice-grid>section, .echo-metrics span, .echo-outcome, .echo-rule, .echo-status, .echo-step, .echo-storage-summary span, .echo-work-grid>article, .eco-grid .eco-polluted, .exhibit, .exhibit-slots>div, .far-strip, .forecast>div, .frontier-card, .frontier-card input, .frontier-card select, .frost-forecast, .g-facts, .garden-strip, .gear-intro-old, .gear-pick-row.current, .gear-slot) {
+  background-color: var(--c-card-hi);
+}
+html.desk :where(.hot-slot, .hot-slot.active, .hud-date:focus-visible, .hud-date:hover, .hud-dock, .hud-food, .hud-food.warn, .hud-top, .intro-card, .inventory-cell, .inventory-inspector, .item-detail, .journal-flow span, .journal-next, .journal-options article, .journal-recipe, .journal-steps li>span, .kin-fishbook li, .kit-list>span, .ladder li, .loading, .manual .camp-summary, .manual .cost span, .manual .echo-metrics, .manual .echo-outcome, .manual .rebuild-note, .manual .rebuild-report, .manual .rebuild-result, .manual-detail, .manual-list, .manual-nav>button.active, .manual-row.selected, .manual-shortcuts, .modal, .modal-foot, .modal-header, .msg-log li, .note, .npc-head, .odds-parts) {
+  background-color: var(--c-card-hi);
+}
+html.desk :where(.offer, .outpost-alert, .outpost-strip, .pack-grid button, .patience, .people li, .pocket-no, .portrait, .rebuild-card, .rebuild-chapters>div, .rebuild-crops article, .rebuild-note, .rebuild-page select, .rebuild-primary, .rebuild-purpose, .rebuild-report span, .rebuild-tool-panel, .recipe, .recipe-flow, .rl-lamps li, .search, .seasons-strip, .seed-no, .selected-label, .settings-row select, .skill-card, .skill-col, .skill-spec, .skill-xp, .stall-form, .stall-form input, .stall-form select, .station-rush, .story-choice article, .story-choice article.current, .story-choice button[disabled], .story-letters .story-letter, .story-line, .story-line.now, .summary-grid div) {
+  background-color: var(--c-card-hi);
+}
+html.desk :where(.supply-panel input, .supply-panel select, .supply-planner select, .supply-status, .tabs button, .tag, .tag.canteen, .tag.caravan, .tag.cold, .tag.fest, .tag.gold, .talent.owned, .thief-strip, .tier-tag.tier-important, .tier-tag.tier-junk, .tier-tag.tier-normal, .tier-tag.tier-treasure, .title-actions button, .title-actions button.primary:disabled, .toast, .touch-actions #touch-roll, .touch-controls button, .trade-item, .version, .welcome .difficulty select, .welcome .save-notice, .winter-strip, body.vis-on #season-chip.ok, body.vis-on #world-viewport, body.vis-on .alert-item:focus-visible, body.vis-on .alert-item:hover, body.vis-on .b-card, body.vis-on .b-destination, body.vis-on .b-event-list .selected, body.vis-on .b-event-list button, body.vis-on .b-nav button.selected, body.vis-on .b-teaser, body.vis-on .calendar li.today, body.vis-on .chance i, body.vis-on .circuit-grid button) {
+  background-color: var(--c-card-hi);
+}
+html.desk :where(body.vis-on .clue, body.vis-on .collection li.done, body.vis-on .cost span, body.vis-on .daily-opt, body.vis-on .daily-strip, body.vis-on .decree-grid article.current, body.vis-on .district-detail, body.vis-on .district-launch, body.vis-on .district-list-row.selected, body.vis-on .district-mark, body.vis-on .district-nav button span, body.vis-on .district-nav button[aria-current=page], body.vis-on .district-nav button[aria-pressed=true], body.vis-on .echo-choice-grid section, body.vis-on .echo-metrics span, body.vis-on .echo-outcome, body.vis-on .echo-rule, body.vis-on .echo-status, body.vis-on .echo-step, body.vis-on .echo-storage-summary span, body.vis-on .echo-work-grid>article, body.vis-on .eco-grid .eco-polluted, body.vis-on .exhibit, body.vis-on .exhibit-slots>div, body.vis-on .feature-purpose, body.vis-on .forecast>div, body.vis-on .frontier-card, body.vis-on .frost-forecast, body.vis-on .hot-slot, body.vis-on .hot-slot.active, body.vis-on .hud-date:focus-visible, body.vis-on .hud-date:hover, body.vis-on .hud-dock button:not(.primary, .danger, .active, .selected, .on, .current, .chosen, .warn, .gold), body.vis-on .hud-dock button:not(.primary, .danger, .active, .selected, .on, .current, .chosen, .warn, .gold):hover, body.vis-on .hud-food, body.vis-on .hud-food.warn, body.vis-on .hud-top .hud-location, body.vis-on .hud-top .hud-settings, body.vis-on .intro-card, body.vis-on .inventory-cell) {
+  background-color: var(--c-card-hi);
+}
+html.desk :where(body.vis-on .inventory-cell:hover, body.vis-on .journal-next, body.vis-on .journal-options article, body.vis-on .journal-recipe, body.vis-on .kit-list>span, body.vis-on .loading, body.vis-on .manual .rebuild-note, body.vis-on .manual-detail, body.vis-on .manual-list, body.vis-on .manual-nav>button.active, body.vis-on .manual-row.selected, body.vis-on .modal, body.vis-on .modal button.primary:disabled, body.vis-on .modal button:disabled.primary, body.vis-on .modal-header, body.vis-on .msg-log li, body.vis-on .note, body.vis-on .npc-head, body.vis-on .offer, body.vis-on .outpost-alert, body.vis-on .patience, body.vis-on .pocket-no, body.vis-on .rebuild-card, body.vis-on .rebuild-chapters .current, body.vis-on .rebuild-crops article, body.vis-on .rebuild-note, body.vis-on .rebuild-primary, body.vis-on .rebuild-purpose, body.vis-on .rebuild-report span, body.vis-on .rebuild-status, body.vis-on .recipe-flow, body.vis-on .seasons-strip, body.vis-on .seed-no, body.vis-on .skill-col, body.vis-on .skill-xp, body.vis-on .stall-form, body.vis-on .station-rush, body.vis-on .story-choice article, body.vis-on .story-choice article.current, body.vis-on .story-choice button[disabled]) {
+  background-color: var(--c-card-hi);
+}
+html.desk :where(body.vis-on .story-letters .story-letter, body.vis-on .story-line, body.vis-on .story-line.now, body.vis-on .summary-grid div, body.vis-on .supply-status, body.vis-on .tabs button, body.vis-on .tag, body.vis-on .tag.canteen, body.vis-on .tag.caravan, body.vis-on .tag.cold, body.vis-on .tag.fest, body.vis-on .talent.owned, body.vis-on .thief-strip, body.vis-on .tier-tag.tier-important, body.vis-on .tier-tag.tier-junk, body.vis-on .tier-tag.tier-normal, body.vis-on .tier-tag.tier-treasure, body.vis-on .title-actions button, body.vis-on .title-actions button.primary:disabled, body.vis-on .touch-controls button, body.vis-on .trade-item, body.vis-on .version, body.vis-on .welcome .difficulty select, body.vis-on .welcome .save-notice, body.vis-on .winter-strip, body.vis-on button, body.vis-on button.active, body.vis-on button.danger, body.vis-on button.primary:disabled, body.vis-on button:disabled, body.vis-on button:hover, body.vis-on button[aria-pressed=true], button, button.active, button.danger, button.primary:disabled, button:disabled, button:hover, button[aria-pressed=true]) {
+  background-color: var(--c-card-hi);
+}
+html.desk :where(.danger, .gear-slot.active, .gear-slot:focus-visible, .gear-slot:hover, body.vis-on .b-nav-divider, body.vis-on .daily-chip, body.vis-on .danger, body.vis-on .eco-grid .eco-forest, body.vis-on .hot-slot.active, body.vis-on .hot-slot:hover, body.vis-on .hud-dock button:is(.active, .selected, .on, .current, .chosen):not(.hot-slot), body.vis-on .hud-food, body.vis-on .inventory-cell.selected, body.vis-on .seed-no, body.vis-on .tabs button.active, body.vis-on button[aria-pressed=true]) {
+  background-color: #3a2414;
+}
+html.desk :where(#horde-warning.raid, .hud-food.danger, .tag.bday, .tag.danger, body.vis-on #horde-warning.raid, body.vis-on .hud-dock button.danger, body.vis-on .hud-dock button.danger:hover, body.vis-on .hud-food.danger, body.vis-on .tag.bday, body.vis-on .tag.danger) {
+  background-color: var(--c-danger-bg);
+}
+html.desk :where(.feature-purpose, .inventory-cell:hover, .rebuild-chapters .current, .rebuild-status) {
+  background-color: #1f3320;
+}
+/* 旧样式里带 !important 的字色、字号（层在 legacy 前面，所以压得过） */
+@layer ui-important {
+  html.desk .item-purpose {
+    color: var(--c-ink-2) !important;
+  }
+  html.desk .recipe-flow {
+    font-size: var(--fs-s, 14px) !important;
+  }
+  html.desk .district-reason {
+    color: var(--c-ink-2) !important;
+  }
+  html.desk .district-reason.done {
+    color: var(--c-good) !important;
+  }
+  html.desk .district-error {
+    color: var(--c-danger) !important;
+  }
+  html.desk .district-note, html.desk .district-next {
+    font-size: var(--fs-s, 14px) !important;
+  }
+  html.desk .district-caption {
+    color: var(--c-ink-2) !important;
+  }
+  html.desk .district-caption {
+    font-size: var(--fs-s, 14px) !important;
+  }
+  html.desk .district-operation {
+    color: var(--c-ink-2) !important;
+  }
+  html.desk .b-reason {
+    color: var(--c-ink-2) !important;
+  }
+  html.desk body.vis-on .item-purpose {
+    color: var(--c-ink-2) !important;
+  }
+  html.desk body.vis-on .district-reason {
+    color: var(--c-ink-2) !important;
+  }
+  html.desk body.vis-on .district-reason.done {
+    color: var(--c-good) !important;
+  }
+  html.desk body.vis-on .district-error {
+    color: var(--c-danger) !important;
+  }
+  html.desk body.vis-on .district-caption {
+    color: var(--c-warn) !important;
+  }
+  html.desk body.vis-on .district-operation {
+    color: var(--c-ink-2) !important;
+  }
+  html.desk body.vis-on .b-reason {
+    color: var(--c-ink-2) !important;
+  }
+}

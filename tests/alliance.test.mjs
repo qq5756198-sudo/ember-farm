@@ -518,9 +518,9 @@ test("after act two the residential neighbours trade one meal a day, never charg
 test("pressing a world-map place keeps it under the pointer (global :active reset would move it)", async () => {
   const { readFileSync } = await import("node:fs");
   const css = (n) => readFileSync(new URL("../dist/" + n, import.meta.url), "utf8");
-  const html = css("index.html");
-  assert.ok(html.indexOf("clarity.css") < html.indexOf("wayfinding.css"), "map rules load after the global button reset");
+  const order = (await import("./style-order.mjs")).styleOrder();
+  assert.ok(order.indexOf("clarity.css") < order.indexOf("wayfinding.css"), "map rules load after the global button reset");
   assert.match(css("clarity.css"), /button:active\{transform:none\}/);
   assert.match(css("wayfinding.css"), /\.atlas-node:active\{transform:translate\(-50%,-50%\)\}/);
-  assert.ok(html.includes('href="alliance.css"'));
+  assert.ok(order.includes("alliance.css"));
 });
