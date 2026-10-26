@@ -90,6 +90,12 @@ test("styles: eight surfaces — button states never add a background colour, on
   assert.match(css, /:is\(\.recipe-grid \.recipe, \.story-choice article, \.settings-section, details\.sx-msg\) button:is\(\.primary, \.sx-primary\):not\(:disabled\) \{\s*background: var\(--c-card\);/);
   // 描边也有名字
   for (const t of ["line-lo", "ember-line", "danger-line", "warn-line"]) assert.match(css, new RegExp("--c-" + t + ":\\s*#[0-9a-f]{6};"), t);
+  // 试玩页会把整页包进一层、最前面放一段默认样式（白底黑字、浅色控件）：页面最外层的颜色在层外面照旧样式再写一遍
+  assert.match(css, /html\.desk,\nhtml:not\(\.desk\) \{\n  color-scheme: dark;\n\}/);
+  assert.match(css, /html:not\(\.desk\) body \{\n  background: #121c17;\n  color: var\(--ink\);\n\}/);
+  assert.match(css, /html:not\(\.desk\) body\.vis-on \{\n  background: #140f0b;\n\}/);
+  const legacy = read("legacy.css");
+  assert.ok(legacy.includes("background: #140f0b;") && legacy.includes("body{background:#121c17;color:var(--ink)}"), "the values copied from the old sheets");
   // 字号只用规范里的几种：14 / 15 / 18 / 像素体 24（标题页的大字 96）；不跟着对话框放大的小卡按放大倍数乘上去
   const body = css.replace(/\/\*[\s\S]*?\*\//g, "");
   for (const m of body.matchAll(/font-size:\s*([^;]+);/g)) assert.match(m[1].trim(), /^(var\(--fs-(s|b|h|px)(, 14px)?\)|calc\(var\(--fs-(s|b|h|px)\) \* var\(--uiz\)\)|14px|24px)$/, m[0]);

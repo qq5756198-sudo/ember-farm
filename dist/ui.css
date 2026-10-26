@@ -277,6 +277,19 @@ html.desk #modal input[type="checkbox"] {
 html:not(.desk) :is(.hud-left, .hud-right) {
   display: contents;
 }
+/* 试玩页会把整页包进一层，最前面一段默认样式（白底、黑字、浅色的下拉框和滚动条）。
+   旧样式现在在最底下一层里，压不过它，所以页面最外层这几样在层外面照原样再写一遍（值和旧样式一样，手机上看着不变）。 */
+html.desk,
+html:not(.desk) {
+  color-scheme: dark;
+}
+html:not(.desk) body {
+  background: #121c17;
+  color: var(--ink);
+}
+html:not(.desk) body.vis-on {
+  background: #140f0b;
+}
 html.desk body:not(.title-screen) .hud-top {
   zoom: var(--uiz);
   display: grid;
