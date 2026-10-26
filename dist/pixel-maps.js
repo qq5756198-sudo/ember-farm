@@ -41,7 +41,7 @@ export function bakeMap(region, { keepPix = false } = {}) {
     if (!make) return null;
     const art = make();
     const codes = region === "shelter" ? [] : [S.road, S.paving, S.dirt, S.wood];
-    out = { ...art, puddles: codes.length ? puddlesOn(art.map, codes, region === "courtyard" ? 46 : 34, 900 + region.length * 13) : [], mood: MAP_MOOD[region] || {} };
+    out = { ...art, puddles: codes.length ? puddlesOn(art.map, codes, region === "courtyard" ? 92 : 68, 900 + region.length * 13) : [], mood: MAP_MOOD[region] || {} };
   }
   if (!keepPix) delete out.pix;
   return out;

@@ -260,7 +260,8 @@ export function paintWater(sc, test = (x, y) => sc.code(x, y) === S.water, ramp 
 export function puddlesOn(map, codes, n = 34, seed = 808) {
   const out = [],
     r = rng(seed);
-  for (let i = 0; i < 1600 && out.length < n; i++) {
+  // v0.41：水洼多一倍，多试几回才找得到地方
+  for (let i = 0; i < 3200 && out.length < n; i++) {
     const x = 6 + Math.floor(r() * (MAP_W - 12)),
       y = 30 + Math.floor(r() * (MAP_H - 60)),
       t = map[y * MAP_W + x];

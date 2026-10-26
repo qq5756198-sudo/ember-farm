@@ -205,10 +205,13 @@ export class Renderer extends SeasonsRenderer {
     c.save();
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const r = Math.min(this.w, this.h) * 0.24,
-      g = c.createRadialGradient(p.x, p.y, r * 0.55, p.x, p.y, r * 2.2);
-    g.addColorStop(0, "rgba(200,205,198,0)");
-    g.addColorStop(0.45, "rgba(200,205,198,0.55)");
-    g.addColorStop(1, "rgba(190,196,190,0.86)");
+      g = c.createRadialGradient(p.x, p.y, r * 0.55, p.x, p.y, r * 2.2),
+      // v0.41：夜里跟着月光偏一点蓝（亮度不变）
+      a = (this.fogTint?.([200, 205, 198]) || [200, 205, 198]).join(","),
+      b = (this.fogTint?.([190, 196, 190]) || [190, 196, 190]).join(",");
+    g.addColorStop(0, `rgba(${a},0)`);
+    g.addColorStop(0.45, `rgba(${a},0.55)`);
+    g.addColorStop(1, `rgba(${b},0.86)`);
     c.fillStyle = g;
     c.fillRect(0, 0, this.w, this.h);
     this.badge("浓雾 · 开箱会惊动附近的感染者", this.w / 2, 70, "#e6e5c7");

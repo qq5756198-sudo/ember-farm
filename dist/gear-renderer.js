@@ -313,11 +313,12 @@ export class Renderer extends VisualRenderer {
           this._pixelText("抓！", z.x, z.y - (z.type === "elite" ? 124 : 100), "#f0a040", 12);
         }
       }
-      // 奔跑者蹲身：地上一支箭头指向它要扑的方向
+      // 奔跑者蹲身：地上一支箭头指向它要扑的方向（v0.41：最后 0.2 秒闪白）
       if (z.lunge?.phase === "crouch") {
         const a = z.lunge.a,
           len = lunge.dist,
-          k0 = 1 - Math.max(0, z.lunge.t) / lunge.crouch;
+          k0 = 1 - Math.max(0, z.lunge.t) / lunge.crouch,
+          danger = z.lunge.t < 0.2 && (calm || Math.floor(t * 30) % 2 === 0) ? "#ffffff" : this.dangerColor;
         c.globalAlpha = 0.95 * pulse(10);
         // 虚线从脚下伸到它要落下的地方，越接近出手伸得越长
         for (let k = 14; k < len * Math.max(0.35, Math.min(1, k0 + 0.35)); k += 12) mark(z.x + Math.cos(a) * k - 3, z.y + Math.sin(a) * k - 2, 6, 4, danger);
@@ -327,10 +328,11 @@ export class Renderer extends VisualRenderer {
         c.globalAlpha = 1;
         this._pixelText("扑！", z.x, z.y - 74, danger, 24);
       }
-      // 重甲跺脚：冲撞会走的那条线
+      // 重甲跺脚：冲撞会走的那条线（v0.41：最后 0.2 秒闪白）
       if (z.charge?.phase === "stomp") {
         const a = z.charge.a,
-          len = charge.len;
+          len = charge.len,
+          danger = z.charge.t < 0.2 && (calm || Math.floor(t * 30) % 2 === 0) ? "#ffffff" : this.dangerColor;
         c.globalAlpha = 0.85 * pulse(12);
         // 两条边线 + 箭头：冲撞会扫过的那条路
         for (let k = 0; k < len; k += 10) {

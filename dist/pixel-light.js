@@ -1,5 +1,7 @@
 // 新画面的光影与天气：一天四段的环境色、火光灯光（一圈圈像素色阶）、雨丝水花水洼、酸雨的小烟、高温的泛白与热浪、
 // 闪电、篝火的火星和烟、夜里的萤火虫和余烬。
+// v0.41「看得清」：夜里留月光（显示用的天色深夜不低于 #6472A2，暗处再“滤色”一层 #0C111D 的底）；灯光 12 圈细台阶。
+// “天黑没有”（灯亮不亮、萤火虫、感染者的眼睛）照旧按原来的天色算，别处的规矩不跟着变。
 import { makeCanvas, hash2, PAL, rgb } from "./pixel-kit.js";
 
 // 环境色：乘到整个画面上（白 = 原色，越暗越像夜里）
@@ -31,9 +33,31 @@ export function skyColor(minute) {
   }
   return SKY[0][1];
 }
+// 月光：深夜显示用的天色（原来 #546096）、暗处留的底色（加在整个画面上）
+export const MOON = [100, 114, 162],
+  MOON_FLOOR = [12, 17, 29];
+// 原来深夜的“夜深程度”（天色 #546096 时）：拿它当 1，黄昏、黎明按比例掺月光
+export const NIGHT_MAX = (235 - (84 + 96 + 150) / 3) / 165;
+// 0（白天）到 1（深夜）：月光掺多少
+export function moonness(minute) {
+  return Math.max(0, Math.min(1, nightness(minute) / NIGHT_MAX));
+}
+export function liftedSky(minute) {
+  const c = skyColor(minute),
+    t = moonness(minute);
+  return c.map((v, k) => Math.round(v + Math.max(0, MOON[k] - v) * t));
+}
 const blend = (c, to, t) => c.map((v, k) => Math.round(v + (to[k] - v) * t));
-export function ambientFor(minute, weather) {
-  let c = skyColor(minute);
+// 夜里的雾、风雪：颜色往月光的蓝偏一点，亮度不变（雾里看得清看不清和原来一样）
+export function moonTint(col, moon, k = 0.6) {
+  const Y = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2],
+    f = Y(col) / Y(MOON),
+    t = Math.max(0, Math.min(1, moon)) * k;
+  return col.map((v, i) => Math.max(0, Math.min(255, Math.round(v + (MOON[i] * f - v) * t))));
+}
+// lifted：显示用（有月光）；false 是 v0.40 的算法（光外的感染者还按它画）
+export function ambientFor(minute, weather, lifted = true) {
+  let c = lifted ? liftedSky(minute) : skyColor(minute);
   const day = minute >= 420 && minute <= 1080;
   if (weather === "小雨") c = blend(c, [158, 174, 200], day ? 0.45 : 0.2);
   else if (weather === "暴雨") c = blend(c, [104, 120, 156], day ? 0.62 : 0.3);
@@ -50,8 +74,9 @@ export function nightness(minute) {
 }
 
 // ---------- 光照图 ----------
-const RINGS = [[1, 0.1], [0.84, 0.11], [0.68, 0.13], [0.52, 0.15], [0.36, 0.18], [0.22, 0.22]],
-  RINGS_SMALL = [[1, 0.16], [0.6, 0.22], [0.3, 0.3]];
+// v0.41：12 圈细台阶（原来 6 圈硬边），加起来和原来一样亮
+export const RINGS = [[1, 0.082], [0.91, 0.055], [0.82, 0.062], [0.73, 0.071], [0.64, 0.074], [0.55, 0.084], [0.46, 0.085], [0.38, 0.096], [0.3, 0.091], [0.23, 0.086], [0.16, 0.079], [0.1, 0.024]],
+  RINGS_SMALL = [[1, 0.13], [0.8, 0.093], [0.6, 0.119], [0.42, 0.148], [0.26, 0.14], [0.14, 0.05]];
 // 光照图按美术像素画（地图 2 个单位一格），放大后自然是一块块的像素光
 export class LightMap {
   constructor() {
@@ -83,7 +108,7 @@ export class LightMap {
         ly = l.y / ART - oy,
         r = l.r / ART;
       if (lx < -r || ly < -r || lx > w + r || ly > h + r) continue;
-      // 四圈色阶：外圈淡、内圈亮
+      // 一圈圈色阶：外圈淡、内圈亮
       const [cr, cg, cb] = l.color,
         p = l.power ?? 1;
       for (const [k, a] of l.small ? RINGS_SMALL : RINGS) {
@@ -171,7 +196,8 @@ export class Weather {
     if (!["小雨", "暴雨", "酸雨"].includes(weather)) return;
     const storm = weather === "暴雨",
       acid = weather === "酸雨",
-      n = calm ? 60 : storm ? 260 : 150,
+      // v0.41：加密一倍（雨丝本来就是 1 个美术像素宽）
+      n = calm ? 120 : storm ? 520 : 300,
       fall = storm ? 680 : 460,
       slant = storm ? 0.34 : 0.16,
       len = storm ? 16 : 12,
@@ -189,6 +215,36 @@ export class Weather {
       for (let k = 0; k < len; k += 4) ctx.fillRect(wx - Math.round((k * slant) / 2) * 2, wy + k, 2, 4);
     }
     ctx.globalAlpha = 1;
+  }
+  // v0.41：地上湿了起一层湿光（亮处偏蓝白，几点一闪一闪的反光）；暴雨时远处（画面上边）发灰。画在光照之前，夜里跟着暗
+  drawSheen(ctx, view, weather, time, calm) {
+    const wet = this.wet;
+    if (wet > 0.05) {
+      ctx.save();
+      ctx.globalCompositeOperation = "soft-light";
+      ctx.globalAlpha = 0.22 * wet;
+      ctx.fillStyle = "#cfe0ff";
+      ctx.fillRect(view.x, view.y, view.w, view.h);
+      ctx.restore();
+      if (!calm) {
+        const slot = Math.floor(time * 2);
+        ctx.fillStyle = "#eef6ff";
+        for (let i = 0; i < 28; i++) {
+          const k = ((time * 2) % 1) + hash2(i, slot, 5) * 0.6;
+          if (k > 1) continue;
+          ctx.globalAlpha = 0.55 * wet * Math.sin(Math.PI * k);
+          ctx.fillRect(Math.round((view.x + hash2(i, slot, 6) * view.w) / 2) * 2, Math.round((view.y + hash2(i, slot, 7) * view.h) / 2) * 2, 2, 2);
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+    if (weather === "暴雨") {
+      const g = ctx.createLinearGradient(0, view.y, 0, view.y + view.h * 0.5);
+      g.addColorStop(0, "rgba(150,164,178,0.26)");
+      g.addColorStop(1, "rgba(150,164,178,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(view.x, view.y, view.w, view.h * 0.5);
+    }
   }
   // 暴雨和酸雨时一层层飘过的雾
   drawMist(ctx, view, weather, time, calm) {

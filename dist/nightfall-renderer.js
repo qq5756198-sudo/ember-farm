@@ -73,12 +73,13 @@ export class Renderer extends GrowRenderer {
     const c = this.ctx,
       p = e.s.player,
       clear = PHASES.fog.fx.clear,
-      a = 0.62 * L.k;
+      a = 0.62 * L.k,
+      fog = (this.fogTint?.(FOG) || FOG).join(",");
     c.save();
     const g = c.createRadialGradient(p.x, p.y - 20, clear * 0.55, p.x, p.y - 20, clear + 260);
-    g.addColorStop(0, `rgba(${FOG.join(",")},0)`);
-    g.addColorStop(0.3, `rgba(${FOG.join(",")},${(a * 0.45).toFixed(3)})`);
-    g.addColorStop(1, `rgba(${FOG.join(",")},${a.toFixed(3)})`);
+    g.addColorStop(0, `rgba(${fog},0)`);
+    g.addColorStop(0.3, `rgba(${fog},${(a * 0.45).toFixed(3)})`);
+    g.addColorStop(1, `rgba(${fog},${a.toFixed(3)})`);
     c.fillStyle = g;
     c.fillRect(view.x - 40, view.y - 40, view.w + 80, view.h + 80);
     if (this.wx?.drawFog) this.wx.drawFog(c, view, this.time || 0, this.calm, "#a7b0b2", 1.4 * L.k);

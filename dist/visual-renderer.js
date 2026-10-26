@@ -11,11 +11,15 @@ import { farmQueries } from "./pixel-farm.js";
 import { pixelSheets } from "./pixel-sheets.js";
 import { personSprite, lookFor, PLAYER_LOOK, dirFromAngle, cropSprite, soilSprite, iconSprite, debrisSprite, shadowSprite, gardenSprite, zombieSprite } from "./pixel-sprites.js";
 import { buildingArt, objectArt, flameArt, carryArt } from "./pixel-props.js";
-import { LightMap, Particles, Weather, ambientFor, nightness, FIRE, LAMP, WARM, SCREEN, EMBER, FIREFLY } from "./pixel-light.js";
+import { LightMap, Particles, Weather, ambientFor, nightness, moonness, moonTint, MOON_FLOOR, FIRE, LAMP, WARM, SCREEN, EMBER, FIREFLY } from "./pixel-light.js";
 
 export const VIS = Object.freeze({ on: true });
 const FONT = '"Fusion Pixel", "Microsoft YaHei", sans-serif';
 const RAIN = ["小雨", "暴雨", "酸雨"];
+// v0.41：夜里出门探索比农场暗多少（原来 25%，有月光以后暗一档就够了）；月光底的浓淡
+export const EXPLORE_DIM = 0.12,
+  MOON_FLOOR_K = 1,
+  MOON_OP = "screen";
 const SNOW = ["小雪", "大雪"];
 const ZOMBIE_ICONS = new Set([16, 17, 18, 19, 20, 21, 22, 23, 58, 59]);
 // 田的编号：农场是数字，溪谷是字符串（valley-0-3），动画和变化要用数字
@@ -731,6 +735,11 @@ export class Renderer extends GardenRenderer {
       c.fillRect(X, Y, Math.round((w * b.hp) / d.hp / 2) * 2, 4);
     }
   }
+  // v0.41：后面各层画的雾（大雾险地、黑瞎子的雾、白毛风、长夜的雾）夜里跟着月光偏一点蓝，亮度不变
+  fogTint(col) {
+    const m = this.v && !this.indoor ? this.lit?.moon || 0 : 0;
+    return m > 0.01 ? moonTint(col, m) : col;
+  }
   // 寒潮里火炉要点着才有火（和原来的条件一样）
   stoveLit(b, e) {
     const wi = e.w?.winter;
@@ -1238,17 +1247,30 @@ export class Renderer extends GardenRenderer {
       this.wx.drawSplashes(c, view, weather, this.time, this.calm);
       this.wx.drawRain(c, view, weather, this.time, this.calm, clear);
       this.wx.drawMist(c, view, weather, this.time, this.calm);
+      this.wx.drawSheen(c, view, weather, this.time, this.calm);
       if (SNOW.includes(weather)) this.wx.drawSnow(c, view, weather === "大雪", this.time, this.calm);
       if (this.mood.mist) this.wx.drawFog(c, view, this.time, this.calm, "#cfd8cc", night > 0.4 ? 0.6 : 1.2);
     }
     // 环境色 + 灯光，用“正片叠底”压到整个画面上
-    let amb = this.indoor ? [146, 152, 168] : ambientFor(this.vMinute, weather);
-    // 夜里在外面探索：四周更黑，手电筒照到的地方才看得清
-    if (!this.indoor && night > 0.3 && !["farm", "market"].includes(s.region)) amb = amb.map((v) => Math.round(v * (1 - 0.25 * night)));
+    // v0.41：显示用的天色夜里留月光；old 是 v0.40 的算法（光外的感染者还按它画，夜里不变容易）
+    let amb = this.indoor ? [146, 152, 168] : ambientFor(this.vMinute, weather),
+      old = this.indoor ? amb : ambientFor(this.vMinute, weather, false);
+    // 夜里在外面探索：四周更黑，手电筒照到的地方才看得清（有月光以后也比农场暗一档）
+    if (!this.indoor && night > 0.3 && !["farm", "market"].includes(s.region)) {
+      amb = amb.map((v) => Math.round(v * (1 - EXPLORE_DIM * night)));
+      old = old.map((v) => Math.round(v * (1 - 0.25 * night)));
+    }
     // 后面的层可以给天色上一层颜色（v0.25 长夜那天天边发红）
-    if (!this.indoor && this.tintAmbient) amb = this.tintAmbient(amb, e) || amb;
-    if (this.wx.flash > 0 && !this.indoor) amb = amb.map((v) => Math.round(v + (255 - v) * this.wx.flash * 0.45));
-    const lit = this.lightMap.render(view, amb, this.collectLights(e, night));
+    if (!this.indoor && this.tintAmbient) {
+      amb = this.tintAmbient(amb, e) || amb;
+      old = this.tintAmbient(old, e) || old;
+    }
+    if (this.wx.flash > 0 && !this.indoor) {
+      amb = amb.map((v) => Math.round(v + (255 - v) * this.wx.flash * 0.45));
+      old = old.map((v) => Math.round(v + (255 - v) * this.wx.flash * 0.45));
+    }
+    const lights = this.collectLights(e, night),
+      lit = this.lightMap.render(view, amb, lights);
     if (lit) {
       c.save();
       c.imageSmoothingEnabled = false;
@@ -1256,6 +1278,22 @@ export class Renderer extends GardenRenderer {
       c.drawImage(lit.canvas, lit.x, lit.y, lit.w, lit.h);
       c.restore();
     }
+    // v0.41：暗处留一层月光底（加在整个画面上），夜里不是一团黑；屋里、隧道里没有
+    const moon = this.indoor ? 0 : moonness(this.vMinute);
+    if (moon > 0.01) {
+      c.save();
+      c.globalCompositeOperation = MOON_OP;
+      // 这是光不是东西的颜色：不换成调色板里最近的颜色（换了就只剩几档，调不细）
+      const vm = this.vMap;
+      this.vMap = false;
+      c.fillStyle = `rgba(${MOON_FLOOR[0]},${MOON_FLOOR[1]},${MOON_FLOOR[2]},${(moon * MOON_FLOOR_K).toFixed(3)})`;
+      this.vMap = vm;
+      c.fillRect(view.x, view.y, view.w, view.h);
+      c.restore();
+    }
+    // 这一帧的光：后面的层要用（光外的感染者按 v0.40 的天色补画、雾跟着天色）
+    this.lit = { amb, old, lights, night, moon, view, lifted: !this.indoor && (moon > 0.01 || amb.some((v, i) => v !== old[i])) };
+    if (this.afterLight) this.afterLight(e, view);
     if (weather === "高温" && night < 0.3 && !this.indoor) {
       c.save();
       c.globalCompositeOperation = "screen";

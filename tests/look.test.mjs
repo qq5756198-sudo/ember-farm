@@ -141,7 +141,8 @@ test("zoom: the interface grows with the window — 1366 ×1, 1920 ×1.25, 2560 
 
 // ---------- 镜头 ----------
 test("camera: at most 2× now — 2560 wide sees the same 1280 as 1920; up to 2050 wide nothing changes", () => {
-  assert.equal(CampaignRenderer, LookRenderer, "the scene is drawn by the new top layer");
+  // v0.41 在上面又加了一层（看得清），镜头这一层还在链上
+  assert.ok(CampaignRenderer === LookRenderer || CampaignRenderer.prototype instanceof LookRenderer, "the scene is drawn through the camera layer");
   assert.equal(CAMERA_MAX, 2);
   const scale = (w, h, zoom = 1) => LookRenderer.prototype.cameraScale.call({ w, h, v: true, dpr: 1 }, { settings: { zoom } });
   assert.equal(scale(1366, 600), 1);

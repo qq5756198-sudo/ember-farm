@@ -7,9 +7,9 @@ const canvasOf = (P) => P.toCanvas();
 // ---------- 影子 ----------
 export function shadowSprite(rx, ry = Math.max(2, Math.round(rx * 0.32))) {
   return cached(`shadow:${rx}:${ry}`, () => {
+    // v0.41：脚下一块实影（实心深色、不透明度 35%），人、感染者、动物、东西都一样
     const P = new Pix(rx * 2 + 2, ry * 2 + 2);
-    P.ellipse(rx + 1, ry + 1, rx, ry, "#140f0b", 0.38);
-    P.ellipse(rx + 1, ry + 1, rx - 1.2, ry - 0.8, "#140f0b", 0.18);
+    P.ellipse(rx + 1, ry + 1, rx, ry, "#140f0b", 0.35);
     return canvasOf(P);
   });
 }
@@ -51,7 +51,7 @@ const FEET = {
   soft: { boots: [PAL.stone[3], PAL.stone[2]] },
   work: { boots: [PAL.soil[1], PAL.soil[0]], tall: true },
 };
-// 主角：乱蓬蓬的棕发、红围巾、橄榄色夹克、背包
+// 主角：乱蓬蓬的棕发、余烬橙的围巾（v0.41：你身上那一点橙，原来是红围巾）、橄榄色夹克、背包
 export const PLAYER_LOOK = {
   skin: PAL.skin[2],
   skinDark: PAL.skin[1],
@@ -61,7 +61,7 @@ export const PLAYER_LOOK = {
   top: TOPS[0],
   pants: PANTS[0],
   boots: [PAL.soil[0], PAL.ash[1]],
-  scarf: [PAL.cloth[1], PAL.cloth[0]],
+  scarf: [PAL.ember[3], PAL.ember[2]],
   bag: [PAL.soil[2], PAL.soil[1]],
 };
 // 按名字或身份给每个人一套固定的长相
@@ -82,10 +82,14 @@ export function lookFor(key, role = null) {
     hat: r() > 0.75 ? pick(["cap", "straw", "beanie"]) : null,
   };
   look.hairLight = mix(look.hair, "#ffffff", 0.18);
+  // v0.41：人不穿绿（绿是感染者的皮肤）；抽到绿衣绿裤的换一件，按名字定，别的长相不变
+  const h = seedOf(key);
+  if (look.top === TOPS[0]) look.top = TOPS[1 + (h % (TOPS.length - 1))];
+  if (look.pants === PANTS[3]) look.pants = PANTS[h % 3];
   if (role === "farmer") Object.assign(look, { hat: "straw", top: TOPS[3] });
   if (role === "mechanic") Object.assign(look, { hat: "cap", top: TOPS[1], pants: PANTS[0] });
   if (role === "medic") Object.assign(look, { top: [PAL.cloth[5], PAL.stone[4], "#f6f0de"], hat: null });
-  if (role === "guard") Object.assign(look, { hat: "helmet", top: TOPS[0], pants: PANTS[3] });
+  if (role === "guard") Object.assign(look, { hat: "helmet", top: [PAL.soil[2], PAL.soil[1], PAL.soil[3]], pants: PANTS[1] });
   if (role === "trader") Object.assign(look, { bag: [PAL.straw[1], PAL.straw[0]], hat: "straw" });
   if (role === "helper") Object.assign(look, { hat: "hardhat", vest: [PAL.ember[3], PAL.straw[4]], top: TOPS[1] });
   if (role === "raider") Object.assign(look, { hat: "hood", top: [PAL.ash[2], PAL.ash[1], PAL.ash[3]], mask: PAL.ash[0], pants: PANTS[2], scarf: null });
@@ -191,6 +195,8 @@ function drawPerson(L, dir, frame, pose) {
     }
   }
   P.hline(bx, bx + bw - 1, legTop - 1, L.belt || PAL.soil[0]);
+  // v0.41：感染者的衣摆是破的，一条条耷拉下来，剪影边上参差不齐
+  if (L.blood) for (let x = bx; x < bx + bw; x++) if ((x * 5 + (L.bloodSeed || "").length) % 3 === 0) P.set(x, legTop + 1, td);
   if (AR) {
     const H = legTop - bodyTop;
     // 保温衣：长到大腿，一道道绗线

@@ -959,7 +959,8 @@ export function farmQueries(map) {
 export function puddleSpots(map) {
   const out = [],
     r = rng(808);
-  for (let i = 0; i < 900 && out.length < 34; i++) {
+  // v0.41：水洼多一倍
+  for (let i = 0; i < 1800 && out.length < 68; i++) {
     const x = Math.floor(r() * FARM_W),
       y = Math.floor(r() * FARM_H),
       t = map[y * FARM_W + x];

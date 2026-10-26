@@ -563,7 +563,7 @@ export class Renderer extends NfRenderer {
     if (!cv || cv.width !== W || cv.height !== H) cv = this._tFogCv = makeCanvas(W, H);
     if (!cv) return;
     const g = cv.getContext("2d"),
-      col = F.white ? [226, 232, 236] : [52, 64, 62],
+      col = this.fogTint ? this.fogTint(F.white ? [226, 232, 236] : [52, 64, 62]) : F.white ? [226, 232, 236] : [52, 64, 62],
       a = F.white ? 0.9 : 0.86;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalCompositeOperation = "source-over";
@@ -604,7 +604,7 @@ export class Renderer extends NfRenderer {
     // 几条慢慢飘的雾带
     if (this.wx?.drawFog && !F.white) {
       c.save();
-      this.wx.drawFog(c, view, this.time || 0, this.calm, "#8e9a96", 1.1);
+      this.wx.drawFog(c, view, this.time || 0, this.calm, rgba(this.fogTint ? this.fogTint([142, 154, 150]) : [142, 154, 150], 1), 1.1);
       c.restore();
     }
   }
