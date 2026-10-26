@@ -262,6 +262,9 @@ test("wiring: game.js imports the look, marks each page, refits icons after the 
   assert.match(g, /paintNotices\(\);lookHud\(engine\);\}/);
   assert.match(g, /engine\.s\.slot=slot;engine\.reload=null;hudCache='';[^}]*if\(started\)updateHUD\(\);\}/);
   assert.match(g, /if\(menu\)closeMenu\(\);else showMenu\('sx',\{view:'menus'\}\);return;\}/);
+  // 手柄：十字键挪焦点也走得到建造页的图标格（不是按钮，是 role=button 的格子）
+  assert.match(g, /function padFocus\(dir\)\{const list=\[\.\.\.\$\('#modal'\)\.querySelectorAll\('button:not\(\[disabled\]\),input:not\(\[disabled\]\),select:not\(\[disabled\]\),summary,\[role="button"\]\[tabindex="0"\]'\)\]/);
+  assert.match(read("look-ui.js"), /if \(ev\.detail === 0\) aside\.querySelector\('button\[data-action="build"\]:not\(\[disabled\]\)'\)\?\.focus\?\.\(\);/);
   // 背包里“从哪来”和说明一样时不再写第二遍
   assert.match(g, /from===it\.desc\|\|from===engine\.itemPurpose\(id\)/);
 });

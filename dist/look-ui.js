@@ -379,6 +379,8 @@ export function buildTiles(modal, ctx = {}) {
     tile.addEventListener?.("click", (ev) => {
       if (ev.target?.closest?.("button")) return;
       show(tile, true);
+      // 手柄按 A（不是鼠标点的）：选中以后焦点跳到卡上的“建一个”，再按一下 A 就建
+      if (ev.detail === 0) aside.querySelector('button[data-action="build"]:not([disabled])')?.focus?.();
     });
     tile.addEventListener?.("keydown", (ev) => {
       if (ev.key === "Enter" || ev.key === " ") {
