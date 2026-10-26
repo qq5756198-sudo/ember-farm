@@ -11,7 +11,7 @@ import { farmQueries } from "./pixel-farm.js";
 import { pixelSheets } from "./pixel-sheets.js";
 import { personSprite, lookFor, PLAYER_LOOK, dirFromAngle, cropSprite, soilSprite, iconSprite, debrisSprite, shadowSprite, gardenSprite, zombieSprite } from "./pixel-sprites.js";
 import { buildingArt, objectArt, flameArt, carryArt } from "./pixel-props.js";
-import { LightMap, Particles, Weather, ambientFor, nightness, moonness, moonTint, MOON_FLOOR, FIRE, LAMP, WARM, SCREEN, EMBER, FIREFLY } from "./pixel-light.js";
+import { LightMap, Particles, Weather, ambientFor, nightness, moonness, fogColor, MOON_FLOOR, FIRE, LAMP, WARM, SCREEN, EMBER, FIREFLY } from "./pixel-light.js";
 
 export const VIS = Object.freeze({ on: true });
 const FONT = '"Fusion Pixel", "Microsoft YaHei", sans-serif';
@@ -735,10 +735,11 @@ export class Renderer extends GardenRenderer {
       c.fillRect(X, Y, Math.round((w * b.hp) / d.hp / 2) * 2, 4);
     }
   }
-  // v0.41：后面各层画的雾（大雾险地、黑瞎子的雾、白毛风、长夜的雾）夜里跟着月光偏一点蓝，亮度不变
+  // v0.41：后面各层画的雾（大雾险地、黑瞎子的雾、白毛风、长夜的雾）跟着天色走：夜里是蓝灰，不再发白；浓淡和看得见的那一圈不变
   fogTint(col) {
-    const m = this.v && !this.indoor ? this.lit?.moon || 0 : 0;
-    return m > 0.01 ? moonTint(col, m) : col;
+    const L = this.lit,
+      m = this.v && !this.indoor ? L?.moon || 0 : 0;
+    return m > 0.01 && L?.amb ? fogColor(col, L.amb, m) : col;
   }
   // 寒潮里火炉要点着才有火（和原来的条件一样）
   stoveLit(b, e) {

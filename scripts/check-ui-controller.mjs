@@ -3169,3 +3169,81 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.deepEqual(Object.keys(JSON.parse(storage.get(Session.CAMPAIGN_SAVE))).filter((k) => !keys0.includes(k)), [], 'no new save field');
   console.log('Look controller passed: Esc opens the ten menus and closes them, a number key switches the hotbar at once, each page is marked with its name (inventory, build, people), the top bar split left / middle / right with every old number still there, and save/parse.');
 }
+// ================= v0.41.0「看得清」：夜里的月光、光外的感染者画淡、打中白一下、收菜那一下、四角框、场景里的字不小于 14 =================
+{
+  const ui = () => context.inspect();
+  for (let i = 0; i < 6 && ui().menu; i++) click('close');
+  assert.equal(ui().menu, null);
+  const e = ui().engine, R = ui().renderer;
+  const keys0 = Object.keys(JSON.parse(e.serialize()));
+  const minute = e.s.minute, weather = e.s.weather;
+  e.paused = false;
+  if (e.s.region !== 'farm') e.travel('farm');
+  try {
+    // 夜里在外面：显示的天色有月光，原来的天色留着（光外的感染者按它算淡多少）
+    e.s.minute = 23 * 60; e.s.weather = '晴朗';
+    R.resize(1366, 600, 1);
+    R.draw(e, { x: 683, y: 300 }, 0.05);
+    assert.ok(R.lit && R.lit.lifted, 'moonlight at night');
+    assert.ok(R.lit.moon > 0.95, 'full moonlight at 23:00');
+    for (let k = 0; k < 3; k++) assert.ok(R.lit.amb[k] >= R.lit.old[k], 'never darker than before');
+    const p = e.s.player;
+    assert.ok(R.foeAlpha({ x: p.x + 700, y: p.y, id: -41, type: 'slow' }) < 1, 'an infected out of the light is drawn fainter');
+    assert.equal(R.foeAlpha({ x: p.x, y: p.y + 18, id: -42, type: 'slow' }), 1, 'in your own light it is drawn as usual');
+    assert.equal(R.foeAlpha({ x: p.x + 700, y: p.y, id: -43, type: 'slow', windup: 0.3 }), 1, 'about to strike: drawn as usual');
+    // 白天：什么都不淡
+    e.s.minute = 10 * 60;
+    R.draw(e, { x: 683, y: 300 }, 0.05);
+    assert.equal(R.foeAlpha({ x: p.x + 700, y: p.y, id: -44, type: 'slow' }), 1, 'by day nothing is faded');
+    // 打中：画面那一层这一帧就取走，白 0.06 秒
+    e.emitAt('hitFlesh', { x: p.x + 40, y: p.y, id: 4141, type: 'slow' }, { heavy: true });
+    R.draw(e, { x: 683, y: 300 }, 0.016);
+    assert.ok(R._cFlash.has(4141), 'the hit flash starts the next frame');
+    // 收菜：那块田上弹一下、飞到身上
+    const plot = e.s.plots.find((q) => e.isFarmPlot(q));
+    Object.assign(plot, { tilled: true, crop: 'radish', growth: Data.CROPS.radish.grow, wateredDay: e.s.day });
+    Object.assign(p, { x: plot.x, y: plot.y + 30 });
+    assert.ok(e.harvest(plot));
+    R.draw(e, { x: 683, y: 300 }, 0.016);
+    assert.ok(R._cFx.some((f) => f.kind === 'harvest' && f.item === 'radish'), 'the harvest pop starts the next frame');
+    assert.deepEqual(e.takeVfx(), [], 'the scene took everything');
+    // 四角框：面前那一样东西的四个角是规范里“能按”的颜色
+    const ship = e.objects.find((o) => o.type === 'outpostShipping');
+    Object.assign(p, { x: ship.x, y: ship.y + 40 });
+    R.draw(e, { x: 683, y: 300 }, 0.016);
+    const target = e.nearestObject(), box = R.cBox(target, e);
+    assert.ok(box, 'the thing in front of you has a box');
+    const sc = R.camera.scale, cx = Math.round((box.x0 - R.camera.x) * sc), cy = Math.round((box.y0 - R.camera.y) * sc);
+    const img = R.ctx.getImageData(Math.max(0, cx - 12), Math.max(0, cy - 12), 24, 24).data;
+    let cream = 0;
+    for (let i = 0; i < img.length; i += 4) if (img[i] === 255 && img[i + 1] === 241 && img[i + 2] === 200) cream++;
+    assert.ok(cream >= 4, 'a cream corner at the top left of ' + target.type + ' (' + cream + ' pixels)');
+    // 场景里的字：1366 下（镜头 1 倍）没有小于 14 像素的；1920 下也没有
+    const ctx = R.ctx, fillText = ctx.fillText, seen = [];
+    ctx.fillText = function (t, x, y, ...a) {
+      const m = this.getTransform(), px = parseFloat(/(\d+(?:\.\d+)?)px/.exec(this.font)?.[1] || '0');
+      seen.push([String(t), (px * Math.hypot(m.a, m.b)) / (R.dpr || 1)]);
+      return fillText.call(this, t, x, y, ...a);
+    };
+    try {
+      for (const [w, h] of [[1366, 600], [1920, 900]]) {
+        R.resize(w, h, 1);
+        seen.length = 0;
+        R.draw(e, { x: w / 2, y: h / 2 }, 0.016);
+        const small = seen.filter(([t, s]) => /[一-鿿]/.test(t) && s < 13.99);
+        assert.ok(seen.length > 0, 'some scene text at ' + w);
+        assert.deepEqual(small, [], 'no scene text under 14 px at ' + w);
+      }
+    } finally {
+      ctx.fillText = fillText;
+    }
+  } finally {
+    e.s.minute = minute; e.s.weather = weather;
+    R.resize(1366, 600, 1);
+  }
+  // 存档：没有新字段
+  click('save');
+  assert.deepEqual(Object.keys(JSON.parse(storage.get(Session.CAMPAIGN_SAVE))).filter((k) => !keys0.includes(k)), [], 'no new save field');
+  Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
+  console.log('Clear controller passed: moonlight at night (never darker than before), an infected out of the light drawn fainter but as usual in your light, when striking and by day, the hit flash and the harvest pop start the next frame, the scene takes every effect, cream corners on the thing in front of you, no scene text under 14 px at 1366 and 1920, and save/parse.');
+}

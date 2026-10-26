@@ -281,15 +281,14 @@ test("wiring: game.js imports the look, marks each page, refits icons after the 
   assert.match(g, /from===it\.desc\|\|from===engine\.itemPurpose\(id\)/);
 });
 
-test("words: no developer words in the new layer, and the version is 0.40.0 一套 in the title and settings", () => {
+test("words: no developer words in the new layer, and the version (0.40.0 一套 or later) is in the title and settings", () => {
   for (const f of ["look-ui.js", "look-renderer.js", "ui.css"]) {
     const t = read(f).replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, "");
     assert.doesNotMatch(t, /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN/, f);
   }
   const v = read("version.js");
-  assert.match(v, /GAME_VERSION='v0\.40\.0'/);
-  assert.match(v, /GAME_EDITION='一套'/);
-  assert.match(read("index.html"), /<title>余烬农场 v0\.40\.0 · 一套<\/title>/);
+  assert.match(v, /GAME_VERSION='v0\.(4\d|[5-9]\d)\.\d+'/);
+  assert.match(read("index.html"), /<title>余烬农场 v0\.(4\d|[5-9]\d)\.\d+ · [^<]+<\/title>/);
 });
 
 test("saves: nothing new is written — the look never touches the save", () => {

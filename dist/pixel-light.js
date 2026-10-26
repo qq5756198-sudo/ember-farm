@@ -48,12 +48,11 @@ export function liftedSky(minute) {
   return c.map((v, k) => Math.round(v + Math.max(0, MOON[k] - v) * t));
 }
 const blend = (c, to, t) => c.map((v, k) => Math.round(v + (to[k] - v) * t));
-// 夜里的雾、风雪：颜色往月光的蓝偏一点，亮度不变（雾里看得清看不清和原来一样）
-export function moonTint(col, moon, k = 0.6) {
-  const Y = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2],
-    f = Y(col) / Y(MOON),
-    t = Math.max(0, Math.min(1, moon)) * k;
-  return col.map((v, i) => Math.max(0, Math.min(255, Math.round(v + (MOON[i] * f - v) * t))));
+// v0.41：夜里的雾、风雪跟着天色走——雾的颜色乘上这一刻的环境色（白天环境色接近白，几乎不变；夜里是蓝灰，不再发白）。
+// 浓淡（透明度）和看得见的那一圈不变。moon 是月光掺了几成（0 白天，1 深夜）
+export function fogColor(col, amb, moon) {
+  const t = Math.max(0, Math.min(1, moon || 0));
+  return col.map((v, i) => Math.max(0, Math.min(255, Math.round(v * (1 - t + (t * (amb?.[i] ?? 255)) / 255)))));
 }
 // lifted：显示用（有月光）；false 是 v0.40 的算法（光外的感染者还按它画）
 export function ambientFor(minute, weather, lifted = true) {
@@ -216,27 +215,24 @@ export class Weather {
     }
     ctx.globalAlpha = 1;
   }
-  // v0.41：地上湿了起一层湿光（亮处偏蓝白，几点一闪一闪的反光）；暴雨时远处（画面上边）发灰。画在光照之前，夜里跟着暗
+  // v0.41：地上湿了起一层湿光——一点点蓝白的反光一闪一闪（不整片提亮，湿地面本来该暗一点）；
+  // 暴雨时远处（画面上边）发灰。画在光照之前，夜里跟着暗
   drawSheen(ctx, view, weather, time, calm) {
     const wet = this.wet;
-    if (wet > 0.05) {
-      ctx.save();
-      ctx.globalCompositeOperation = "soft-light";
-      ctx.globalAlpha = 0.22 * wet;
-      ctx.fillStyle = "#cfe0ff";
-      ctx.fillRect(view.x, view.y, view.w, view.h);
-      ctx.restore();
-      if (!calm) {
-        const slot = Math.floor(time * 2);
-        ctx.fillStyle = "#eef6ff";
-        for (let i = 0; i < 28; i++) {
-          const k = ((time * 2) % 1) + hash2(i, slot, 5) * 0.6;
-          if (k > 1) continue;
-          ctx.globalAlpha = 0.55 * wet * Math.sin(Math.PI * k);
-          ctx.fillRect(Math.round((view.x + hash2(i, slot, 6) * view.w) / 2) * 2, Math.round((view.y + hash2(i, slot, 7) * view.h) / 2) * 2, 2, 2);
-        }
-        ctx.globalAlpha = 1;
+    if (wet > 0.05 && !calm) {
+      const slot = Math.floor(time * 2),
+        n = Math.round(48 * wet);
+      ctx.fillStyle = "#eef6ff";
+      for (let i = 0; i < n; i++) {
+        const k = ((time * 2) % 1) + hash2(i, slot, 5) * 0.6;
+        if (k > 1) continue;
+        ctx.globalAlpha = 0.6 * Math.sin(Math.PI * k);
+        const x = Math.round((view.x + hash2(i, slot, 6) * view.w) / 2) * 2,
+          y = Math.round((view.y + hash2(i, slot, 7) * view.h) / 2) * 2;
+        ctx.fillRect(x, y, 2, 2);
+        if (hash2(i, slot, 8) > 0.6) ctx.fillRect(x + 2, y, 2, 2);
       }
+      ctx.globalAlpha = 1;
     }
     if (weather === "暴雨") {
       const g = ctx.createLinearGradient(0, view.y, 0, view.y + view.h * 0.5);

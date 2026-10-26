@@ -10,7 +10,7 @@ import { Engine as SimpleEngine } from "../dist/simple.js";
 import { Renderer as CampaignRenderer } from "../dist/campaign-renderer.js";
 import { Renderer as ClearRenderer, hideAlpha, lightAt, attacking, cursorKind, shapeInto, HIDE_MIN, LIGHT_FULL, C41, FX_T, HALO } from "../dist/clear-renderer.js";
 import { Renderer as LookRenderer } from "../dist/look-renderer.js";
-import { skyColor, liftedSky, moonness, nightness, ambientFor, moonTint, MOON, MOON_FLOOR, NIGHT_MAX, RINGS, RINGS_SMALL } from "../dist/pixel-light.js";
+import { skyColor, liftedSky, moonness, nightness, ambientFor, fogColor, MOON, MOON_FLOOR, NIGHT_MAX, RINGS, RINGS_SMALL } from "../dist/pixel-light.js";
 import { lookFor, PLAYER_LOOK, zombiePix, ZOMBIE_LOOKS } from "../dist/pixel-sprites.js";
 import { puddlesOn } from "../dist/pixel-build.js";
 import { PAL } from "../dist/pixel-kit.js";
@@ -69,14 +69,15 @@ test("night: the sky shown at deep night is the moonlit one, never darker than b
   // 原来的算法还在（光外的感染者按它算淡多少）
   assert.deepEqual(ambientFor(1380, "晴朗", false), skyColor(1380));
   assert.notDeepEqual(ambientFor(1380, "晴朗"), skyColor(1380));
-  // 雾：夜里往月光的蓝偏，亮度不变（雾里看得清看不清和原来一样）
-  const Y = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  // 雾：跟着天色走——白天不变，夜里乘上月光的天色，是蓝灰、不再发白
+  const night = ambientFor(1380, "晴朗");
   for (const fog of [[52, 64, 62], [200, 205, 198], [92, 100, 104]]) {
-    const t = moonTint(fog, 1);
-    assert.ok(Math.abs(Y(t) - Y(fog)) < 3, "same brightness " + fog);
-    assert.ok(t[2] - t[0] > fog[2] - fog[0], "bluer " + fog);
-    assert.deepEqual(moonTint(fog, 0), fog);
+    const t = fogColor(fog, night, 1);
+    for (let k = 0; k < 3; k++) assert.ok(t[k] < fog[k], "darker at night " + fog);
+    assert.ok(t[2] / Math.max(1, t[0]) > fog[2] / fog[0], "bluer " + fog);
+    assert.deepEqual(fogColor(fog, night, 0), fog, "unchanged by day");
   }
+  assert.ok(fogColor([200, 205, 198], night, 1).every((v) => v < 140), "the hazard fog is no longer white at night");
 });
 
 test("lights: 12 fine rings give about the same light as the old 6 hard ones (indoors is not darker)", () => {
@@ -104,7 +105,7 @@ test("infected outside the light are drawn fainter so they stand out from the gr
   assert.equal(hideAlpha([255, 250, 240], [255, 250, 240], 0, 0), 1);
   // 深夜光外：淡一些，但不会淡到看不见
   const dark = hideAlpha(amb, old, 0, floor);
-  assert.ok(dark < 0.85 && dark >= HIDE_MIN, String(dark));
+  assert.ok(dark < 0.9 && dark >= HIDE_MIN, String(dark));
   // 灯光越足越接近照常，足了就照常
   let prev = dark;
   for (const l of [10, 20, 40, LIGHT_FULL]) {
@@ -364,11 +365,42 @@ test("weather: rain twice as dense, a wet sheen and far greying in storms, twice
   assert.match(read("clear-renderer.js"), /snowCap\(canvas\)/);
 });
 
-test("tunnel and fog: the tunnel shows walls and rails as a very dark outline; titan, hazard and long-night fogs turn moon-blue at night at the same brightness", () => {
+test("tunnel and fog: the tunnel shows walls and rails as a very dark outline; titan, hazard and long-night fogs follow the night sky (blue-grey, not white)", () => {
   const src = read("clear-renderer.js");
   assert.match(src, /cTunnel\(e\) \{\s*if \(!e\.inTunnel\?\.\(\) \|\| !this\.mood\?\.tunnel\) return;/);
   assert.match(src, /c\.globalAlpha = 0\.26;/);
   assert.match(read("titan-renderer.js"), /this\.fogTint \? this\.fogTint\(F\.white/);
   assert.match(read("farlands-renderer.js"), /this\.fogTint\?\.\(\[200, 205, 198\]\)/);
   assert.match(read("nightfall-renderer.js"), /this\.fogTint\?\.\(FOG\)/);
+});
+
+test("words: no developer words in the v0.41 layers, and the version is 0.41.0 看得清 in the title and settings", () => {
+  for (const f of ["clear.js", "clear-renderer.js"]) {
+    const t = read(f).replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, "");
+    assert.doesNotMatch(t, /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|Joja|祝尼魔|星之果实/, f);
+  }
+  const v = read("version.js");
+  assert.match(v, /GAME_VERSION='v0\.41\.0'/);
+  assert.match(v, /GAME_EDITION='看得清'/);
+  assert.match(read("index.html"), /<title>余烬农场 v0\.41\.0 · 看得清<\/title>/);
+  assert.match(read("index.html"), /data-release>v0\.41\.0 · 看得清</);
+});
+
+test("rim light: at night a person or infected next to a warm lamp or fire gets a thin edge on that side; not by day, not from cold or own lights, not with reduce-flashing", () => {
+  const lamp = { x: 100, y: 100, r: 120, color: [255, 214, 140], power: 0.95 },
+    fire = { x: 100, y: 100, r: 140, color: [255, 168, 88], power: 0.9 },
+    cold = { x: 100, y: 100, r: 150, color: [215, 235, 255], power: 0.8 },
+    own = { x: 160, y: 104, r: 140, color: [176, 160, 132], power: 0.62 };
+  const me = (lights, moon = 1, calm = false) => ({ v: true, calm, indoor: false, lit: { moon, lights } });
+  const rim = (m, x = 160, y = 128) => ClearRenderer.prototype.cRim.call(m, x, y);
+  const r = rim(me([lamp]));
+  assert.ok(r, "next to a lamp");
+  assert.equal(r.dx, -2, "towards the lamp (it is to the left)");
+  assert.equal(r.color, "#ffd68c");
+  assert.equal(rim(me([fire])).color, "#ffa858", "fire light is orange");
+  assert.equal(rim(me([cold])), null, "cold lights give no rim");
+  assert.equal(rim(me([own])), null, "your own torch gives no rim");
+  assert.equal(rim(me([lamp], 0)), null, "not by day");
+  assert.equal(rim(me([lamp], 1, true)), null, "not with reduce-flashing");
+  assert.equal(rim(me([lamp]), 600, 128), null, "far from the lamp");
 });

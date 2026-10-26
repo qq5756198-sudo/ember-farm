@@ -22,8 +22,10 @@ export const FX_T = { flash: 0.06, pop: 0.18, fly: 0.35, arc: 0.35, drop: 0.3, l
 // ================= 光外的感染者 =================
 // 再淡也不低于这么多（怕哪种天色算出来太淡，看着像没有）；HIDE_GAMMA：亮一点的地方同样的颜色差看着小一点，
 // 不用淡那么多（量出来的）；LIGHT_FULL：灯光加了这么多就照常画
+// 灯光加了这么多才有亮边（灯心附近才有，远处不画）
+export const RIM_MIN = 30;
 export const HIDE_MIN = 0.45,
-  HIDE_GAMMA = 0.8,
+  HIDE_GAMMA = 0.45,
   LIGHT_FULL = 60;
 const Y = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 export const FLOOR_Y = Y(MOON_FLOOR);
@@ -66,11 +68,28 @@ export function attacking(z) {
 //    读出来的是没乘之前的数（留到光照后再写的字照原来的透明度写）。
 // 2. 挨打白一下：white > 0 时每画一张小图，紧跟着在同一个地方画一张白剪影（影子不算）。
 const whiteCache = new WeakMap();
+// 一张小图的剪影染成一种颜色（人物靠灯一侧的亮边用）
+const tintCache = new WeakMap();
+export function tintOf(img, color) {
+  if (!img || !(img.width > 0)) return null;
+  let m = tintCache.get(img);
+  if (!m) tintCache.set(img, (m = new Map()));
+  if (m.has(color)) return m.get(color);
+  let t = makeCanvas(img.width, img.height);
+  const g = t?.getContext?.("2d");
+  if (g) {
+    g.drawImage(img, 0, 0);
+    g.globalCompositeOperation = "source-in";
+    g.fillStyle = color;
+    g.fillRect(0, 0, img.width, img.height);
+  } else t = null;
+  m.set(color, t);
+  return t;
+}
 export function whiteOf(img) {
   if (!img || !(img.width > 0)) return null;
-  let w = whiteCache.get(img);
-  if (w !== undefined) return w;
-  w = makeCanvas(img.width, img.height);
+  if (whiteCache.has(img)) return whiteCache.get(img);
+  let w = makeCanvas(img.width, img.height);
   const g = w?.getContext?.("2d");
   if (g) {
     g.drawImage(img, 0, 0);
@@ -81,12 +100,17 @@ export function whiteOf(img) {
   whiteCache.set(img, w);
   return w;
 }
+const protoOwn = (obj, key) => {
+  let proto = Object.getPrototypeOf(obj),
+    d = null;
+  while (proto && !(d = Object.getOwnPropertyDescriptor(proto, key))) proto = Object.getPrototypeOf(proto);
+  return d;
+};
 export function installCtx(ctx) {
   if (!ctx || ctx.__c41) return !!ctx?.__c41;
-  let proto = Object.getPrototypeOf(ctx),
-    d = null;
-  while (proto && !(d = Object.getOwnPropertyDescriptor(proto, "globalAlpha"))) proto = Object.getPrototypeOf(proto);
-  if (!d?.get || !d?.set || typeof ctx.drawImage !== "function") return false;
+  const d = protoOwn(ctx, "globalAlpha"),
+    draw = protoOwn(ctx, "drawImage")?.value;
+  if (!d?.get || !d?.set || typeof draw !== "function") return false;
   try {
     Object.defineProperty(ctx, "globalAlpha", {
       configurable: true,
@@ -97,16 +121,30 @@ export function installCtx(ctx) {
         d.set.call(this, v >= 0 && v <= 1 ? v * (this.__fade || 1) : v);
       },
     });
-    const draw = ctx.drawImage;
+    // 用原型上那个画图的方法（不经过实例上的这一个，不会自己调自己）
     ctx.drawImage = function (img, ...a) {
+      // 靠灯的一侧一道亮边：同一张剪影染成灯的颜色，往灯那边挪 1 个美术像素，垫在下面
+      const rim = this.__rim;
+      // 只给人物、感染者的身子（小图标、心情脸、血条不画亮边）
+      if (rim && !this.__noWhite && img && (a.length >= 8 ? a[3] : img.height) >= 24) {
+        const t = tintOf(img, rim.color);
+        if (t) {
+          const m = this.getTransform();
+          this.save();
+          this.setTransform(m.a, m.b, m.c, m.d, m.e + rim.dx * Math.abs(m.a), m.f + rim.dy * Math.abs(m.d));
+          draw.call(this, t.native || t, ...a);
+          this.restore();
+        }
+      }
       draw.call(this, img, ...a);
       if (this.__white > 0 && !this.__noWhite) {
         const w = whiteOf(img);
-        if (w) draw.call(this, w, ...a);
+        if (w) draw.call(this, w.native || w, ...a);
       }
     };
     ctx.__fade = 1;
     ctx.__white = 0;
+    ctx.__rim = null;
     ctx.__c41 = true;
   } catch {
     return false;
@@ -159,9 +197,8 @@ export function stripeTile(color) {
 const capCache = new WeakMap();
 export function snowCap(img) {
   if (!img || !(img.width > 0)) return null;
-  let cap = capCache.get(img);
-  if (cap !== undefined) return cap;
-  cap = null;
+  if (capCache.has(img)) return capCache.get(img);
+  let cap = null;
   try {
     const W = img.width,
       H = img.height,
@@ -352,6 +389,56 @@ export class Renderer extends LookRenderer {
     if (this._cFx.length > 40) this._cFx.splice(0, this._cFx.length - 40);
   }
 
+  // ================= 人物靠灯的一侧一道亮边（夜里，篝火、路灯旁） =================
+  // 找这一点最亮的那盏暖色灯（灯光够亮才有）：亮边往灯那边挪 1 个美术像素
+  cRim(x, y) {
+    const L = this.lit;
+    if (!this.v || this.calm || this.indoor || !L || (L.moon || 0) < 0.3) return null;
+    let best = null,
+      bv = RIM_MIN;
+    for (const l of L.lights || []) {
+      const col = l.color || LAMP;
+      if (col[0] < col[2] + 60) continue; // 只要暖色的灯和火
+      const v = lightAt([l], x, y - 24);
+      if (v > bv) {
+        bv = v;
+        best = l;
+      }
+    }
+    if (!best) return null;
+    const dx = best.x - x,
+      dy = best.y - (y - 24),
+      d = Math.hypot(dx, dy);
+    if (d < 6) return null;
+    const fire = (best.color || LAMP)[1] < 190;
+    return { dx: Math.round(dx / d) * 2, dy: Math.round(dy / d) * 2, color: fire ? "#ffa858" : "#ffd68c" };
+  }
+  cWithRim(x, y, fn) {
+    const rim = this.cRim(x, y);
+    if (!rim || !installCtx(this.ctx)) return fn();
+    const c = this.ctx,
+      was = c.__rim;
+    c.__rim = rim;
+    try {
+      return fn();
+    } finally {
+      c.__rim = was;
+    }
+  }
+  drawPlayer(e) {
+    const p = e?.s?.player;
+    return p ? this.cWithRim(p.x, p.y, () => super.drawPlayer(e)) : super.drawPlayer(e);
+  }
+  drawVillager(o, x, y, alpha = 1, index = 56) {
+    return this.cWithRim(x, y, () => super.drawVillager(o, x, y, alpha, index));
+  }
+  person(sheet, x, y, facing, moving, alpha) {
+    return this.cWithRim(x, y, () => super.person(sheet, x, y, facing, moving, alpha));
+  }
+  drawHelper(o, e) {
+    return this.cWithRim(o.x, o.y, () => super.drawHelper(o, e));
+  }
+
   // ================= 感染者 =================
   // 这个感染者画几成
   foeAlpha(z) {
@@ -373,19 +460,23 @@ export class Renderer extends LookRenderer {
       until = this._cFlash.get(z.id),
       white = until != null && (this.time || 0) < until && !this.calm && this.v;
     if (until != null && !white) this._cFlash.delete(z.id);
-    if ((k >= 0.995 && !white) || !installCtx(this.ctx)) return super.drawEnemy(z, e);
+    const rim = this.cRim(z.x, z.y);
+    if ((k >= 0.995 && !white && !rim) || !installCtx(this.ctx)) return super.drawEnemy(z, e);
     const c = this.ctx,
-      a = c.globalAlpha;
+      a = c.globalAlpha,
+      wasRim = c.__rim;
     c.save();
     c.__fade = k;
     c.globalAlpha = a;
     c.__white = white ? 1 : 0;
+    c.__rim = rim;
     try {
       return super.drawEnemy(z, e);
     } finally {
       c.restore();
       c.__fade = 1;
       c.__white = 0;
+      c.__rim = wasRim;
     }
   }
   // 影子不跟着白
@@ -550,7 +641,7 @@ export class Renderer extends LookRenderer {
     } catch {
       L = null;
     }
-    if (!L?.grid || typeof Path2D === "undefined") return;
+    if (!L?.grid || typeof Path2D !== "function") return;
     if (this._cTunKey !== L.key) {
       const T = 64,
         COLS = 24,
@@ -615,7 +706,7 @@ export class Renderer extends LookRenderer {
     c.fill();
     if (k > 0) {
       const tile = stripeTile(C41.danger),
-        pat = tile && c.createPattern ? c.createPattern(tile, "repeat") : null;
+        pat = tile && c.createPattern ? c.createPattern(tile.native || tile, "repeat") : null;
       if (pat) {
         c.globalAlpha = 0.85;
         c.fillStyle = pat;
@@ -821,9 +912,9 @@ export class Renderer extends LookRenderer {
       k = clamp(1 - S.t / Math.max(0.01, S.max), 0, 1);
     if (k <= 0) return;
     const tile = stripeTile(S.col === "blue" ? "#bfe3ff" : S.col === "yellow" ? C41.warn : S.col === "green" ? "#9fe08a" : S.col === "orange" ? C41.emberHi : C41.danger),
-      pat = tile && c.createPattern ? c.createPattern(tile, "repeat") : null;
+      pat = tile && c.createPattern ? c.createPattern(tile.native || tile, "repeat") : null;
     if (!pat) return;
-    if (typeof Path2D === "undefined") return;
+    if (typeof Path2D !== "function") return;
     const P = new Path2D();
     // 冲过来的路：沿着路往前填；别的：从边上往里填（外形减去缩小的外形）
     if (sh.k === "line") shapeInto(P, sh, k);
