@@ -51,6 +51,7 @@ import {
   REST,
   CLINIC,
   ECO_ORDER,
+  WATER_HOLD,
   applyTrimData,
 } from "./trim-data.js";
 
@@ -80,9 +81,10 @@ const TRIM_QUIET = [/^生活水准：/];
 const TRIM_GONE = new Set(["farNight", "farHemc", "thiefDummy", "thiefBox", "thiefStash", "btGarden", "rlDig", "waterGate", "ecoBoard"]);
 
 // ================= 存档：新的一块 s.trim =================
-// 新开的档：水渠的闸门一直开着
+// 新开的档：水渠的闸门一直开着；农场的田肥力就是那个数
 function openGate(s) {
   if (s?.frontier?.canals) s.frontier.canals.open = true;
+  for (const p of s?.plots || []) if (p.region !== "valley") p.fertility = SOIL_FLAT;
   return s;
 }
 export function trimDefaults() {
@@ -111,7 +113,7 @@ function mergeDefaults(x) {
   out.hurt = { ...d.hurt, ...(isObj(x.hurt) ? x.hurt : {}) };
   out.learned = Array.isArray(x.learned) ? [...x.learned] : [];
   out.given = Array.isArray(x.given) ? [...x.given] : [];
-  out.conv = isObj(x.conv) ? { ...x.conv, notes: [...(x.conv.notes || [])], items: { ...(x.conv.items || {}) } } : null;
+  out.conv = isObj(x.conv) ? { ...x.conv, notes: [...(x.conv.notes || [])], items: { ...(x.conv.items || {}) }, removed: Array.isArray(x.conv.removed) ? x.conv.removed.map((b) => ({ ...b })) : [] } : null;
   return out;
 }
 
@@ -129,7 +131,8 @@ export function convertOld(s) {
     }
   };
   // ---------- 设施 ----------
-  const gone = {};
+  const gone = {},
+    removed = [];
   let wine = 0;
   s.buildings = (s.buildings || []).filter((b) => {
     if (REFUND_TYPES.includes(b.type)) {
@@ -137,6 +140,8 @@ export function convertOld(s) {
       const cls = b.hnUp ? upClassOf(b.type) : null;
       if (cls) give(UPGRADES[cls]?.cost);
       gone[b.type] = (gone[b.type] || 0) + 1;
+      // 拆掉的设施原来的样子也记在档里（只记，不再读）
+      if (removed.length < 200) removed.push(JSON.parse(JSON.stringify(b)));
       return false;
     }
     if (b.type === WINE_JAR) {
@@ -261,6 +266,12 @@ export function convertOld(s) {
     notes.push("妙手的经验 " + sk.thiefXp + " 折给了探索");
     sk.thiefXp = 0;
   }
+  // 学过的妙手天赋不再有用：拿掉，点数退回来按顺序学别的
+  const thiefTalents = (sk?.talents || []).filter((id) => TALENTS[id]?.skill === "thief");
+  if (thiefTalents.length) {
+    sk.talents = sk.talents.filter((id) => TALENTS[id]?.skill !== "thief");
+    notes.push("妙手的天赋 " + thiefTalents.length + " 个拿掉了，点数退回来按顺序学别的");
+  }
   if (th) {
     for (const st of th.stashes || []) give(st.items);
     if ((th.stashes || []).length) notes.push("藏货点里的东西搬进了仓库");
@@ -311,7 +322,7 @@ export function convertOld(s) {
     notes.push("路上存下的 " + caches.length + " 处物资搬进了仓库");
   }
   if (money) s.money = (s.money || 0) + money;
-  s.trim.conv = { day: s.day || 1, notes, items: back, money, told: false, after: true };
+  s.trim.conv = { day: s.day || 1, notes, items: back, money, told: false, after: true, removed };
 }
 
 // 读档前：清单进度里“上品”那几格改叫“优质”（下面几层读档时按清单查，不改读不进来）
@@ -324,33 +335,39 @@ export function trimPreText(text) {
   }
   return raw && typeof raw === "object" && renameListKeys(raw) ? JSON.stringify(raw) : text;
 }
-export function migrateState(s) {
-  applyTrimData();
-  renameListKeys(s);
-  sMigrate(s);
+// 只管删繁这一块：没有就建（旧档：转换一次），有就补齐
+function trimMigrate(s) {
   if (!s.trim) {
     s.trim = trimDefaults();
     convertOld(s);
   } else s.trim = mergeDefaults(s.trim);
   return s;
 }
+export function migrateState(s) {
+  applyTrimData();
+  renameListKeys(s);
+  // 已经有删繁这一块的（新开的、读进来的）：下面几层已经过过一遍，不再过——下面几层每过一遍都会多掷一次骰子，
+  // 同一个种子的台子就和上一版对不上了
+  if (!s.trim) sMigrate(s);
+  return trimMigrate(s);
+}
 export function freshState() {
   applyTrimData();
   const s = sFresh();
   s.trim = trimDefaults();
-  return openGate(migrateState(s));
+  return openGate(s);
 }
 export function newGameState(origin = "farmer") {
   applyTrimData();
   const s = sNewGame(origin);
   s.trim = trimDefaults();
-  return openGate(migrateState(s));
+  return openGate(s);
 }
 export function newGamePlusState(old, origin = "farmer", keep = "", book = []) {
   applyTrimData();
   const s = sNewGamePlus(old, origin, keep, book);
   s.trim = trimDefaults();
-  return openGate(migrateState(s));
+  return openGate(s);
 }
 // 读档以前：没有删繁这一块的旧档，原样留一份在升级检查点里（那一格空着的话）
 export const needsUpgrade = (text) => {
@@ -374,7 +391,7 @@ function validateTrim(s) {
   if (!isObj(t.dry) || Object.keys(t.dry).length > 2000) bad("田");
   if (!isObj(t.hurt) || !Number.isFinite(t.hurt.day) || !Number.isFinite(t.hurt.n)) bad("伤");
   if (!Array.isArray(t.learned) || t.learned.length > 40 || !Array.isArray(t.given) || t.given.length > 40) bad("记录");
-  if (t.conv !== null && (!isObj(t.conv) || !Array.isArray(t.conv.notes) || t.conv.notes.length > 60 || !isObj(t.conv.items))) bad("转换");
+  if (t.conv !== null && (!isObj(t.conv) || !Array.isArray(t.conv.notes) || t.conv.notes.length > 60 || !isObj(t.conv.items) || (t.conv.removed !== undefined && (!Array.isArray(t.conv.removed) || t.conv.removed.length > 200 || t.conv.removed.some((b) => !isObj(b)))))) bad("转换");
 }
 
 export class Engine extends ClearEngine {
@@ -505,8 +522,23 @@ export class Engine extends ClearEngine {
     n += this.trAutoWater();
     return n;
   }
+  // 今天还没浇上的（只看今天：昨天浇的水夜里管着长，但今天照样要浇）
   trWaterable(p) {
-    return !!p?.crop && CROPS[p.crop] && p.growth < CROPS[p.crop].grow && !this.plotWatered(p);
+    return !!p?.crop && CROPS[p.crop] && p.growth < CROPS[p.crop].grow && !super.plotWatered(p);
+  }
+  // 浇一次水管到第二天早上 8 点：长的时候，昨天浇过的田半夜到 8 点照样长（水网去掉以后，自己浇的田夜里也不停）
+  grow(n) {
+    if (!this.tr) return super.grow(n);
+    this._trGrow = true;
+    try {
+      return super.grow(n);
+    } finally {
+      this._trGrow = false;
+    }
+  }
+  plotWatered(p) {
+    if (super.plotWatered(p)) return true;
+    return !!(this._trGrow && p?.crop && p.wateredDay > 0 && p.wateredDay === this.s.day - 1 && this.s.minute <= WATER_HOLD);
   }
   trWater(p) {
     this._netWater = true;
@@ -624,7 +656,9 @@ export class Engine extends ClearEngine {
       if (!this.isFarmPlot(p)) continue;
       p.fertility = SOIL_FLAT;
       const rec = g.plots[p.id];
-      if (p.crop && rec?.pd && rec.pd <= y && !this.wateredOn(p, y)) dry[p.id] = 1;
+      // 熟了的不用浇（等着收的那几个钟点不算漏浇）
+      const ripe = !!CROPS[p.crop] && p.growth >= CROPS[p.crop].grow;
+      if (p.crop && !ripe && rec?.pd && rec.pd <= y && !this.wateredOn(p, y)) dry[p.id] = 1;
       if (!p.crop) delete dry[p.id];
     }
     for (const [k, rec] of Object.entries(g.plots)) {
@@ -1045,9 +1079,6 @@ export class Engine extends ClearEngine {
   isHurt() {
     return false;
   }
-  restedNow() {
-    return false;
-  }
   // 食堂：口碑不再算；到了营业的晚上，你走到前哨广场它就自己开张（不用再按“开张”）
   trCanteen() {
     const c = this.ss?.canteen;
@@ -1256,7 +1287,7 @@ export class Engine extends ClearEngine {
     const [ok] = this.trQuiet(() => super.forageTake(sid));
     if (ok) {
       const r = this.trSortMushrooms(true);
-      if (!r) this.toast("捡到蘑菇。", "gold");
+      if (!r) this.toast("捡到 蘑菇。", "gold");
     }
     return ok;
   }
@@ -1280,7 +1311,8 @@ export class Engine extends ClearEngine {
       if (toBag) inv[MUSHROOM.good] = (inv[MUSHROOM.good] || 0) + toBag;
       if (good - toBag) st[MUSHROOM.good] = (st[MUSHROOM.good] || 0) + good - toBag;
     }
-    if (say) this.toast("捡到 " + n + " 朵蘑菇：认出 " + bad + " 朵有毒的扔了" + (good ? "，" + good + " 朵能吃。" : "，这回一朵能吃的都没有。"), good ? "gold" : "warn");
+    // 走“捡到 …。”那一类：只在头顶飘一下，不进提示栏
+    if (say) this.toast("捡到 蘑菇 ×" + n + (!bad ? "（都能吃）" : !good ? "：都有毒，扔了" : "：" + bad + " 朵有毒，扔了") + "。", good ? "gold" : "warn");
     return { n, bad };
   }
 
@@ -1553,8 +1585,9 @@ export class Engine extends ClearEngine {
     this.trMoraleSync();
     this.trCoop();
     this.trCanteen();
+    // 特性种子、旧的两种肥：到了手上（奖励、柜子里翻到的）一个钟点内换掉
+    this.trTraitSweep();
     if (h === 6) {
-      this.trTraitSweep();
       this.trLearn();
       this.trEcology();
     }
@@ -1573,8 +1606,9 @@ export class Engine extends ClearEngine {
   // ================= 存档 =================
   static parse(text) {
     applyTrimData();
+    // 下面几层读档时已经各自过了一遍：这里只管删繁这一块
     const s = ClearEngine.parse(trimPreText(text));
-    migrateState(s);
+    trimMigrate(s);
     validateTrim(s);
     return s;
   }

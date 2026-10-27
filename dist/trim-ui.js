@@ -194,7 +194,7 @@ function viewPlot(e, ui) {
   if (!g && !ripe && p.crop !== "hybrid" && p.growth / c.grow >= STORM.rush) btns.push(button("btRush", p.id, "现在抢收（" + (safe(() => e.fieldRushPortions?.(p), 0) || 0) + " 份，不出优质）", dis(safe(() => e.fieldRushReason?.(p), "") || "")));
   const info = cropInfo(p.crop);
   const weather = [info.likes ? "喜欢" + word(info.likes) + (info.likes === e.s.weather ? "（今天就是，长得快）" : "") : "", info.hates ? "怕" + word(info.hates) : ""].filter(Boolean).join(" · ");
-  return `<div class="g-plot"><header class="g-head"><div><small>第 ${e.s.plots.indexOf(p) + 1} 块田</small><h3>${esc(c.name)} · ${ripe ? "熟了" : "长到 " + Math.floor((p.growth / c.grow) * 100) + "%"}</h3><p>${ripe ? "可以收了。" : "还要约 " + hours + " 游戏小时（" + realTime(hours) + "）"}</p></div></header><ul class="g-today">${lines.join("")}</ul><div class="button-row g-actions">${btns.join("")}</div><dl class="g-facts"><dt>天气</dt><dd>${esc(weather || "不挑天")}</dd><dt>优质</dt><dd>从种下那天起天天浇上水，收的时候有机会多一份优质（卖得贵六成）；漏浇一天，这一茬就不出了。</dd><dt>肥料</dt><dd>堆肥桶沤的，一茬施一袋：${esc(FERT.text)}。</dd></dl></div>`;
+  return `<div class="g-plot"><header class="g-head"><div><small>第 ${e.s.plots.indexOf(p) + 1} 块田</small><h3>${esc(c.name)} · ${ripe ? "熟了" : "长到 " + Math.floor((p.growth / c.grow) * 100) + "%"}</h3><p>${ripe ? "可以收了。" : "还要约 " + hours + " 游戏小时（" + realTime(hours) + "）"}</p></div></header><ul class="g-today">${lines.join("")}</ul><div class="button-row g-actions">${btns.join("")}</div><dl class="g-facts"><dt>天气</dt><dd>${esc(weather || "不挑天")}</dd><dt>浇水</dt><dd>浇一次管到第二天早上 8 点：夜里照样长。</dd><dt>优质</dt><dd>从种下那天起天天浇上水，收的时候有机会多一份优质（卖得贵六成）；漏浇一天，这一茬就不出了。</dd><dt>肥料</dt><dd>堆肥桶沤的，一茬施一袋：${esc(FERT.text)}。</dd></dl></div>`;
 }
 
 // ================= 菜地告示牌：这个时节、这三天种什么好 =================

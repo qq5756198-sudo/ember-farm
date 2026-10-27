@@ -28,6 +28,10 @@ import * as Version from '../dist/version.js';
 import * as MendData from '../dist/mend-data.js';
 // v0.39：一物一用的界面
 import * as SimpleUI from '../dist/simple-ui.js';
+// v0.42：删繁（旧档用下面那一层的引擎做）
+import * as ClearEngineMod from '../dist/clear.js';
+import * as SimpleEngineMod from '../dist/simple.js';
+import * as TrimData from '../dist/trim-data.js';
 import * as LookUI from '../dist/look-ui.js';
 import * as SimpleData from '../dist/simple-data.js';
 import * as Atlas from '../dist/atlas.js';
@@ -3185,4 +3189,94 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.deepEqual(Object.keys(JSON.parse(storage.get(Session.CAMPAIGN_SAVE))).filter((k) => !keys0.includes(k)), [], 'no new save field');
   Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
   console.log('Clear controller passed: moonlight at night (never darker than before), an infected out of the light drawn fainter but as usual in your light, when striking and by day, the hit flash and the harvest pop start the next frame, the scene takes every effect, cream corners on the thing in front of you, no scene text under 14 px at 1366 and 1920, the word inside a resident\'s needs bubble, a leaning infected moved row by row with its feet in place, and save/parse.');
+}
+// ================= v0.42.0「删繁」：一份 v0.41 的档从文件恢复——拆掉的设施退料、消息里“这次简化退回了什么”、建造页 26 样以内、
+// 菜单最上面一行有士气没有动静、走近一块田头上写“该浇水”“浇过了”、喷灌头白天转水花，存档读回来不再退 =================
+{
+  let clock = 42000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const ui = () => context.inspect();
+  for (let i = 0; i < 6 && ui().menu; i++) click('close');
+  dailyOn = false;
+  // 一份 v0.41 的旧档：雨水桶、太阳能板、照看机、药柜、土酒坛、一把椅子；手上两袋提质肥
+  const old = new ClearEngineMod.Engine(SimpleEngineMod.newGameState('farmer'), () => {});
+  old.s.day = 30; old.s.minute = 600; if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();
+  for (const [type, x, y] of [['rain', 600, 640], ['solar', 660, 640], ['drone', 720, 640], ['medCabinet', 500, 235], ['alWineJar', 760, 520], ['chair', 420, 300]]) old.s.buildings.push({ id: 'v41-' + type, type, x, y, rotation: 0, hp: Data.BUILDINGS[type].hp });
+  old.s.inventory.fertCare = 2;
+  const wood0 = old.s.storage.wood || 0, scrap0 = old.s.storage.scrap || 0;
+  const text = old.serialize();
+  assert.ok(!('trim' in JSON.parse(text)), 'a v0.41 save');
+  context.open('restoreArchive', { files: { old: text } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  const e = ui().engine;
+  assert.equal(ui().menu, null);
+  assert.ok(e.tr?.conv, 'converted once on the way in');
+  for (const t of TrimData.REFUND_TYPES) assert.ok(!e.s.buildings.some((b) => b.type === t), t + ' taken down');
+  assert.equal(e.s.buildings.find((b) => b.id === 'v41-alWineJar')?.type, TrimData.PICKLE_JAR, 'the wine jar is a pickle jar now');
+  assert.equal(e.s.storage.wood - wood0, 6 + 6, 'wood back from the rain barrel and the medicine cabinet');
+  assert.equal(e.s.storage.scrap - scrap0, 3 + 10 + 12, 'scrap back from the barrel, the solar panel and the tending machine');
+  assert.equal((e.s.inventory.fertCare || 0), 0); assert.equal((e.s.inventory.fertGrow || 0) + (e.s.storage.fertGrow || 0) >= 2, true);
+  e.paused = false; if (e.dy) e.dy.pending = null; run(3);
+  assert.match(document.querySelector('#toasts').innerHTML, /删繁：营地里一样东西只做一件事/, 'told on the first frame');
+  // 消息：多一条“这次简化退回了什么”，点开是清单
+  context.open('sx', { view: 'messages' }); clean();
+  assert.ok(html().includes(TrimData.CONVERT_TITLE), 'the messages page lists it');
+  click('close');
+  context.open('outpost', { view: 'trConv' }); clean();
+  assert.match(html(), /拆掉了 雨水桶 ×1，材料全退/); assert.match(html(), /土酒坛 ×1 换成了腌缸/); assert.match(html(), /退进仓库的：/);
+  assert.ok(html().includes('<h2 id="modal-title">' + TrimData.CONVERT_TITLE + '</h2>'), 'the page is titled');
+  click('close');
+  // 建造页：26 样以内（锁着的也算），摆件一格，拆掉的那几样不在
+  context.open('build'); clean();
+  for (const t of [...TrimData.REFUND_TYPES, TrimData.WINE_JAR]) assert.ok(!html().includes('<h3>' + Data.BUILDINGS[t].name + '</h3>'), Data.BUILDINGS[t].name + ' is not offered');
+  assert.match(html(), /<h3>摆件<\/h3>/);
+  const tiles = (html().match(/<article class="recipe/g) || []).length, locked = (html().match(/<h3 class="sx-group">先研究才能建<\/h3><p class="muted">([^<]*)</) || ['', ''])[1].split('、').filter(Boolean).length;
+  assert.ok(tiles > 10 && tiles + locked <= 26, 'tiles ' + tiles + ' + locked ' + locked);
+  assert.equal(TrimData.buildCount(), 26);
+  click('close');
+  // 菜单最上面一行：金、口粮、士气……没有动静
+  const hud = CampaignUI.campaignHud(e), rows = LookUI.statusRows(e, hud);
+  assert.equal(hud.noise, null); assert.ok(!rows.some((r) => r.key === 'noise'), 'no noise');
+  const mo = rows.find((r) => r.key === 'morale'); assert.ok(mo && mo.value === String(Math.round(e.tr.morale)), 'morale in the status row');
+  assert.match(mo.now, /明天往 \d+ 走/);
+  // 走近一块田：头上写今天浇没浇（不再写照料分）
+  const R = ui().renderer;
+  if (e.s.region !== 'farm') e.travel('farm');
+  e.s.minute = 10 * 60; e.s.weather = '晴朗';
+  const plot = e.s.plots.find((q) => e.isFarmPlot(q) && !q.crop) || e.s.plots.find((q) => e.isFarmPlot(q));
+  e.s.debris = e.s.debris.filter((d) => Math.hypot(d.x - plot.x, d.y - plot.y) >= 15);
+  Object.assign(plot, { tilled: true, crop: 'radish', growth: 5, wateredDay: 0, waterUnits: 0 });
+  e.s.buildings = e.s.buildings.filter((b) => b.type !== 'irrigation');
+  Object.assign(e.s.player, { x: plot.x + 2, y: plot.y + 6 });
+  e.nearestObject = () => ({ type: 'plot', plot, x: plot.x, y: plot.y });
+  const words = [], ft = R.ctx.fillText;
+  R.ctx.fillText = function (t, ...a) { words.push(String(t)); return ft.call(this, t, ...a); };
+  try {
+    R.resize(1366, 600, 1);
+    R.draw(e, { x: 683, y: 300 }, 0.016);
+    assert.ok(words.includes('该浇水'), 'over the plot: needs water');
+    assert.ok(!words.some((w) => /照料/.test(w)), 'no care score');
+    e.trWater(plot); words.length = 0;
+    R.draw(e, { x: 683, y: 300 }, 0.016);
+    assert.ok(words.includes('浇过了'), 'over the plot: watered');
+  } finally {
+    R.ctx.fillText = ft;
+    delete e.nearestObject;
+  }
+  // 喷灌头：白天不下雨就转水花
+  const spr = { id: 'trim-spr', type: 'irrigation', x: plot.x + 40, y: plot.y + 40, rotation: 0, hp: Data.BUILDINGS.irrigation.hp };
+  e.s.buildings.push(spr); e.navRevision++;
+  let sprays = 0; const tsp = R.trSpray.bind(R);
+  R.trSpray = (en) => { sprays++; return tsp(en); };
+  try { R.draw(e, { x: 683, y: 300 }, 0.016); } finally { delete R.trSpray; }
+  assert.ok(sprays >= 1, 'the sprinkler spray is drawn by day');
+  e.s.buildings = e.s.buildings.filter((b) => b !== spr); e.navRevision++;
+  // 存档：读回来不再退
+  click('save');
+  const saved = storage.get(Session.CAMPAIGN_SAVE);
+  assert.ok('trim' in JSON.parse(saved));
+  const back = new Campaign.Engine(Campaign.Engine.parse(saved), () => {});
+  assert.deepEqual(back.s.storage, e.s.storage, 'no second refund');
+  assert.equal(back.s.money, e.s.money);
+  console.log('Trim controller passed (v0.42): a v0.41 save restored from a file has its four removed facilities refunded (wood and scrap counted) and the wine jar turned into a pickle jar, the fertiliser merged, one notice on the first frame and 这次简化退回了什么 in the messages with its list, the build page within 26 with the decor tile and none of the removed ones, morale in the status row and no noise, 该浇水 / 浇过了 over the plot you face, the sprinkler spray by day, and save/parse with no second refund.');
 }

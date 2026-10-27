@@ -4,11 +4,12 @@
 import { ITEMS, BUILDINGS, CROPS } from "./data.js";
 import { BUILD_GROUPS, BCARD, BVERB, HUD_CARD, PAGE_CARD, MENUS, DISTRICT_CARD } from "./simple-data.js";
 import { FERTS, MYSTERY, HYBRID } from "./bounty-data.js";
-import { SPECS } from "./expansion-data.js";
+import { SPECS, REP_TIERS, EVENTS as CAMP_EVENTS } from "./expansion-data.js";
+import { FEATURES as FRONTIER_FEATURES } from "./frontier-data.js";
 import { PERKS as GROW_PERKS } from "./grow-data.js";
 import { SKILLS as KIN_SKILLS } from "./kin-data.js";
 import { TITAN_CASE } from "./titan-data.js";
-import { JARS } from "./almanac-data.js";
+import { JARS, NIGHT_GOOD } from "./almanac-data.js";
 import { LISTS, DIGS, WALLS } from "./relight-data.js";
 import { LISTS2 } from "./grow-data.js";
 import { TRAVELERS, PEDDLERS, BUYERS, LETTERS, WEEK_LISTS, EXPAND, WALL2, GOODS } from "./hope-data.js";
@@ -40,10 +41,10 @@ export function buildCount() {
 
 // ================= 种地：只留种、浇、收和一种肥 =================
 // 优质：从种下那天起，天天都浇上了水，收的时候有这么大的机会出一份优质（农业专精“品质”再高一点）。
-// 原来靠照料分（照看、换茬、肥地、邻居提质），勤快的玩家七成上下；台子上量了再定（见 docs/releases/v0.42.0.md）。
-export const FINE = { chance: 0.62, spec: 0.85, dryScore: 40, wetScore: 90 };
-// 肥力不再算：每块田一直是这个数（不快不慢）
-export const SOIL_FLAT = 65;
+// 原来靠照料分（照看、换茬、肥地、邻居提质）；种田台上量了（见 docs/releases/v0.42.0.md），七成时两版收入差不出一成。
+export const FINE = { chance: 0.7, spec: 0.85, dryScore: 40, wetScore: 90 };
+// 肥力不再算：每块田一直是这个数（85：长得快一成多，顶上原来勤快人养地、换茬的那一点）
+export const SOIL_FLAT = 85;
 // 三种肥并成一种：这一茬长快一半
 export const FERT = { id: "fertGrow", name: "肥料", grow: 1.5, text: "这一茬长快一半", old: ["fertCare", "fertWater"] };
 // 特性种子（早熟、丰产、耐旱）不再有：手上的一颗换两颗普通种子；种下去的照普通的长
@@ -52,13 +53,15 @@ export const TRAIT_SWAP = 2;
 // 喷灌头：每天早上浇它旁边的田（白天新种下的，一个钟点内也给浇上）；水渠挖通了，渠边的田每天自己有水
 export const SPRINKLE = { r: 300, from: 6, to: 20 };
 export const CANAL_R = 190;
+// 浇一次水管到第二天早上这个钟点（分钟）：半夜到早上 8 点照样长（水网去掉以后，自己浇的田夜里也不停）
+export const WATER_HOLD = 480;
 // 原来往水网里加水的几样（每天替你浇几块田）
 export const AUTO_WATER = { cistern: 6, wall: 10, wall2: 10, windmill: 12 };
 
 // ================= 营地一个士气 =================
 // 每个人原来各有一个心情；现在全营一个数，每个人都照它。每天半夜往“该有的士气”走四成。
-// 高了（70 以上）每个钟点两成五的机会多干一件，低了（35 以下）每个钟点四成的机会歇着。
-export const MORALE = { start: 60, low: 35, high: 70, home: 50, drift: 0.4, idle: 0.4, extra: 0.25, min: 5, max: 100 };
+// 高了（70 以上）营地里加工、做饭快一成，低了（35 以下）慢一成。
+export const MORALE = { start: 60, low: 35, high: 70, home: 50, drift: 0.4, min: 5, max: 100 };
 export const MORALE_FACTORS = {
   fine: { v: 5, text: "晚饭有三样以上的菜" },
   missed: { v: -15, text: "有人没吃上晚饭" },
@@ -82,8 +85,8 @@ export const MORALE_TEXT = {
   name: "士气",
   what: "营地里大家干劲足不足，全营一个数。",
   how: "吃得好、刚过了节、营地里摆着摆件会涨；有人没吃上饭、床不够、长夜没守住、守夜有人受伤会跌。",
-  low: "低了（35 以下）：大家时不时歇着，活干得慢。",
-  high: "高了（70 以上）：大家时不时多干一件。",
+  low: "低了（35 以下）：营地里加工、做饭慢一成。",
+  high: "高了（70 以上）：营地里加工、做饭快一成。",
 };
 
 // ================= 睡一觉「休息好」 =================
@@ -262,7 +265,17 @@ export function applyTrimData() {
   for (const m of MENUS) if (m[0] === "消息") m[1] = "发生过的事：战报、抉择、账本，还有这一版退回的东西";
   // 地区仓库那一格只剩休整（仓库并进了农场仓库）
   if (DISTRICT_CARD.storage) DISTRICT_CARD.storage = ["休整点", "在这里歇一个钟点：补满水壶、恢复体力", "地区仓库并进了农场仓库：这里出的东西直接进农场仓库"];
-  for (const data of [LISTS, LISTS2, TRAVELERS, PEDDLERS, BUYERS, LETTERS, WEEK_LISTS, TREASURES, DIGS]) remapDeep(data);
+  for (const data of [LISTS, LISTS2, TRAVELERS, PEDDLERS, BUYERS, LETTERS, WEEK_LISTS, TREASURES, DIGS, NIGHT_GOOD, CAMP_EVENTS, REP_TIERS]) remapDeep(data);
+  for (const t of REP_TIERS) if (typeof t.desc === "string") t.desc = t.desc.replace("特性种子", "种子");
+  // 家园与远行那一页的一格格：去掉了的不再列；水渠、生态、麦穗照新的写
+  {
+    const gone = new Set(["轮作与肥力", "作物邻接", "家具与功能房间", "营地政策", "分岔远征路线"]);
+    for (let i = FRONTIER_FEATURES.length - 1; i >= 0; i--) if (gone.has(FRONTIER_FEATURES[i]?.name)) FRONTIER_FEATURES.splice(i, 1);
+    const set = { 水渠与闸门: ["水渠", "挖通 4×4 水渠：渠边 190 步内的田每天自己有水；选“排水”开放浅滩捷径。"], 生态修复: ["生态修复", "不用你管：收复度每涨一截，自己修好一格；草地林地连成片来蝴蝶，湿地连成片来青蛙。"], 伙伴犬与追踪: ["伙伴犬与追踪", "在住宅区救回小犬麦穗：它一直跟着你，饭自己吃；跟着它的鼻子找藏起来的物资。"] };
+    for (const f of FRONTIER_FEATURES) if (set[f?.name]) [f.name, f.desc] = set[f.name];
+  }
+  if (GOODS?.bait?.text) GOODS.bait.text = GOODS.bait.text.replace("（不用再拿菜青虫）", "（不用再拿豆子当饵）");
+  if (ITEMS.fodder) ITEMS.fodder.desc = "从地里拔下来的杂草。3 份能代替玉米喂一次鸡，也能丢进堆肥桶沤肥料。";
   // 每日抉择里“稀有种子”那一条：给普通种子（两颗顶一颗）
   for (let i = 0; i < RARE_SEEDS.length; i++) RARE_SEEDS[i] = remapItem(RARE_SEEDS[i])[0];
   // 清单名字里的“上品”
