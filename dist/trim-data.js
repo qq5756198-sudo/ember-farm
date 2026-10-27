@@ -12,7 +12,7 @@ import { TITAN_CASE } from "./titan-data.js";
 import { JARS, NIGHT_GOOD } from "./almanac-data.js";
 import { LISTS, DIGS, WALLS } from "./relight-data.js";
 import { LISTS2 } from "./grow-data.js";
-import { TRAVELERS, PEDDLERS, BUYERS, LETTERS, WEEK_LISTS, EXPAND, WALL2, GOODS } from "./hope-data.js";
+import { TRAVELERS, PEDDLERS, BUYERS, LETTERS, WEEK_LISTS, EXPAND, WALL2, GOODS, MARKET_ORDER, INTRO_LINES as HOPE_INTRO } from "./hope-data.js";
 import { RARE_SEEDS, PERKS as DAILY_PERKS } from "./daily-data.js";
 import { TREASURES } from "./thief-data.js";
 import { TRAITS } from "./expansion-data.js";
@@ -55,6 +55,8 @@ export const SPRINKLE = { r: 300, from: 6, to: 20 };
 export const CANAL_R = 190;
 // 浇一次水管到第二天早上这个钟点（分钟）：半夜到早上 8 点照样长（水网去掉以后，自己浇的田夜里也不停）
 export const WATER_HOLD = 480;
+// 唐九的车上最多摆几样（存档只认 8 样）：这周的稀罕货跟着商队来，满了换掉一样普通的货
+export const CARAVAN_MAX = 8;
 // 原来往水网里加水的几样（每天替你浇几块田）
 export const AUTO_WATER = { cistern: 6, wall: 10, wall2: 10, windmill: 12 };
 
@@ -275,6 +277,12 @@ export function applyTrimData() {
     for (const f of FRONTIER_FEATURES) if (set[f?.name]) [f.name, f.desc] = set[f.name];
   }
   if (GOODS?.bait?.text) GOODS.bait.text = GOODS.bait.text.replace("（不用再拿菜青虫）", "（不用再拿豆子当饵）");
+  if (GOODS?.cellar?.text) GOODS.cellar.text = GOODS.cellar.text.replace("腌缸、土酒坛都早一天好", "腌缸里腌的、酿的都早一天好");
+  // 鸽子来信去掉了：鸽舍不再卖（每周那一样轮到它时换成留声机，表一样长，旧档记的位置照样认）
+  for (let i = 0; i < MARKET_ORDER.length; i++) if (MARKET_ORDER[i] === "dove") MARKET_ORDER[i] = "gramophone";
+  if (GOODS?.dove) GOODS.dove.text = "鸽子来信去掉了，不再卖；以前买下的，读档时拆了、钱退回来。";
+  // 这周的稀罕货跟着唐九的商队来：旧档那张“盼头”卡片的第一句照这个说
+  if (HOPE_INTRO?.[0]) HOPE_INTRO[0] = HOPE_INTRO[0].replace("旧站商街每周一样稀罕货", "唐九的商队每回来都带着这周的那一样稀罕货");
   if (ITEMS.fodder) ITEMS.fodder.desc = "从地里拔下来的杂草。3 份能代替玉米喂一次鸡，也能丢进堆肥桶沤肥料。";
   // 每日抉择里“稀有种子”那一条：给普通种子（两颗顶一颗）
   for (let i = 0; i < RARE_SEEDS.length; i++) RARE_SEEDS[i] = remapItem(RARE_SEEDS[i])[0];

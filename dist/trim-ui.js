@@ -16,6 +16,8 @@ import { STRIP, MESSAGE_VIEWS, SX_LABELS } from "./simple-ui.js";
 import { almanacBuildExtras } from "./almanac-ui.js";
 import { dexBlock } from "./bounty-ui.js";
 import { DECOR_LOOKS, DECOR_SPECIAL, FERT, MORALE, MORALE_TEXT, CONVERT_TITLE, SPRINKLE, CANAL_R, JAR_ANY, jarRecipe, REST } from "./trim-data.js";
+import { ALERT_HOOKS } from "./winter-ui.js";
+import { SPOTS as O_SPOTS } from "./outpost-data.js";
 
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 const dis = (reason) => (reason ? `disabled title="${esc(reason)}"` : "");
@@ -64,8 +66,43 @@ function applyTrimUi() {
 function on(e) {
   if (!e?.tr) return false;
   applyTrimUi();
+  wrapAlerts();
   return true;
 }
+
+// ================= 顶上的提醒：这周的稀罕货跟着唐九的商队来 =================
+// 旧站商街那一处不再卖：商队在、车上有这周那一样时才提醒，标出商队；别的提醒照旧
+const MARKET_ALERT = "旧站商街这周的稀罕货：";
+function caravanGood(e) {
+  const m = safe(() => e.marketGood?.(), null);
+  if (!m || m.sold || !safe(() => e.caravanHere?.(), false)) return null;
+  return (e.o?.caravan?.offers || []).find((o) => o.trWeek && !o.sold && o.hpGood === m.good) || null;
+}
+function trAlert(e, pri, text, tone, target) {
+  if (typeof text !== "string" || !text.startsWith(MARKET_ALERT)) return [pri, text, tone, target];
+  if (!caravanGood(e)) return null;
+  const S = O_SPOTS.caravan;
+  return [pri, "唐九的商队带着这周的稀罕货：" + text.slice(MARKET_ALERT.length), tone, S ? { region: "farm", x: S.x, y: S.y + 30, label: "唐九的商队" } : target];
+}
+function wrapAlerts() {
+  for (let i = 0; i < ALERT_HOOKS.length; i++) {
+    const h = ALERT_HOOKS[i];
+    if (h.trWrapped) continue;
+    const w = (e, add) =>
+      h(
+        e,
+        e?.tr
+          ? (...a) => {
+              const r = trAlert(e, ...a);
+              if (r) add(...r);
+            }
+          : add,
+      );
+    w.trWrapped = true;
+    ALERT_HOOKS[i] = w;
+  }
+}
+wrapAlerts();
 export const trimUiOn = () => uiOn;
 
 // ================= 拿掉一段 HTML 的小工具 =================
@@ -368,6 +405,14 @@ export function trimPatch(e, ui, html) {
   }
   if (v === "dialog" && ui.id === "hemc") out = dropActions(out, ["xAdvance", "xRepay"]);
   if (v === "crew" || v === "lnight") out = dropBlock(out, "hn-hurt");
+  // 这周和今天：这周的稀罕货跟着唐九的商队来（旧站商街那一处不再卖）
+  if (v === "hpWeek" && out.includes("旧站商街这周的稀罕货")) {
+    const c = e.o?.caravan,
+      where = caravanGood(e)
+        ? "唐九的商队这会儿就在农场北边：在他车上买（今天 20:00 前）。"
+        : "唐九的商队来的那天在他车上买（他隔几天来一回，08:00 到、20:00 走" + (c?.next > e.s.day ? "；下回第 " + c.next + " 天" : "") + "）。";
+    out = out.replace("<h4>旧站商街这周的稀罕货 ", "<h4>这周的稀罕货 ").replace("到旧站商街「两间铺位经营」那一处买。", esc(where));
+  }
   return out;
 }
 
@@ -540,7 +585,7 @@ export function trimHomeExtras(e) {
       })
       .join("");
     const have = GOOD_IDS.filter((id) => !GOODS[id].repeat && e.hpOwn?.(id));
-    const goods = have.length ? `<ul class="hp-rows">${have.map((id) => `<li class="full"><span>${esc(GOODS[id].name)}</span><small>${esc(GOODS[id].text)}</small></li>`).join("")}</ul>` : `<p class="muted">还没有添置稀罕货：唐九的商队来的那一周带着（第 ${START.good} 天起）。</p>`;
+    const goods = have.length ? `<ul class="hp-rows">${have.map((id) => `<li class="full"><span>${esc(GOODS[id].name)}</span><small>${esc(GOODS[id].text)}</small></li>`).join("")}</ul>` : `<p class="muted">还没有添置稀罕货：第 ${START.good} 天起，唐九的商队每回来都带着这周的那一样，商队那一周再多两样。</p>`;
     expand = `<article class="frontier-card hp-expand"><h3>${esc(EXPAND_NAMES.home)}扩建 <small>${lv}/${EXPAND.home.length}</small></h3><ul class="hp-rows">${rows}</ul><p class="muted">仓库箱、鸡舍的扩建在它们自己的设施卡上（走到跟前按 E）。</p><h4>家里添的东西</h4>${goods}</article>`;
   }
   return card(lines, "tr-home") + expand;

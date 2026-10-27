@@ -52,6 +52,7 @@ import {
   CLINIC,
   ECO_ORDER,
   WATER_HOLD,
+  CARAVAN_MAX,
   applyTrimData,
 } from "./trim-data.js";
 
@@ -250,7 +251,16 @@ export function convertOld(s) {
     hemc.debt = null;
     notes.push("欠贺满仓的那笔一笔结清了" + (Object.keys(owe).length ? "（剩下的 " + itemsText(owe) + " 不用还了）" : ""));
   }
-  for (const o of s.outpost?.caravan?.offers || []) if (o.fake) o.fake = false;
+  // 商队的假货去掉了：车上的都是真货（存档里“没有假货”写 null，写 false 存档不认）
+  for (const o of s.outpost?.caravan?.offers || []) if (o.fake) o.fake = null;
+  // 今天早上已经播过的那一回（旧档里存着原话，任务手记和通信站照它写）：不念签，稀罕货照这一版说
+  const zr = s.zest?.radio;
+  if (zr && typeof zr.text === "string")
+    zr.text = zr.text
+      .replace(/老琴抽了支[^；。]*；/, "")
+      .replace(/；老琴抽了支[^；。]*(?=。)/, "")
+      .replace(/老琴抽了支[^；。]*/, "")
+      .replace(/旧站商街这周的稀罕货是([^；。]+)/, "这周的稀罕货是$1，唐九的商队来的那天在他车上买");
   const hp = s.hope;
   if (hp?.goods?.dove) {
     delete hp.goods.dove;
@@ -1176,13 +1186,23 @@ export class Engine extends ClearEngine {
   }
 
   // ================= 手气签、夜里的抉择、来信、纸条 =================
+  // 睡醒的账：“今天”那一行不再写“手气平”
+  ledger(day0, money0) {
+    const out = super.ledger(day0, money0);
+    if (this.tr && Array.isArray(out?.lines)) out.lines = out.lines.map((l) => (typeof l === "string" ? l.replace(/ · 手气[^ ·]+/, "") : l));
+    return out;
+  }
   // 手气签去掉了：每天都是“平”，早上的广播不再念签
   luckOf() {
     return LUCK_BY_ID.plain;
   }
   morningParts(day = this.s.day) {
     const line = LUCK_BY_ID.plain.line;
-    return super.morningParts(day).filter((x) => !!x && x !== line);
+    // 这周的稀罕货跟着唐九的商队来（旧站商街那一处不再卖）
+    return super
+      .morningParts(day)
+      .filter((x) => !!x && x !== line)
+      .map((x) => (typeof x === "string" ? x.replace(/^旧站商街这周的稀罕货是(.+)$/, "这周的稀罕货是$1，唐九的商队来的那天在他车上买") : x));
   }
   planNight() {}
   nightReason() {
@@ -1203,15 +1223,29 @@ export class Engine extends ClearEngine {
     const out = super.arriveCaravan();
     const c = this.o?.caravan;
     if (c?.offers) {
-      for (const o of c.offers) if (o.fake) o.fake = false;
+      for (const o of c.offers) if (o.fake) o.fake = null;
       // 旧站商街这周的稀罕货：跟着唐九的商队来
       const m = this.marketGood?.();
       if (m && !m.sold && GOODS[m.good] && !c.offers.some((o) => o.hpGood === m.good) && !this.goodReason?.(m.good, 0)) {
-        const key = Math.max(0, ...c.offers.map((o) => Number(o.key) || 0)) + 1;
-        c.offers.push({ key, item: goodItem(m.good), tech: null, qty: 1, price: GOODS[m.good].price, fake: null, inspected: "real", sold: false, hpGood: m.good, trWeek: true });
+        const key = Math.max(0, ...c.offers.map((o) => Number(o.key) || 0)) + 1,
+          offer = { key, item: goodItem(m.good), tech: null, qty: 1, price: GOODS[m.good].price, fake: null, inspected: "real", sold: false, hpGood: m.good, trWeek: true };
+        // 车上最多摆 8 样（存档只认 8 样；商队那一周已经多了两样稀罕货）：满了就换掉一样普通的货
+        if (c.offers.length >= CARAVAN_MAX) {
+          const i = c.offers
+            .map((o, k) => [o, k])
+            .filter(([o]) => !o.tech && !o.sold && !o.hpGood && !o.kinRare && !String(o.item).startsWith("bp_") && o.item !== "upPaper")
+            .map(([, k]) => k)
+            .pop();
+          if (i !== undefined) c.offers[i] = { ...offer, key: c.offers[i].key };
+        } else c.offers.push(offer);
       }
     }
     return out;
+  }
+  // 鸽子来信去掉了：鸽舍不再卖（商队那一周挑货时也跳过它）
+  goodNeed(id) {
+    if (this.tr && id === "dove") return "鸽子来信去掉了";
+    return super.goodNeed(id);
   }
   buyOffer(key) {
     const c = this.o?.caravan,

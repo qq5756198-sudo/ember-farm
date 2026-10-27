@@ -17,6 +17,8 @@ import { FERTS } from "../dist/bounty-data.js";
 import { TALENTS } from "../dist/thief-data.js";
 import { MUSHROOM } from "../dist/almanac-data.js";
 import { prefsOf } from "../dist/kin-data.js";
+import { GOODS, MARKET_ORDER, START, goodItem } from "../dist/hope-data.js";
+import { ALERT_HOOKS } from "../dist/winter-ui.js";
 import { GAME_VERSION, GAME_EDITION, GAME_RELEASE } from "../dist/version.js";
 import { preserveBeforeUpgrade, readCampaign, writeCampaign, UPGRADE_CHECKPOINT, CAMPAIGN_SAVE, CAMPAIGN_BACKUP } from "../dist/player-session.js";
 import {
@@ -86,6 +88,11 @@ function buildOld() {
   s.echoes.caches = [{ id: "c1", region: "warehouse", x: 300, y: 300, items: { scrap: 7 } }];
   s.bustle.noise.v = 3;
   s.frontier.canals.open = false;
+  // 唐九的商队这会儿在农场，车上一样是假货（假货去掉了：读进来就是真货，存档照样认）
+  s.outpost.caravan.offers = [{ key: 0, item: "medkit", tech: null, qty: 2, price: 58, fake: "bandage", inspected: null, sold: false }];
+  s.outpost.caravan.until = s.day * 1440 + 20 * 60;
+  // 今天早上播过的广播（任务手记、通信站照它写）：念了签，说了旧站商街的稀罕货
+  s.zest.radio = { day: s.day, text: "电台早间播报。老琴抽了支吉签：今天柜子里多翻一样的机会大一点；旧站商街这周的稀罕货是大号浇水壶；明天小雨。" };
   return { text: old.serialize(), jar: jar.id, plot: farm[0].id };
 }
 const OLD = buildOld();
@@ -205,6 +212,8 @@ test("an old save: the before-upgrade copy is kept, removed facilities are refun
   assert.deepEqual(e.d.stores.valley, {});
   assert.deepEqual(e.b.stores.pinewood, {});
   assert.deepEqual(e.v.caches, []);
+  assert.deepEqual(e.o.caravan.offers.map((o) => o.fake), [null], "唐九's fake is a real one now");
+  assert.equal(e.radioToday(), "电台早间播报。这周的稀罕货是大号浇水壶，唐九的商队来的那天在他车上买；明天小雨。");
   // 消息里的那一条
   const lines = e.trConvLines();
   for (const re of [/拆掉了 雨水桶 ×1/, /土酒坛 ×1 换成了腌缸/, /全营士气 62/, /鸽舍拆了，9000 金币/, /妙手的经验 120 折给了探索/, /退进仓库的：/, /退回的金币：9000/]) assert.ok(lines.some((l) => re.test(l)), String(re));
@@ -519,6 +528,11 @@ test("removed systems say so and change nothing: noise, radio programme and comm
   assert.equal(e.upgradeBuilding("x"), false);
   assert.equal(e.unlockPath("x"), false);
   assert.equal(e.luckOf().id, "plain");
+  // 睡醒的账不再念手气签
+  if (e.r) e.r.radio = true;
+  const led = e.ledger(e.s.day, e.s.money);
+  assert.ok(led.lines.some((l) => /^今天：/.test(l)), "the ledger has its today line");
+  assert.ok(led.lines.every((l) => !/手气/.test(l)), "no luck slip in the morning ledger");
   assert.match(e.nightReason(), /去掉了/);
   assert.equal(e.inspectOffer(1), false);
   assert.equal(e.exposeCheat(1), false);
@@ -556,6 +570,94 @@ test("regions: the district and outpost stores are the farm storage; freight and
   const html = UI.patchBeyond(e, { view: "storage" }, '<section class="b-card"><p>工作产出与奖励都放在这里。</p><button data-action="bShip">运</button></section>');
   assert.match(html, /休整点/);
   assert.doesNotMatch(html, /data-action="bShip"/);
+});
+
+test("rare goods ride with 唐九's caravan: this week's one is on his cart (never more than 8 offers), the dove loft is not sold, the alert, radio and week page point to him", () => {
+  const { e } = make();
+  e.s.day = 37;
+  e.s.minute = 9 * 60;
+  const m = e.marketGood();
+  assert.ok(m && GOODS[m.good] && !m.sold);
+  assert.ok(!MARKET_ORDER.includes("dove"));
+  assert.match(e.goodReason("dove"), /鸽子来信去掉了/);
+  // 唐九的商队那一周：车上本来就摆满了 8 样（6 样普通货、两样稀罕货），这周的那一样换掉一样普通货
+  e.o.caravan.visits = Math.max(1, e.o.caravan.visits || 0);
+  const W = e.weekEnsure();
+  Object.assign(W, { kind: "caravan", st: "soon", id: "c0", goods: ["bait", "goldSeeds"], buy: "pumpkin", sold: 0 });
+  e.o.caravan.next = e.s.day;
+  const lower = Object.getPrototypeOf(Engine.prototype),
+    own = Object.prototype.hasOwnProperty.call(lower, "arriveCaravan") ? lower.arriveCaravan : null;
+  lower.arriveCaravan = function () {
+    const c = this.o.caravan,
+      two = ["bait", "goldSeeds"];
+    c.offers = Array.from({ length: 8 }, (_, i) => ({ key: i, item: i < 6 ? "ammo" : goodItem(two[i - 6]), tech: null, qty: 1, price: 10, fake: null, inspected: "real", sold: false, ...(i >= 6 ? { hpGood: two[i - 6] } : {}) }));
+    c.until = this.s.day * 1440 + 20 * 60;
+    c.visits++;
+    c.next = 0;
+    return true;
+  };
+  try {
+    e.arriveCaravan();
+  } finally {
+    if (own) lower.arriveCaravan = own;
+    else delete lower.arriveCaravan;
+  }
+  const offers = e.o.caravan.offers;
+  assert.equal(offers.length, 8);
+  const mine = offers.find((o) => o.trWeek);
+  assert.ok(mine && mine.hpGood === m.good, "this week's good is on the cart");
+  assert.deepEqual(offers.filter((o) => o.hpGood && !o.trWeek).map((o) => o.hpGood), ["bait", "goldSeeds"]);
+  assert.ok(Engine.parse(e.serialize()), "a full cart still saves and loads");
+  // 顶上的提醒（钱够才提醒）：标出唐九的商队，不再说旧站商街
+  e.s.money = 50000;
+  const alerts = [];
+  for (const h of ALERT_HOOKS) h(e, (pri, text, tone, target) => alerts.push({ text, target }));
+  const a = alerts.find((x) => /这周的稀罕货/.test(x.text));
+  assert.ok(a && /^唐九的商队带着这周的稀罕货：/.test(a.text) && a.target?.label === "唐九的商队", JSON.stringify(a));
+  assert.ok(!alerts.some((x) => /旧站商街/.test(x.text)));
+  // 这周和今天那一页、早上的广播
+  const week = UI.renderCampaignView(e, { view: "hpWeek" });
+  assert.match(week, /这周的稀罕货/);
+  assert.match(week, /在他车上买/);
+  assert.doesNotMatch(week, /旧站商街|两间铺位/);
+  // 买下来；商队走了以后不再提醒
+  e.s.region = "farm";
+  assert.equal(e.buyOffer(mine.key), true);
+  assert.equal(e.marketGood().sold, true);
+  assert.ok(e.hpOwn(m.good));
+  e.leaveCaravan();
+  const after = [];
+  for (const h of ALERT_HOOKS) h(e, (pri, text) => after.push(text));
+  assert.ok(!after.some((t) => /稀罕货：/.test(t)));
+  // 真的那一串（不换掉下面几层）：商队那一周车上也不超过 8 样，存得进读得回
+  const { e: e2 } = make();
+  e2.s.day = 37;
+  e2.s.minute = 9 * 60;
+  e2.o.caravan.visits = Math.max(1, e2.o.caravan.visits || 0);
+  Object.assign(e2.weekEnsure(), { kind: "caravan", st: "soon", id: "c0", goods: ["bait", "goldSeeds"], buy: "pumpkin", sold: 0 });
+  e2.o.caravan.next = e2.s.day;
+  e2.arriveCaravan();
+  assert.ok(e2.o.caravan.offers.length <= 8, String(e2.o.caravan.offers.length));
+  assert.ok(e2.o.caravan.offers.some((o) => o.trWeek));
+  assert.ok(Engine.parse(e2.serialize()));
+  // 原来会是假货的那几样现在都是真货（存档认得）
+  const { e: e4 } = make();
+  e4.s.day = 20;
+  e4.o.caravan.visits = 1;
+  e4.o.caravan.exposed = 0;
+  e4.o.caravan.next = e4.s.day;
+  e4.roll = () => 0;
+  e4.arriveCaravan();
+  delete e4.roll;
+  assert.ok(e4.o.caravan.offers.length > 0);
+  assert.ok(e4.o.caravan.offers.every((o) => o.fake === null), JSON.stringify(e4.o.caravan.offers.map((o) => o.fake)));
+  assert.ok(Engine.parse(e4.serialize()));
+  // 早上的广播：每周换的那天说这周的稀罕货在唐九车上买
+  const { e: e3 } = make();
+  e3.s.day = START.good + 7;
+  const radio = e3.morningParts(e3.s.day).join("。");
+  assert.match(radio, /这周的稀罕货是.+唐九的商队来的那天在他车上买/);
+  assert.doesNotMatch(radio, /旧站商街/);
 });
 
 test("people: likes are written out; 麦穗 only wants petting, eats by itself and always follows", () => {
