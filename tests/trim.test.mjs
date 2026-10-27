@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { Engine as OldEngine } from "../dist/clear.js";
 import { newGameState as oldNewGame } from "../dist/simple.js";
 import { Engine, freshState, newGameState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine as TrimEngine } from "../dist/trim.js";
 import * as UI from "../dist/campaign-ui.js";
 import { statusRows } from "../dist/look-ui.js";
 import { ITEMS, BUILDINGS, CROPS } from "../dist/data.js";
@@ -143,13 +144,12 @@ const mem = () => {
 const ctx = (e, extra = {}) => ({ engine: e, ui: {}, rebuildUI: {}, showMenu() {}, closeMenu() {}, renderMenu() {}, save() {}, toast() {}, ...extra });
 
 // ================= 版本 =================
-test("version: v0.42.0 删繁 in the title, the loading page and settings", () => {
-  assert.equal(GAME_VERSION, "v0.42.0");
-  assert.equal(GAME_EDITION, "删繁");
-  assert.equal(GAME_RELEASE, "v0.42.0 · 删繁");
+test("version: the title, the loading page and settings carry the version (moved on to v0.43 上手, checked in ease.test.mjs)", () => {
+  assert.match(GAME_VERSION, /^v0\.(4[2-9]|[5-9]\d)\.\d+$/);
+  assert.equal(GAME_RELEASE, GAME_VERSION + " · " + GAME_EDITION);
   const html = read("dist/index.html");
-  assert.match(html, /<title>余烬农场 v0.42.0 · 删繁<\/title>/);
-  assert.match(html, /data-release>v0.42.0 · 删繁</);
+  assert.ok(html.includes("<title>余烬农场 " + GAME_RELEASE + "</title>"));
+  assert.ok(html.includes("data-release>" + GAME_RELEASE + "<"));
   assert.match(read("dist/game.js"), /document\.title=`余烬农场 \$\{GAME_VERSION\} · \$\{GAME_EDITION\}`/);
   assert.match(read("dist/game.js"), /\[data-version\]/, "settings shows the version");
 });
@@ -585,7 +585,8 @@ test("rare goods ride with 唐九's caravan: this week's one is on his cart (nev
   const W = e.weekEnsure();
   Object.assign(W, { kind: "caravan", st: "soon", id: "c0", goods: ["bait", "goldSeeds"], buy: "pumpkin", sold: 0 });
   e.o.caravan.next = e.s.day;
-  const lower = Object.getPrototypeOf(Engine.prototype),
+  // 删繁那一层下面的那一层（v0.43 起最上面是上手那一层）
+  const lower = Object.getPrototypeOf(TrimEngine.prototype),
     own = Object.prototype.hasOwnProperty.call(lower, "arriveCaravan") ? lower.arriveCaravan : null;
   lower.arriveCaravan = function () {
     const c = this.o.caravan,

@@ -28,6 +28,7 @@ import * as Version from '../dist/version.js';
 import * as MendData from '../dist/mend-data.js';
 // v0.39：一物一用的界面
 import * as SimpleUI from '../dist/simple-ui.js';
+// v0.43：上手。下面各段的 fixture 是做好的中后期存档（不是刚开的档），菜单都在、不弹小卡；“上手”那一段用真开的新档
 // v0.42：删繁（旧档用下面那一层的引擎做）
 import * as ClearEngineMod from '../dist/clear.js';
 import * as SimpleEngineMod from '../dist/simple.js';
@@ -105,7 +106,7 @@ globalThis.document=document;
 let raf;
 const context=vm.createContext({...LookUI,...Session,...Journey,...Data,...Frontier,...Rebuild,...RebuildUI,...SupplyUI,...EchoUI,...RebuildData,...CampUI,...CampData,...FrontierUI,...FrontierActions,...FrontierData,...Version,...MendData,...SimpleUI,...SimpleData,...Atlas,...Clarity,...ZestUI,...DistrictArt,...DistrictUI,...DistrictData,...Beyond,...BeyondUI,...BeyondArt,...BeyondData,...Guidance,...GuidanceUI,...Wayfinding,...Alliance,...AllianceUI,...Outpost,...OutpostUI,...Winter,...WinterUI,...Campaign,...CampaignUI,...Visual,...Audio,Renderer,document,localStorage,Image,innerWidth:1366,innerHeight:768,devicePixelRatio:1,getComputedStyle:()=>({width:'40px'}),requestAnimationFrame:fn=>raf=fn,setTimeout:fn=>{if(false)fn()},clearTimeout:()=>{},window:{addEventListener(){},AudioContext:null},location:{reload(){}},URL,Blob,AbortController,console});
 let script=readFileSync(dir+'/game.js','utf8').replace(/^import .*?;\n/gm,'');
-script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,menuArgs,outpostUI,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo,moments});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.hud=updateHUD;globalThis.fixture=(state)=>{state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
+script+='\nglobalThis.inspect=()=>({engine,menu,menuTab,menuArgs,outpostUI,renderer,rebuildUI,districtUI,beyondUI,atlasUI,journalUI,started,campaignInfo,moments});globalThis.openRadial=openRadial;globalThis.radialState=()=>radial;globalThis.action=handleAction;globalThis.open=showMenu;globalThis.step=frame;globalThis.hud=updateHUD;globalThis.fixture=(state)=>{if(state.ease)state.ease.fresh=false;state.frontier.demo=false;state.frontier.echoDemo=false;state.districts.demo=false;resetEngine(state);engine.markGearIntro?.();started=true;closeMenu();};';
 vm.runInContext(script,context,{filename:'game.js'});
 for(let i=0;i<150&&!document.querySelector('#loading').hidden;i++)await new Promise(resolve=>setTimeout(resolve,20));
 if(!document.querySelector('#loading').hidden)console.log('Loading details:',document.querySelector('#loading').innerHTML);assert.equal(document.querySelector('#loading').hidden,true,'all game assets should finish loading');
@@ -354,7 +355,9 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   Object.assign(e.s.player, { x: 830, y: 460 }); run(4);
   assert.equal(document.querySelector('#season-chip').hidden, true, 'no season chip before the forecast');
   context.open('journey'); clean();
-  for (const line of ['第七段「让所有人过冬」', '用电台联系白霜站', '生活水准', '法令簿 0/4']) assert.ok(html().includes(line), line);
+  for (const line of ['第七段「让所有人过冬」', '用电台联系白霜站']) assert.ok(html().includes(line), line);
+  // v0.43 上手：生活水准和法令簿 v0.42 就去掉了，任务手记里那一条也不再画
+  for (const line of ['生活水准', '法令簿 0/4']) assert.ok(!html().includes(line), line);
   // v0.42 删繁：法令去掉了——那一页只说一句，按钮按了也不生效
   click('wView', 'decrees'); assert.equal(context.inspect().menu, 'outpost'); clean();
   assert.match(html(), /法令去掉了/); assert.doesNotMatch(html(), /data-action="wDecree"/);
@@ -3279,4 +3282,109 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.deepEqual(back.s.storage, e.s.storage, 'no second refund');
   assert.equal(back.s.money, e.s.money);
   console.log('Trim controller passed (v0.42): a v0.41 save restored from a file has its four removed facilities refunded (wood and scrap counted) and the wine jar turned into a pickle jar, the fertiliser merged, one notice on the first frame and 这次简化退回了什么 in the messages with its list, the build page within 26 with the decor tile and none of the removed ones, morale in the status row and no noise, 该浇水 / 浇过了 over the plot you face, the sprinkler spray by day, and save/parse with no second refund.');
+}
+
+// ================= v0.43.0「上手」：真开一个新档——第 1 天菜单里只有用得上的五格（拍照不在、脱困在）、菜单最上面一行没有士气、按住 Tab 的轮盘只有三样、
+// 右上角“在哪”不写地图；走到水井边角上停一张“第一次见到”的小卡（菜单开着时收起来），点 × 收起，同一样不再弹；设置里能关能开；
+// 第一次收菜以后菜单里多出“成就册”并停一张小卡；任务手记里没有还用不上的按钮；存档读回来照旧；一份 v0.42 的档读进来菜单都在、不弹小卡 =================
+{
+  let clock = 43000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const ui = () => context.inspect();
+  const card = () => document.querySelector('#ease-card');
+  const look = async () => { await wait(300); run(4); await wait(1050); run(4); };
+  const keydown = (key) => listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false });
+  const keyup = (key) => listeners.keyup({ key });
+  for (let i = 0; i < 6 && ui().menu; i++) click('close');
+  dailyOn = false;
+  // 回标题页，真开一个新档
+  context.open('confirmTitle'); click('backToTitle'); assert.equal(ui().started, false);
+  click('restart'); click('newGame');
+  for (let i = 0; i < 6 && ui().menu; i++) click('close');
+  const e = ui().engine;
+  assert.equal(ui().started, true); assert.equal(e.s.day, 1); assert.equal(e.easeFresh(), true, 'a new game');
+  e.paused = false; if (e.dy) e.dy.pending = null;
+  await look();
+  // 第 1 天的菜单：任务手记、背包、制作、建造、设置；拍照（还没相机）不在，脱困一直在
+  click('xView', 'phone'); assert.equal(ui().menu, 'sx'); clean();
+  for (const a of ['data-menu="rebuild"', 'data-menu="inventory"', 'data-menu="craft"', 'data-menu="build"', 'data-menu="pause"', 'data-action="mendUnstuck"']) assert.ok(html().includes(a), a);
+  for (const a of ['data-menu="map"', 'data-menu="skills"', 'data-id="people"', 'data-id="collection"', 'data-id="messages"', 'data-action="fPhoto"']) assert.ok(!html().includes(a), 'not yet: ' + a);
+  assert.ok(!card() || card().hidden, 'the card waits while a menu is open');
+  click('close');
+  const rows = LookUI.statusRows(e, CampaignUI.campaignHud(e));
+  assert.ok(!rows.some((r) => r.key === 'morale'), 'no morale before anyone lives in the camp');
+  assert.deepEqual(CampaignUI.easeRadial(e, CampaignUI.radialItems(e)).map((x) => x.id), ['craft', 'build', 'journal'], 'the Tab wheel: three');
+  keydown('Tab'); context.openRadial(); assert.ok(context.radialState(), 'held Tab opens the wheel');
+  assert.equal((document.querySelector('#radial').innerHTML.match(/data-radial=/g) || []).length, 3);
+  keyup('Tab'); assert.equal(context.radialState(), null); assert.equal(ui().menu, null);
+  for (let i = 0; i < 4 && ui().menu; i++) click('close');
+  assert.ok(document.documentElement.className.includes('ease-nomap'), 'the place button does not offer the map yet');
+  // 任务手记：选别的委托、查看地图、查看防线、别的地方都还没有
+  context.open('rebuild', { tab: 'overview' }); clean();
+  for (const a of ['data-action="gCatalog"', 'data-action="aOpen"', 'data-action="oDefense"', '<summary>别的地方</summary>', '生活水准']) assert.ok(!html().includes(a), 'journal, not yet: ' + a);
+  assert.match(html(), /清理一块农田/);
+  click('close');
+  // 走到水井边：角上停一张“第一次见到”的小卡
+  const well = e.objects.find((o) => o.type === 'well');
+  assert.ok(well, 'the farm has its well');
+  e.paused = false; Object.assign(e.s.player, { x: well.x, y: well.y + 26 });
+  assert.equal(e.nearestObject()?.type, 'well');
+  await look();
+  assert.ok(card() && !card().hidden, 'the corner card shows');
+  assert.match(card().innerHTML, /第一次见到/); assert.match(card().innerHTML, /灌满水壶/); assert.match(card().innerHTML, /data-action="eCardClose"/);
+  assert.doesNotMatch(card().innerHTML, /机制参考|已体验|试玩|待验证|undefined|NaN/);
+  assert.ok(document.documentElement.className.includes('ease-showing'));
+  // 菜单开着：先收起来；关上菜单接着停
+  context.open('inventory'); run(4); assert.equal(card().hidden, true, 'hidden while the inventory is open'); click('close');
+  e.paused = false; run(4); assert.equal(card().hidden, false, 'back after the menu closes');
+  // 点 × 收起；同一样不再弹
+  click('eCardClose'); assert.equal(card().hidden, true);
+  assert.ok(e.ez.seen.includes('well'));
+  await look(); assert.equal(card().hidden, true, 'the well does not come again');
+  // 设置：上手那一节能关能开
+  context.open('pause'); clean();
+  assert.match(html(), /<summary>上手<\/summary>/); assert.match(html(), /第一次见到的小卡/); assert.match(html(), /data-action="eCards"[^>]*aria-pressed="true"/);
+  click('eCards'); assert.equal(e.ez.cards, false); assert.match(html(), /data-action="eCards"[^>]*aria-pressed="false"[^>]*>已关闭/);
+  click('eCards'); assert.equal(e.ez.cards, true); assert.match(html(), />已开启</);
+  click('close');
+  // 第一次收菜：菜单里多出“成就册”，角上停一张“菜单里多了一格”
+  e.paused = false;
+  const p = e.s.plots.find((q) => e.isFarmPlot(q) && !q.crop) || e.s.plots[0];
+  e.s.debris = e.s.debris.filter((d) => Math.hypot(d.x - p.x, d.y - p.y) >= 15);
+  assert.ok(e.toolPlot(p, 'hoe')); assert.ok(e.toolPlot(p, 'seedRadish')); assert.ok(e.toolPlot(p, 'water'));
+  e.advanceMinutes(220); assert.ok(e.harvest(p));
+  Object.assign(e.s.player, { x: 830, y: 480 });
+  click('eCardClose');
+  let saw = '';
+  for (let i = 0; i < 6 && !/成就册/.test(saw); i++) { await look(); if (!card().hidden) { saw += card().innerHTML; click('eCardClose'); } }
+  assert.match(saw, /菜单里多了一格/); assert.match(saw, /成就册/);
+  click('xView', 'phone'); assert.ok(html().includes('data-id="collection"'), 'the collection tile is there now'); click('close');
+  // 存档读回来：见过的、出现过的、开没开都在
+  click('save');
+  const saved = JSON.parse(storage.get(Session.CAMPAIGN_SAVE));
+  assert.equal(saved.ease.fresh, true); assert.ok(saved.ease.seen.includes('well')); assert.ok(saved.ease.shown.includes('menu:collection'));
+  const back = new Campaign.Engine(Campaign.Engine.parse(JSON.stringify(saved)), () => {});
+  assert.deepEqual(back.ez, e.ez);
+  // 一份 v0.42 的档：菜单都在、没有士气以外的门槛、不弹小卡、设置里没有上手那一节
+  const TrimMod = await import('../dist/trim.js');
+  const old = new TrimMod.Engine(TrimMod.newGameState('farmer'), () => {});
+  old.s.day = 12; old.s.minute = 600; if (old.feel?.open) old.feel.open.phase = 'done'; old.markGearIntro?.();
+  const text = old.serialize();
+  assert.ok(!('ease' in JSON.parse(text)), 'a v0.42 save');
+  context.open('restoreArchive', { files: { old: text } }); clean();
+  click('restoreCandidate', '0'); click('applyImport');
+  const o = ui().engine;
+  for (let i = 0; i < 6 && ui().menu; i++) click('close');
+  assert.equal(o.easeFresh(), false);
+  o.paused = false; if (o.dy) o.dy.pending = null;
+  click('xView', 'phone');
+  for (const a of ['data-menu="map"', 'data-menu="skills"', 'data-id="people"', 'data-id="collection"', 'data-id="messages"', 'data-action="fPhoto"']) assert.ok(html().includes(a), 'an old save keeps ' + a);
+  click('close');
+  const ow = o.objects.find((x) => x.type === 'well');
+  Object.assign(o.s.player, { x: ow.x, y: ow.y + 26 });
+  await look(); assert.ok(!card() || card().hidden, 'no corner cards on an old save');
+  assert.ok(!document.documentElement.className.includes('ease-nomap'));
+  context.open('pause'); assert.doesNotMatch(html(), /<summary>上手<\/summary>/); click('close');
+  console.log('Ease controller passed (v0.43): a genuinely new game shows five menu tiles on day 1 (photo hidden without a camera, unstuck kept), no morale in the status row, three entries on the Tab wheel and no map on the place button; the journal has no buttons not yet usable; at the well a corner card (first seen) shows, hides while a menu is open and comes back, closes with ×, and never repeats; the settings switch turns the cards off and on; the first harvest adds the collection tile with its card; save/parse keeps what was seen; a v0.42 save keeps every menu, shows no cards and has no settings section.');
 }

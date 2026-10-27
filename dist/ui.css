@@ -2117,3 +2117,155 @@ html.desk #modal .collection li.rl-pct > b {
 html.desk #modal .g-stat b {
   font: 400 var(--fs-px) / 1.2 var(--f-px);
 }
+
+/* ======================================================================
+   v0.43 上手：第一次见到的小卡（场景右上角；不挡路、不停游戏，几秒后收起，点 × 也收）
+   左上是提醒，上方居中是教学提示和大事卡，右上空着
+   ====================================================================== */
+html.desk #ease-card {
+  zoom: var(--uiz);
+  position: absolute;
+  top: var(--sp3);
+  right: var(--sp4);
+  z-index: 6;
+  box-sizing: border-box;
+  width: 340px;
+  max-width: calc(var(--vw-z) - 400px);
+  padding: var(--sp3) var(--sp4);
+  font-family: var(--f-body);
+  color: var(--c-ink);
+  background: var(--c-panel);
+  border: 2px solid var(--c-line);
+  border-left: 4px solid var(--c-ember);
+  box-shadow: 0 0 0 2px #0a0705, 0 6px 0 #0a0705, 0 12px 28px #0008;
+  animation: ease-card-in var(--t-open) var(--ease-out);
+}
+html.desk #ease-card[hidden] {
+  display: none;
+}
+@keyframes ease-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+html.desk #ease-card .ease-tag {
+  display: block;
+  margin-right: 28px;
+  font-size: var(--fs-s);
+  letter-spacing: 2px;
+  color: var(--c-ember-hi);
+}
+html.desk #ease-card .sx-card {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+html.desk #ease-card h3 {
+  margin: 2px 28px 6px 0;
+  font-size: var(--fs-h);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--c-ink);
+}
+html.desk #ease-card p {
+  margin: 2px 0;
+  font-size: var(--fs-b);
+  line-height: 1.5;
+  color: var(--c-ink-2);
+}
+html.desk #ease-card :is(.sx-good, .sx-now) b {
+  margin-right: 6px;
+  font-weight: 600;
+  color: var(--c-good);
+}
+html.desk #ease-card .ease-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  min-height: 0;
+  padding: 0;
+  font-size: var(--fs-h);
+  line-height: 1;
+  color: var(--c-ink-3);
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+html.desk #ease-card .ease-close:hover {
+  color: var(--c-ink);
+}
+html.desk body:is(.title-screen, .modal-open) #ease-card {
+  display: none;
+}
+/* 地图还用不上时，右上角“在哪”那一格不写“地图 M” */
+html.desk.ease-nomap .hud-location span:last-child,
+html:not(.desk).ease-nomap .hud-location span:last-child {
+  display: none;
+}
+/* 手机上（样子照旧，只给小卡一个位置）：右上角，提醒那一列让出地方 */
+html:not(.desk) #ease-card {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 6;
+  box-sizing: border-box;
+  width: min(46%, 280px);
+  padding: 8px 10px;
+  font-size: var(--fs-s, 14px);
+  line-height: 1.45;
+  color: var(--ink);
+  background: #1b2922f2;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: 4px;
+}
+html:not(.desk) #ease-card[hidden] {
+  display: none;
+}
+html:not(.desk) #ease-card .ease-tag {
+  display: block;
+  margin-right: 24px;
+  font-size: var(--fs-s, 14px);
+  color: var(--gold);
+}
+html:not(.desk) #ease-card .sx-card {
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+html:not(.desk) #ease-card h3 {
+  margin: 2px 24px 4px 0;
+  font-size: var(--fs-s, 14px);
+  font-weight: 700;
+}
+html:not(.desk) #ease-card p {
+  margin: 2px 0;
+  font-size: var(--fs-s, 14px);
+  color: var(--dim);
+}
+html:not(.desk) #ease-card .sx-good b {
+  margin-right: 4px;
+  color: var(--green);
+}
+html:not(.desk) #ease-card .ease-close {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: var(--fs-s, 14px);
+  background: none;
+  border: 0;
+}
+html:not(.desk) body:is(.title-screen, .modal-open) #ease-card {
+  display: none;
+}
+html:not(.desk).ease-showing .alert-bar {
+  max-width: calc(54% - 16px);
+}

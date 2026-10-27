@@ -271,7 +271,7 @@ test("wiring: game.js imports the look, marks each page, refits icons after the 
   assert.match(g, /import \{applyLook,lookAfterRender,lookHud\} from '\.\/look-ui\.js';/);
   assert.match(g, /function resize\(\)\{applyLook\(\);/);
   assert.match(g, /if\(lookAfterRender\(\$\('#modal'\),\{menu,args:menuArgs,view:outpostUI\.view,engine,hud\}\)\)styleIcons\(\$\('#modal'\)\);/);
-  assert.match(g, /paintNotices\(\);lookHud\(engine\);\}/);
+  assert.match(g, /paintNotices\(\);lookHud\(engine\);(easeFrame\(engine\);)?\}/);
   assert.match(g, /engine\.s\.slot=slot;engine\.reload=null;hudCache='';[^}]*if\(started\)updateHUD\(\);\}/);
   assert.match(g, /if\(menu\)closeMenu\(\);else showMenu\('sx',\{view:'menus'\}\);return;\}/);
   // 手柄：十字键挪焦点也走得到建造页的图标格（不是按钮，是 role=button 的格子）

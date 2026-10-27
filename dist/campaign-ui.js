@@ -35,6 +35,9 @@ import { renderHopeView, hopeTitle, handleHopeAction, patchHopeJournal, hopeBuil
 import { renderGrowSkillPage, patchGrowStation, patchGrowCollection, patchGrowBench, handleGrowAction } from "./grow-ui.js";
 // v0.42：删繁——去掉的东西不再出现在页面上（田、广播、堆肥、麦穗、技能、设施卡、手记、顶栏、休整点、摆件、农舍）
 import { trimView, trimPatch, trimTitle, trimBuildingExtras, trimStationExtras, trimSkillPage, trimJournal, trimHud, decorCard, trimBuildCardExtras, trimHomeExtras, trimDistricts, trimBeyond, boardHtml, handleTrimAction, trimBuildIds, trimManual } from "./trim-ui.js";
+// v0.43：用得上才出现（菜单十项、士气、任务手记的几行）、角上的小卡、设置里那一行、前三天的“带路”
+import { easeMenus, easeHud, easeJournal, easeView, easeSettings, easeFrame, easeCardHtml, easeCardNow, easeRadial, handleEaseAction } from "./ease-ui.js";
+export { easeMenus, easeSettings, easeFrame, easeCardHtml, easeCardNow, easeRadial };
 const renderSkillPage = (e) => trimSkillPage(e, renderGrowSkillPage(e, thiefSkillPage));
 export const patchHopeDistricts = (e, html) => trimDistricts(e, hopeDistricts(e, html));
 export const patchBeyond = trimBeyond;
@@ -108,11 +111,11 @@ const renderCampaignView1 = (e, ui) => {
 };
 export const renderCampaignView = (e, ui) => {
   const own = trimView(e, ui);
-  return own != null ? own : trimPatch(e, ui, renderCampaignView1(e, ui));
+  return easeView(e, ui, own != null ? own : trimPatch(e, ui, renderCampaignView1(e, ui)));
 };
 export const renderCampaignJournal = (e, ui) => {
   const html = renderGardenJournal(e, ui);
-  return ui?.catalog ? html : trimJournal(e, patchHopeJournal(e, patchZestJournal(e, patchRelightJournal(e, patchNfJournal(e, patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html))))))));
+  return ui?.catalog ? html : easeJournal(e, trimJournal(e, patchHopeJournal(e, patchZestJournal(e, patchRelightJournal(e, patchNfJournal(e, patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html)))))))));
 };
 export const renderMapPlus = (e, ui) => patchUnderMap(e, ui, renderFarMap(e, ui));
 // 去掉营地手册后，“农业”这一页就是菜地告示牌；其余每页只放那一处的内容
@@ -132,11 +135,11 @@ export function campaignHud(e) {
   const base = outpostHud(e);
   if (!base) return null;
   const ln = tidyLnHud(e);
-  return trimHud(e, nfHud(e, { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchNfAlerts(e, patchAlerts(e, alertBar(e))), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e), date: almanacDate(e) }));
+  return easeHud(e, trimHud(e, nfHud(e, { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchNfAlerts(e, patchAlerts(e, alertBar(e))), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e), date: almanacDate(e) })));
 }
 // 动作：巨影 → 成长 → 盼头 → 重光 → 人情 → 四时 → 热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
-  return handleTrimAction(action, el, ctx) || handleTitanAction(action, el, ctx) || handleGrowAction(action, el, ctx) || handleHopeAction(action, el, ctx) || handleRelightAction(action, el, ctx) || handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
+  return handleEaseAction(action, el, ctx) || handleTrimAction(action, el, ctx) || handleTitanAction(action, el, ctx) || handleGrowAction(action, el, ctx) || handleHopeAction(action, el, ctx) || handleRelightAction(action, el, ctx) || handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
 }
 
 // v0.25：到这里所有层的物品都登记过了，把还没挂上的新小图挂上
