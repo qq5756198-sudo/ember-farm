@@ -2248,9 +2248,9 @@ html:not(.desk) #ease-card p {
   font-size: var(--fs-s, 14px);
   color: var(--dim);
 }
-html:not(.desk) #ease-card .sx-good b {
-  margin-right: 4px;
-  color: var(--green);
+/* 手机上只留头一行、名字和做什么，少挡一点场景 */
+html:not(.desk) #ease-card :is(.sx-good, .sx-now) {
+  display: none;
 }
 html:not(.desk) #ease-card .ease-close {
   position: absolute;
