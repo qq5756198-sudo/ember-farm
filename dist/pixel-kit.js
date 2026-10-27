@@ -303,6 +303,9 @@ export function deskLook(win = globalThis) {
   }
 }
 export const LOOK41 = { on: deskLook() };
+// v0.44「四季」：正在画的底图是哪个时节的（thaw / heat / harvest / cold；null 是原来的样子，和夏天一样）。
+// 只在画底图的那一下设上（pixel-maps 的 bakeMap），画树、画松树的地方看它换叶、积雪。
+export const ART_SEASON = { id: null };
 
 // 画好的小图按名字存起来，只画一次（v0.41 的画面和原来的画面各存各的）
 const sprites = new Map();

@@ -109,6 +109,10 @@ export class Renderer extends VisualRenderer {
     }
     return this._look;
   }
+  // 走路第几帧（v0.44 上面的层改成 8 帧、站着加小动作；sub、idle 见 pixel-sprites 的 drawPerson）
+  playerStep(e, walking) {
+    return { frame: walking ? Math.floor((e.moveTime || this.time) * 9) % 4 : 0, sub: 0, idle: 0 };
+  }
   drawPlayer(e) {
     if (!this.v || !e.gr) return super.drawPlayer(e);
     const p = e.s.player,
@@ -116,13 +120,13 @@ export class Renderer extends VisualRenderer {
       c = this.ctx,
       walking = !!e.walking && !e.paused && !gx.grab && !(gx.down > 0),
       { dir, flip } = dirFromAngle(p.facing),
-      frame = walking ? Math.floor((e.moveTime || this.time) * 9) % 4 : 0,
       pose = e.actionAnim > 0 || gx.swing ? "work" : "walk",
+      st = this.playerStep(e, walking, pose),
       alpha = e.invulnerable > 0 && Math.floor(e.invulnerable * 12) % 2 === 0 ? 0.45 : 1,
       look = this.playerLook(e),
       id = e.currentItem(),
       held = heldSprite(id),
-      spr = personSprite(look, "player", dir, frame, pose);
+      spr = personSprite(look, "player", dir, st.frame, pose, st.sub, st.idle);
     this.pxShadow(p.x, p.y, 20);
     // 倒地：人横躺着，手里的东西掉在旁边
     if (gx.down > 0) {

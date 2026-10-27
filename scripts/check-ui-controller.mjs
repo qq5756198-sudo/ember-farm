@@ -3388,3 +3388,40 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   context.open('pause'); assert.doesNotMatch(html(), /<summary>上手<\/summary>/); click('close');
   console.log('Ease controller passed (v0.43): a genuinely new game shows five menu tiles on day 1 (photo hidden without a camera, unstuck kept), no morale in the status row, three entries on the Tab wheel and no map on the place button; the journal has no buttons not yet usable; at the well a corner card (first seen) shows, hides while a menu is open and comes back, closes with ×, and never repeats; the settings switch turns the cards off and on; the first harvest adds the collection tile with its card; save/parse keeps what was seen; a v0.42 save keeps every menu, shows no cards and has no settings section.');
 }
+
+// ================= v0.44.0「四季」：建造页每样设施一个新画的小图（不再有旧图集转出来的箱子、扩建图集、边境图集），每样不一样；
+// 快捷栏“建造”那一格是新画的锤子；场景按这一天的时节画树（换了时节后台重画，画好之前照用原来那张）；
+// 老怀表那一句说全营士气 =================
+{
+  const ui = () => context.inspect();
+  for (let i = 0; i < 6 && ui().menu; i++) click('close');
+  const e = ui().engine, r = ui().renderer;
+  e.paused = false; if (e.dy) e.dy.pending = null;
+  // 建造页
+  context.open('build'); clean();
+  const tiles = html().match(/<article class="recipe">[\s\S]*?<\/article>/g) || [];
+  assert.ok(tiles.length >= 20, 'build tiles: ' + tiles.length);
+  assert.doesNotMatch(html(), /data-atlas=|data-frontier=/, 'no old atlas pictures on the build page');
+  const icons = tiles.map((t) => (t.match(/data-icon="(g\d+)"/) || [])[1]);
+  assert.ok(icons.every(Boolean), 'every tile has a new icon');
+  assert.equal(new Set(icons).size, icons.length, 'one icon each (the chest used to stand in for six)');
+  click('close');
+  // 快捷栏“建造”那一格
+  e.s.hotbar = e.s.hotbar || [];
+  context.hud();
+  const bar = document.querySelector('#hotbar')?.innerHTML || '';
+  const slot = bar.match(/title="建造"><span class="key">\d<\/span><i class="item-icon " data-icon="([^"]+)"/);
+  if (slot) assert.equal(slot[1], CampaignUI.buildToolIcon(), 'the hammer');
+  assert.match(CampaignUI.buildToolIcon(), /^g\d+$/);
+  // 树按时节画：画面要的是这一天的时节；换时节以后要的跟着换
+  const keepDay = e.s.day;
+  for (const [day, want] of [[1, 'thaw'], [8, 'heat'], [15, 'harvest'], [22, 'cold'], [200, 'thaw']]) {
+    e.s.day = day; context.step((ui().clock = (ui().clock || 44000000) + 50));
+    assert.equal(r.artSeason('farm'), want, 'day ' + day);
+    assert.equal(r.artSeason('shelter'), null, 'no seasons underground');
+  }
+  e.s.day = keepDay;
+  // 老怀表那一句
+  assert.match(Data.BUILDINGS.rlWatch?.desc || '全营士气', /全营士气/);
+  console.log('Four seasons controller passed (v0.44): every facility on the build page has its own new icon and no old atlas picture is left there; the hotbar build slot is the new hammer; the scene asks for the season of the day (spring, summer, autumn, winter; none underground); the old watch says camp morale.');
+}

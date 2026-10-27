@@ -18,8 +18,8 @@ export const RL_SCHEMA = 1;
 export const STATION = { type: "rlStation", name: "重建站", cost: { wood: 20, stone: 12, scrap: 8 }, w: 52, h: 40, hp: 160 };
 if (!BUILDINGS.rlStation)
   BUILDINGS.rlStation = { name: STATION.name, icon: 40, cost: { ...STATION.cost }, w: STATION.w, h: STATION.h, hp: STATION.hp, desc: "6 面墙、28 份重建清单：按清单凑齐一组东西交上去，交满一面墙，余烬地区就恢复一样（通电、通水、开课、开诊、通车、通话）。整个营地只建一座。" };
-// 第一次点满 4 盏灯给的老怀表：摆出来全营心情 +3（只有一件）
-if (!BUILDINGS.rlWatch) BUILDINGS.rlWatch = { name: "老怀表", icon: 40, cost: {}, w: 22, h: 22, hp: 60, retired: true, desc: "年终评定第一次点满 4 盏灯，联盟捎来的一只老怀表，还在走。摆在营地里，全营心情 +3。只有一件。" };
+// 第一次点满 4 盏灯给的老怀表：摆出来全营士气 +3（只有一件）
+if (!BUILDINGS.rlWatch) BUILDINGS.rlWatch = { name: "老怀表", icon: 40, cost: {}, w: 22, h: 22, hp: 60, retired: true, desc: "年终评定第一次点满 4 盏灯，联盟捎来的一只老怀表，还在走。摆在营地里，全营士气 +3。只有一件。" };
 
 // ================= 六面墙 =================
 export const WALLS = {

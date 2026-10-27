@@ -38,6 +38,8 @@ import { trimView, trimPatch, trimTitle, trimBuildingExtras, trimStationExtras, 
 // v0.43：用得上才出现（菜单十项、士气、任务手记的几行）、角上的小卡、设置里那一行、前三天的“带路”
 import { easeMenus, easeHud, easeJournal, easeView, easeSettings, easeFrame, easeCardHtml, easeCardNow, easeRadial, handleEaseAction } from "./ease-ui.js";
 export { easeMenus, easeSettings, easeFrame, easeCardHtml, easeCardNow, easeRadial };
+// v0.44「四季」：设施图标、快捷栏“建造”换成新画的；标题页动起来
+export { buildToolIcon, decorIcon } from "./four-ui.js";
 const renderSkillPage = (e) => trimSkillPage(e, renderGrowSkillPage(e, thiefSkillPage));
 export const patchHopeDistricts = (e, html) => trimDistricts(e, hopeDistricts(e, html));
 export const patchBeyond = trimBeyond;

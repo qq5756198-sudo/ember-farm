@@ -1,6 +1,6 @@
 // 新画面的通用画法：一张地图（768×512 美术像素）的地面、道路、房子、院子、灯光记录。
 // 每张地图的配方在 pixel-city.js（四个废墟区）和 pixel-regions.js（地区和边境）里。
-import { PAL, OUTLINE, Pix, fbm, vnoise, hash2, dither, rng, mix, bayer } from "./pixel-kit.js";
+import { PAL, OUTLINE, Pix, fbm, vnoise, hash2, dither, rng, mix, bayer, ART_SEASON } from "./pixel-kit.js";
 
 export const MAP_W = 768,
   MAP_H = 512;
@@ -1266,8 +1266,9 @@ export function container(sc, x, y, w = 30, col = PAL.rust) {
   P.hline(x, x + w - 1, y - 1, OUTLINE);
   P.hline(x, x + w - 1, y - h, OUTLINE);
 }
-// 松树（可带雪）
+// 松树（可带雪；v0.44 寒潮时节画的底图上松树都积雪）
 export function pine(seed, s = 1, snow = false) {
+  snow = snow || ART_SEASON.id === "cold";
   const r = rng(seed),
     H = Math.round(26 * s) + 8,
     W = Math.round(16 * s) + 6,

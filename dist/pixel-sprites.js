@@ -111,15 +111,25 @@ export function lookFor(key, role = null) {
 
 // dir: down / up / side（朝右，朝左时翻转）；frame 0–3；pose: walk / work / idle
 // 画布 22×34，脚底在第 32 行；头顶约在地图上方 60 个单位处，和原来的人物一样高。
+// v0.44「四季」：sub = 1 是 frame 和下一帧中间补的那一帧（走路 8 帧：步子迈到一半、身子不往下沉、手先甩过去）；
+// idle 是站着时的小动作（按位）：1 吸气（头和肩膀抬一个像素），2 眨眼，4 往旁边看一眼（只有朝下时看得出）。
+// sub、idle 都是 0 时和原来一模一样。
 export const PERSON_W = 22,
   PERSON_H = 34;
-function drawPerson(L, dir, frame, pose) {
+const STEP_FWD = [0, 2, 0, -2],
+  STEP_LIFT = [0, 1, 0, -1],
+  STEP_SWING = [0, 1, 0, -1];
+function drawPerson(L, dir, frame, pose, sub = 0, idle = 0) {
+  const walk = pose === "walk" || pose === "reach",
+    mid = walk && sub ? 1 : 0,
+    f1 = (frame + 1) % 4,
+    still = !mid && frame === 0,
+    breathe = still && idle & 1 ? 1 : 0;
   const P = new Pix(PERSON_W, PERSON_H),
     cx = 11,
     feet = 32,
-    walk = pose === "walk" || pose === "reach",
-    bob = walk && (frame === 1 || frame === 3) ? 1 : 0,
-    top = 3 + bob + (L.hunch ? 1 : 0);
+    bob = walk && !mid && (frame === 1 || frame === 3) ? 1 : 0,
+    top = 3 + bob + (L.hunch ? 1 : 0) - breathe;
   const AR = ARMOR_TOPS[L.armor] || null,
     [tc, td, tl] = AR?.top || L.top,
     [ac, ad, al] = AR?.sleeve ? AR.top : L.top,
@@ -135,7 +145,7 @@ function drawPerson(L, dir, frame, pose) {
   const tall = FEET[L.feet]?.tall ? 1 : 0,
     LG = LEGS[L.legs] || null;
   if (dir === "side") {
-    const fwd = walk ? [0, 2, 0, -2][frame] : 0;
+    const fwd = !walk ? 0 : mid ? (STEP_FWD[frame] + STEP_FWD[f1]) / 2 : STEP_FWD[frame];
     P.rect(cx - 2 - fwd, legTop, 3, 6, pd);
     P.rect(cx - 2 - fwd, feet - 1 - tall, 4, 2 + tall, boots[1]);
     P.rect(cx - 1 + fwd, legTop, 3, 6, pc);
@@ -150,7 +160,7 @@ function drawPerson(L, dir, frame, pose) {
       P.hline(cx - 1 + fwd, cx + 1 + fwd, legTop + 2, LG.shin[1]);
     }
   } else {
-    const lift = walk ? [0, 1, 0, -1][frame] : 0,
+    const lift = !walk ? 0 : mid ? STEP_LIFT[frame] + STEP_LIFT[f1] : STEP_LIFT[frame],
       l = Math.max(0, lift),
       r = Math.max(0, -lift);
     P.rect(cx - 4, legTop, 4, 6 - l, pc);
@@ -261,7 +271,10 @@ function drawPerson(L, dir, frame, pose) {
     }
   }
   // ---- 手臂 ----
-  const swing = walk ? [0, 1, 0, -1][frame] : 0;
+  // 中间那一帧：胳膊还在身边，手先甩过去一个像素
+  const swing = !walk ? 0 : mid ? STEP_SWING[frame] + STEP_SWING[f1] : STEP_SWING[frame],
+    armS = mid ? 0 : swing,
+    handS = mid ? swing : swing * 2;
   if (pose === "work") {
     if (dir === "side") {
       P.rect(cx, bodyTop + 2, 6, 3, ad);
@@ -291,9 +304,9 @@ function drawPerson(L, dir, frame, pose) {
       P.rect(bx + bw - 3, bodyTop + 8 + Math.max(0, -swing), 3, 2, L.skinDark);
     }
   } else if (dir === "side") {
-    P.rect(cx - 1 + swing, bodyTop + 1, 3, 7, ad);
-    P.rect(cx - 1 + swing * 2, bodyTop + 8, 3, 2, hand);
-    if (GL?.band) P.hline(cx - 1 + swing, cx + 1 + swing, bodyTop + 6, GL.band[0]);
+    P.rect(cx - 1 + armS, bodyTop + 1, 3, 7, ad);
+    P.rect(cx - 1 + handS, bodyTop + 8, 3, 2, hand);
+    if (GL?.band) P.hline(cx - 1 + armS, cx + 1 + armS, bodyTop + 6, GL.band[0]);
   } else {
     P.rect(bx - 2, bodyTop + 1 + Math.max(0, swing), 2, 7, dir === "down" ? al : ad);
     P.rect(bx + bw, bodyTop + 1 + Math.max(0, -swing), 2, 7, ad);
@@ -368,9 +381,12 @@ function drawPerson(L, dir, frame, pose) {
     }
   }
   // ---- 脸 ----
+  // v0.44：眨眼时眼睛是一道缝（肤色深的一道），往旁边看时两只眼睛往左挪一个像素
+  const blink = still && idle & 2,
+    gx = still && idle & 4 && dir === "down" ? -1 : 0;
   if (L.eyes && dir === "down") {
-    P.rect(hx + 2, hy + 5, 2, 1, L.eyes);
-    P.rect(hx + 6, hy + 5, 2, 1, L.eyes);
+    P.rect(hx + 2 + gx, hy + 5, 2, 1, blink ? L.skinDark : L.eyes);
+    P.rect(hx + 6 + gx, hy + 5, 2, 1, blink ? L.skinDark : L.eyes);
     P.set(hx + 2, hy + 4, L.skinDark);
     P.set(hx + 7, hy + 4, L.skinDark);
     if (L.mouth) {
@@ -378,19 +394,19 @@ function drawPerson(L, dir, frame, pose) {
       P.set(hx + 4, hy + 9, PAL.cloth[1]);
     } else P.hline(hx + 3, hx + 6, hy + 8, PAL.ash[1]);
   } else if (L.eyes && dir === "side") {
-    P.rect(hx + 7, hy + 5, 2, 1, L.eyes);
+    P.rect(hx + 7, hy + 5, 2, 1, blink ? L.skinDark : L.eyes);
     if (L.mouth) P.rect(hx + 8, hy + 7, 2, 3, PAL.ash[0]);
     else P.set(hx + 8, hy + 8, PAL.ash[1]);
   } else if (dir === "down") {
-    P.rect(hx + 2, hy + 5, 1, 2, OUTLINE);
-    P.rect(hx + 7, hy + 5, 1, 2, OUTLINE);
+    P.rect(hx + 2 + gx, hy + 5 + (blink ? 1 : 0), 1, blink ? 1 : 2, OUTLINE);
+    P.rect(hx + 7 + gx, hy + 5 + (blink ? 1 : 0), 1, blink ? 1 : 2, OUTLINE);
     P.set(hx + 2, hy + 4, mix(hair, skin, 0.3));
     P.set(hx + 7, hy + 4, mix(hair, skin, 0.3));
     P.set(hx + 1, hy + 7, mix(skin, PAL.cloth[2], 0.35));
     P.set(hx + 8, hy + 7, mix(skin, PAL.cloth[2], 0.35));
     P.hline(hx + 4, hx + 5, hy + 8, L.skinDark);
   } else if (dir === "side") {
-    P.rect(hx + 7, hy + 5, 1, 2, OUTLINE);
+    P.rect(hx + 7, hy + 5 + (blink ? 1 : 0), 1, blink ? 1 : 2, OUTLINE);
     P.set(hx + 10, hy + 6, skin);
     P.set(hx + 8, hy + 8, L.skinDark);
   }
@@ -488,8 +504,12 @@ function drawPerson(L, dir, frame, pose) {
   P.outline(OUTLINE);
   return P;
 }
-export function personSprite(look, key, dir, frame, pose) {
-  return cached(`person:${key}:${look.sig || ""}:${dir}:${frame}:${pose}`, () => canvasOf(drawPerson(look, dir, frame, pose)));
+// v0.44：sub（走路中间补的那一帧）、idle（站着的小动作）见 drawPerson；都是 0 时和原来同一张
+export function personSprite(look, key, dir, frame, pose, sub = 0, idle = 0) {
+  const walk = pose === "walk" || pose === "reach",
+    s = walk && sub ? 1 : 0,
+    i = !s && frame === 0 ? (dir === "down" ? idle & 7 : dir === "side" ? idle & 3 : idle & 1) : 0;
+  return cached(`person:${key}:${look.sig || ""}:${dir}:${frame}:${pose}${s ? ":s" : ""}${i ? ":i" + i : ""}`, () => canvasOf(drawPerson(look, dir, frame, pose, s, i)));
 }
 export const dirFromAngle = (a) => {
   if (a >= Math.PI / 4 && a < (Math.PI * 3) / 4) return { dir: "down", flip: false };
@@ -798,20 +818,22 @@ export const ZOMBIE_LOOKS = ZLOOK;
 export function zombiePix(look, dir, frame, pose = "reach") {
   return drawPerson(look, dir, frame, dir === "up" ? "walk" : pose);
 }
-export function zombieSprite(type, dir, frame) {
-  if (type === "elite") return bruteSprite(dir, frame);
+// v0.44：sub = 1 是走路中间补的那一帧（感染者也是 8 帧）
+export function zombieSprite(type, dir, frame, sub = 0) {
+  if (type === "elite") return bruteSprite(dir, frame, sub);
   const look = ZLOOK[type] || ZLOOK.slow;
-  return cached(`zombie:${type}:${dir}:${frame}`, () => canvasOf(drawPerson(look, dir, frame, dir === "up" ? "walk" : "reach")));
+  return cached(`zombie:${type}:${dir}:${frame}${sub ? ":s" : ""}`, () => canvasOf(drawPerson(look, dir, frame, dir === "up" ? "walk" : "reach", sub ? 1 : 0)));
 }
 // 仓库守卫：宽肩、粗胳膊、缩在肩膀里的小脑袋、沾血的围裙，36×48
-function bruteSprite(dir, frame) {
-  return cached(`brute:${dir}:${frame}`, () => {
-    const P = new Pix(36, 48),
+function bruteSprite(dir, frame, sub = 0) {
+  return cached(`brute:${dir}:${frame}${sub ? ":s" : ""}`, () => {
+    const f1 = (frame + 1) % 4,
+      P = new Pix(36, 48),
       cx = 18,
       feet = 46,
-      bob = frame % 2,
-      sway = [0, 1, 0, -1][frame],
-      lift = [0, 1, 0, -1][frame],
+      bob = sub ? 0 : frame % 2,
+      sway = sub ? STEP_SWING[frame] + STEP_SWING[f1] : STEP_SWING[frame],
+      lift = sub ? STEP_LIFT[frame] + STEP_LIFT[f1] : STEP_LIFT[frame],
       top = 11 + bob,
       side = dir === "side";
     const flesh = (x, y, t) => P.set(x, y, dither("stone", Math.max(0.15, Math.min(0.98, t)), x, y));

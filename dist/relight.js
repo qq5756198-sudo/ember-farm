@@ -1062,7 +1062,7 @@ export class Engine extends KinEngine {
       if (!this.rl.watch) {
         this.rl.watch = 1;
         this.syncRelightBuild();
-        this.rlLog("联盟捎来一只老怀表：摆在营地里，全营心情 +3（建设页里摆出来）。", "gold");
+        this.rlLog("联盟捎来一只老怀表：摆在营地里，全营士气 +3（建设页里摆出来）。", "gold");
       }
       this.grantCore("review");
     }
@@ -1403,7 +1403,7 @@ export class Engine extends KinEngine {
       if (o?.type === "rlShaft") return "检修平台 · 按 E 往下（地铁隧道）";
       if (o?.type === "rlDig") return "这里的土是松的 · 按 E 挖";
       if (o?.type === "building" && o.building?.type === STATION.type && o.building.hp >= BUILDINGS[STATION.type].hp * 0.7) return "重建站 · 按 E 看清单（" + this.rl.done.length + "/" + LIST_IDS.length + "）";
-      if (o?.type === "building" && o.building?.type === "rlWatch") return "老怀表 · 还在走（全营心情 +" + REVIEW.watchMood + "）";
+      if (o?.type === "building" && o.building?.type === "rlWatch") return "老怀表 · 还在走（全营士气 +" + REVIEW.watchMood + "）";
       const pid = this.personOf?.(o);
       if (pid && this.rl.co.leave?.id === pid) return this.kinName(pid) + " · 想走了，按 E 劝劝";
     }

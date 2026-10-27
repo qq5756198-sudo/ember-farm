@@ -7,6 +7,7 @@
 // 这一层不改玩法、不碰存档，只排版。
 import { keyLabel } from "./farlands-data.js";
 import { hudCardHtml } from "./simple-ui.js";
+import { paintGearIcon } from "./gear-sprites.js";
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const escH = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -350,7 +351,7 @@ export function buildTiles(modal, ctx = {}) {
       const n = Number(copy.dataset?.icon);
       if (copy.tagName === "I" && Number.isFinite(n) && copy.style) {
         copy.style.backgroundPosition = `${-(n % 8) * 64}px ${-Math.floor(n / 8) * 64}px`;
-      }
+      } else if (copy.tagName === "I" && /^g\d+$/.test(copy.dataset?.icon || "") && copy.style) paintGearIcon(copy, copy.dataset.icon, 64); // v0.44：设施图标换成了新画的，按 64 像素重新贴
       head.appendChild(copy);
     }
     const body = tile.querySelector(".recipe-body");

@@ -70,7 +70,7 @@ function companyBlock(e) {
     const leave = c.leave ? `<p class="story-lack">${esc(c.leave.name)}说两天后要走（第 ${c.leave.day + COMPANY.leaveDays} 天早上）：走到他跟前按 E 劝劝。</p>` : "";
     return `<article class="rl-co signed"><h3>${esc(COMPANY.name)} · 签着合同</h3><p>每面墙都能付钱让车队第二天修好。已经付了 ${c.paid} 金币；抽走的收成 ${c.cut} 份。</p>${consequence({ cost: CO_TEXT.ruleCost, gain: "不用一样样凑清单", effect: "法令簿里多一条公司规矩；有人会想走；结局换成「公司的余烬地区」" })}${leave}${button("rlCoTear", "", "撕了合同（交过的钱不退）")}</article>`;
   }
-  return `<article class="rl-co"><h3>${esc(COMPANY.name)}</h3><p>${esc(CO_TEXT.pitch)}</p>${consequence({ cost: "签约 " + COMPANY.sign + " 金币；每面墙 6000–12000 金币", gain: "付了钱第二天车队就修好那面墙（花钱买的不算交满清单）", effect: "公司规矩（宵禁、收成抽一成）、全营心情 −5、有人会想走、邻居不再来帮守；能中途撕合同" })}${act("rlCoSign", "", "签约（" + COMPANY.sign + " 金币）", e.coReason())}</article>`;
+  return `<article class="rl-co"><h3>${esc(COMPANY.name)}</h3><p>${esc(CO_TEXT.pitch)}</p>${consequence({ cost: "签约 " + COMPANY.sign + " 金币；每面墙 6000–12000 金币", gain: "付了钱第二天车队就修好那面墙（花钱买的不算交满清单）", effect: "公司规矩（宵禁、收成抽一成）、全营士气 −5、有人会想走、邻居不再来帮守；能中途撕合同" })}${act("rlCoSign", "", "签约（" + COMPANY.sign + " 金币）", e.coReason())}</article>`;
 }
 function viewStation(e) {
   const done = e.rl.done.length,

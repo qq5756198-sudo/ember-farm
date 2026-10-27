@@ -132,7 +132,10 @@ const SHEET_KEYS = ["sprites", "expansion", "frontier"];
 // 页面一开（index.html 里那一小段）就已经让后台开始画当前那张了：接过来接着用。
 let bakeW; // undefined：还没试过；null：用不了
 const bakeWaiting = new Map(),
-  bakeReady = new Map(); // 已经画好、还没人来拿的
+  bakeReady = new Map(), // 已经画好、还没人来拿的
+  // v0.44：底图按时节画，“地图|时节”才算同一张；载入页一开就画的那张是哪个时节（game.js 不给时节时照它）
+  earlySeason = new Map();
+const bakeKey = (region, season) => region + "|" + (season ?? "");
 function bakeWorker() {
   if (bakeW !== undefined) return bakeW;
   bakeW = null;
@@ -145,27 +148,30 @@ function bakeWorker() {
     }
     const w = early?.worker || new Worker(new URL("./bake-worker.js", import.meta.url), { type: "module" });
     // 页面一开就交给它的那张已经在画了，不用再发一次
-    if (early?.worker && early.region) bakeWaiting.set(early.region, []);
-    w.onmessage = (ev) => bakeFinish(ev.data?.region, ev.data);
+    if (early?.worker && early.region) {
+      earlySeason.set(early.region, early.season ?? null);
+      bakeWaiting.set(bakeKey(early.region, early.season), []);
+    }
+    w.onmessage = (ev) => bakeFinish(bakeKey(ev.data?.region, ev.data?.season), ev.data);
     w.onerror = () => {
       // 这台浏览器跑不了：以后都在主线程画
       w.terminate?.();
       bakeW = null;
-      for (const region of [...bakeWaiting.keys()]) bakeFinish(region, null);
+      for (const key of [...bakeWaiting.keys()]) bakeFinish(key, null);
     };
     bakeW = w;
-    for (const msg of early?.msgs || []) bakeFinish(msg?.region, msg);
+    for (const msg of early?.msgs || []) bakeFinish(bakeKey(msg?.region, msg?.season), msg);
   } catch {
     early?.worker?.terminate?.();
     bakeW = null;
   }
   return bakeW;
 }
-function bakeFinish(region, msg) {
-  const list = bakeWaiting.get(region);
-  bakeWaiting.delete(region);
+function bakeFinish(key, msg) {
+  const list = bakeWaiting.get(key);
+  bakeWaiting.delete(key);
   if (list?.length) for (const done of list) done(msg);
-  else if (msg?.ok && region) bakeReady.set(region, msg);
+  else if (msg?.ok && key) bakeReady.set(key, msg);
   else msg?.bitmap?.close?.();
 }
 // 这台浏览器能不能在后台画
@@ -173,23 +179,26 @@ export function canBakeAway() {
   return !!(VIS.on && bakeWorker());
 }
 // 让后台画一张；返回 Promise（画好的消息，失败是 null），用不了 Worker 时返回 null
-export function bakeAway(region) {
+// season：这张按哪个时节画（v0.44）；不给时照载入页一开就画的那张（没有就是原来的样子）
+export function bakeAway(region, season) {
   if (!VIS.on || !hasMapArt(region)) return null;
   const w = bakeWorker();
   if (!w) return null;
-  if (bakeReady.has(region)) {
-    const msg = bakeReady.get(region);
-    bakeReady.delete(region);
+  if (season === undefined) season = earlySeason.get(region) ?? null;
+  const key = bakeKey(region, season);
+  if (bakeReady.has(key)) {
+    const msg = bakeReady.get(key);
+    bakeReady.delete(key);
     return Promise.resolve(msg);
   }
   return new Promise((done) => {
-    const list = bakeWaiting.get(region);
+    const list = bakeWaiting.get(key);
     if (list) return list.push(done);
-    bakeWaiting.set(region, [done]);
+    bakeWaiting.set(key, [done]);
     try {
-      w.postMessage({ region });
+      w.postMessage({ region, season });
     } catch {
-      bakeFinish(region, null);
+      bakeFinish(key, null);
     }
   });
 }
@@ -238,13 +247,21 @@ export class Renderer extends GardenRenderer {
     // 一开始就把小图集换好，界面上的物品格子第一次画出来就是像素版
     if (VIS.on) this.applyAssets(true, null);
   }
+  // v0.44：这张图该按哪个时节画（树换叶）；这一层不管时节，上面的层（four-renderer）给出来
+  artSeason() {
+    return null;
+  }
+  indoorAmbient() {
+    return null;
+  }
   // 某张地图的新底图（第一次进去时才画）
   artFor(region) {
     if (!hasMapArt(region)) return null;
+    const season = this.artSeason(region);
     if (!this.arts.has(region)) {
       let art = null;
       try {
-        art = bakeMap(region);
+        art = bakeMap(region, { season });
         if (!art?.canvas) art = null;
       } catch (err) {
         art = null;
@@ -252,7 +269,46 @@ export class Renderer extends GardenRenderer {
       }
       this.arts.set(region, art || false);
     }
-    return this.arts.get(region) || null;
+    const art = this.arts.get(region) || null;
+    // v0.44：换了时节，后台按新时节重画；画好之前先用原来那张（不等、不黑一下）
+    if (art && (art.season ?? null) !== season) this.rebake(region, season);
+    return art;
+  }
+  rebake(region, season) {
+    const key = bakeKey(region, season),
+      now = globalThis.performance?.now?.() ?? Date.now();
+    this.rebaking ??= new Map();
+    // 正在画，或者刚画失败过（一分钟内不再试，免得每一帧都发一次）
+    if (this.rebaking.has(key) && (this.rebaking.get(key) === 0 || now - this.rebaking.get(key) < 60000)) return;
+    this.rebaking.set(key, 0);
+    const finish = (art) => {
+      if (!art?.canvas) return void this.rebaking.set(key, globalThis.performance?.now?.() ?? Date.now());
+      this.rebaking.delete(key);
+      if ((this.artSeason(region) ?? null) === (art.season ?? null)) this.arts.set(region, art);
+    };
+    const job = bakeAway(region, season);
+    if (job) {
+      patience(job, 15000).then((msg) => {
+        const art = artFromMsg(region, msg);
+        if (art) return finish(art);
+        // 后台画不了：空闲时在主线程画
+        this.idleRebake(region, season, finish);
+      });
+      return;
+    }
+    this.idleRebake(region, season, finish);
+  }
+  idleRebake(region, season, finish) {
+    const idle = globalThis.requestIdleCallback ? (fn) => globalThis.requestIdleCallback(fn, { timeout: 4000 }) : (fn) => setTimeout(fn, 300);
+    idle(() => {
+      let art = null;
+      try {
+        art = bakeMap(region, { season });
+      } catch {
+        art = null;
+      }
+      finish(art);
+    });
   }
   // 载入页还没关的时候先把当前地图画好，进游戏时不再卡一下。
   // 给了 job（载入一开始就交给后台画的那张）就等它画好；后台画不了再在这里画。
@@ -278,7 +334,7 @@ export class Renderer extends GardenRenderer {
     const region = this.bakeQueue.shift();
     if (this.arts.has(region)) return this.pumpBake();
     this.baking = region;
-    const job = bakeAway(region);
+    const job = bakeAway(region, this.artSeason(region));
     if (job) {
       patience(job, 15000).then((msg) => {
         if (!this.arts.has(region)) {
@@ -611,9 +667,13 @@ export class Renderer extends GardenRenderer {
     const type = z.type in { slow: 1, runner: 1, screamer: 1, armor: 1, elite: 1 } ? z.type : "slow",
       { dir, flip } = dirFromAngle(z.facing ?? Math.PI / 2),
       speed = type === "runner" ? 10 : type === "elite" ? 4 : 6,
-      frame = Math.floor(this.time * speed + (z.x + z.y) * 0.01) % 4;
+      st = this.zombieStep(z, speed);
     this.pxShadow(x, y, type === "elite" ? 34 : 20);
-    this.px(zombieSprite(type, dir, frame), x, y, { flip, alpha, foot: 1 });
+    this.px(zombieSprite(type, dir, st.frame, st.sub), x, y, { flip, alpha, foot: 1 });
+  }
+  // 感染者走到第几帧（v0.44 上面的层改成 8 帧）
+  zombieStep(z, speed) {
+    return { frame: Math.floor(this.time * speed + (z.x + z.y) * 0.01) % 4, sub: 0 };
   }
   drawHelper(o, e) {
     if (!this.v) return super.drawHelper(o, e);
@@ -1256,7 +1316,8 @@ export class Renderer extends GardenRenderer {
     }
     // 环境色 + 灯光，用“正片叠底”压到整个画面上
     // v0.41：显示用的天色夜里留月光；old 是 v0.40 的算法（光外的感染者还按它画，夜里不变容易）
-    let amb = this.indoor ? [146, 152, 168] : ambientFor(this.vMinute, weather),
+    // v0.44：屋里（地底避难城、隧道）的灯光色由上面的层给（每张图一个主色调），默认是原来的 #9298A8
+    let amb = this.indoor ? this.indoorAmbient(e) || [146, 152, 168] : ambientFor(this.vMinute, weather),
       old = this.indoor ? amb : ambientFor(this.vMinute, weather, false);
     // 夜里在外面探索：四周更黑，手电筒照到的地方才看得清（有月光以后也比农场暗一档；手机、小窗口照旧暗 25%）
     if (!this.indoor && night > 0.3 && !["farm", "market"].includes(s.region)) {

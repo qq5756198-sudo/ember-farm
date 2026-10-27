@@ -4,6 +4,7 @@ import { bakeFarm, puddleSpots } from "./pixel-farm.js";
 import { CITY } from "./pixel-city.js";
 import { DISTRICT_ART, FRONTIER_ART } from "./pixel-lands.js";
 import { S, puddlesOn } from "./pixel-build.js";
+import { ART_SEASON } from "./pixel-kit.js";
 // v0.31：地铁隧道每一层按名字（tunnel:种子:层:日子:大吉）临时拼出来
 import { tunnelArt } from "./tunnel-art.js";
 import { parseTunnelKey } from "./tunnel-gen.js";
@@ -21,8 +22,31 @@ export const MAP_MOOD = {
 export function hasMapArt(region) {
   return region === "farm" || !!TABLE[region] || !!parseTunnelKey(region);
 }
+// v0.44「四季」：底图按时节画（树换叶、积雪）。地底避难城和隧道里没有树，白霜气象站只有一年到头积雪的松树，这三处不分时节。
+// 没给时节（null）是原来的样子（和夏天一样）。
+export const ART_SEASONS = ["thaw", "heat", "harvest", "cold"];
+export function mapSeason(region, season) {
+  if (!ART_SEASONS.includes(season)) return null;
+  if (region === "shelter" || region === "frost" || parseTunnelKey(region)) return null;
+  return season;
+}
 // 画好后只留画布和地面种类；逐像素的原始数据很大（每张约 1.5 MB），只有测试要看时才留着
-export function bakeMap(region, { keepPix = false } = {}) {
+export function bakeMap(region, { keepPix = false, season = null } = {}) {
+  const was = ART_SEASON.id,
+    want = mapSeason(region, season);
+  ART_SEASON.id = want;
+  try {
+    const out = bakeRegion(region);
+    if (out) {
+      out.season = want;
+      if (!keepPix) delete out.pix;
+    }
+    return out;
+  } finally {
+    ART_SEASON.id = was;
+  }
+}
+function bakeRegion(region) {
   let out = null;
   if (region === "farm") {
     const f = bakeFarm();
@@ -51,6 +75,5 @@ export function bakeMap(region, { keepPix = false } = {}) {
       mood: MAP_MOOD[region] || {},
     };
   }
-  if (!keepPix) delete out.pix;
   return out;
 }

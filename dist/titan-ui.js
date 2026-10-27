@@ -157,7 +157,7 @@ export function patchTitanCollection(e, html) {
     next = TITAN_CASE.steps.find((st) => !C.done.includes(st.n));
   const rows =
     li("十凶", info.wins, info.total, won.length ? "✓ " + esc(won.join("、")) : "末日以后长成的十个巨物，各守着自己的窝", info.wins >= info.total) +
-    li("十凶柜", C.donated.length, C.total, esc(next ? "捐满 " + next.n + " 件：" + next.text : "✓ 十件都捐齐了：全营心情一直 +3"), !next);
+    li("十凶柜", C.donated.length, C.total, esc(next ? "捐满 " + next.n + " 件：" + next.text : "✓ 十件都捐齐了：全营士气一直 +3"), !next);
   let out = html;
   const start = out.indexOf('<ul class="collection">'),
     at = start >= 0 ? out.indexOf("</ul>", start) : -1;

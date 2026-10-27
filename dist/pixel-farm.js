@@ -1,6 +1,6 @@
 // 新画面的农场底图：烧过的土地上重新长出来的农场。只画一次，存成 768×512 的像素画（每个像素占地图 2×2）。
 // 布局沿用原来的：农舍、谷仓、池塘的碰撞范围不变，十字路口、农田、水渠、生态区都在原位。
-import { PAL, OUTLINE, Pix, fbm, vnoise, hash2, dither, rng, mix } from "./pixel-kit.js";
+import { PAL, OUTLINE, Pix, fbm, vnoise, hash2, dither, rng, mix, bayer, ART_SEASON } from "./pixel-kit.js";
 
 export const FARM_W = 768,
   FARM_H = 512;
@@ -335,11 +335,38 @@ export function place(P, S, x, y, opt = {}) {
 }
 
 // 树：活树、秋树、枯树
+// v0.44「四季」：底图按时节画（ART_SEASON.id）。夏天（heat）和没给时节时和原来一模一样；
+// 回暖：叶子嫩一档，一半活树开白花；秋收：活树黄、秋树红，树下落几片叶子；寒潮：大多数树落光、枝上积雪，三成活树是常绿的、顶上压着雪；枯树积雪。
+// 同一棵树四个时节的大小、位置、树冠的形状都一样（随机数只用树自己的种子）。
+const SPRING_LIVE = [PAL.leaf[1], PAL.leaf[2], PAL.leaf[3], PAL.leaf[4], PAL.leaf[5], PAL.leaf[5]],
+  SPRING_RUST = [PAL.leaf[2], PAL.leaf[3], PAL.leaf[4], PAL.leaf[5], PAL.straw[2], PAL.straw[3]],
+  GOLD = [PAL.soil[1], PAL.straw[0], PAL.straw[1], PAL.straw[2], PAL.ember[4], PAL.ember[5]],
+  CRIMSON = [PAL.rust[0], PAL.ember[0], PAL.ember[1], PAL.cloth[1], PAL.ember[2], PAL.ember[3]],
+  WINTER_GREEN = [PAL.leaf[0], PAL.leaf[0], PAL.leaf[1], PAL.leaf[1], PAL.leaf[2], PAL.leaf[3]],
+  BLOSSOM = [PAL.snow[4], PAL.cloth[5], PAL.snow[3]];
+const rampAt = (ramp, t, x, y) => {
+  const f = Math.max(0, Math.min(ramp.length - 1.001, t * (ramp.length - 1))),
+    i = Math.floor(f);
+  return ramp[f - i > bayer(x, y) ? i + 1 : i];
+};
+// 雪落在朝上的边上：上面一格是空的，就盖一层雪
+function snowCaps(S, seed, keep = 0.25) {
+  const caps = [];
+  for (let y = 1; y < S.h; y++)
+    for (let x = 0; x < S.w; x++) if (S.opaque(x, y) && !S.opaque(x, y - 1) && hash2(x, y, seed + 13) > keep) caps.push(x, y);
+  for (let i = 0; i < caps.length; i += 2) {
+    const x = caps[i],
+      y = caps[i + 1];
+    S.set(x, y, hash2(x, y, seed + 17) > 0.5 ? PAL.snow[4] : PAL.snow[3]);
+    if (S.opaque(x - 1, y) && S.opaque(x + 1, y) && hash2(x, y, seed + 19) > 0.55) S.set(x, y - 1, PAL.snow[4]);
+  }
+}
 export function tree(seed, kind = "live", size = 1) {
   const r = rng(seed),
     R = Math.round(11 + 6 * size + r() * 3),
     W = R * 2 + 8,
-    H = R * 2 + 18;
+    H = R * 2 + 18,
+    season = ART_SEASON.id === "heat" ? null : ART_SEASON.id;
   return sprite(W, H, (S) => {
     const cx = W / 2,
       base = H - 1,
@@ -362,11 +389,11 @@ export function tree(seed, kind = "live", size = 1) {
         branch(x2, y2, a + 0.4 + r() * 0.3, len * 0.62, Math.max(1, w - 1));
       };
       branch(cx - 1, base - trunkH - R * 0.5, -Math.PI / 2, R * 0.75, 2);
+      if (season === "cold") snowCaps(S, seed, 0.3);
       S.outline(OUTLINE, 0.9);
       return;
     }
-    const ramp = kind === "autumn" ? [PAL.ember[0], PAL.ember[1], PAL.ember[2], PAL.ember[3], PAL.ember[4], PAL.straw[3]] : PAL.leaf,
-      cy = base - trunkH - R + 2,
+    const cy = base - trunkH - R + 2,
       blobs = [];
     for (let i = 0; i < 7; i++) {
       const a = r() * Math.PI * 2,
@@ -374,6 +401,37 @@ export function tree(seed, kind = "live", size = 1) {
       blobs.push([cx + Math.cos(a) * d, cy + Math.sin(a) * d * 0.8, R * (0.5 + r() * 0.25)]);
     }
     blobs.push([cx, cy, R * 0.72]);
+    const evergreen = kind === "live" && hash2(seed, 1, 9) < 0.3;
+    // 寒潮：落光了叶子的树，枝条伸向原来树冠的几团（和别的时节一个样子）
+    if (season === "cold" && !evergreen) {
+      const top = Math.round(base - trunkH - R * 0.6);
+      for (const [bx, by, br] of blobs) {
+        const tx = bx + (bx - cx) * 0.35,
+          ty = by - br * 0.5;
+        S.line(cx - 1, top + 3, tx, ty, bark[1]);
+        S.line(cx, top + 3, tx + 1, ty, bark[0]);
+        S.line(tx, ty, tx - br * 0.4, ty - br * 0.35, bark[2]);
+        S.line(tx, ty, tx + br * 0.35, ty - br * 0.45, bark[1]);
+        S.line(tx, ty, tx + (bx < cx ? -1 : 1) * br * 0.5, ty + br * 0.05, bark[1]);
+      }
+      snowCaps(S, seed, 0.2);
+      S.outline(OUTLINE, 0.85);
+      return;
+    }
+    const ramp =
+      season === "thaw"
+        ? kind === "autumn"
+          ? SPRING_RUST
+          : SPRING_LIVE
+        : season === "harvest"
+          ? kind === "autumn"
+            ? CRIMSON
+            : GOLD
+          : season === "cold"
+            ? WINTER_GREEN
+            : kind === "autumn"
+              ? [PAL.ember[0], PAL.ember[1], PAL.ember[2], PAL.ember[3], PAL.ember[4], PAL.straw[3]]
+              : PAL.leaf;
     for (let y = 0; y < H; y++)
       for (let x = 0; x < W; x++) {
         let inside = false;
@@ -382,21 +440,47 @@ export function tree(seed, kind = "live", size = 1) {
         // 光从左上来
         const lx = (x - cx) / R,
           ly = (y - cy) / R,
-          light = 0.62 - lx * 0.32 - ly * 0.42 + (fbm(x * 0.35, y * 0.35, seed, 2) - 0.5) * 0.5;
-        S.set(x, y, dither(kind === "autumn" ? "ember" : "leaf", Math.max(0.05, Math.min(0.98, light)), x, y));
-        if (kind === "autumn" && hash2(x, y, seed) > 0.93) S.set(x, y, PAL.straw[3]);
+          light = 0.62 - lx * 0.32 - ly * 0.42 + (fbm(x * 0.35, y * 0.35, seed, 2) - 0.5) * 0.5,
+          t = Math.max(0.05, Math.min(0.98, light));
+        if (!season) {
+          S.set(x, y, dither(kind === "autumn" ? "ember" : "leaf", t, x, y));
+          if (kind === "autumn" && hash2(x, y, seed) > 0.93) S.set(x, y, PAL.straw[3]);
+          continue;
+        }
+        S.set(x, y, rampAt(ramp, t, x, y));
+        if (season === "harvest" && hash2(x, y, seed) > (kind === "autumn" ? 0.93 : 0.88)) S.set(x, y, kind === "autumn" ? PAL.ember[4] : PAL.ember[3]);
+        if (season === "cold" && light > 0.66 && hash2(x, y, seed + 3) > 0.2) S.set(x, y, light > 0.82 ? PAL.snow[4] : PAL.snow[3]);
       }
     // 树叶的小簇
     for (let i = 0; i < R * 2; i++) {
       const x = Math.round(cx + (r() - 0.5) * R * 1.6),
         y = Math.round(cy + (r() - 0.5) * R * 1.4);
       if (S.opaque(x, y) && S.opaque(x, y + 2)) {
-        S.set(x, y, ramp[5]);
+        S.set(x, y, season === "cold" ? PAL.snow[3] : ramp[5]);
         S.set(x + 1, y, ramp[4]);
         S.set(x, y + 1, ramp[2]);
       }
     }
+    // 回暖：四成的活树开一层小白花（一朵是一个十字，花心淡黄）
+    if (season === "thaw" && kind === "live" && hash2(seed, 2, 7) < 0.4)
+      for (let y = 2; y < H - 2; y++)
+        for (let x = 2; x < W - 2; x++)
+          if (y < base - trunkH && hash2(x, y, seed + 7) > 0.955 && S.opaque(x - 1, y) && S.opaque(x + 1, y) && S.opaque(x, y - 1) && S.opaque(x, y + 1)) {
+            const c = BLOSSOM[(x + y) % 2];
+            S.set(x - 1, y, c);
+            S.set(x + 1, y, c);
+            S.set(x, y - 1, c);
+            S.set(x, y + 1, BLOSSOM[2]);
+            S.set(x, y, PAL.ember[5]);
+          }
     S.outline(OUTLINE, 0.85);
+    // 秋收：树下落了几片叶子（画在描边外面，地上不带黑边）
+    if (season === "harvest")
+      for (let k = 0; k < 7; k++) {
+        const x = Math.round(cx + (hash2(seed, k, 21) - 0.5) * R * 1.5),
+          y = base - Math.floor(hash2(seed, k, 22) * 2);
+        if (!S.opaque(x, y)) S.set(x, y, kind === "autumn" ? (k % 2 ? PAL.ember[2] : PAL.cloth[1]) : k % 2 ? PAL.straw[2] : PAL.ember[4]);
+      }
   });
 }
 export function rock(seed, w = 12, h = 8) {

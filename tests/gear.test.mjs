@@ -105,7 +105,8 @@ test("data: 25 armour pieces in five slots, 23 weapons, three phases, unique ico
   assert.ok(ZSTATS[0].slow.hp > ZOMBIES.slow.hp * 1.25, "slow infected are tougher than before from day one");
   // 每件新物品都有名字、说明、小图（"g" 开头的编号不重复）
   const icons = new Set();
-  for (const id of GEAR_ICON_IDS) {
+  // v0.44 起同一张图集里还有设施图标（"b:…"）和快捷栏“建造”（"t:…"），它们不是物品
+  for (const id of GEAR_ICON_IDS.filter((k) => !k.includes(":"))) {
     assert.ok(ITEMS[id], id);
     assert.ok(ITEMS[id].name && ITEMS[id].desc, id);
     assert.match(String(ITEMS[id].icon), /^g\d+$/, id);

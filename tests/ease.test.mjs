@@ -61,13 +61,12 @@ function fakeDoc() {
 }
 
 // ================= 版本 =================
-test("version: v0.43.0 上手 in the title, the loading page and settings", () => {
-  assert.equal(GAME_VERSION, "v0.43.0");
-  assert.equal(GAME_EDITION, "上手");
-  assert.equal(GAME_RELEASE, "v0.43.0 · 上手");
+test("version: the title, the loading page and settings carry the version (moved on to v0.44 四季, checked in four.test.mjs); the corner card is in the scene", () => {
+  assert.match(GAME_VERSION, /^v0\.(4[3-9]|[5-9]\d)\.\d+$/);
+  assert.equal(GAME_RELEASE, GAME_VERSION + " · " + GAME_EDITION);
   const html = read("dist/index.html");
-  assert.match(html, /<title>余烬农场 v0\.43\.0 · 上手<\/title>/);
-  assert.match(html, /data-release>v0\.43\.0 · 上手</);
+  assert.ok(html.includes("<title>余烬农场 " + GAME_RELEASE + "</title>"));
+  assert.ok(html.includes("data-release>" + GAME_RELEASE + "<"));
   assert.match(html, /<div id="ease-card" class="ease-card" role="status" aria-live="polite" hidden><\/div><\/section>/, "the corner card sits in the scene");
   for (const f of ["ease.js", "ease-data.js", "ease-ui.js"]) assert.ok(html.includes('<link rel="modulepreload" href="' + f + '">'), f + " preloaded");
   assert.match(read("dist/game.js"), /document\.title=`余烬农场 \$\{GAME_VERSION\} · \$\{GAME_EDITION\}`/);

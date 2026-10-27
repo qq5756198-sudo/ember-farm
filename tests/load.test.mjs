@@ -74,7 +74,8 @@ test("the early bake in index.html only reads the save key, starts the worker an
   }
   const win = { Worker: FakeWorker, OffscreenCanvas: function () {} };
   new Function("window", "localStorage", src)(win, { getItem: (k) => store[k] ?? null });
-  assert.deepEqual(posted, [{ region: "pinewood" }]);
+  // v0.44：带上存档那天的时节（没有日子按第 1 天，回暖）
+  assert.deepEqual(posted, [{ region: "pinewood", season: "thaw" }]);
   assert.equal(win.__emberEarlyBake.region, "pinewood");
   assert.equal(win.__emberEarlyBake.worker.opts.type, "module");
   win.__emberEarlyBake.worker.onmessage({ data: { region: "pinewood", ok: true } });
@@ -84,7 +85,7 @@ test("the early bake in index.html only reads the save key, starts the worker an
     posted.length = 0;
     const w2 = { Worker: FakeWorker, OffscreenCanvas: function () {} };
     new Function("window", "localStorage", src)(w2, { getItem: () => text });
-    assert.deepEqual(posted, [{ region: "farm" }]);
+    assert.deepEqual(posted, [{ region: "farm", season: "thaw" }]);
   }
   const bare = {};
   new Function("window", "localStorage", src)(bare, { getItem: () => null });

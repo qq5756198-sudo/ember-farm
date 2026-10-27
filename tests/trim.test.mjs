@@ -800,7 +800,8 @@ test("the code: the new layer never rolls dice, never touches storage keys, and 
 });
 
 test("the scene: the campaign renderer is the trim layer; the ♪ / 愁 bubble follows the camp morale over one resident only", () => {
-  assert.equal(CampaignRenderer, TrimRenderer);
+  // v0.44 起上面还有一层（四季）；这一层照旧在里面
+  assert.ok(CampaignRenderer === TrimRenderer || CampaignRenderer.prototype instanceof TrimRenderer);
   assert.ok(TrimRenderer.prototype instanceof ClearRenderer);
   const { e } = make();
   for (const id of ["farmer", "medic", "mechanic"]) e.recruit(id);
