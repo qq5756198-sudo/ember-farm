@@ -306,7 +306,7 @@ test("a gift shows a face over the person and makes a sound by how much they lik
   assert.ok(said(toasts, /送给/), "the line about the gift is still said");
 });
 
-test("hold interact to keep going: walking along a row harvests, replants the last seed and tends without more presses", () => {
+test("hold interact to keep going: walking along a row harvests, replants the last seed and waters without more presses", () => {
   const { e, toasts } = make();
   e.s.day = 9;
   const row = ripeRow(e, 9);
@@ -322,7 +322,8 @@ test("hold interact to keep going: walking along a row harvests, replants the la
   }
   e.update(0.05, {});
   assert.ok(row.every((p) => p.crop === "radish" && p.growth < CROPS.radish.grow), "harvested and replanted");
-  assert.ok(row.every((p) => e.g.plots[p.id]?.t === e.s.day), "tended");
+  // v0.42 删繁：照看去掉了，按住一路是收、种、浇
+  assert.ok(row.every((p) => e.plotWatered(p)), "watered");
   assert.ok(e.zx.stats.holds >= 1 && e.zx.stats.holdActs >= 20);
   // 一路做下来只记一行
   for (let i = 0; i < 100; i++) e.update(0.05, {});

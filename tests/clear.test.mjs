@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { Engine, freshState } from "../dist/campaign.js";
 import { Engine as ClearEngine, VFX_MAX } from "../dist/clear.js";
-import { Engine as SimpleEngine } from "../dist/simple.js";
+import { Engine as SimpleEngine, freshState as simpleFresh } from "../dist/simple.js";
 import { Renderer as CampaignRenderer } from "../dist/campaign-renderer.js";
 import { Renderer as ClearRenderer, hideAlpha, lightAt, attacking, cursorKind, shapeInto, HIDE_MIN, LIGHT_FULL, C41, FX_T, HALO } from "../dist/clear-renderer.js";
 import { Renderer as LookRenderer } from "../dist/look-renderer.js";
@@ -156,7 +156,7 @@ test("infected outside the light are drawn fainter so they stand out from the gr
 
 // ---------- 引擎那一层：只记画面上的动作 ----------
 test("the effects layer records harvest, pickup, build, level and hits for the scene and changes nothing in the game", () => {
-  assert.equal(Engine, ClearEngine, "the campaign engine is the v0.41 layer");
+  assert.ok(Engine === ClearEngine || Engine.prototype instanceof ClearEngine, "the campaign engine sits on the v0.41 layer");
   assert.ok(Engine.prototype instanceof SimpleEngine);
   const e = make();
   e.s.day = 9;
@@ -232,7 +232,7 @@ test("the effects layer changes no outcome: the same moves on the v0.39 engine a
     const rnd = Math.random;
     Math.random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     try {
-      const e = new Eng(freshState(), () => {});
+      const e = new Eng(simpleFresh(), () => {});
       e.paused = false;
       if (e.feel?.open) e.feel.open.phase = "done";
       if (e.dy) e.dy.pending = null;
@@ -252,12 +252,12 @@ test("the effects layer changes no outcome: the same moves on the v0.39 engine a
       Math.random = rnd;
     }
   };
-  assert.equal(run(Engine), run(SimpleEngine));
+  assert.equal(run(ClearEngine), run(SimpleEngine));
 });
 
 // ---------- 画面那一层 ----------
 test("scene: the v0.41 layer sits on top of the camera layer; the scene takes the effects every frame and turns them into flashes, pops, arcs, drops and rings", () => {
-  assert.equal(CampaignRenderer, ClearRenderer);
+  assert.ok(CampaignRenderer === ClearRenderer || CampaignRenderer.prototype instanceof ClearRenderer);
   assert.ok(ClearRenderer.prototype instanceof LookRenderer);
   const fake = { time: 10, calm: false, v: false, fx: null, _cFx: [], _cFlash: new Map(), _cDrop: new Map(), _cE: null };
   ClearRenderer.prototype.cTake.call(fake, [
@@ -394,16 +394,11 @@ test("tunnel and fog: the tunnel shows walls and rails as a very dark outline; t
   assert.match(read("nightfall-renderer.js"), /this\.fogTint\?\.\(FOG\)/);
 });
 
-test("words: no developer words in the v0.41 layers, and the version is 0.41.0 看得清 in the title and settings", () => {
+test("words: no developer words in the v0.41 layers (the version line moved on to v0.42 删繁, checked in trim.test.mjs)", () => {
   for (const f of ["clear.js", "clear-renderer.js"]) {
     const t = read(f).replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, "");
     assert.doesNotMatch(t, /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|Joja|祝尼魔|星之果实/, f);
   }
-  const v = read("version.js");
-  assert.match(v, /GAME_VERSION='v0\.41\.0'/);
-  assert.match(v, /GAME_EDITION='看得清'/);
-  assert.match(read("index.html"), /<title>余烬农场 v0\.41\.0 · 看得清<\/title>/);
-  assert.match(read("index.html"), /data-release>v0\.41\.0 · 看得清</);
 });
 
 test("rim light: at night a person or infected next to a warm lamp or fire gets a thin edge on that side; not by day, not from cold or own lights, not with reduce-flashing", () => {

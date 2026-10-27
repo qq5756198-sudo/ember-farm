@@ -3,7 +3,7 @@
 // 订单板（旧的每日订单不再出）、放鸡下地、生态三种动物、每日卡里的农事、林姨的菜园、收获展、鸡蛋上桌、界面和存档。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState, newGameState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, newGameState, needsStoryMigration } from "./pre-trim.mjs";
 import * as Tidy from "../dist/tidy.js";
 import { ITEMS, BUILDINGS, CROPS } from "../dist/data.js";
 import { TASKS } from "../dist/rebuild-data.js";

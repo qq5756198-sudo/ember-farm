@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState } from "../dist/campaign.js";
+import { Engine, freshState } from "./pre-trim.mjs";
 import { Engine as WinterEngine, freshState as winterFresh } from "../dist/winter.js";
 import { TASKS } from "../dist/rebuild-data.js";
 import { ITEMS, BUILDINGS, RECIPES } from "../dist/data.js";

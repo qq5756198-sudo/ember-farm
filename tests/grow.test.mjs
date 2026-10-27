@@ -1,7 +1,7 @@
 // v0.34.0「成长」：技能 6–10 级（老手的小本事）、每样近战擅长的场合、打法挑战、第二年的清单、存档和页面。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, needsStoryMigration } from "./pre-trim.mjs";
 import * as Hope from "../dist/hope.js";
 import { ITEMS, REGIONS, CROPS, RECIPES } from "../dist/data.js";
 import { MELEE, ARMOR, RULES } from "../dist/gear-data.js";

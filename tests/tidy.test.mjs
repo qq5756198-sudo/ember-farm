@@ -3,7 +3,7 @@
 // 带徒改学职能、设施卡和警报栏、存档。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, needsStoryMigration } from "./pre-trim.mjs";
 import * as Old from "../dist/longnight.js";
 import { BUILDINGS, ITEMS } from "../dist/data.js";
 import { TASKS } from "../dist/rebuild-data.js";

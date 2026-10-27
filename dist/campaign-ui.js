@@ -30,17 +30,21 @@ import { renderRelightView, relightTitle, handleRelightAction, patchRelightJourn
 // v0.32：任务手记“今天”下面的早间广播、成就册里的三本图鉴（大事卡片和手机上的说法在 game.js 里接）
 import { patchZestJournal, patchZestCollection } from "./zest-ui.js";
 // v0.33：营门口的过路人、货郎、收购的人；重建站上这周的清单和墙升二级；农舍、仓库箱、鸡舍的扩建；商队的稀罕货；任务手记的这周和今天；顶上的提醒
-import { renderHopeView, hopeTitle, handleHopeAction, patchHopeJournal, hopeBuildingExtras, patchHopeDistricts } from "./hope-ui.js";
-export { patchHopeDistricts };
+import { renderHopeView, hopeTitle, handleHopeAction, patchHopeJournal, hopeBuildingExtras, patchHopeDistricts as hopeDistricts } from "./hope-ui.js";
 // v0.34：技能页的 6–10 级、重建站上的第二年清单、成就册里的打法挑战和老手、武器台那一页每样近战擅长什么
 import { renderGrowSkillPage, patchGrowStation, patchGrowCollection, patchGrowBench, handleGrowAction } from "./grow-ui.js";
-const renderSkillPage = (e) => renderGrowSkillPage(e, thiefSkillPage);
+// v0.42：删繁——去掉的东西不再出现在页面上（田、广播、堆肥、麦穗、技能、设施卡、手记、顶栏、休整点、摆件、农舍）
+import { trimView, trimPatch, trimTitle, trimBuildingExtras, trimStationExtras, trimSkillPage, trimJournal, trimHud, decorCard, trimBuildCardExtras, trimHomeExtras, trimDistricts, trimBeyond, boardHtml, handleTrimAction, trimBuildIds, trimManual } from "./trim-ui.js";
+const renderSkillPage = (e) => trimSkillPage(e, renderGrowSkillPage(e, thiefSkillPage));
+export const patchHopeDistricts = (e, html) => trimDistricts(e, hopeDistricts(e, html));
+export const patchBeyond = trimBeyond;
+export { decorCard, trimHomeExtras, trimBuildIds };
 // v0.35：顶栏和提醒带上夜相、手记长夜那几行、长夜战报里的夜相和守夜笔记、日历、成就册的夜相
 import { nfHud, patchNfAlerts, patchNfJournal, patchNfReport, patchNfCalendar, patchNfCollection } from "./nightfall-ui.js";
 // v0.36：屏幕上方的十凶血条（换段刻度、冰甲、两半、打晃）、成就册里的十凶录、档案馆的十凶柜、传闻卡的说明
 import { titanBossBar, patchTitanCollection, patchTitanMuseum, handleTitanAction } from "./titan-ui.js";
 // 设施卡下面：腌缸、果树、摆件、鸡舍（v0.29）；仓库箱、鸡舍的扩建（v0.33）
-export const buildingExtras = (e, b) => almanacBuildingExtras(e, b) + hopeBuildingExtras(e, b);
+export const buildingExtras = (e, b) => trimBuildingExtras(e, b, almanacBuildingExtras(e, b) + hopeBuildingExtras(e, b));
 // v0.25：开始新游戏选出身、二周目、设置里的“带着记忆重新开始”
 export { restartTitle, restartText, restartPicker, restartState, ngPlusRow, exportLine } from "./longnight-ui.js";
 import {
@@ -75,13 +79,13 @@ export const renderGearPanel = (e, helpers) => {
   return html ? originLine(e) + html : html;
 };
 // 建设页每一格下面：贺满仓垫付；旧物摆件挑哪一件、果树的枝条去哪剪
-export const buildCardExtras = (e, id) => farBuildCardExtras(e, id) + almanacBuildExtras(e, id);
+export const buildCardExtras = (e, id) => trimBuildCardExtras(e, farBuildCardExtras(e, id), almanacBuildExtras(e, id));
 export { hungerDeathNote, itemLinks, settingsExtras, applyAccess, mapKey, keyLabel, keyCaptureActive, cancelKeyCapture, captureKey, helpRows, readPad };
 export const stationExtras = (e, b) => {
   const html = seasonsStationExtras(e, b) + gardenStationExtras(e, b) + gearStationExtras(e, b) + bustleStationExtras(e, b);
-  return e?.bt ? patchOrderLinks(html) : html;
+  return trimStationExtras(e, b, e?.bt ? patchOrderLinks(html) : html);
 };
-export const campaignTitle = (ui) => hopeTitle(ui, (uH) => relightTitle(uH, (u4) => kinTitle(u4, (u3) => bustleTitle(u3, (u2) => bountyTitle(u2, (u1) => longNightTitle(u1, (u0) => gearTitle(u0, (u) => gardenTitle(u, winterTitle))))))));
+export const campaignTitle = (ui) => trimTitle(ui, (uT) => hopeTitle(uT, (uH) => relightTitle(uH, (u4) => kinTitle(u4, (u3) => bustleTitle(u3, (u2) => bountyTitle(u2, (u1) => longNightTitle(u1, (u0) => gearTitle(u0, (u) => gardenTitle(u, winterTitle)))))))));
 const renderViewBase = (e, ui) => {
   const html = renderLongNightView(e, ui, (e1, u1) => renderGearView(e1, u1, (e2, u2) => renderGardenView(e2, u2, renderWinterView)));
   if (ui?.view === "daily") return patchDailyCard(e, html);
@@ -93,7 +97,7 @@ const renderViewBase = (e, ui) => {
   return html;
 };
 const renderCampaignView0 = (e, ui) => renderHopeView(e, ui, (eH, uH) => renderRelightView(eH, uH, (eR, uR) => patchTidyView(eR, uR, renderKinView(eR, uR, (eK, uK) => renderAlmanacView(eK, uK, (e0, u0) => renderBustleView(e0, u0, (e1, u1) => renderBountyView(e1, u1, renderViewBase)))))));
-export const renderCampaignView = (e, ui) => {
+const renderCampaignView1 = (e, ui) => {
   const html = renderCampaignView0(e, ui);
   if (ui?.view === "collection") return patchTitanCollection(e, patchNfCollection(e, patchGrowCollection(e, patchZestCollection(e, html))));
   if (ui?.view === "museum") return patchTitanMuseum(e, html);
@@ -102,17 +106,22 @@ export const renderCampaignView = (e, ui) => {
   if (ui?.view === "calendar") return patchNfCalendar(e, html);
   return html;
 };
+export const renderCampaignView = (e, ui) => {
+  const own = trimView(e, ui);
+  return own != null ? own : trimPatch(e, ui, renderCampaignView1(e, ui));
+};
 export const renderCampaignJournal = (e, ui) => {
   const html = renderGardenJournal(e, ui);
-  return ui?.catalog ? html : patchHopeJournal(e, patchZestJournal(e, patchRelightJournal(e, patchNfJournal(e, patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html)))))));
+  return ui?.catalog ? html : trimJournal(e, patchHopeJournal(e, patchZestJournal(e, patchRelightJournal(e, patchNfJournal(e, patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html))))))));
 };
 export const renderMapPlus = (e, ui) => patchUnderMap(e, ui, renderFarMap(e, ui));
 // 去掉营地手册后，“农业”这一页就是菜地告示牌；其余每页只放那一处的内容
 // v0.22：武器台的“武器与潜行”这一页下面接着修理与改装
 // 放进同一个滚动区里（.frontier-body 的最后），整页一起上下滚
 const PAGE_TAIL = "</div></div></div></div>";
-export const renderManualPlus = (e, tab, h, ui, fui) => {
-  if (tab === "farm" && !ui?.tool && !ui?.guided && e.g) return `<div class="outpost-page view-gBoard">${patchAlmanacBoard(e, patchBoard(e, renderGardenBoard(e)))}</div>`;
+export const renderManualPlus = (e, tab, h, ui, fui) => trimManual(e, tab, ui, renderManualPlus0(e, tab, h, ui, fui));
+const renderManualPlus0 = (e, tab, h, ui, fui) => {
+  if (tab === "farm" && !ui?.tool && !ui?.guided && e.g) return e.tr ? boardHtml(e) : `<div class="outpost-page view-gBoard">${patchAlmanacBoard(e, patchBoard(e, renderGardenBoard(e)))}</div>`;
   const html = renderManualSeasons(e, tab, h, ui, fui);
   if (!(ui?.tool?.menu === "frontier" && ui.tool.tab === "combat" && e.gr)) return html;
   const bench = patchGrowBench(e, renderGearBench(e, h));
@@ -123,11 +132,11 @@ export function campaignHud(e) {
   const base = outpostHud(e);
   if (!base) return null;
   const ln = tidyLnHud(e);
-  return nfHud(e, { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchNfAlerts(e, patchAlerts(e, alertBar(e))), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e), date: almanacDate(e) });
+  return trimHud(e, nfHud(e, { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchNfAlerts(e, patchAlerts(e, alertBar(e))), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e), date: almanacDate(e) }));
 }
 // 动作：巨影 → 成长 → 盼头 → 重光 → 人情 → 四时 → 热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
-  return handleTitanAction(action, el, ctx) || handleGrowAction(action, el, ctx) || handleHopeAction(action, el, ctx) || handleRelightAction(action, el, ctx) || handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
+  return handleTrimAction(action, el, ctx) || handleTitanAction(action, el, ctx) || handleGrowAction(action, el, ctx) || handleHopeAction(action, el, ctx) || handleRelightAction(action, el, ctx) || handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
 }
 
 // v0.25：到这里所有层的物品都登记过了，把还没挂上的新小图挂上

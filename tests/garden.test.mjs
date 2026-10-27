@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState } from "../dist/campaign.js";
+import { Engine, freshState } from "./pre-trim.mjs";
 import { Engine as ThiefEngine, freshState as thiefFresh } from "../dist/thief.js";
 import { TASKS } from "../dist/rebuild-data.js";
 import { ITEMS, BUILDINGS, CROPS } from "../dist/data.js";

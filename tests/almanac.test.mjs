@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { Engine, freshState, newGameState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, newGameState, needsStoryMigration } from "./pre-trim.mjs";
 import * as Bustle from "../dist/bustle.js";
 // v0.30：最上面又接了一层（人情）；这里测的是四时这一层，“下面那一层”从四时的 Engine 往下找
 import * as Almanac from "../dist/almanac.js";

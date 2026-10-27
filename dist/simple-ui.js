@@ -174,8 +174,8 @@ export function sxTitle(e, args) {
 }
 
 // ---------- 画完以后：拿掉挂在这样东西身上的别的功能 ----------
-// 键：菜单名，或“菜单:view”
-const STRIP = {
+// 键：菜单名，或“菜单:view”（上面几层还能往里加）
+export const STRIP = {
   journey: [
     "section.outpost-strip",
     "section.winter-strip",
@@ -245,12 +245,14 @@ export function pageCard(table, key) {
   const c = table[key];
   return c ? cardHtml({ key: "page:" + key, name: c[0], does: c[1], good: c[2] }) : "";
 }
+// 这几个按钮上的字（上面几层可以改）
+export const SX_LABELS = { dog: "麦穗 · 喂它、叫它做事" };
 export function sxViewExtra(e, ui) {
   const v = ui?.view;
   const out = { before: v === "pick" ? "" : pageCard(PAGE_CARD, v), after: "" };
   if (v === "people") {
     const rows = [];
-    if (e.dogReady?.()) rows.push(btn("xView", "dog", "麦穗 · 喂它、叫它做事"));
+    if (e.dogReady?.()) rows.push(btn("xView", "dog", SX_LABELS.dog));
     let talk = "x";
     try {
       talk = typeof e.talkReason === "function" ? e.talkReason() : "x";

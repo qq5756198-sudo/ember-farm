@@ -277,16 +277,17 @@ export function menuKeys(modal, ctx = {}) {
     const b = ev.target?.closest?.("[data-look-card]");
     if (!b) return;
     const row = rows.find((r) => r.key === b.dataset.lookCard);
-    toggleStatusCard(modal, b, e, row ? row.name + " " + row.value : "");
+    toggleStatusCard(modal, b, e, row ? row.now || row.name + " " + row.value : "");
   });
 }
-// 金、口粮、动静（有寒冷时加上寒冷）：顶栏上收起来的那几样
+// 金、口粮、动静（有寒冷时加上寒冷）：顶栏上收起来的那几样；v0.42 起动静去掉，多一个全营士气
 export function statusRows(e, hud = {}) {
   const rows = [];
   const money = Math.floor(e.s?.money || 0).toLocaleString("zh-CN");
   rows.push({ key: "money", name: "金", value: money });
   if (hud.food?.text) rows.push({ key: "food", name: "口粮", value: String(hud.food.text).replace(/^口粮\s*/, ""), tone: hud.food.tone });
   if (hud.noise?.text) rows.push({ key: "noise", name: "动静", value: String(hud.noise.text).replace(/^动静\s*/, ""), tone: hud.noise.tone });
+  if (hud.morale?.value) rows.push({ key: "morale", name: hud.morale.name || "士气", value: String(hud.morale.value), tone: hud.morale.tone, now: hud.morale.now });
   if (hud.season?.text) rows.push({ key: "cold", name: "寒冷", value: String(hud.season.text), tone: hud.season.tone });
   return rows;
 }

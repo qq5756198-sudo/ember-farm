@@ -3,7 +3,7 @@
 // 各有各的一天、界面和存档。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState, newGameState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, newGameState, needsStoryMigration } from "./pre-trim.mjs";
 import * as Almanac from "../dist/almanac.js";
 import { ITEMS, RECIPES } from "../dist/data.js";
 import { TASKS } from "../dist/rebuild-data.js";

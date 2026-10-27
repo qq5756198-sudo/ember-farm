@@ -2,7 +2,7 @@
 // 年终评定和收复度、鼎丰物资、余烬核和上限、界面和存档。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, needsStoryMigration } from "./pre-trim.mjs";
 import * as Kin from "../dist/kin.js";
 import { ITEMS, REGIONS, CROPS } from "../dist/data.js";
 import { TASKS } from "../dist/rebuild-data.js";

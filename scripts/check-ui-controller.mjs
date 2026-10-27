@@ -141,7 +141,7 @@ context.open('rebuild',{tab:'production'});clean();assert.match(html(),/class="p
 click('close');e.events=[];context.step(6000);const world=document.querySelector('#world');let captured;const actualUse=e.use;e.use=p=>{captured=p;return true;};world.events.pointerdown({clientX:683,clientY:356,button:0});const expected=context.inspect().renderer.worldPoint(683,300);assert.ok(Math.abs(captured.x-expected.x)<.001);assert.ok(Math.abs(captured.y-expected.y)<.001);listeners.pointerup();let uses=0;e.use=()=>{uses++;return true};document.querySelector('#touch-use').events.pointerdown({preventDefault(){}});assert.equal(uses,1);listeners.click({target:document.querySelector('#touch-use'),detail:1});assert.equal(uses,1);listeners.pointerup();e.use=actualUse;
 context.fixture(Rebuild.districtDemoState());e=context.inspect().engine;
 for(const region of Object.keys(DistrictData.DISTRICTS)){click('dRegion',region);for(const p of DistrictData.POINTS.filter(p=>p.region===region)){click('dPoint',p.id);assert.match(html(),new RegExp(p.name));clean();}for(const view of ['entrance','jobs','freight','workers','needs','ledger','storage']){click('dView',view);clean();}}
-click('dRegion','valley');Object.assign(e.s.player,DistrictData.POINT_BY_ID.watergate);click('dPreview','watergate:built');click('dExecute','watergate:built');assert.ok(e.flag('watergate','built'));click('dDestination','stationMarket');click('dGo','stationMarket');Object.assign(e.s.player,DistrictData.POINT_BY_ID.shops);click('dPoint','shops');click('dPreview','shops:food');click('dExecute','shops:food');assert.ok(e.flag('shops','food'));click('dView','storage');const bag=e.qty('wood');click('dDeposit','wood');assert.equal(e.qty('wood'),0);click('dWithdraw','wood');assert.ok(e.qty('wood')>=bag);
+click('dRegion','valley');Object.assign(e.s.player,DistrictData.POINT_BY_ID.watergate);click('dPreview','watergate:built');click('dExecute','watergate:built');assert.ok(e.flag('watergate','built'));click('dDestination','stationMarket');click('dGo','stationMarket');Object.assign(e.s.player,DistrictData.POINT_BY_ID.shops);click('dPoint','shops');click('dPreview','shops:food');click('dExecute','shops:food');assert.ok(e.flag('shops','food'));context.open('districts',{view:'storage',detail:true,region:'stationMarket'});assert.match(html(),/休整点/);assert.doesNotMatch(html(),/data-action="dDeposit"|data-action="dWithdraw"/);const bag=e.qty('wood');click('dDeposit','wood');assert.equal(e.qty('wood'),bag,'v0.42: the district store merged into the farm storage');
 click('dView','workers');click('dWorker','farmer:stationMarket');assert.equal(e.d.workers.farmer,'stationMarket');click('dWorker','farmer:home');assert.equal(e.d.workers.farmer,undefined);
 click('dWorld');assert.match(html(),/atlas-terrain/);clean();assert.doesNotMatch(html(),/data-action="(?:dOpen|bOpen|eMapFilter|dWorldFilter)"/);for(const id of Object.keys(Wayfinding.ATLAS_POINTS)){click('aSelect',id);clean();assert.equal(context.inspect().atlasUI.selected,id);}
 for(const region of Object.keys(DistrictData.DISTRICTS)){e.s.region=region;e.assignRegion();Object.assign(e.s.player,{x:770,y:510});for(const [w,h] of [[1366,600],[1920,900],[390,480],[844,240]]){context.inspect().renderer.resize(w,h,1);context.step(9000);}}
@@ -161,8 +161,9 @@ for(const region of Object.keys(BeyondData.BMAPS)){
  for(const [w,h]of [[1366,600],[1920,900],[390,480],[844,240]]){context.inspect().renderer.resize(w,h,1);context.step(10000);}
 }
 e.s.region='pinewood';e.s.enemies.pinewood=[];e.assignRegion();Object.assign(e.s.player,BeyondData.BPOINT_BY_ID.pinewood_resin);
-click('bPoint','pinewood_resin');click('bAct','pinewood_resin:tap');assert.equal(e.b.jobs.length,1);click('bAct','pinewood_resin:tap');assert.equal(e.b.jobs.length,1);click('close');e.advanceMinutes(45);assert.ok(e.b.stores.pinewood.resin>=12);
-Object.assign(e.s.player,{x:220,y:570});context.open('beyond',{region:'pinewood',view:'storage'});click('bWithdraw','resin');assert.ok(e.qty('resin'));click('save');
+// v0.42 删繁：前哨的仓库并进农场仓库——割出来的松脂直接进农场仓库；仓库那一页只剩休整点
+const resin0=e.s.storage.resin||0;click('bPoint','pinewood_resin');click('bAct','pinewood_resin:tap');assert.equal(e.b.jobs.length,1);click('bAct','pinewood_resin:tap');assert.equal(e.b.jobs.length,1);click('close');e.advanceMinutes(45);assert.ok((e.s.storage.resin||0)-resin0>=2,'the tapped resin is in the farm storage');
+Object.assign(e.s.player,{x:220,y:570});context.open('beyond',{region:'pinewood',view:'storage'});assert.match(html(),/休整点/);assert.doesNotMatch(html(),/data-action="bWithdraw"|data-action="bDeposit"/);click('save');
 const newest=storage.get(Session.CAMPAIGN_SAVE);assert.ok(JSON.parse(newest).beyond);assert.ok(Beyond.Engine.parse(newest));
 click('bView','events');click('bEvent','stillwind');click('bAccept','stillwind');click('bChoose','stillwind:short');Object.assign(e.s.player,e.beventLocation('stillwind'));click('bPerform','stillwind');assert.ok(e.b.records.stillwind.remaining>0);click('bPause','stillwind');assert.equal(e.b.records.stillwind.status,'paused');click('bAccept','stillwind');assert.equal(e.b.records.stillwind.status,'active');
 console.log('Beyond controller passed: five regions,40 point panels,20 event messages, construction costs/double-click, local storage, new save migration and native Canvas at four dimensions. Not a browser CSS/zoom test.');
@@ -350,11 +351,11 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(document.querySelector('#season-chip').hidden, true, 'no season chip before the forecast');
   context.open('journey'); clean();
   for (const line of ['第七段「让所有人过冬」', '用电台联系白霜站', '生活水准', '法令簿 0/4']) assert.ok(html().includes(line), line);
+  // v0.42 删繁：法令去掉了——那一页只说一句，按钮按了也不生效
   click('wView', 'decrees'); assert.equal(context.inspect().menu, 'outpost'); clean();
-  assert.match(html(), /data-action="wDecree" data-id="rotation"/); assert.match(html(), /轮休制/);
-  click('wDecree', 'rotation'); assert.equal(e.decree('rotation'), true);
-  click('wDecree', 'rotation'); assert.equal(e.decree('rotation'), true, 'the two-day cooldown blocks a double click');
-  clean(); assert.match(html(), /生效中/); click('close');
+  assert.match(html(), /法令去掉了/); assert.doesNotMatch(html(), /data-action="wDecree"/);
+  click('wDecree', 'rotation'); assert.equal(e.decree('rotation'), false);
+  click('close');
   // 联盟终端 E：呼叫白霜站
   Object.assign(e.s.player, { x: AD.TERMINAL_SPOT.x, y: AD.TERMINAL_SPOT.y + 20 }); run(2);
   assert.match(document.querySelector('#context').innerHTML, /呼叫白霜站/);
@@ -400,14 +401,14 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // 地图：亮灯的路
   context.open('map'); clean(); assert.match(html(), /亮灯的路/); click('close');
   // 营地手册 · 居民
-  context.open('rebuild', { tab: 'residents' }); clean(); assert.match(html(), /前哨法令簿与生活水准/); click('close');
+  context.open('rebuild', { tab: 'residents' }); clean(); assert.doesNotMatch(html(), /前哨法令簿与生活水准/, 'v0.42: no decree book or living standard'); click('close');
   // 其它新页面
   for (const view of ['radio', 'collection', 'winter', 'museum']) { context.open('outpost', { view }); clean(); }
-  click('wProgram', 'songs'); assert.equal(e.w.radio.program, 'songs');
+  click('wProgram', 'songs'); assert.notEqual(e.w.radio.program, 'songs', 'v0.42: the radio only broadcasts in the morning');
   click('close');
   click('save'); const saved = storage.get(Session.CAMPAIGN_SAVE);
   const back = Campaign.Engine.parse(saved);
-  assert.equal(back.winter.forecast, true); assert.equal(back.winter.winter.priority, 'engineering'); assert.deepEqual(back.winter.decrees, ['rotation']);
+  assert.equal(back.winter.forecast, true); assert.equal(back.winter.winter.priority, 'engineering'); assert.deepEqual(back.winter.decrees, []);
   console.log('Winter controller passed: act seven card, decree book with cooldown, terminal forecast via E (once), stove placed through the build flow, preparation and season chip, priority choice from the journal, alert bar with gold marker, 葛队长 and 阿兰 dialogs via E, cold Canvas with snow, warm zones and defence overlay at four sizes, lit map, camp manual decree card, radio/collection/winter/museum pages and save/parse.');
 }
 
@@ -520,17 +521,10 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // v0.39：“☰ 菜单”是十个菜单，每个一句话（麦穗那一格挪到“人”那一页）
   click('xView', 'phone'); assert.equal(context.inspect().menu, 'sx'); clean();
   assert.match(html(), /data-menu="inventory"/); assert.match(html(), /data-id="people"/); assert.equal((html().match(/<small>/g) || []).length >= 10, true); click('close');
-  // 夜里的抉择：19:00 → 走到废墟 → E → 选择 → 任务手记里补救
-  toHour(19); const n = e.fr.night; assert.equal(n.kind, 'ruin');
-  goRegion(n.region); const spot = FD.NIGHT_SPOTS[n.region];
-  Object.assign(e.s.player, { x: spot.x, y: spot.y + 20 }); run(3);
-  assert.match(document.querySelector('#context').innerHTML, /做个决定/);
-  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /就这么办/);
-  click('xNight', 'take'); assert.equal(context.inspect().menu, null); assert.ok(e.fr.night.done);
-  click('xNight', 'leave'); assert.equal(e.fr.nightLog.length, 1, 'a second click does not decide twice');
-  context.open('journey'); clean(); assert.match(html(), /补救/); assert.match(html(), /明天的险地|今日险地/);
-  e.s.storage.bread = 30; e.s.storage.cloth = 4;
-  click('xAmends', e.fr.amends[0].id); assert.equal(e.fr.amends.length, 0); click('close');
+  // v0.42 删繁：夜里的抉择去掉了——19:00 不再有事等你，手记里也没有补救
+  toHour(19); assert.ok(!e.fr.night || e.fr.night.done || e.fr.night.day !== e.s.day, 'no night choice tonight');
+  assert.ok(!e.objects.some((o) => o.type === 'farNight'));
+  context.open('journey'); clean(); assert.doesNotMatch(html(), /补救/); assert.match(html(), /明天的险地|今日险地/); click('close');
   // 今日险地：E 打开补给
   e.s.minute = 23 * 60; e.c.workClock = 0; e.s.minute = 1440 - 0.5; e.advanceMinutes(1);
   const h = e.hazardToday(); assert.ok(h);
@@ -543,24 +537,17 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   context.inspect().renderer.resize(1366, 600, 1);
   goRegion('farm'); Object.assign(e.s.player, { x: 830, y: 460 });
   // 麦穗
-  click('xView', 'dog'); clean(); assert.match(html(), /默契/); click('xDog', 'feed'); assert.equal(e.fr.dog.bond >= 1, true); click('xDog', 'feed'); assert.equal(e.fr.dog.fedDay, e.s.day); click('close');
+  // v0.42：麦穗只要摸，饭自己吃
+  click('xView', 'dog'); clean(); assert.match(html(), /默契/); assert.doesNotMatch(html(), /data-id="feed"/); assert.match(html(), /data-action="xDog" data-id="pet"/); click('close');
   // 彭姐：08:00 来借粮，E 打开对话
   toHour(8); assert.equal(e.fr.peng.phase, 'asking'); goRegion('farm');
   Object.assign(e.s.player, { x: FD.FSPOTS.peng.x, y: FD.FSPOTS.peng.y + 20 }); run(3);
   press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /彭姐/);
   click('xPeng', 'lend'); assert.equal(e.fr.peng.phase, 'waiting'); assert.equal(context.inspect().menu, null);
-  // 贺满仓：核账、垫付、建造
-  e.o.ledger = [1, 2, 3].map((d) => ({ day: d, income: 10, items: { radish: 1 } })); e.o.bundles = ['clinic', 'caravan'];
+  // v0.42 删繁：贺满仓只管垫付，垫付去掉了，他的账桌也不在了；建造页没有“贺满仓垫付”
   Object.assign(e.s.player, { x: FD.FSPOTS.hemc.x, y: FD.FSPOTS.hemc.y + 20 }); run(3);
-  press('e'); run(1); clean(); assert.match(html(), /贺满仓/); assert.equal(e.fr.hemc.phase, 'open'); click('close');
-  const [type, def] = Object.entries(Data.BUILDINGS).find(([id, b]) => !b.tech && id !== 'field' && Object.values(b.cost).some((v) => v >= 3));
-  for (const k of Object.keys(def.cost)) { delete e.s.storage[k]; delete e.s.inventory[k]; }
-  context.open('build'); clean(); assert.match(html(), /贺满仓垫付/);
-  click('xAdvance', type); assert.equal(e.buildMode, type); assert.equal(context.inspect().menu, null);
-  let placed = false;
-  for (let r = 60; r < 600 && !placed; r += 16) for (let a = 0; a < 6.28 && !placed; a += 0.3) { const x = Math.round((760 + Math.cos(a) * r) / 8) * 8, y = Math.round((620 + Math.sin(a) * r) / 8) * 8; Object.assign(e.s.player, { x, y: y + Math.max(40, e.buildingRect(type, x, y).h / 2 + 24) }); if (!e.buildReason(type, x, y)) placed = e.placeBuilding(x, y); }
-  assert.ok(placed); assert.ok(e.fr.hemc.debt);
-  context.open('journey'); clean(); assert.match(html(), /还这一期/); click('close');
+  assert.ok(!e.objects.some((o) => o.type === 'farHemc'));
+  context.open('build'); clean(); assert.doesNotMatch(html(), /贺满仓垫付/); click('xAdvance', 'chest'); assert.ok(!e.buildMode); click('close');
   // 设置：无障碍、改键（真按键）
   context.open('pause'); clean(); assert.match(html(), /无障碍/); assert.match(html(), /键位/); assert.match(html(), /手柄/);
   click('xAccess', 'text'); assert.match(document.body.className, /a11y-text/); assert.equal(JSON.parse(storage.get(Session.PREFERENCES)).access.text, true);
@@ -568,14 +555,15 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   click('xKey', 'interact'); assert.match(html(), /按下新键/);
   press('x'); assert.equal(JSON.parse(storage.get(Session.PREFERENCES)).keymap.interact, 'x');
   click('close'); e.paused = false;
-  Object.assign(e.s.player, { x: FD.FSPOTS.hemc.x, y: FD.FSPOTS.hemc.y + 20 }); run(3);
+  const SDk = await import('../dist/seasons-data.js');
+  Object.assign(e.s.player, { x: SDk.SSPOTS.plaza.x, y: SDk.SSPOTS.plaza.y + 20 }); run(3);
   assert.match(document.querySelector('#context').innerHTML, /<kbd>X<\/kbd>/);
   press('e'); run(1); assert.equal(context.inspect().menu, null, 'the old key no longer interacts');
   press('x'); run(1); assert.equal(context.inspect().menu, 'outpost', 'the new key interacts'); click('close');
   context.open('pause'); click('xKeyReset'); assert.deepEqual(JSON.parse(storage.get(Session.PREFERENCES)).keymap, {});
   click('xKey', 'reload'); click('close'); press('w'); assert.deepEqual(e.s.settings.keymap, {}, 'closing the menu cancels a pending remap');
   click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
-  assert.ok(back.far.hemc.debt); assert.equal(back.far.peng.phase, 'waiting'); assert.equal(back.far.nightLog.length, 1);
+  assert.equal(back.far.hemc.debt, null); assert.equal(back.far.peng.phase, 'waiting'); assert.equal(back.far.nightLog.length, 0);
   // 标题画面的设置里，无障碍开关同样生效
   context.open('confirmTitle'); click('backToTitle'); assert.equal(context.inspect().started, false);
   context.open('pause'); click('xAccess', 'calm'); assert.match(document.body.className, /a11y-calm/); click('xAccess', 'calm'); assert.doesNotMatch(document.body.className, /a11y-calm/); click('close');
@@ -699,84 +687,25 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   e.s.day = 12; e.s.minute = 10 * 60; e.dy.pending = null;
   e.s.xp.agriculture = 160; e.s.xp.combat = 160;
   goRegion('farm'); run(2);
-  // K → 技能页，点“学会”
+  // v0.42 删繁：天赋按固定顺序自己学（没有“学会”“重新分配”按钮），妙手（偷东西）去掉了
   press('k'); assert.equal(context.inspect().menu, 'skills'); clean();
-  assert.match(html(), /class="tree-grid"/); assert.match(html(), /可用技能点 \d+/);
-  click('kLearn', 'pickpocket'); assert.ok(e.hasTalent('pickpocket')); clean(); assert.match(html(), /顺手牵羊/);
-  click('kLearn', 'nightOwl'); assert.ok(!e.hasTalent('nightOwl'), 'a locked talent stays locked');
+  assert.match(html(), /class="tree-grid"/); assert.match(html(), /天赋自己学/);
+  assert.doesNotMatch(html(), /data-action="kLearn"|data-action="kRespec"|skill-thief/);
+  click('kLearn', 'oldHand'); assert.ok(!e.hasTalent('pickpocket'));
   click('close'); assert.equal(context.inspect().menu, null);
-  // V 蹲下，站到阿禾背后：提示栏写着“下手”
+  // 早上 06:00：有点数就按顺序学（打着仗不学）
+  const before = e.sk.talents.length; e.s.minute = 6 * 60 - 0.5; e.c.workClock = 59.5; e.advanceMinutes(1);
+  assert.ok(e.sk.talents.length > before, 'learned in order at 06:00'); assert.ok(!e.sk.talents.includes('pickpocket'));
+  // 蹲在人背后不再“下手”；稻草人、钱箱不在了；手记里没有妙手那一条
   const who = (id) => e.objects.find((o) => o.type === 'resident' && o.resident === id);
-  const behind = (ob) => Object.assign(e.s.player, { x: ob.x + 4, y: ob.y - 46 });
-  press('v'); assert.equal(e.f.crouch, true);
-  let ob = who('farmer'); assert.ok(ob); behind(ob); run(2); ob = who('farmer'); behind(ob); run(1);
-  assert.match(document.querySelector('#context').innerHTML, /· 下手/);
-  // E → 下手之前
-  behind(who('farmer')); press('e'); run(1);
-  assert.equal(context.inspect().menu, 'outpost'); clean();
-  assert.match(html(), /没被察觉的机会/); assert.match(html(), /data-action="kGo"/);
-  const tid = e.targetNear().id;
-  for (let s = 1; s < 20000; s++) { e.th.seed = s; if (e.stealRoll(tid) < 0.05) break; }
-  // 1 = 下手
-  press('1'); run(1); clean();
-  assert.ok(e.steal && e.steal.phase === 'pick'); assert.match(html(), /id="st-attn"/);
-  const tries = e.th.stats.tries;
-  // 数字键选口袋，空格在安全区里抽
-  press('1'); assert.equal(e.steal.phase, 'swing');
-  for (let i = 0; i < 200 && e.steal.phase === 'swing'; i++) {
-    const st = e.steal;
-    if (st.marker > st.zone.a + 0.02 && st.marker < st.zone.a + st.zone.w - 0.02) { press(' '); break; }
-    run(1);
-  }
-  assert.ok(['pick', 'done', 'caught'].includes(e.steal.phase));
-  const gotFirst = e.steal.slots[0].done; assert.ok(gotFirst, 'space inside the zone takes the item');
-  // Esc = 收手，结果页；再按 Esc 关掉
-  if (['pick', 'swing'].includes(e.steal.phase)) { press('Escape'); assert.equal(e.steal.phase, 'done'); clean(); assert.match(html(), /得手了|收手/); }
-  if (e.steal.phase === 'done') { press('Escape'); assert.equal(context.inspect().menu, null); assert.equal(e.steal, null); }
-  else { click('kFace'); click('kCaught', '0'); click('kOk'); }
-  assert.equal(e.th.stats.tries, tries); if (gotFirst) { assert.equal(e.th.stats.wins, 1); assert.ok(e.th.taken[tid].ids.length >= 1, 'the pocket is empty for the rest of the week'); }
-  // 第二次：对许医生，第一道运气没过 → 当场被抓，卡片锁住
-  const med = who('medic'); assert.ok(med); behind(med); run(1); behind(who('medic'));
-  for (let s = 1; s < 20000; s++) { e.th.seed = s; if (e.stealRoll('medic') > 0.97) break; }
-  e.f.crouch = true; behind(who('medic')); press('e'); run(1);
-  assert.equal(context.inspect().menu, 'outpost'); assert.equal(e.targetNear()?.id, 'medic');
-  const money = e.s.money;
-  click('kGo', 'medic'); clean();
-  assert.ok(e.th.pending, 'caught on the first gate'); assert.match(html(), /被发现了/);
-  // 任何 data-menu 按钮（比如顶栏的任务手记）也绕不过去：被抓后点它，回到要了结的卡
-  const footer = () => listeners.click({ target: { closest: () => ({ dataset: { menu: 'rebuild' } }) } });
-  footer(); assert.equal(context.inspect().menu, 'outpost', 'the footer cannot skip the caught card'); assert.ok(e.th.pending);
-  if (!/caught-card/.test(html())) press('1');
-  clean(); assert.match(html(), /caught-card locked/);
-  footer(); assert.equal(context.inspect().menu, 'outpost');
-  press('Escape'); assert.equal(context.inspect().menu, 'outpost', 'Esc cannot dismiss the caught card');
-  click('close'); assert.equal(context.inspect().menu, 'outpost', 'close cannot dismiss it either');
-  e.s.money = Math.max(e.s.money, 40);
-  const m1 = e.s.money;
-  press('1'); assert.equal(e.th.pending, null); assert.equal(e.s.money, m1 - 20, 'apologising costs 20 gold'); clean();
-  press('1'); assert.equal(context.inspect().menu, null);
-  assert.ok(money >= 0);
-  // 任务手记的“妙手”条 → 妙手手记
-  context.open('journey'); clean(); assert.match(html(), /class="thief-strip"/);
-  click('kView', 'thief'); clean(); assert.match(html(), /妙手手记|宝贝/); click('close');
-  // 稻草人：站着按 E 练手
-  e.f.crouch = false;
-  const dummy = e.objects.find((o) => o.type === 'thiefDummy'); assert.ok(dummy);
-  // 顶上的提示每 0.12 秒刷新一次：多走一帧，保证刷新过
-  Object.assign(e.s.player, { x: dummy.x, y: dummy.y + 24 }); run(3);
-  assert.match(document.querySelector('#context').innerHTML, /稻草人/);
-  Object.assign(e.s.player, { x: dummy.x, y: dummy.y + 24 }); press('e'); run(1);
-  assert.equal(context.inspect().menu, 'outpost'); assert.ok(e.steal?.practice); clean();
-  press('Escape'); press('Escape'); assert.equal(context.inspect().menu, null);
-  // 蹲着时 Canvas 画出眼睛
-  e.f.crouch = true; behind(who('farmer'));
+  const far = who('farmer'); if (far) { e.f.crouch = true; Object.assign(e.s.player, { x: far.x, y: far.y + 30 }); run(3); assert.doesNotMatch(document.querySelector('#context').innerHTML, /下手/); e.f.crouch = false; }
+  assert.ok(!e.objects.some((o) => ['thiefDummy', 'thiefBox', 'thiefStash'].includes(o.type)));
+  context.open('journey'); clean(); assert.doesNotMatch(html(), /class="thief-strip"/); click('close');
   for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); run(3); }
   context.inspect().renderer.resize(1366, 600, 1);
-  e.f.crouch = false;
   click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
-  assert.ok(back.skills.talents.includes('pickpocket')); assert.equal(back.theft.sus.medic >= 1, true);
-  assert.equal(back.theft.pending, null); assert.equal(back.theft.stats.tries, 2); assert.equal(back.theft.stats.caught, 1);
-  console.log('Thief controller passed: skills page via K learns a talent (locked ones refuse), V crouch behind a person shows 下手 in the context bar, E opens the preview, 1 starts, number keys pick a pocket, space takes inside the zone, Esc stops then closes, a failed first gate locks the caught card (Esc and close refused) until 1 apologises for 20 gold, journal strip → thief book, the dummy via E, Canvas marks at four sizes and save/parse.');
+  assert.ok(back.skills.talents.length > before); assert.equal(back.theft.pending, null);
+  console.log('Talents controller passed (v0.42): the skills page says talents are learned in order, no learn/respec buttons or thief column, a talent learned by itself at 06:00, no pickpocketing behind a person, no thief dummy, no thief strip in the journal, Canvas at four sizes, save/parse.');
 }
 // v0.20.0「一亩田」: E on a plot tills, opens the seed picker (number key plants), waters, tends and opens the plot card; the farm board via E; N/F no longer open the journal; no page has a “返回营地手册” footer; objects open single-place pages; weeds, bugs, cover and a scarecrow on Canvas at four sizes; save/parse.
 {
@@ -801,9 +730,9 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   press('1'); run(1);
   assert.equal(context.inspect().menu, null, 'planting closes the picker'); assert.equal(p.crop, 'radish');
   stand(p); press('e'); run(1); assert.ok(e.plotWatered(p), 'E waters');
-  stand(p); press('e'); run(1); assert.equal(e.g.plots[p.id].t, e.s.day, 'E tends');
+  // v0.42 删繁：照看去掉了——浇过水再按 E 就打开这块田
   stand(p); press('e'); run(1);
-  assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /<h2 id="modal-title">这块田<\/h2>/); assert.match(html(), /照料分/);
+  assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /<h2 id="modal-title">这块田<\/h2>/); assert.match(html(), /天天浇/); assert.doesNotMatch(html(), /照料分/);
   press('Escape'); assert.equal(context.inspect().menu, null);
   // 菜地告示牌
   const sign = e.objects.find((o) => o.type === 'frontierBoard');
@@ -827,20 +756,21 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   context.open('outpost', { view: 'shipping' }); clean(); assert.doesNotMatch(html(), /每日订单/); click('bView', 'bOrders'); assert.match(html(), /<h2 id="modal-title">订单板<\/h2>/); click('close');
   // v0.39：农舍只管休息；房间与家具挪到建造页“摆件”那一组
   context.open('home'); assert.doesNotMatch(html(), /房间与家具|保存存档|家园计划/); assert.match(html(), /data-action="sleep"/);
-  context.open('build'); assert.match(html(), /房间与家具/); click('rOpen', 'frontier:rooms'); assert.match(html(), /<h2 id="modal-title">房间与家具<\/h2>/); click('close');
+  // v0.42：房间去掉了，建造页“摆件”一格挑样子
+  context.open('build'); assert.doesNotMatch(html(), /房间与家具/); assert.match(html(), /tr-decor/); click('close');
   // 池塘按 E：只开钓鱼与养殖那一页
   const pond = e.objects.find((o) => o.type === 'pond');
   if (pond) { Object.assign(e.s.player, { x: pond.x, y: pond.y + 30 }); run(1); Object.assign(e.s.player, { x: pond.x, y: pond.y + 30 }); press('e'); run(1); if (context.inspect().menu) { assert.doesNotMatch(html(), /manual-nav|camp-tabs|返回营地手册/); click('close'); } }
-  // Canvas：杂草、菜青虫、盖布、乌鸦爪印、稻草人、肥力色条
+  // Canvas：乌鸦爪印、稻草人（v0.42 起没有杂草、菜青虫、盖布、肥力色条）
   for (let i = 2; i < 8; i++) { const q = e.s.plots[i]; e.s.debris = e.s.debris.filter((d) => Math.hypot(d.x - q.x, d.y - q.y) >= 15); q.tilled = true; }
   e.s.inventory.seedPotato = 5; e.plantSeed(2, 'seedPotato'); e.plantSeed(3, 'seedPotato');
-  e.gRec(e.s.plots[2]).b = 2; e.gRec(e.s.plots[3]).w = e.s.day; e.gRec(e.s.plots[4]).w = e.s.day; e.gRec(e.s.plots[3]).cv = e.s.day; e.gRec(e.s.plots[2]).pk = 1; e.s.plots[5].fertility = 90; e.s.plots[6].fertility = 20;
+  e.gRec(e.s.plots[2]).pk = 1;
   e.s.buildings.push({ id: 'ctl-scare', type: 'scarecrow', x: 520, y: 400, rotation: 0, hp: 40 });
   stand(e.s.plots[2]);
   for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); run(3); }
   context.inspect().renderer.resize(1366, 600, 1);
   click('save'); const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
-  assert.equal(back.garden.plots[2].b, 2); assert.equal(back.garden.plots[3].w, e.s.day); assert.ok(back.buildings.some((b) => b.type === 'scarecrow'));
+  assert.equal(back.garden.plots[2].pk, 1); assert.ok(back.buildings.some((b) => b.type === 'scarecrow'));
   console.log('Garden controller passed: E on a plot tills, opens the seed picker (1 plants and closes), waters, tends and opens the plot card; the farm board via E and its scarecrow button; the slim journal; N/F no longer open it; no footer “返回营地手册” on any page; 营地消息 and the pond open single pages; weeds, bugs, cover, crow marks, fertility strips and a scarecrow on Canvas at four sizes; save/parse.');
 }
 // v0.22.0「披挂」: the bag (Tab) shows the gear panel with eight slots and a trap; buttons equip, swap and take off; the new hotbar (4 melee, 5 ranged, 6 throw, 7 trap) and empty slots;
@@ -987,6 +917,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // 新开的家园：13:00 左右路那头来一拨，开局提示条一步一步
   e.s.minute = 779.9; e.s.slot = 0; run(3);
   assert.equal(e.feel.open.phase, 'fight'); assert.equal(e.enemies.filter((z) => z.tut && !z.dead).length, 4);
+  context.hud(); // 顶栏每 0.12 秒刷一次：这里先刷一下，不赶前面几段走了多少帧
   assert.equal(document.querySelector('#coach').hidden, false); assert.match(document.querySelector('#coach').innerHTML, /按 4 拿起木棍/);
   press('4'); run(3); assert.match(document.querySelector('#coach').innerHTML, /左键/);
   // 声音提示：带方向的一行字
@@ -1326,8 +1257,9 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(context.inspect().menu, null);
   assert.ok(!e.s.buildings.some((b) => ['canner', 'fishTrap', 'stall'].includes(b.type)));
   assert.equal(e.s.storage.wood - wood0, 8 + 6 + 10);
-  assert.deepEqual(e.td.listing.map((l) => [l.item, l.qty]), [['potato', 7]]);
-  assert.deepEqual(e.w.decrees, ['overtime']); assert.equal(e.f.policy.work, 'overtime'); assert.equal(e.o.lathe.mode, 'parts');
+  // v0.42 删繁接着读：挂牌并进出货箱（挂着的退回仓库），法令取消、政策回到平常
+  assert.deepEqual(e.td.listing, []); assert.ok((e.s.trim.conv.items.potato || 0) >= 7, 'the listed potatoes are back in storage');
+  assert.deepEqual(e.w.decrees, []); assert.equal(e.f.policy.work, 'standard'); assert.equal(e.o.lathe.mode, 'parts');
   e.paused = false; run(3);
   assert.ok(e.td.converted.told, 'told on the first frame');
   context.open('outpost', { view: 'log' }); clean(); assert.match(html(), /营地整顿/); click('close');
@@ -1338,15 +1270,12 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // ---------- 设施卡：按 E 打开自己的那一页 ----------
   e.s.region = 'farm'; e.assignRegion();
   const B = (type, x, y) => { const b = { id: 'td-' + type + '-' + e.s.idCounter++, type, x, y, rotation: 0, hp: Data.BUILDINGS[type].hp }; e.s.buildings.push(b); e.navRevision++; return b; };
-  const solar = B('solar', 420, 880);
-  Object.assign(e.s.player, { x: solar.x, y: solar.y + 40 }); run(2);
-  assert.match(document.querySelector('#context').innerHTML, /太阳能板 · /);
-  press('e'); run(1);
-  assert.equal(context.inspect().menu, 'building'); clean(); assert.match(html(), /营地的电/); click('close');
-  const lure = B('lure', 300, 620); e.c.energy = 40;
+  // v0.42：太阳能板拆了（不再有电），建造页上也没有；信标拉一次用 1 个零件
+  context.open('build'); clean(); assert.ok(!html().includes('<h3>太阳能板</h3>')); click('close');
+  const lure = B('lure', 300, 620); delete e.s.inventory.parts; e.s.storage.parts = 3;
   Object.assign(e.s.player, { x: lure.x, y: lure.y + 40 }); run(2); press('e'); run(1);
-  assert.equal(context.inspect().menu, 'building'); clean(); assert.match(html(), /拉响信标/);
-  click('tdLure', lure.id); assert.ok(e.pulledLure()); assert.equal(e.c.energy, 35); assert.match(html(), /正在响/); click('close');
+  assert.equal(context.inspect().menu, 'building'); clean(); assert.match(html(), /拉响信标/); assert.doesNotMatch(html(), /电/);
+  click('tdLure', lure.id); assert.ok(e.pulledLure()); assert.equal((e.s.storage.parts || 0) + (e.s.inventory.parts || 0), 2); assert.match(html(), /正在响/); click('close');
   const trap = B('trap', 1000, 240); trap.hp = 20; e.s.storage.repairKit = 1;
   Object.assign(e.s.player, { x: trap.x, y: trap.y + 40 }); run(2); press('e'); run(1);
   assert.equal(context.inspect().menu, 'building'); clean(); assert.match(html(), /用修理包修满（有 1 个）/);
@@ -1358,22 +1287,23 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // ---------- 出货箱：明天的行情、挂牌 ----------
   e.s.inventory.tomato = 6; e.s.storage.bread = 30; e.s.minute = 360;
   context.open('outpost', { view: 'shipping' }); clean();
-  assert.match(html(), /明天/); assert.match(html(), /挂牌 · 1\/3 格/);
-  document.querySelector('#td-list-item').value = 'bread'; document.querySelector('#td-list-qty').value = '4';
-  click('tdList'); assert.equal(e.td.listing.length, 2); assert.match(html(), /挂牌 · 2\/3 格/); click('close');
-  const money = e.s.money; e.advanceMinutes(6 * 60); assert.ok(e.s.money > money, 'sold by day');
+  // v0.42：挂牌并进出货箱——出货箱只看明天的行情、放东西进去当晚卖
+  assert.match(html(), /明天/); assert.doesNotMatch(html(), /挂牌 ·/);
+  click('tdList'); assert.equal(e.td.listing.length, 0); click('close');
   // ---------- 居民的心情、法令的代价、生活水准差哪一格 ----------
   for (const id of ['farmer', 'medic']) e.recruit(id);
   B('bed', 700, 330);
   e.w.decrees = ['ration'];
-  context.open('rebuild', { tab: 'residents' }); clean(); assert.match(html(), /心情 /); assert.match(html(), /配给卡/); click('close');
-  context.open('outpost', { view: 'decrees' }); clean(); assert.match(html(), /让谁不高兴：阿禾、许医生，心情 −10/); assert.match(html(), /差「/); click('close');
+  // v0.42：每个人的心情并成全营士气，法令去掉了
+  context.open('rebuild', { tab: 'residents' }); clean(); assert.doesNotMatch(html(), /配给卡|前哨法令簿/); click('close');
+  context.open('outpost', { view: 'decrees' }); clean(); assert.match(html(), /法令去掉了/); click('close');
   // ---------- 警报栏：借宿 ----------
   e.ss.lodger = { name: '过路人', look: 0, gift: 'item', stay: false, phase: 'asking', day: e.s.day, qin: false }; run(4);
   assert.match(document.querySelector('#alert-bar').innerHTML, /想借宿/); e.ss.lodger = null;
   // ---------- 机床加急 ----------
-  e.s.minute = 600; context.open('outpost', { view: 'lathe' }); clean(); assert.match(html(), /今晚加急/); assert.doesNotMatch(html(), /优先弹药/);
-  click('tdRush'); assert.equal(e.td.lathe.rush, e.s.day); assert.match(html(), /说好了/); click('close');
+  // v0.42：机床加急去掉了
+  e.s.minute = 600; context.open('outpost', { view: 'lathe' }); clean(); assert.doesNotMatch(html(), /今晚加急/); assert.doesNotMatch(html(), /优先弹药/);
+  click('tdRush'); assert.notEqual(e.td.lathe.rush, e.s.day); click('close');
   // ---------- 画面：警钟、信标的圈、头上的心情，四种大小，白天和夜里 ----------
   e.objects.push({ type: 'tdBell', name: '警钟', x: TidyData.LN_PACE.bell.x, y: TidyData.LN_PACE.bell.y, icon: 55 });
   e.c.residents[0].morale = 90; e.c.residents[1].morale = 10;
@@ -1428,8 +1358,9 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.match(document.querySelector('#context').innerHTML, /堆肥桶/);
   press('e'); run(1);
   assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /<h2 id="modal-title">堆肥桶<\/h2>/);
-  click('btCompKind', bin.id + '|care'); assert.equal(e.bt.compost[bin.id].kind, 'care');
-  click('btCompAdd', bin.id + '|fodder|5'); assert.equal(e.bt.compost[bin.id].n, 5); assert.match(html(), /明早 06:00 出 1 袋提质肥/); click('close');
+  // v0.42：三种肥并成一种，堆肥桶不用挑
+  assert.doesNotMatch(html(), /data-action="btCompKind"/); click('btCompKind', bin.id + '|care'); assert.equal(e.bt.compost[bin.id]?.kind ?? 'grow', 'grow');
+  click('btCompAdd', bin.id + '|fodder|5'); assert.equal(e.bt.compost[bin.id].n, 5); assert.match(html(), /明早 06:00 出 1 袋肥料/); click('close');
   // ---------- 订单板：按 E ----------
   Object.assign(e.s.player, { x: BountyData.ORDERS.spot.x, y: BountyData.ORDERS.spot.y + 24 }); run(2); press('e'); run(1);
   assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /<h2 id="modal-title">订单板<\/h2>/);
@@ -1439,15 +1370,16 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   click('btOrderGive', o.id); assert.ok(!e.bt.orders.list.includes(o)); assert.equal(e.bt.stats.orders, 1);
   click('btOrderTear', e.bt.orders.list[0].id); assert.equal(e.bt.orders.list.length, 1); click('close');
   // ---------- 告示牌：今天的水、图鉴；水网那一页 ----------
-  context.open('outpost', { view: 'gBoard' }); clean(); assert.match(html(), /今天的水够浇/); assert.match(html(), /菜地图鉴/);
-  click('bView', 'bWater'); clean(); assert.match(html(), /<h2 id="modal-title">水网<\/h2>/);
-  const before = e.bt.net.order.join(','); click('btNet', 'tower:-1'); assert.notEqual(e.bt.net.order.join(','), before); click('close');
+  // v0.42：水网去掉了——告示牌只写今天的菜地和图鉴；原来的水网那一页就是告示牌
+  context.open('outpost', { view: 'gBoard' }); clean(); assert.match(html(), /今天的菜地/); assert.match(html(), /菜地图鉴/); assert.doesNotMatch(html(), /水网|今天的水够浇/);
+  click('bView', 'bWater'); clean(); assert.match(html(), /<h2 id="modal-title">菜地告示牌<\/h2>/);
+  const before = e.bt.net.order.join(','); click('btNet', 'tower:-1'); assert.equal(e.bt.net.order.join(','), before); click('close');
   // ---------- 设施卡：喷灌头开关、放鸡 ----------
   const spr = B('irrigation', 455, 520);
   context.open('building', { buildingId: spr.id }); clean(); assert.match(html(), /喷灌头/);
-  click('btSprinkler', spr.id); assert.ok(e.bt.net.off.includes(spr.id)); click('btSprinkler', spr.id); assert.ok(!e.bt.net.off.includes(spr.id)); click('close');
+  assert.doesNotMatch(html(), /data-action="btSprinkler"/); click('btSprinkler', spr.id); assert.ok(!e.bt.net.off.includes(spr.id), 'v0.42: sprinklers are always on'); click('close');
   const coop = B('coop', 640, 760); e.c.animals.chicken = true; e.s.minute = 600;
-  context.open('building', { buildingId: coop.id }); clean(); click('btChickens', 'out'); assert.ok(e.bt.chickens.out); assert.match(html(), /赶回窝里/); click('close');
+  context.open('building', { buildingId: coop.id }); clean(); assert.doesNotMatch(html(), /data-action="btChickens"/); click('btChickens', 'out'); assert.ok(!e.bt.chickens.out, 'v0.42: no chickens in the field'); click('close');
   // ---------- 选种页：神秘种子包；这块田：肥、抢收 ----------
   const q = e.s.plots[40]; e.s.debris = e.s.debris.filter((d) => Math.hypot(d.x - q.x, d.y - q.y) >= 15); q.tilled = true; if (e.g.plots[q.id]) e.g.plots[q.id].w = 0;
   e.s.storage.seedMystery = 2;
@@ -1483,7 +1415,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // 存档
   click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
   const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
-  assert.equal(back.bounty.stats.orders, 1); assert.equal(back.bounty.compost[bin.id].kind, 'care'); assert.equal(back.bounty.intro.told, true);
+  assert.equal(back.bounty.stats.orders, 1); assert.equal(back.bounty.compost[bin.id].kind, 'grow'); assert.equal(back.bounty.intro.told, true);
   console.log('Bounty controller passed: a v0.26 save restored from a file (canal water became stored water, the 丰年 notice on the first frame), the compost bin in the build list and its page on E (fertiliser picked, fodder thrown in), the order board on E (an order handed in, one torn), the farm board\'s water line and collection book, the water page (a route moved up), the sprinkler card switching it off and on, chickens let out from the coop card, the mystery pack in the seed picker, fertiliser and early harvest on the plot card, a giant radish hoed from its card, the night-raid alert, giant crop/chickens/order board/compost bin/Lin\'s garden drawn at four sizes by day and night, and save/parse.');
 }
 
@@ -1514,27 +1446,24 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   click('restoreCandidate', '0'); click('applyImport');
   let e = context.inspect().engine;
   assert.equal(context.inspect().menu, null);
-  assert.equal(e.hn.noise.v, 3, "the radio's own noise moved onto the meter");
+  // v0.42 删繁接着读：动静去掉了（清零），电台指令、设施改良、伤员、房间舒适度、挑供品去掉了
+  assert.equal(e.hn.noise.v, 0, 'v0.42: no noise meter');
   assert.equal(e.w.radio.noise, 0);
   e.paused = false; if (e.dy) e.dy.pending = null; run(3);
   assert.ok(e.hn.intro.told, 'told on the first frame');
-  context.open('outpost', { view: 'log' }); clean(); assert.match(html(), /热闹：营地里吵的事会攒「动静」/); click('close');
-  // ---------- 顶栏的动静格 ----------
-  const chip = document.querySelector('#noise-chip');
-  assert.equal(chip.hidden, false); assert.equal(chip.textContent, '动静 3'); assert.match(chip.title, /0 点结算/);
-  // ---------- 建造菜单：药柜（往事陈列柜要挑过才有） ----------
-  context.open('build'); clean(); assert.ok(html().includes('<h3>药柜</h3>'), 'the medicine cabinet can be built'); assert.ok(!html().includes('<h3>往事陈列柜</h3>')); click('close');
-  // ---------- 通信站：按 E，发电台指令 ----------
+  context.open('outpost', { view: 'log' }); clean(); assert.match(html(), /热闹：/); click('close');
+  // ---------- 顶栏没有动静格 ----------
+  context.hud(); const chip = document.querySelector('#noise-chip'); assert.equal(chip.hidden, true);
+  // ---------- 建造菜单：没有药柜 ----------
+  context.open('build'); clean(); assert.ok(!html().includes('<h3>药柜</h3>')); assert.ok(!html().includes('<h3>往事陈列柜</h3>')); click('close');
+  // ---------- 通信站：按 E 只听广播 ----------
   e.s.region = 'farm'; e.assignRegion();
-  e.c.energy = 30;
   Object.assign(e.s.player, { x: 1220, y: 420 }); run(4);
-  assert.match(document.querySelector('#context').innerHTML, /通信站 · 听广播/);
+  assert.match(document.querySelector('#context').innerHTML, /通信站/);
   press('e'); run(1);
-  assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /电台指令/); assert.doesNotMatch(html(), /满了会引来尸群/);
-  click('hnCmd', 'scout'); assert.equal(e.c.energy, 30 - BustleData.RADIO_CMDS.scout.power); assert.match(html(), /今天的侦察/);
-  click('hnCmd', 'scout'); assert.equal(e.c.energy, 30 - BustleData.RADIO_CMDS.scout.power, 'a second click waits for the cooldown');
-  click('close'); run(4);
-  assert.equal(chip.textContent, '动静 4'); assert.match(chip.className, /warn/);
+  assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /<h2 id="modal-title">通信站<\/h2>/); assert.match(html(), /今天早上的广播/); assert.doesNotMatch(html(), /电台指令|data-action="hnCmd"/);
+  click('hnCmd', 'scout'); clean(); click('close'); run(4);
+  assert.equal(e.hn.noise.v, 0); assert.equal(chip.hidden, true);
   // ---------- 红薯：按 E，装车出发 ----------
   e.s.storage.potato = 14; e.s.storage.radish = 3;
   Object.assign(e.s.player, { x: 800, y: 760 }); run(4);
@@ -1546,41 +1475,29 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   click('hnMuleGo'); assert.ok(e.hn.mule.trip, 'Hong Shu is on the road'); assert.equal(context.inspect().menu, null);
   assert.equal(e.s.storage.potato, 4); assert.equal(e.s.storage.radish, 2);
   run(1); press('e'); run(1); clean(); assert.match(html(), /在路上/); assert.match(html(), /想跟车/); click('close');
-  // ---------- 设施卡：瞭望塔选路线、改；围栏一起改 ----------
+  // ---------- 设施卡：瞭望塔、围栏没有改良 ----------
   const B = (type, x, y) => { const b = { id: 'hn-' + type + '-' + e.s.idCounter++, type, x, y, rotation: 0, hp: Data.BUILDINGS[type].hp }; e.s.buildings.push(b); e.navRevision++; return b; };
   const tower = B('tower', 1180, 300);
-  e.c.researchCredits = 2; e.s.storage.parts = (e.s.storage.parts || 0) + 3;
-  context.open('building', { buildingId: tower.id }); clean(); assert.match(html(), /改良（二选一）/);
-  click('hnUpPath', 'tower:light'); assert.equal(e.upPath('tower'), 'light'); assert.match(html(), /改成「探照灯」/);
-  click('hnUpBuild', tower.id); assert.equal(tower.hnUp, 'light'); assert.match(html(), /这座已经改成「探照灯」/); click('close');
-  const fences = [0, 1, 2, 3].map((i) => B('fence', 940 + i * 40, 250));
-  e.unlockPath('fence', 'barb'); e.s.storage.scrap = (e.s.storage.scrap || 0) + 10;
-  context.open('building', { buildingId: fences[0].id }); clean(); assert.match(html(), /附近还没改的 4 段一起改/);
-  click('hnUpFences', fences[0].id); assert.ok(fences.every((f) => f.hnUp === 'barb')); click('close');
-  const trap = B('trap', 1320, 520); trap.hnUp = 'net'; e.hn.up.trap = 'net';
-  // ---------- 伤员：居民卡上用药包 ----------
+  context.open('building', { buildingId: tower.id }); clean(); assert.doesNotMatch(html(), /改良（二选一）|data-action="hnUpPath"/);
+  click('hnUpPath', 'tower:light'); assert.ok(!e.upPath('tower')); click('close');
+  const fence = B('fence', 940, 250);
+  context.open('building', { buildingId: fence.id }); clean(); assert.doesNotMatch(html(), /data-action="hnUpFences"/); click('close');
+  // ---------- 守夜受伤：不再躺两天，全营士气掉一截 ----------
   for (const id of ['farmer', 'medic']) e.recruit(id);
   B('bed', 700, 330);
-  e.injure('r:farmer', '阿禾', '守夜时被感染者摸到'); e.s.storage.medkit = 1; run(4);
-  assert.match(document.querySelector('#alert-bar').innerHTML, /1 人受伤/);
-  context.open('rebuild', { tab: 'residents' }); clean(); assert.match(html(), /受伤了：还要养 48 个钟点/);
-  click('hnTreat', 'r:farmer|medkit'); assert.equal(e.hn.hurt['r:farmer'].care, 'medkit'); assert.ok(!e.s.storage.medkit); click('close');
-  // ---------- 农舍「房间与家具」：舒适度 ----------
-  const floor = B('floor', 420, 360); B('chair', 440, 360); B('lamp', 400, 340); B('table', 440, 390); B('bed', 400, 395);
-  context.open('frontier', { tab: 'rooms' }); clean(); assert.match(html(), /舒适度和「休息好」/); assert.match(html(), /舒适度 4\/9/); // v0.29：旧物摆件也算一类家具，最多 9
-  assert.match(html(), /data-action="build" data-id="medCabinet"/); click('close');
-  void floor;
-  // ---------- 广场：节庆挑供品；食堂走着端菜上菜 ----------
+  const hurt0 = e.tr.hurt.n; e.injure('r:farmer', '阿禾', '守夜时被感染者摸到'); run(4);
+  assert.equal(e.tr.hurt.n, hurt0 + 1); assert.ok(!e.hn.hurt['r:farmer']); assert.doesNotMatch(document.querySelector('#alert-bar').innerHTML, /受伤/);
+  context.open('rebuild', { tab: 'residents' }); clean(); assert.doesNotMatch(html(), /受伤了：还要养/); click('close');
+  // ---------- 广场：节庆的供品自己挑；食堂走到广场自己开张，走着端菜上菜 ----------
   e.ss.he.stage = 4; e.s.day = 21; e.s.minute = 16 * 60 + 10; e.c.workClock = 10;
   Object.assign(e.s.storage, { fine_pumpkin: 2, fine_herb: 2, fine_cotton: 2, potato: 4, radish: 4 });
   Object.assign(e.s.player, { x: SD.SSPOTS.plaza.x, y: SD.SSPOTS.plaza.y + 20 }); run(2);
-  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /挑三样菜去评比/);
-  for (const id of ['fine_pumpkin', 'fine_herb', 'fine_cotton']) click('hnFestPick', id);
-  assert.match(html(), /满堂彩/);
-  click('sHost'); assert.ok(e.festivalHosted(21)); assert.ok(!e.s.storage.fine_pumpkin, 'the picked offering was paid'); click('close');
+  press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.doesNotMatch(html(), /data-action="hnFestPick"/);
+  const offer = () => ['fine_pumpkin', 'fine_herb', 'fine_cotton', 'potato', 'radish'].reduce((a, k) => a + (e.s.storage[k] || 0), 0), offer0 = offer();
+  click('sHost'); assert.ok(e.festivalHosted(21)); assert.ok(offer() < offer0, 'the offering picked itself and was paid'); click('close');
   e.s.day = 23; e.s.minute = 19 * 60 + 2; e.c.workClock = 2;
   Object.assign(e.s.storage, { stew: 4, bread: 6, jam: 2, beanMeal: 2, herbTea: 2 });
-  run(2); press('e'); run(1); clean(); click('sCanteen'); assert.ok(e.ss.canteen.night); assert.match(html(), /不开菜单/); click('close');
+  run(2); assert.ok(e.ss.canteen.night, 'the canteen opened by itself'); press('e'); run(1); clean(); assert.doesNotMatch(html(), /data-action="sCanteen"/); assert.match(html(), /不开菜单/); click('close');
   const stove = e.objects.find((o) => o.type === 'hnStove');
   Object.assign(e.s.player, { x: stove.x, y: stove.y + 16 }); run(4);
   assert.match(document.querySelector('#context').innerHTML, /何大勺的灶台 · 端菜/);
@@ -1597,10 +1514,9 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   Object.assign(e.s.player, { x: BustleData.FISH_RUN.spot.x, y: BustleData.FISH_RUN.spot.y + 20 }); run(4);
   assert.match(document.querySelector('#context').innerHTML, /江伯 · /);
   press('e'); run(1); assert.equal(context.inspect().menu, 'outpost'); clean(); assert.match(html(), /<h2 id="modal-title">江伯 · 鱼汛<\/h2>/); click('close');
-  // ---------- 循声来的感染者：警报；邻居、空投、探照灯、端着的菜，四种大小，白天和夜里 ----------
+  // ---------- 不再有循声来的感染者；端着的菜、探照灯，四种大小，白天和夜里 ----------
   e.hn.noise.v = 6.5; e.s.minute = 19 * 60; run(4);
-  assert.match(document.querySelector('#alert-bar').innerHTML, /今夜 0 点会有 6 只循声摸来/);
-  e.hn.help = { armed: false, day: e.s.day, live: true, allies: BustleData.ALLY.names.map((name, i) => ({ id: 'a' + i, name, look: BustleData.ALLY.looks[i], x: 1240 + i * 30, y: 470, hp: BustleData.ALLY.hp - 30 * i, down: false, cd: 0, facing: 0 })) };
+  assert.doesNotMatch(document.querySelector('#alert-bar').innerHTML, /循声摸来/);
   e.hn.carry = { dish: 'stew', guest: 'g0' };
   e.ss.canteen.night = { day: e.s.day, customers: [], spawned: 0, nextIn: 20, income: 0, score: 0, served: 0, wrong: 0, missed: 0, max: 4 };
   e.ln.night = null;
@@ -1609,22 +1525,12 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
     for (const [w, hh] of [[1366, 600], [1920, 900], [390, 480], [844, 240]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
   }
   context.inspect().renderer.resize(1366, 600, 1);
-  e.ss.canteen.night = null; e.hn.carry = null; e.hn.help = { armed: false, day: 0, live: false, allies: [] };
-  // 空投箱在废墟里
-  e.c.energy = 20; e.s.minute = 600;
-  const reg = e.dropRegions()[0];
-  if (reg) {
-    e.radioCmd('drop'); const d = e.hn.drop;
-    e.s.region = d.region; e.enemies = e.s.enemies[d.region] ||= []; e.assignRegion(); Object.assign(e.s.player, { x: d.x, y: d.y + 40 });
-    for (const [w, hh] of [[1366, 600], [390, 480]]) { context.inspect().renderer.resize(w, hh, 1); context.step((clock += 20)); }
-    context.inspect().renderer.resize(1366, 600, 1);
-    e.s.region = 'farm'; e.enemies = e.s.enemies.farm ||= []; e.assignRegion();
-  }
+  e.ss.canteen.night = null; e.hn.carry = null;
   // 存档
   click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
   const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
-  assert.equal(back.bustle.up.tower, 'light'); assert.equal(back.bustle.mule.trip.load.potato, 10); assert.equal(back.bustle.intro.told, true);
-  assert.equal(back.bustle.hurt['r:farmer'].care, 'medkit');
+  assert.ok(!back.bustle.up.tower); assert.equal(back.bustle.mule.trip.load.potato, 10); assert.equal(back.bustle.intro.told, true);
+  assert.ok(!back.bustle.hurt['r:farmer']);
   console.log('Bustle controller passed: a v0.27 save restored from a file (the radio noise on the meter, the 热闹 notice on the first frame), the noise chip, the medicine cabinet in the build list, E at the radio station sending a scout command (the cooldown holds a second click), E at Hong Shu loading and sending a run and showing it on the road, a tower card picking the searchlight and upgrading, four fence segments barbed in one go, a hurt resident treated from the residents page, the comfort card on the rooms page, the harvest offering picked and paid on the plaza, the canteen served on foot (E at the stove, E at the guest), the museum\'s 往事 case, Jiang Bo via E, the noise warning in the alert bar, neighbours, the airdrop, upgraded towers/fences/traps and a carried dish drawn at four sizes by day and night, and save/parse.');
 }
 
@@ -1677,10 +1583,12 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   Object.assign(e.s.player, { x: q.x + 2, y: q.y + 6 }); run(2); press('e'); run(1);
   clean(); assert.match(html(), /当季 快 15% · 多收 1 份/); click('close');
   // ---------- 电台：今天的签 ----------
-  context.open('outpost', { view: 'radio' }); clean(); assert.match(html(), /早间广播（每天 07:00）/); assert.match(html(), /今天的手气签：/); click('close');
+  // v0.42：通信站只听早上的广播，手气签去掉了
+  context.open('outpost', { view: 'radio' }); clean(); assert.match(html(), /今天早上的广播/); assert.doesNotMatch(html(), /手气签/); click('close');
   // ---------- 建造菜单：腌缸、土酒坛、四种果树；摆件要有了才出现 ----------
   context.open('build'); clean();
-  for (const n of ['腌缸', '土酒坛', '嫁接桃树', '嫁接柿子树']) assert.ok(html().includes('<h3>' + n + '</h3>'), n);
+  for (const n of ['腌缸', '嫁接桃树', '嫁接柿子树']) assert.ok(html().includes('<h3>' + n + '</h3>'), n);
+  assert.ok(!html().includes('<h3>土酒坛</h3>'), 'v0.42: the wine jar merged into the pickle jar');
   assert.ok(!html().includes('<h3>旧物摆件</h3>'), 'no decor entry before you own one');
   assert.match(html(), /枝条去废弃居民区/); click('close');
   // ---------- 腌缸：放下、按 E 装缸、过几天取 ----------
@@ -1697,8 +1605,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   context.open('building', { buildingId: jar.id }); clean(); click('alJarTake', jar.id); assert.equal(e.qty('alPickle', true), 4); click('close');
   // ---------- 鸡舍：摸一摸 ----------
   const coop = B(e, 'coop', 980, 860); e.c.animals.chicken = true;
-  context.open('building', { buildingId: coop.id }); clean(); assert.match(html(), /牲口亲近/);
-  click('alHerdPet', 'flock'); assert.equal(e.al.herd.flock.pts, AL.HERD.pet); assert.match(html(), /今天已经摸过了/); click('close');
+  // v0.42：鸡舍自己喂、自己摸，卡上不再有“摸一摸”
+  context.open('building', { buildingId: coop.id }); clean(); assert.doesNotMatch(html(), /data-action="alHerdPet"/); assert.match(html(), /每天早上自己喂/); click('close');
   // ---------- 居民区：老果树按 E 剪枝条；回农场嫁接 ----------
   e.s.region = 'residential'; e.enemies = e.s.enemies.residential ||= []; for (const z of e.enemies) z.dead = true; e.enemies = e.s.enemies.residential = []; e.assignRegion();
   const oldPeach = e.objects.find((o) => o.type === 'alOldTree' && o.tree === 'peach'); assert.ok(oldPeach);
@@ -1715,7 +1623,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   context.open('building', { buildingId: tree.id }); clean(); assert.match(html(), /还要 14 天长成/); click('close');
   // ---------- 旧物摆件：有了才出现，在建设页挑一件摆 ----------
   e.add({ [AL.decorItem('globe')]: 1, [AL.decorItem('phono')]: 1 }); run(1);
-  context.open('build'); clean(); assert.ok(html().includes('<h3>旧物摆件</h3>')); assert.match(html(), /data-action="alDecorPick" data-id="globe"/);
+  context.open('build'); clean(); assert.match(html(), /tr-decor/); assert.match(html(), /旧物摆件/); assert.match(html(), /data-action="alDecorPick" data-id="globe"/);
   click('alDecorPick', 'globe'); assert.equal(e.buildMode, 'alDecor'); assert.equal(context.inspect().menu, null);
   spot = spotFor(e, 'alDecor', 1100, 700); assert.ok(spot); assert.ok(e.placeBuilding(spot.x, spot.y)); e.buildMode = null;
   const deco = e.s.buildings.at(-1); assert.equal(deco.decor, 'globe'); assert.equal(e.qty(AL.decorItem('globe'), true), 0);
@@ -1725,7 +1633,9 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const fo = e.objects.find((o) => o.type === 'alForage'); assert.ok(fo);
   Object.assign(e.s.player, { x: fo.x, y: fo.y + 4 }); run(3);
   assert.match(document.querySelector('#context').innerHTML, /捡起来/);
-  const had = e.qty(fo.item, true); press('e'); run(1); assert.ok(e.qty(fo.item, true) > had);
+  const had = e.qty(fo.item, true); press('e'); run(1);
+  if (fo.item === AL.MUSHROOM.raw) assert.equal(e.qty(fo.item, true), 0, 'v0.42: mushrooms are sorted as they are picked');
+  else assert.ok(e.qty(fo.item, true) > had);
   // ---------- 许医生认蘑菇 ----------
   e.recruit('medic'); e.add({ [AL.MUSHROOM.raw]: 3 });
   context.open('rebuild', { tab: 'residents' }); clean(); assert.match(html(), /认蘑菇（3 朵）/);
@@ -2070,28 +1980,21 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   Object.assign(e.s.player, { x: TG.UP.x, y: TG.UP.y + 16 }); run(3);
   press('e'); run(1); assert.equal(e.s.region, 'shelter', 'back up at the shelter');
   // ---------- 残页：任务手记里看；藏货点按 E 挖 ----------
-  e.readPage('p09');
-  const dig = Object.entries(RD.DIGS).find(([id]) => e.rlDigOpen(id));
-  assert.ok(dig, 'the riddle opened a dig spot');
+  // v0.42 删繁：残页上的藏货不用再挖——读到就直接进仓库，地上没有松土
+  const dug0 = e.rl.dug.length; e.readPage('p09');
+  assert.ok(!Object.keys(RD.DIGS).some((id) => e.rlDigOpen(id)), 'no loose earth to dig');
   context.open('journey'); clean(); assert.match(html(), /残页 \d+\/24/); assert.ok(html().includes(e.pageTitle('p09'))); click('close');
-  goTo(e, dig[1].region, dig[1].x, dig[1].y + 20); run(3);
-  assert.match(ctxLine(), /松土 · 挖一挖/);
-  press('e'); run(1); assert.ok(e.rl.dug.includes(dig[0]), 'dug with E');
+  if (RD.PAGES.p09?.kind === 'riddle') assert.ok(e.rl.dug.length > dug0, "the riddle's cache went straight into storage");
   // ---------- 年终评定：守夜纪念日 21:00 ----------
   goTo(e, 'farm', 760, 640);
   e.s.day = 56; e.s.minute = 21 * 60 - 0.5; e.c.workClock = 59.5; e.advanceMinutes(1);
   assert.ok(e.lastReview()?.day === 56, 'the review came on the vigil night');
   context.open('journey'); clean(); assert.match(html(), /评定信/); click('close');
   context.open('outpost', { view: 'rlReview', id: '0' }); clean(); assert.match(html(), /存粮/); assert.match(html(), /纪念石/); click('close');
-  // ---------- 鼎丰物资：签约、买一面墙（第二天修好）、法令簿、撕合同 ----------
+  // v0.42 删繁：鼎丰物资去掉了
   Object.assign(e.s.player, { x: st.x, y: st.y + 40 }); e.s.minute = 10 * 60; e.s.money = 30000;
-  context.open('outpost', { view: 'rlStation' }); clean(); assert.match(html(), /鼎丰物资/);
-  click('rlCoSign'); assert.equal(e.rl.co.state, 'signed'); clean();
-  click('rlCoBuy', 'clinic'); assert.equal(e.rl.co.pending.clinic, e.s.day, 'ordered'); click('close');
-  e.s.minute = 1440 - 0.5; e.c.workClock = 0; e.advanceMinutes(1); e.s.minute = 6 * 60 - 0.5; e.c.workClock = 59.5; e.advanceMinutes(1);
-  assert.ok(e.wallOn('clinic'), 'the convoy put the wall up by morning');
-  context.open('outpost', { view: 'decrees' }); clean(); assert.match(html(), /公司规矩/); click('close');
-  context.open('outpost', { view: 'rlStation' }); click('rlCoTear'); assert.equal(e.rl.co.state, 'torn'); clean(); click('close');
+  context.open('outpost', { view: 'rlStation' }); clean(); assert.doesNotMatch(html(), /data-action="rlCoSign"/);
+  click('rlCoSign'); assert.notEqual(e.rl.co?.state, 'signed'); click('close');
   // ---------- 成就册：收复度、余烬核 ----------
   context.open('outpost', { view: 'collection' }); clean(); assert.match(html(), /收复度/); assert.match(html(), /余烬核 \d\/7/); click('close');
   // ---------- 画面：重建站、纪念石、老怀表、检修平台，四种大小，白天和夜里 ----------
@@ -2101,8 +2004,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // 存档
   click('save'); assert.notEqual(context.inspect().menu, 'saveFail');
   const back = Campaign.Engine.parse(storage.get(Session.CAMPAIGN_SAVE));
-  assert.ok(back.relight.done.includes('w_pond')); assert.ok(back.relight.old.includes('rlOld_photo')); assert.equal(back.relight.co.state, 'torn');
-  assert.ok(back.relight.walls.water && back.relight.walls.clinic); assert.equal(back.relight.intro.told, true);
+  assert.ok(back.relight.done.includes('w_pond')); assert.ok(back.relight.old.includes('rlOld_photo')); assert.notEqual(back.relight.co.state, 'signed');
+  assert.ok(back.relight.walls.water); assert.equal(back.relight.intro.told, true);
   console.log('Relight controller passed: a v0.30 save restored from a file (the 重光 notice on the first frame), the station picked from the build menu and opened with E (items handed in with their buttons, a list filled, the water wall up), the archive\'s 旧世界陈列 (donated with the button, the owner\'s story), 陈工 opening an iron box from the residents page, the platform by the hospital lift opened with E (closed before the main story, down to floor 1 with the button), a tunnel cabinet opened with E, the ladder taken with E, the way up back to the shelter, a page in the journal and its dig spot dug with E, the year review on the vigil night (journal letter and review page), the company signed, a wall bought and up the next morning, the company rule in the decree book, the contract torn up, the collection\'s 收复度 and cores, the tunnel at floors 1 and 24 and the station, the stone and the platform drawn at four sizes by day and night, and save/parse.');
 }
 
@@ -2146,7 +2049,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   for (let i = 0; i < 6; i++) { e.s.player.x = row[i].x; run(26); }
   keyup('e');
   assert.ok(row.every((p) => p.crop === 'radish' && p.growth < Data.CROPS.radish.grow), 'harvested and replanted');
-  assert.ok(row.every((p) => e.g.plots[p.id]?.t === e.s.day), 'tended');
+  assert.ok(row.every((p) => e.plotWatered(p)), 'watered (v0.42: no tending)');
   assert.doesNotMatch(toastsHtml(), /收获 ·|照看了|种下萝卜/);
   run(90);
   assert.ok(e.zx.stats.tallies >= 1, 'one line for the pass');
@@ -2250,13 +2153,15 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const st = e.s.buildings.find((b) => b.type === 'rlStation');
   Object.assign(e.s.player, { x: st.x, y: st.y + 50 });
   context.open('outpost', { view: 'rlStation' }); clean();
-  assert.match(html(), /升二级 · 二级水网/);
+  assert.match(html(), /升二级 · 二级供水/);
   click('hpWall2', 'water'); assert.ok(e.wall2On('water'), 'the water wall is level II'); clean();
-  assert.match(html(), /二级 · 二级水网<\/b> ✓/); click('close');
+  assert.match(html(), /二级 · 二级供水<\/b> ✓/); click('close');
   // ---------- 农舍「房间与家具」：东厢房；鸡舍的设施卡：大鸡舍 ----------
   goTo(e, 'farm', 760, 640);
-  context.open('frontier', { tab: 'rooms' }); clean(); assert.match(html(), /农舍扩建/);
+  // v0.42：房间去掉了，农舍扩建在农舍那一页
+  context.open('home'); clean(); assert.match(html(), /农舍扩建/);
   click('hpExpand', 'home'); assert.equal(e.hpLv('home'), 1); click('close');
+  context.open('frontier', { tab: 'rooms' }); clean(); assert.match(html(), /房间去掉了/); click('close');
   context.open('building', { buildingId: 'hpcoop' }); clean(); assert.match(html(), /鸡舍扩建/);
   click('hpExpand', 'coop'); assert.equal(e.hpLv('coop'), 1); click('close');
   // ---------- 旧站商街：这周的稀罕货 ----------
@@ -2265,8 +2170,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   goTo(e, 'stationMarket', P.x, P.y + 20);
   context.open('districts', {}); const dui = context.inspect().districtUI; dui.region = 'stationMarket'; dui.point = 'shops'; dui.view = 'point'; context.open('districts', {});
   clean();
-  click('dQuick', 'shops:hpGood');
-  assert.ok(e.hpOwn(m.good) || HD.GOODS[m.good].repeat, 'bought this week\'s rare good'); click('close');
+  // v0.42：稀罕货跟着唐九的商队来，旧站商街上不再卖
+  assert.doesNotMatch(html(), /shops:hpGood/); click('close');
   // ---------- 货郎：营门口按 E，买一样 ----------
   goTo(e, 'farm');
   e.hp.noon = { day: e.s.day, kind: 'peddler', st: 'soon', id: 'mei' }; hourTo(e, 14);
@@ -2992,7 +2897,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // ---------- 建造页：四组；拆掉一样设施 ----------
   context.open('build'); clean();
   for (const t of ['种地', '吃住', '防守', '摆件']) assert.ok(html().includes('<h3 class="sx-group">' + t + '</h3>'), t);
-  assert.match(html(), /data-action="rOpen" data-id="frontier:rooms"/);
+  assert.doesNotMatch(html(), /data-action="rOpen" data-id="frontier:rooms"/, 'v0.42: no rooms page'); assert.match(html(), /tr-decor/);
   click('sxDismantle'); assert.equal(ui().menu, null); context.hud();
   const banner = document.querySelector('#building-banner');
   assert.equal(banner.hidden, false); assert.match(banner.textContent, /拆东西/);
@@ -3031,7 +2936,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // ---------- 农舍：只休息 ----------
   context.open('home'); clean();
   const acts = [...new Set([...html().matchAll(/data-action="([^"]+)"/g)].map((m) => m[1]))].filter((a) => a !== 'close').sort();
-  assert.deepEqual(acts, ['sleep', 'waitUntilNight'], 'the farmhouse: sleep or wait for the night');
+  // v0.42：房间页拿掉了，扩建农舍挪到这一页（扩满了就没有这个按钮）
+  assert.deepEqual(acts.filter((a) => a !== 'hpExpand'), ['sleep', 'waitUntilNight'], 'the farmhouse: sleep or wait for the night (and expand it)');
   click('close');
   // ---------- 背包里一样东西：说明卡 ----------
   e.s.inventory.radish = Math.max(1, e.s.inventory.radish || 0);

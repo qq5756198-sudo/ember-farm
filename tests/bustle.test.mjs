@@ -3,7 +3,7 @@
 // 广场上的食堂（端菜上菜）、节庆供品、档案馆「往事」一柜、江伯的鱼汛、麦穗巡夜、商队卖改良图纸、界面和存档。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState, newGameState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, newGameState, needsStoryMigration } from "./pre-trim.mjs";
 import * as Bounty from "../dist/bounty.js";
 import { Engine as BustleEngine } from "../dist/bustle.js";
 import { ITEMS, BUILDINGS, CROPS } from "../dist/data.js";

@@ -1,7 +1,7 @@
 // v0.33.0「盼头」：钱的去处（墙升二级、营地扩建、每周的稀罕货）、每周一件“这周的事”、每天下午的限时事、存档。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, needsStoryMigration } from "./pre-trim.mjs";
 import * as Zest from "../dist/zest.js";
 import { ITEMS, REGIONS, CROPS } from "../dist/data.js";
 import { WALL_IDS, OLD, OLD_IDS, PAGE_IDS } from "../dist/relight-data.js";

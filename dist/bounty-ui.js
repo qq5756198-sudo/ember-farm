@@ -225,7 +225,7 @@ function warnings(e) {
   if (bt.pumpkin === day) out.push(["good", "田角长出一个大得出奇的南瓜：今天的抉择里决定怎么处理。"]);
   return out;
 }
-function dexBlock(e) {
+export function dexBlock(e) {
   const bt = e.bt;
   let done = 0;
   const rows = DEX_CROPS.filter((c) => CROPS[c])

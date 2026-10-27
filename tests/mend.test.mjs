@@ -4,6 +4,7 @@ import { styleOrder } from "./style-order.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { Engine, freshState } from "../dist/campaign.js";
+import { Engine as PreEngine, freshState as preFresh } from "./pre-trim.mjs";
 import { BUILDINGS, REGIONS, WORLD, ITEMS } from "../dist/data.js";
 import { MEND, MEND_TEXT } from "../dist/mend-data.js";
 import { FORAGE_SPOTS } from "../dist/almanac-data.js";
@@ -151,8 +152,13 @@ test("a broken fence repaired while you stand on its footprint no longer traps y
 });
 
 // ================= 4. 照看机替你补种 =================
+// 照看机和杂草 v0.42 删繁时去掉了（旧档里的照看机拆掉退料）：这一条按删繁以前的引擎测
 test("the drone, harvesting while you are away, no longer replants a plot that has weeds", () => {
-  const { e } = make();
+  const st = preFresh();
+  st.undertow.seed = 38001;
+  const e = new PreEngine(st, () => {});
+  e.paused = false;
+  if (e.feel?.open) e.feel.open.phase = "done";
   const p = e.s.plots[20];
   e.s.debris = e.s.debris.filter((d) => d.id !== p.id);
   Object.assign(p, { tilled: true, crop: "radish", trait: null, growth: 999, wateredDay: e.s.day });

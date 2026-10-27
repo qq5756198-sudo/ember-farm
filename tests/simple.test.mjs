@@ -4,6 +4,7 @@ import { styleOrder } from "./style-order.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { Engine, freshState } from "../dist/campaign.js";
+import { trimBuildIds } from "../dist/trim-ui.js";
 import { BUILDINGS, REGIONS, RECIPES, ITEMS } from "../dist/data.js";
 import { VERB, BVERB, BCARD, BUILD_GROUPS, MENUS, HUD_CARD, PAGE_CARD, WORDING } from "../dist/simple-data.js";
 import { cardHtml, buildingCardHtml, buildGroups, menusHtml, hudCardHtml, pickBlocks, lettersHtml, gateHtml, stripKey, sxAfterRender, sxWords, sxViewExtra } from "../dist/simple-ui.js";
@@ -275,17 +276,21 @@ test("one card everywhere: name, what it does, the benefit, how it is now, one b
   assert.doesNotMatch(buildingCardHtml(e, b), /<button/);
 });
 
-test("the build page has four groups that hold every building exactly once", () => {
-  const ids = Object.entries(BUILDINGS)
-    .filter(([, b]) => !b.retired)
-    .map(([id]) => id);
+test("the build page has four groups that hold every building exactly once (v0.42: the 摆件 group is one tile)", () => {
+  const { e } = make();
+  const ids = trimBuildIds(
+    e,
+    Object.entries(BUILDINGS)
+      .filter(([, b]) => !b.retired)
+      .map(([id]) => id),
+  );
   const groups = buildGroups(ids);
   assert.deepEqual(groups.map((g) => g.title).slice(0, 4), ["种地", "吃住", "防守", "摆件"]);
   const all = groups.flatMap((g) => g.ids);
   assert.equal(all.length, ids.length);
   assert.equal(new Set(all).size, ids.length);
   assert.ok(!groups.some((g) => g.key === "other"), "nothing left over: " + groups.find((g) => g.key === "other")?.ids);
-  for (const [, , list] of BUILD_GROUPS) for (const id of list) assert.ok(BUILDINGS[id], id + " exists");
+  for (const [, , list] of BUILD_GROUPS) for (const id of list) assert.ok(BUILDINGS[id] || id === "trDecor", id + " exists");
 });
 
 test("the menu page lists ten menus with one line each (and the stuck button)", () => {
