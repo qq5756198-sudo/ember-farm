@@ -13,13 +13,12 @@ import {
   needsUpgrade as tNeedsUpgrade,
   legacyGear,
 } from "./trim.js";
-import { BUILDINGS, RECIPES } from "./data.js";
+import { BUILDINGS, RECIPES, ITEMS } from "./data.js";
 import { BCARD, MENUS } from "./simple-data.js";
 import { DECOR_LOOKS, DECOR_SPECIAL } from "./trim-data.js";
 import { EASE_SCHEMA, CARD_QUEUE, GUIDE_DAYS, MENU_ALWAYS, MENU_IDS, CARD_TAG, CARD_NOW, MENU_FRESH, OBJ_CARD, PERSON_CARD, PERSON_TYPES, MORALE_CARD, GUIDE, EASE_SAY, JOB_TEXT, MANUAL_DESC, DAILY_QUIET, DAILY_TEXT, ITEM_TEXT } from "./ease-data.js";
 import { PERKS, BUFFS } from "./daily-data.js";
 import { GOODS, goodItem } from "./hope-data.js";
-import { ITEMS } from "./data.js";
 import { JOBS, MANUALS, MANUAL_IDS } from "./thief-data.js";
 import { EVENTS as CAMP_EVENTS } from "./expansion-data.js";
 
