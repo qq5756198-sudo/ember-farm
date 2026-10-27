@@ -89,8 +89,13 @@ export class Renderer extends TrimRenderer {
     return super.snapCamera();
   }
   // 飘着的东西和余烬：画在标题页那层暗色上面的一张透明画布上（#four-fx，挂在 #modal-backdrop 里、标题字的下面），
-  // 不跟镜头走，一个美术像素那么大；离开标题页时跟着幅度淡掉，然后清空
-  fourFxCanvas() {
+  // 不跟镜头走，一个美术像素那么大；离开标题页时跟着幅度淡掉，然后清空。
+  // 画布一个像素就是一个美术像素（1920 下是 960×540，不是满屏 1920×1080），由 CSS 按 pixelated 放大：
+  // 每一帧要换上去的那张图小四倍，软件画的时候标题页不掉帧。
+  fourFxPx() {
+    return Math.max(2, Math.round((this.camera?.scale || 1) * 2));
+  }
+  fourFxCanvas(px = this.fourFxPx()) {
     const d = globalThis.document;
     if (!d?.getElementById) return null;
     let cv = this._fFx;
@@ -106,9 +111,8 @@ export class Renderer extends TrimRenderer {
       }
       this._fFx = cv;
     }
-    const dpr = this.dpr || 1,
-      W = Math.round(this.w * dpr),
-      H = Math.round(this.h * dpr);
+    const W = Math.max(1, Math.ceil(this.w / px)),
+      H = Math.max(1, Math.ceil(this.h / px));
     if (cv.width !== W || cv.height !== H) {
       cv.width = W;
       cv.height = H;
@@ -116,18 +120,17 @@ export class Renderer extends TrimRenderer {
     return cv;
   }
   fourTitleFx(dt) {
-    const cv = this.fourFxCanvas(),
+    const px = this.fourFxPx(),
+      cv = this.fourFxCanvas(px),
       c = cv?.getContext?.("2d");
     if (!c) return;
     const W = this.w,
       H = this.h,
-      dpr = this.dpr || 1,
-      px = Math.max(2, Math.round((this.camera.scale || 1) * 2)),
       M = TITLE_MOTES[this._fSeason] || TITLE_MOTES.thaw,
       t = this._fTitleT || 0,
       k = this._fTitleK || 0;
-    c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    c.clearRect(0, 0, W, H);
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(0, 0, cv.width, cv.height);
     if (k <= 0.01) return;
     this._fRng ??= rng(4401);
     const R = this._fRng;
@@ -147,8 +150,8 @@ export class Renderer extends TrimRenderer {
       const a = M.glow ? 0.35 + 0.4 * Math.sin(t * 2.3 + m.ph) : 0.7;
       c.globalAlpha = k * Math.max(0, a);
       c.fillStyle = m.c;
-      // 一片：大的是 2×1（花瓣、雪）或 2×2（落叶）个美术像素
-      c.fillRect(Math.round(m.x / px) * px, Math.round(m.y / px) * px, px * m.s, M.size > 2 && m.s > 1 ? px * 2 : px);
+      // 一片：大的是 2×1（花瓣、雪）或 2×2（落叶）个美术像素（画布上一个像素就是一个美术像素）
+      c.fillRect(Math.round(m.x / px), Math.round(m.y / px), m.s, M.size > 2 && m.s > 1 ? 2 : 1);
     }
     for (const b of this._fEmbers) {
       b.y -= b.v * step;
@@ -162,7 +165,7 @@ export class Renderer extends TrimRenderer {
         a = (1 - life) * (0.55 + 0.45 * Math.sin(t * 6 + b.ph * 3));
       c.globalAlpha = k * Math.max(0, a);
       c.fillStyle = a > 0.6 ? PAL.ember[5] : PAL.ember[4];
-      c.fillRect(Math.round(b.x / px) * px, Math.round(b.y / px) * px, px, px);
+      c.fillRect(Math.round(b.x / px), Math.round(b.y / px), 1, 1);
     }
     c.globalAlpha = 1;
   }

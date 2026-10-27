@@ -401,6 +401,22 @@ test("title page: the camera drifts slowly inside the map and eases back after; 
   assert.match(css, /four-ember 4\.2s ease-in-out 1\.2s infinite/);
   assert.match(css, /html\.desk body\.title-screen #alert-bar \{\s*visibility: hidden;/);
   assert.match(css, /html\.desk #four-fx \{[\s\S]*pointer-events: none;/);
+  // 飘着的东西那张画布：一个像素就是一个美术像素（1920 下 960×540，不是满屏），CSS 按 pixelated 放大
+  assert.match(css, /html\.desk #four-fx \{[^}]*image-rendering: pixelated;/);
+  const calls = [],
+    ctx2d = { setTransform() {}, clearRect() {}, fillRect: (x, y, w, h) => calls.push([x, y, w, h]), set globalAlpha(v) {}, set fillStyle(v) {} },
+    fake = { id: "four-fx", isConnected: true, width: 0, height: 0, getContext: () => ctx2d },
+    was = globalThis.document;
+  globalThis.document = { getElementById: (id) => (id === "four-fx" ? fake : null) };
+  try {
+    Object.assign(r, { w: 1920, h: 1080, camera: { x: 0, y: 0, scale: 1 }, _fTitleK: 1, _fTitleT: 3, _fSeason: "thaw", _fFx: null });
+    r.fourTitleFx(1 / 60);
+  } finally {
+    globalThis.document = was;
+  }
+  assert.deepEqual([fake.width, fake.height], [960, 540]);
+  assert.equal(calls.length, FD.TITLE.motes + FD.TITLE.embers);
+  assert.ok(calls.every(([x, y, w, h]) => Number.isInteger(x) && Number.isInteger(y) && w <= 2 && h <= 2), "whole art pixels on the small canvas");
   assert.match(read("dist/legacy.css"), /\.a11y-calm \*,\s*\.a11y-calm \*::before,\s*\.a11y-calm \*::after \{\s*animation: none !important;/, "reduced flashing stops the title animations");
   for (const s of ["thaw", "heat", "harvest", "cold"]) assert.ok(FD.TITLE_MOTES[s].colors.length >= 3, s);
 });

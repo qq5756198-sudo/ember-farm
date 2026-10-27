@@ -336,7 +336,7 @@ export function place(P, S, x, y, opt = {}) {
 
 // 树：活树、秋树、枯树
 // v0.44「四季」：底图按时节画（ART_SEASON.id）。夏天（heat）和没给时节时和原来一模一样；
-// 回暖：叶子嫩一档，一半活树开白花；秋收：活树黄、秋树红，树下落几片叶子；寒潮：大多数树落光、枝上积雪，三成活树是常绿的、顶上压着雪；枯树积雪。
+// 回暖：叶子嫩一档，四成活树开白花；秋收：活树黄、秋树红，树下落几片叶子；寒潮：大多数树落光、枝上积雪，三成活树是常绿的、顶上压着雪；枯树积雪。
 // 同一棵树四个时节的大小、位置、树冠的形状都一样（随机数只用树自己的种子）。
 const SPRING_LIVE = [PAL.leaf[1], PAL.leaf[2], PAL.leaf[3], PAL.leaf[4], PAL.leaf[5], PAL.leaf[5]],
   SPRING_RUST = [PAL.leaf[2], PAL.leaf[3], PAL.leaf[4], PAL.leaf[5], PAL.straw[2], PAL.straw[3]],
