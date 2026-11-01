@@ -441,6 +441,9 @@ export class Engine extends HandyEngine {
   ahNowList() {
     const out = [],
       info = this.lnInfo?.();
+    // 最后一夜（扑火）：那一天就是它（那天不会再有长夜）
+    const F = this.tg?.final;
+    if (F && !F.won && (F.on || (F.day === this.s.day && this.titanOpen?.("moth")))) out.push({ kind: "final", title: NOW.final.title, short: NOW.final.short, text: NOW.final.text, gain: NOW.final.gain, go: { action: "oDefense", id: "", label: NOW.final.go } });
     if (info?.today && !info.night) out.push({ kind: "night", title: NOW.night.title + "（第 " + (info.tried + 1) + " 个）", short: "今晚长夜", text: NOW.night.text, gain: "守到 04:00 就算守住；守住了下一个大两成，回报也跟着大。", go: { action: "oDefense", id: "", label: NOW.night.go } });
     const W = this.hp?.week;
     const live = W && ((W.kind === "traveler" && W.st === "here") || (W.kind === "list" && W.st === "open") || (W.kind === "caravan" && W.st === "here") || (W.kind === "boss" && W.st === "on"));

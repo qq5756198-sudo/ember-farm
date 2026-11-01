@@ -60,7 +60,7 @@ export function aheadPage(e) {
   const h = e.ah;
   const d1 = BATCH1.filter((id) => h.done[id]).length,
     d2 = BATCH2.filter((id) => h.done[id]).length;
-  const sum = `<section class="far-strip ah-sum"><p><b>余烬地区复兴</b>第一期 ${d1}/${BATCH1.length} 处 · 第二期 ${e.ln?.ended ? d2 + "/" + BATCH2.length + " 处" : "收复以后开"}</p></section>`;
+  const sum = `<section class="far-strip ah-sum"><p><b>余烬地区复兴</b>：第一期 ${d1}/${BATCH1.length} 处 · 第二期 ${e.ln?.ended ? d2 + "/" + BATCH2.length + " 处" : "收复以后开"}</p></section>`;
   const parts = [];
   for (const [batch, ids] of [
     [1, BATCH1],
@@ -91,6 +91,12 @@ export function aheadView(e, ui, html) {
   if (!on(e)) return html;
   if (ui?.view === "ahead") return aheadPage(e);
   if (ui?.view === "rlStation") return stationLink(e, html);
+  // 今日抉择卡上的“奖励 ×2”写成算数时真用的倍数（守住的长夜让它变大）
+  if (ui?.view === "daily") {
+    const t = e.dy?.pending?.tier,
+      eff = t && e.ahTier ? e.ahTier(t) : t;
+    if (t && eff !== t) html = html.replace(`<span class="daily-tag">奖励 ×${t}</span>`, `<span class="daily-tag" title="主线打完以后每守住一个长夜多 0.2 倍">奖励 ×${eff}</span>`);
+  }
   return html;
 }
 
@@ -189,7 +195,8 @@ export function aheadMap(e, ui, html) {
 ALERT_HOOKS.push((e, add) => {
   if (!on(e) || e.s.region !== "farm") return;
   const p = PROJECTS.find((x) => e.ah.opened[x.id] && !e.ah.paid[x.id] && !e.ah.done[x.id] && !e.hpLack(x.cost));
-  if (p) add(9, ALERT_HEAD + p.name + "（" + gold(p.cost.gold) + " 金）办得起了", "gold", null);
+  // 和这周的清单（8）差不多要紧：每周一处、钱的去处
+  if (p) add(7, ALERT_HEAD + p.name + "（" + gold(p.cost.gold) + " 金）办得起了", "gold", null);
 });
 
 // ================= 动作 =================

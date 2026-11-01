@@ -292,6 +292,7 @@ export const KID_LETTERS = [
 export const NOW = {
   eyebrow: "眼下",
   night: { title: "今晚 22:00 长夜", text: "把围栏修好、陷阱摆上、弹药备足，让居民守瞭望塔；今天不能一觉睡过去。", go: "看防线" },
+  final: { title: "今晚 22:00 最后一夜", short: "今晚最后一夜", text: "扑火的从东边林子里来：塔、陷阱、守卫都摆在东边，仓库里给塔留足子弹，弩和箭备足。", gain: "打赢了，这一夜从此不再来。", go: "看防线" },
   project: { title: (p) => "复兴工程 · " + p.name, text: (p, e) => p.text, go: "去看复兴工程" },
   save: { title: (p) => "攒钱办" + p.name, go: "去看复兴工程" },
   building: { title: (p) => p.name + "明早完工", text: "工人进场了，明天早上 6 点完工；修好了有信来。", go: "去看复兴工程" },

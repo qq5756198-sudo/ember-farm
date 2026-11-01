@@ -283,6 +283,17 @@ test("the journal: once the story is over, the top card is the one thing most wo
   n = e.ahNow();
   assert.equal(n.kind, "night");
   e.lnPending = pend;
+  // 今晚最后一夜（扑火）：先说它
+  const fin = e.tg.final,
+    open = e.titanOpen;
+  e.tg.final = { ...(fin || {}), day: e.s.day, won: false, on: false };
+  e.titanOpen = (id) => id === "moth" || open.call(e, id);
+  n = e.ahNow();
+  assert.equal(n.kind, "final");
+  assert.equal(n.title, "今晚 22:00 最后一夜");
+  assert.equal(n.go.action, "oDefense");
+  e.tg.final = fin;
+  e.titanOpen = open;
   // 出了钱：明早完工
   rich(e);
   e.ahFund("waterwheel");
@@ -351,7 +362,7 @@ test("the world map hangs a small sign on each place that's been rebuilt; the to
 });
 
 // ================= 奖励随进度 =================
-test("rewards grow with progress: after the story each long night held adds 0.2 to the daily choice (up to 4x, the saved tier stays 1/1.5/2); the week's list, the season boss and a rescued survivor pay more gold", () => {
+test("rewards grow with progress: after the story each long night held adds 0.2 to the daily choice (up to 4x, the saved tier stays 1/1.5/2, the card shows the real one); the week's list, the season boss and a rescued survivor pay more gold", () => {
   const e = late(60);
   e.sc.act = 8;
   assert.equal(e.tier(), 2);
@@ -375,6 +386,17 @@ test("rewards grow with progress: after the story each long night held adds 0.2 
   assert.ok(e.o.log.some((l) => /守住了 10 个长夜，多给 600 金币/.test(l.text)));
   e.ln.held = 0;
   assert.equal(e.ahBonusGold(300, "x"), 0);
+  // 今日抉择卡上写的倍数跟着变（存档里照旧是 2）
+  const c = late(61);
+  c.sc.act = 8;
+  c.ln.storyDay = 30;
+  c.ln.held = 3;
+  c.s.minute = 7 * 60;
+  assert.ok(c.dailyGenerate(61));
+  assert.equal(c.dy.pending.tier, 2);
+  const card = UI.renderCampaignView(c, { view: "daily" });
+  assert.match(card, /奖励 ×2\.6</);
+  assert.doesNotMatch(card, /奖励 ×2</);
 });
 
 // ================= 少弹几条提示 =================

@@ -3546,7 +3546,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   e.s.money = 60000; for (const k of ['wood', 'stone', 'scrap', 'parts', 'cloth', 'herb']) e.s.storage[k] = 200;
   e.ahEnsure();
   assert.deepEqual(Object.keys(e.ah.opened), ['waterwheel', 'teahouse']);
-  run(2);
+  // 底栏、顶上的提醒每 0.12 秒刷新一回：多走几帧
+  run(4);
   assert.equal(document.querySelector('#quest-number').textContent, '眼下');
   assert.equal(document.querySelector('#quest-body').textContent, '复兴工程 · 水车');
   context.open('journey'); clean();
@@ -3571,7 +3572,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.match(html(), /class="far-pin ah-pin"[^>]*>水车 ✓/);
   click('close');
   // 下一处办得起：顶上一条提醒，点它打开复兴工程那一页
-  run(2);
+  run(4);
   const bar = document.querySelector('#alert-bar').innerHTML;
   assert.match(bar, /复兴工程 · 老茶馆（3,500 金）办得起了/);
   const idx = bar.match(/data-id="(\d+)"[^>]*>复兴工程/)[1];
