@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { Engine, freshState, newGameState, needsStoryMigration } from "../dist/campaign.js";
 import { Engine as EaseEngine, newGameState as easeNewGame } from "../dist/ease.js";
-import { Engine as HandyEngine, handySay } from "../dist/handy.js";
+import { Engine as HandyEngine, handySay, needsUpgrade as handyNeedsUpgrade, freshState as handyFresh } from "../dist/handy.js";
 import * as UI from "../dist/campaign-ui.js";
 import { handyBuildGroups, handyRecipes, handyHome, handyFooter, handyView, handyWantCard, handyFold, handyJournal, handleHandyAction, handyWords, handyLockedShown } from "../dist/handy-ui.js";
 import { EARLY_WAVE_MIN, ROAD, OPEN_STEP, SAY_WAVE, SAY_GO, HANDY_SAY, MENU_MSG, FARMER_ORIGIN, FENCE_CARD, EXIT_LABEL, CARD_STALE, PAGE, FIRST_DAYS, FOOT, GHOST_HINT, PURPOSE_EARLY } from "../dist/handy-data.js";
@@ -48,17 +48,16 @@ const ctx = (e, extra = {}) => ({ engine: e, ui: {}, rebuildUI: {}, showMenu() {
 const btn = (action, id = "") => ({ dataset: { action, id } });
 
 // ================= 版本、层 =================
-test("version: v0.45.0 顺手 in the title, the loading page and settings; the new files are preloaded; the engine and the scene each got a layer on top", () => {
-  assert.equal(GAME_VERSION, "v0.45.0");
-  assert.equal(GAME_EDITION, "顺手");
-  assert.equal(GAME_RELEASE, "v0.45.0 · 顺手");
+test("version: v0.45.0 顺手 or later in the title, the loading page and settings; the handy files are preloaded; the engine and the scene each have the handy layer in their chain", () => {
+  assert.match(GAME_VERSION, /^v0\.(4[5-9]|[5-9]\d)\.\d+$/);
+  assert.equal(GAME_RELEASE, GAME_VERSION + " · " + GAME_EDITION);
   const html = read("dist/index.html");
-  assert.match(html, /<title>余烬农场 v0\.45\.0 · 顺手<\/title>/);
-  assert.match(html, /data-release>v0\.45\.0 · 顺手</);
+  assert.ok(html.includes("<title>余烬农场 " + GAME_RELEASE + "</title>"));
+  assert.ok(html.includes("data-release>" + GAME_RELEASE + "<"));
   for (const f of ["handy.js", "handy-data.js", "handy-ui.js", "handy-renderer.js"]) assert.ok(html.includes('<link rel="modulepreload" href="' + f + '">'), f + " preloaded");
-  assert.equal(Engine, HandyEngine);
+  assert.ok(Engine === HandyEngine || HandyEngine.isPrototypeOf(Engine), "the engine is the handy layer or one on top of it");
   assert.equal(Object.getPrototypeOf(HandyEngine), EaseEngine);
-  assert.equal(CampaignRenderer, HandyRenderer);
+  assert.ok(CampaignRenderer === HandyRenderer || HandyRenderer.isPrototypeOf(CampaignRenderer));
   assert.equal(Object.getPrototypeOf(HandyRenderer), FourRenderer);
 });
 
@@ -424,17 +423,17 @@ test("untilled ground draws as a light, dashed patch with tufts; tilled soil kee
 });
 
 // ================= 存档 =================
-test("saves: nothing new is written; an old v0.44 save loads and saves back byte for byte the same", () => {
+test("saves: nothing new is written by this layer; an old v0.44 save loads and saves back byte for byte the same", () => {
   const o = new EaseEngine(easeNewGame("farmer"), () => {});
   o.s.day = 12;
   o.s.minute = 600;
   const text = o.serialize();
-  assert.equal(needsStoryMigration(text), false);
-  // 读进来、存出去：和上手那一层的引擎一字不差
+  assert.equal(handyNeedsUpgrade(text), false);
+  // 读进来、存出去：和上手那一层的引擎一字不差（v0.46 起最上面一层另加了自己的一块，那是它的事）
   const a = new EaseEngine(EaseEngine.parse(text), () => {}).serialize(),
-    b = new Engine(Engine.parse(text), () => {}).serialize();
+    b = new HandyEngine(HandyEngine.parse(text), () => {}).serialize();
   assert.equal(b, a);
-  assert.equal(new Engine(Engine.parse(b), () => {}).serialize(), b);
-  const s = freshState();
+  assert.equal(new HandyEngine(HandyEngine.parse(b), () => {}).serialize(), b);
+  const s = handyFresh();
   assert.deepEqual(Object.keys(s).sort(), Object.keys(new EaseEngine(undefined, () => {}).s).sort());
 });

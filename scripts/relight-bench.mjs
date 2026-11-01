@@ -169,6 +169,15 @@ function funDay(e, X, today) {
     for (const id of h.log.boss) seen("boss:" + id);
     for (const k of X.noonKinds || []) seen("noon:" + k);
   }
+  // v0.46：修好的复兴工程、它的那封信、孩子们寄来的信（修好时留下的摆件、送来的特产和外面的东西算在物品里）
+  const ah = e.ah;
+  if (ah) {
+    for (const id of Object.keys(ah.done)) {
+      seen("ahead:" + id);
+      seen("ahLetter:" + id);
+    }
+    for (const k of ah.kids) seen("ahKid:" + k);
+  }
   X.fun.worth[today] = Math.round(worthOf(e));
   X.fun.floats[today] = e.zx?.stats?.floats || 0;
   // v0.34：每天各技能的经验（妙手另算），看 6–10 级多少天一级
@@ -1054,6 +1063,30 @@ function hopeEvening(e, X) {
   }
 }
 
+// ---------------- v0.46「有奔头」：复兴工程开着的、办得起的就办 ----------------
+// 缺的木材、石材、废金属、零件、布、药草按买价补（和墙升二级、扩建一样；留 2,500 金不动）
+const AHEAD = typeof Engine.prototype.ahFund === "function";
+function aheadEvening(e, X) {
+  if (!AHEAD || !e.ah || e.s.region !== "farm") return;
+  const BUY = ["wood", "stone", "scrap", "parts", "cloth", "herb"];
+  const price = (k) => ITEMS[k]?.buy || ITEMS[k]?.sell * 2 || 10;
+  for (const id of Object.keys(e.ah.opened)) {
+    if (e.ah.paid[id] || e.ah.done[id]) continue;
+    const cost = e.ahProject(id).cost;
+    let gold = cost.gold;
+    const lack = {};
+    for (const [k, n] of Object.entries(cost)) if (k !== "gold" && qty(e, k) < n) lack[k] = n - qty(e, k);
+    if (Object.keys(lack).some((k) => !BUY.includes(k))) continue;
+    for (const [k, n] of Object.entries(lack)) gold += n * price(k);
+    if (e.s.money < RESERVE + gold) continue;
+    for (const [k, n] of Object.entries(lack)) {
+      e.s.money -= n * price(k);
+      put(e, { [k]: n });
+    }
+    if (e.ahFund(id)) (X.ahead ||= []).push([e.s.day, id]);
+  }
+}
+
 // ---------------- 一天 ----------------
 function station(e, X) {
   if (e.rlStationB()) return true;
@@ -1227,6 +1260,7 @@ function life(seed) {
         stash(e);
         deliverAll(e, X);
         hopeEvening(e, X);
+        aheadEvening(e, X);
         if (e.s.region !== "farm") e.travel("farm");
         stash(e);
       }
@@ -1285,6 +1319,8 @@ function life(seed) {
       break;
     }
   }
+  // v0.46：复兴工程哪天修好、长夜哪天收复
+  if (e?.ah) X.aheadDone = { ...e.ah.done, lnEnd: e.ln?.endDay || 0, kids: e.ah.kids.length, outside: e.ah.outside };
   if (e?.hp) X.hope = { ...e.hp.stats, goods: Object.keys(e.hp.goods).length, wall2: Object.keys(e.hp.wall2).length, expand: Object.values(e.hp.expand).reduce((a, b) => a + b, 0), letters: e.hp.letters.length, met: e.hp.met.length };
   // v0.34：第 120 天还有哪些长期目标没做完（第二年的清单、打法挑战、技能 6–10 级）
   if (e?.gw)
@@ -1355,6 +1391,7 @@ if (MODE === "year") {
           lists: Object.fromEntries(Object.entries(X.lists).map(([k, d]) => [k, d + " " + (X.lastKey[k] || "")])),
           end: X.end,
           hope: X.hope,
+          ...(X.aheadDone ? { ahead: X.aheadDone } : {}),
           grow: X.grow,
           lists2: X.lists2 || {},
           noon: X.noon,
@@ -1393,7 +1430,23 @@ if (MODE === "year") {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 40)
       .map(([k, c]) => [k, +(c / n / span).toFixed(2)]);
-    console.log(JSON.stringify({ FUNDUMP: { seeds: n, kinds, toastTop } }));
+    // 每个种子第 31 天以后连着 3 天以上没见到新东西的那几段，前一天、后一天各见到了什么
+    const dry = rows.map((X) => {
+      const byDay = {};
+      for (const [k, d] of Object.entries(X.fun.seen)) (byDay[d] ||= []).push(k);
+      const runs = [];
+      let start = 0;
+      for (let d = 31; d <= DAYS + 1; d++) {
+        if (d <= DAYS && !byDay[d]) {
+          start ||= d;
+          continue;
+        }
+        if (start && d - start >= 3) runs.push({ from: start, to: d - 1, before: (byDay[start - 1] || []).slice(0, 6), after: (byDay[d] || []).slice(0, 6) });
+        start = 0;
+      }
+      return { seed: X.seed, runs };
+    });
+    console.log(JSON.stringify({ FUNDUMP: { seeds: n, kinds, toastTop, dry } }));
   }
   // FUN_DUMP=文件名：把每条提示、每件好事都写进去（找哪些提示还太多用）
   if (FUN && process.env.FUN_DUMP) (await import("node:fs")).writeFileSync(process.env.FUN_DUMP, JSON.stringify(rows.map((X) => ({ seed: X.seed, ...X.fun, money: X.money, noonDay: X.noonDay || {}, hope: X.hope || null, grow: X.grow || null, lists2: X.lists2 || {}, noon: X.noon || {}, dayLog: X.dayLog || null, tunnelFail: X.tunnelFail || null, errors: X.errors }))));

@@ -727,7 +727,8 @@ test("sleeping at the farmhouse always leaves you well rested (the wing and the 
   assert.ok(e.sleep());
   assert.ok(e.restedNow(), "rested after sleeping");
   assert.ok(e.restedLeft() >= REST.base * 60 - 60);
-  assert.ok(said(toasts, /睡得好：「休息好」4 个钟点/));
+  // v0.46 起这一句天天一样，不在提示栏弹：进消息记录、头顶飘一下
+  assert.ok(said(toasts, /睡得好：「休息好」4 个钟点/) || (e.o?.log || []).some((l) => /睡得好：「休息好」4 个钟点/.test(l.text)));
   const xp0 = e.s.xp.agriculture || 0;
   e.xp("agriculture", 10);
   assert.ok(Math.abs((e.s.xp.agriculture || 0) - xp0 - 11) < 1e-9, "a tenth more experience while rested");

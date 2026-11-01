@@ -3522,3 +3522,63 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   dailyOn = false;
   console.log('Handy controller passed (v0.45): a genuinely new game — after the first reply the gold mark sits on the east road with no residential call, the journal adds 守住东边路口 (2/5); the opening wave comes 20 game minutes later, before 13:00; beaten back, 去建围栏 opens the build page with the fence first under 现在要建, picked, and only affordable ones listed; fenced, the residential area is marked; the stove lists the ration first with the rest folded; a hungry night ends in one morning page (yesterday, today\'s choice, what to do first) with only the 1/2/3 keys named, and a plain choice starts the day.');
 }
+
+// ================= v0.46.0「有奔头」：同一个档拨到第二年、主线打完以后——手记最上面是“眼下”（这个时节的复兴工程），老的家园计划折在下面，
+// 左下角当前目标写“眼下”；“去看复兴工程”打开那一页，出钱办以后写“明早 6 点完工”；第二天 06:00 修好，来一张“复兴”大事卡、摆件进仓库，
+// 世界地图上那片地方挂一块小牌子；下一处办得起时顶上一条提醒，点它打开那一页；天天一样的提示不再弹 =================
+{
+  let clock = 52000000;
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const ui = () => context.inspect();
+  for (let i = 0; i < 6 && ui().menu; i++) click('close');
+  const e = ui().engine;
+  e.paused = false; if (e.dy) e.dy.pending = null;
+  dailyOn = false;
+  e.s.day = 36; e.s.minute = 9 * 60; e.s.region = 'farm';
+  e.storyGoal = () => null;
+  const DI = await import('../dist/district-data.js'), BY = await import('../dist/beyond-data.js');
+  for (const id of Object.keys(DI.DISTRICTS)) e.d.unlocked[id] = true;
+  for (const id of Object.keys(BY.BMAPS)) e.b.unlocked[id] = true;
+  e.s.money = 60000; for (const k of ['wood', 'stone', 'scrap', 'parts', 'cloth', 'herb']) e.s.storage[k] = 200;
+  e.ahEnsure();
+  assert.deepEqual(Object.keys(e.ah.opened), ['waterwheel', 'teahouse']);
+  run(2);
+  assert.equal(document.querySelector('#quest-number').textContent, '眼下');
+  assert.equal(document.querySelector('#quest-body').textContent, '复兴工程 · 水车');
+  context.open('journey'); clean();
+  assert.match(html(), /<span class="journal-eyebrow">眼下<\/span><h2>复兴工程 · 水车<\/h2>/);
+  assert.match(html(), /<details class="journal-extra ah-old"><summary>家园计划（老章节）/);
+  click('oView', 'ahead');
+  assert.equal(ui().menu, 'outpost'); assert.equal(ui().outpostUI.view, 'ahead'); clean();
+  assert.match(html(), /复兴工程/);
+  assert.match(html(), /溪谷试验田 · 水车 <small>3,000 金币、木材 20、石材 10<\/small>/);
+  click('ahFund', 'waterwheel');
+  assert.match(html(), /溪谷试验田 · 水车 <small>工人进场了，明早 6 点完工<\/small>/);
+  assert.equal(e.s.money, 60000 - 3000);
+  click('close');
+  // 第二天 06:00 修好
+  e.s.day = 37; e.s.minute = 5 * 60 + 58; e.paused = false;
+  run(Math.ceil((4 / 1.6) * 20));
+  assert.equal(e.ah.done.waterwheel, 37);
+  assert.ok(e.qty('alDecor_ahWheelModel', true) >= 1, 'the keepsake is in the store');
+  run(4);
+  for (let i = 0; i < 6 && ui().menu; i++) click('close');
+  context.open('map', { selected: 'farm' }); clean();
+  assert.match(html(), /class="far-pin ah-pin"[^>]*>水车 ✓/);
+  click('close');
+  // 下一处办得起：顶上一条提醒，点它打开复兴工程那一页
+  run(2);
+  const bar = document.querySelector('#alert-bar').innerHTML;
+  assert.match(bar, /复兴工程 · 老茶馆（3,500 金）办得起了/);
+  const idx = bar.match(/data-id="(\d+)"[^>]*>复兴工程/)[1];
+  click('wAlert', idx);
+  assert.equal(ui().menu, 'outpost'); assert.equal(ui().outpostUI.view, 'ahead');
+  click('close');
+  // 天天一样的提示不再弹（进消息记录）
+  const before = document.querySelector('#toasts').innerHTML;
+  e.toast('睡得好：「休息好」4 个钟点——体力恢复快五成，经验多一成。', 'gold');
+  run(1);
+  assert.equal(document.querySelector('#toasts').innerHTML.includes('睡得好：「休息好」'), before.includes('睡得好：「休息好」'));
+  assert.ok(e.o.log.some((l) => l.text.startsWith('睡得好')));
+  console.log('Ahead controller passed (v0.46): the same game moved to the second year with the story over — the journal\'s top card is 眼下 (this season\'s project) with the old home plan folded below and 眼下 in the bottom-left goal; 去看复兴工程 opens the projects page, 出钱办 says it will be done at 06:00; the next morning it is done with its keepsake in the store and a sign on the world map; the next affordable project shows as a top alert that opens the page; an everyday line no longer pops up.');
+}

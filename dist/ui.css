@@ -2431,3 +2431,38 @@ html.desk #modal .hy-yesterday ul {
   margin: 0 0 var(--sp2);
   padding-left: 1.2em;
 }
+
+/* ======================================================================
+   v0.46「有奔头」：复兴工程那一页、手记最上面的“眼下”、地图上修好了的小牌子
+   ====================================================================== */
+/* 复兴工程：一处一张，和重建站的清单一个样子；正在修的淡一点 */
+html.desk #modal .view-ahead {
+  display: grid;
+  gap: var(--sp3);
+}
+html.desk #modal .view-ahead .ah-card .story-lack {
+  display: block;
+  margin-top: 4px;
+}
+html.desk #modal .view-ahead .ah-building {
+  opacity: 0.78;
+  border-left: 3px solid var(--c-good);
+}
+html.desk #modal .view-ahead .ah-batch {
+  font: 700 var(--fs-h) / 1.4 var(--f-body);
+  color: var(--c-ink-2);
+  margin: var(--sp3) 0 0;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--c-line);
+}
+/* 手记里折起来的老章节：不再像最上面那张 */
+html.desk #modal .ah-old .ah-folded {
+  margin-top: var(--sp2);
+  opacity: 0.85;
+}
+/* 世界地图：修好了的地方（在地名下面，不挡险地和今晚的牌子） */
+html.desk #modal .far-pin.ah-pin {
+  z-index: 3;
+  color: var(--c-good);
+  border-color: var(--c-good);
+}

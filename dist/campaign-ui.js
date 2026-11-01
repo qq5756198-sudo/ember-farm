@@ -42,6 +42,9 @@ export { easeMenus, easeSettings, easeFrame, easeCardHtml, easeCardNow, easeRadi
 export { buildToolIcon, decorIcon } from "./four-ui.js";
 // v0.45「顺手」：叫法统一、去掉的东西不露字（页面、提醒、手记）、早上一页、农舍页只列下一样扩建、手记上的“去建围栏”
 import { handyHud, handyView, handyJournal, handyHome, handleHandyAction } from "./handy-ui.js";
+// v0.46「有奔头」：复兴工程那一页、重建站上那一行、手记最上面的“眼下”和来信、左下角当前目标、世界地图上的小牌子、顶上的提醒
+import { aheadView, aheadTitle, aheadJournal, aheadMap, handleAheadAction } from "./ahead-ui.js";
+export { aheadHud } from "./ahead-ui.js";
 export { handyWords, handyBuildGroups, handyWantCard, handyFold, handyRecipes, handyRecipeTag, handyLaterTitle, handyFooter, handyLockedShown } from "./handy-ui.js";
 const renderSkillPage = (e) => trimSkillPage(e, renderGrowSkillPage(e, thiefSkillPage));
 export const patchHopeDistricts = (e, html) => trimDistricts(e, hopeDistricts(e, html));
@@ -94,7 +97,8 @@ export const stationExtras = (e, b) => {
   const html = seasonsStationExtras(e, b) + gardenStationExtras(e, b) + gearStationExtras(e, b) + bustleStationExtras(e, b);
   return trimStationExtras(e, b, e?.bt ? patchOrderLinks(html) : html);
 };
-export const campaignTitle = (ui) => trimTitle(ui, (uT) => hopeTitle(uT, (uH) => relightTitle(uH, (u4) => kinTitle(u4, (u3) => bustleTitle(u3, (u2) => bountyTitle(u2, (u1) => longNightTitle(u1, (u0) => gearTitle(u0, (u) => gardenTitle(u, winterTitle)))))))));
+export const campaignTitle = (ui) => aheadTitle(ui, campaignTitle0);
+const campaignTitle0 = (ui) => trimTitle(ui, (uT) => hopeTitle(uT, (uH) => relightTitle(uH, (u4) => kinTitle(u4, (u3) => bustleTitle(u3, (u2) => bountyTitle(u2, (u1) => longNightTitle(u1, (u0) => gearTitle(u0, (u) => gardenTitle(u, winterTitle)))))))));
 const renderViewBase = (e, ui) => {
   const html = renderLongNightView(e, ui, (e1, u1) => renderGearView(e1, u1, (e2, u2) => renderGardenView(e2, u2, renderWinterView)));
   if (ui?.view === "daily") return patchDailyCard(e, html);
@@ -120,12 +124,12 @@ const renderCampaignView2 = (e, ui) => {
   return easeView(e, ui, own != null ? own : trimPatch(e, ui, renderCampaignView1(e, ui)));
 };
 // v0.45：今日抉择那一页并进昨天的总结和前三天的“今天先做”（总结那一页照这条链再画一遍）
-export const renderCampaignView = (e, ui) => handyView(e, ui, renderCampaignView2(e, ui), (u) => renderCampaignView2(e, { ...ui, ...u }));
+export const renderCampaignView = (e, ui) => aheadView(e, ui, ui?.view === "ahead" ? "" : handyView(e, ui, renderCampaignView2(e, ui), (u) => renderCampaignView2(e, { ...ui, ...u })));
 export const renderCampaignJournal = (e, ui) => {
   const html = renderGardenJournal(e, ui);
-  return handyJournal(e, ui?.catalog ? html : easeJournal(e, trimJournal(e, patchHopeJournal(e, patchZestJournal(e, patchRelightJournal(e, patchNfJournal(e, patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html))))))))));
+  return aheadJournal(e, ui, handyJournal(e, ui?.catalog ? html : easeJournal(e, trimJournal(e, patchHopeJournal(e, patchZestJournal(e, patchRelightJournal(e, patchNfJournal(e, patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html)))))))))));
 };
-export const renderMapPlus = (e, ui) => patchUnderMap(e, ui, renderFarMap(e, ui));
+export const renderMapPlus = (e, ui) => aheadMap(e, ui, patchUnderMap(e, ui, renderFarMap(e, ui)));
 // 去掉营地手册后，“农业”这一页就是菜地告示牌；其余每页只放那一处的内容
 // v0.22：武器台的“武器与潜行”这一页下面接着修理与改装
 // 放进同一个滚动区里（.frontier-body 的最后），整页一起上下滚
@@ -147,7 +151,7 @@ export function campaignHud(e) {
 }
 // 动作：巨影 → 成长 → 盼头 → 重光 → 人情 → 四时 → 热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
-  return handleHandyAction(action, el, ctx) || handleEaseAction(action, el, ctx) || handleTrimAction(action, el, ctx) || handleTitanAction(action, el, ctx) || handleGrowAction(action, el, ctx) || handleHopeAction(action, el, ctx) || handleRelightAction(action, el, ctx) || handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
+  return handleAheadAction(action, el, ctx) || handleHandyAction(action, el, ctx) || handleEaseAction(action, el, ctx) || handleTrimAction(action, el, ctx) || handleTitanAction(action, el, ctx) || handleGrowAction(action, el, ctx) || handleHopeAction(action, el, ctx) || handleRelightAction(action, el, ctx) || handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
 }
 
 // v0.25：到这里所有层的物品都登记过了，把还没挂上的新小图挂上
