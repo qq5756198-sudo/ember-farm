@@ -467,7 +467,9 @@ export class Engine extends HandyEngine {
 
   // ================= 时间 =================
   workHour() {
-    const h = Math.floor(this.s.minute / 60);
+    // 正点那一下：真的一帧一帧走时，分钟是一小截一小截加上去的，到整点时常常差一丝（比如 359.9999…），
+    // 直接取整会算成上一个钟点（6 点的事 7 点才办），所以多给半分钟
+    const h = Math.floor((this.s.minute + 0.5) / 60);
     super.workHour();
     if (!this.ah) return;
     this.ahEnsure();

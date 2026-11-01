@@ -2149,8 +2149,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   run(3);
   assert.equal(card().hidden, false, 'the 盼头 card is up'); assert.match(card().innerHTML, /盼头/);
   run(80);
-  // v0.34 起接着一张“成长”，v0.35 起再接一张“长夜”
-  for (let i = 0; i < 3 && !card().hidden; i++) { assert.match(card().innerHTML, /成长|长夜|巨影/); run(80); }
+  // v0.34 起接着一张“成长”，v0.35 起再接一张“长夜”；v0.46 起第二年的旧档再接一张“复兴工程”
+  for (let i = 0; i < 4 && !card().hidden; i++) { assert.match(card().innerHTML, /成长|长夜|巨影|复兴工程/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   // ---------- 过路人：营门口按 E，他的那一页，给他东西 ----------
   let d = 57; while (HD.weekKind(d) !== 'traveler') d += 7;
@@ -2274,8 +2274,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   run(3);
   assert.equal(card().hidden, false, 'the 成长 card is up'); assert.match(card().innerHTML, /成长/); assert.match(card().innerHTML, /直接到了 Lv\.8/);
   run(80);
-  // v0.35 起接着一张“长夜”
-  for (let i = 0; i < 2 && !card().hidden; i++) { assert.match(card().innerHTML, /长夜|巨影/); run(80); }
+  // v0.35 起接着一张“长夜”；v0.46 起第二年的旧档再接一张“复兴工程”
+  for (let i = 0; i < 3 && !card().hidden; i++) { assert.match(card().innerHTML, /长夜|巨影|复兴工程/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   assert.match(document.querySelector('#skill-summary')?.textContent || '', /Lv\.7.*Lv\.9/);
   // ---------- 技能页：按 K ----------
@@ -2365,8 +2365,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   run(3);
   assert.equal(card().hidden, false, 'the 长夜 card is up'); assert.match(card().innerHTML, /长夜/); assert.match(card().innerHTML, /雾夜/); assert.match(card().innerHTML, /春雷夜/); assert.match(card().innerHTML, /雪夜/);
   run(80);
-  // v0.36 起再接一张“巨影”
-  if (!card().hidden) { assert.match(card().innerHTML, /巨影/); run(80); }
+  // v0.36 起再接一张“巨影”，v0.46 起第二年的旧档再接一张“复兴工程”
+  for (let i = 0; i < 2 && !card().hidden; i++) { assert.match(card().innerHTML, /巨影|复兴工程/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   const ph = e.nfPhase(38), P = ND.PHASES[ph];
   assert.ok(P, 'tomorrow night has a phase');
@@ -2470,6 +2470,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(e.tg.rumor.hebo, 41); assert.equal(e.tg.rumor.scrap, undefined, 'one rumour a day');
   assert.match(document.querySelector('#toasts').innerHTML, /河伯/);
   run(80);
+  // v0.46 起第二年的旧档再接一张“复兴工程”
+  if (!card().hidden) { assert.match(card().innerHTML, /复兴工程/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   // ---------- 手记“今天”：点开是成就册里的十凶录；标出它的窝：世界地图上的牌子、金色路标 ----------
   context.open('journey'); clean();
@@ -2577,6 +2579,8 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(card().hidden, false, 'the 后五凶 card is up'); assert.match(card().innerHTML, /后五凶/); assert.match(card().innerHTML, /最后一凶/);
   assert.doesNotMatch(card().innerHTML, /巨影|undefined|NaN/);
   run(80);
+  // v0.46 起第二年的旧档再接一张“复兴工程”
+  if (!card().hidden) { assert.match(card().innerHTML, /复兴工程/); run(80); }
   assert.equal(card().hidden, true, 'and gone after its time');
   assert.equal(e.tg.intro2.told, true);
   // ---------- 后五凶醒着出招：四个大小，白天、夜里（色弱配色） ----------
@@ -3557,7 +3561,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(e.s.money, 60000 - 3000);
   click('close');
   // 第二天 06:00 修好
-  e.s.day = 37; e.s.minute = 5 * 60 + 58; e.paused = false;
+  e.s.day = 37; e.s.minute = 5 * 60 + 58; e.c.workClock = 58; e.paused = false;
   run(Math.ceil((4 / 1.6) * 20));
   assert.equal(e.ah.done.waterwheel, 37);
   assert.ok(e.qty('alDecor_ahWheelModel', true) >= 1, 'the keepsake is in the store');

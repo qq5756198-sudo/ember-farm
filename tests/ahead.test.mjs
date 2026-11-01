@@ -431,6 +431,22 @@ test("saves: a new game has the block (a card when the first project opens); an 
   n.workHour();
   n.update(0.05, {});
   assert.equal(n.events.filter((x) => x.type === "moment" && x.title === "复兴工程").length, 1, "only once");
+  // 一帧一帧走到 06:00（分钟一小截一小截加，到整点差一丝）：照样是 6 点完工，不是 7 点
+  const r = late(36);
+  rich(r);
+  r.s.minute = 9 * 60;
+  r.c.workClock = 0;
+  assert.ok(r.ahFund("waterwheel"));
+  r.s.day = 37;
+  r.s.minute = 5 * 60 + 58;
+  r.c.workClock = 58;
+  if (r.dy) r.dy.pending = null;
+  for (let i = 0; i < 200 && !r.ah.done.waterwheel; i++) {
+    r.paused = false;
+    r.update(0.05, {});
+  }
+  assert.equal(r.ah.done.waterwheel, 37);
+  assert.ok(r.s.minute < 6 * 60 + 5, "done at 06:00, not an hour later");
   // 坏了的几样读成空的（不丢别的进度）
   const bad = JSON.parse(make(newGameState("farmer")).serialize());
   bad.ahead = { schema: 1, opened: [], paid: { nope: 3 }, done: {}, kids: ["k9"], said: { crow: -1 } };
