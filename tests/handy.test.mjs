@@ -16,6 +16,7 @@ import { MENUS, BCARD } from "../dist/simple-data.js";
 import { BUILDINGS, RECIPES } from "../dist/data.js";
 import { EVENTS as DAILY_EVENTS } from "../dist/daily-data.js";
 import { buildGroups } from "../dist/simple-ui.js";
+import { LESSONS } from "../dist/guidance-data.js";
 import { GAME_VERSION, GAME_EDITION, GAME_RELEASE } from "../dist/version.js";
 import { Renderer as HandyRenderer } from "../dist/handy-renderer.js";
 import { Renderer as FourRenderer } from "../dist/four-renderer.js";
@@ -340,6 +341,9 @@ test("one name for one thing, no removed systems or version names in words: resi
   assert.equal(ORIGINS.farmer.kit, FARMER_ORIGIN.kit);
   assert.doesNotMatch(ORIGINS.farmer.line, /原来的开局/);
   assert.deepEqual(BCARD.fence, FENCE_CARD);
+  // 委托列表：房间、雨水桶和照看机、特性种子、营地订单那几件做不成了，不列（别的照旧）
+  for (const id of ["rooms", "automation", "genes", "orders"]) assert.equal(LESSONS.find((l) => l.id === id).unlock(e), false, id);
+  assert.equal(LESSONS.find((l) => l.id === "cooking").unlock({ r: { metrics: { food: 1 } } }), true);
   // 新开的档：菜单格下面没有“退回的东西”
   assert.doesNotMatch(UI.easeMenus(e, '<button data-action="sxOpen" data-id="messages"><b>消息</b><small>' + MENU_MSG[0] + "</small></button>"), /退回的东西/);
   // 页面的外壳和当前目标那一行都过一遍
