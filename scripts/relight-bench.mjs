@@ -1367,6 +1367,34 @@ if (MODE === "year") {
     );
   }
   if (FUN) console.log(JSON.stringify({ FUN: funSummary(rows, DAYS) }));
+  // FUNDUMP=1（v0.46 起）：第一次见到的东西按类和第几天、第 31 天起最常见的提示（看中后期新东西少在哪、提示多在哪）
+  if (FUN && process.env.FUNDUMP === "1") {
+    const kinds = {},
+      top = {};
+    for (const X of rows) {
+      for (const [k, d] of Object.entries(X.fun.seen)) {
+        const kind = k.split(":")[0];
+        (kinds[kind] ||= { early: 0, d31: 0, d57: 0, keys57: [] });
+        if (d >= 57) {
+          kinds[kind].d57++;
+          if (kinds[kind].keys57.length < 12) kinds[kind].keys57.push(k.slice(kind.length + 1) + "@" + d);
+        } else if (d >= 31) kinds[kind].d31++;
+        else kinds[kind].early++;
+      }
+      for (const [d, , tone, text] of X.fun.toasts) {
+        if (d < 31) continue;
+        const key = tone + " " + String(text).replace(/\d+/g, "#").slice(0, 40);
+        top[key] = (top[key] || 0) + 1;
+      }
+    }
+    const n = rows.length,
+      span = Math.max(1, DAYS - 30);
+    const toastTop = Object.entries(top)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 40)
+      .map(([k, c]) => [k, +(c / n / span).toFixed(2)]);
+    console.log(JSON.stringify({ FUNDUMP: { seeds: n, kinds, toastTop } }));
+  }
   // FUN_DUMP=文件名：把每条提示、每件好事都写进去（找哪些提示还太多用）
   if (FUN && process.env.FUN_DUMP) (await import("node:fs")).writeFileSync(process.env.FUN_DUMP, JSON.stringify(rows.map((X) => ({ seed: X.seed, ...X.fun, money: X.money, noonDay: X.noonDay || {}, hope: X.hope || null, grow: X.grow || null, lists2: X.lists2 || {}, noon: X.noon || {}, dayLog: X.dayLog || null, tunnelFail: X.tunnelFail || null, errors: X.errors }))));
 }

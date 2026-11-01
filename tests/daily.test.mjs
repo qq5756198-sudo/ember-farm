@@ -551,14 +551,23 @@ test("the card, result, journal strip and record page render clean text and real
   assert.match(renderCampaignView(e, { view: "daily" }), /class="daily-card[^"]* locked"/);
   assert.match(renderCampaignJournal(e, {}), /还没选/);
   const ui = {};
-  const c = ctx(e, { ui });
+  let shut = 0;
+  const said = [];
+  const c = ctx(e, { ui, closeMenu: () => shut++, toast: (t) => said.push(t) });
   const free = EVENTS[p.id].opts.findIndex((o) => !o.cost && !o.pay && !o.req);
   assert.ok(handleCampaignAction("dPick", btn("dPick", String(free)), c));
-  assert.ok(ui.dailyResult);
-  const res = renderCampaignView(e, { view: "daily", dailyResult: ui.dailyResult });
+  // v0.45：不冒险、没有后续的一项，选了就开始这一天（顶上说一句），不再翻出结果页；冒险的、有后续的照旧翻出结果页
+  const q = e.dy.pending;
+  if (q.win === null && !q.lines.some((l) => /^后续：/.test(l))) {
+    assert.equal(shut, 1);
+    assert.ok(!ui.dailyResult);
+    assert.match(said.join(" "), /今日抉择 · /);
+  } else assert.ok(ui.dailyResult);
+  const result = { lines: q.lines, win: q.win, event: q.id, choice: q.choice };
+  const res = renderCampaignView(e, { view: "daily", dailyResult: result });
   assert.match(res, /开始第 \d+ 天/);
   assert.doesNotMatch(res, FORBIDDEN);
-  assert.equal(dailyLocked(e, { view: "daily", dailyResult: ui.dailyResult }), false);
+  assert.equal(dailyLocked(e, { view: "daily", dailyResult: result }), false);
   let closed = 0;
   handleCampaignAction("dStart", btn("dStart"), ctx(e, { ui, closeMenu: () => closed++ }));
   assert.equal(closed, 1);

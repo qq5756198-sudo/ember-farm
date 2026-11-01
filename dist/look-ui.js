@@ -392,8 +392,8 @@ export function buildTiles(modal, ctx = {}) {
       }
     });
   });
-  // 先选第一样建得起的（都建不起就第一样）
-  const first = tiles.find((t) => !t.classList.contains("look-poor")) || tiles[0];
+  // 先选手记要的那一样（v0.45），再是第一样建得起的（都建不起就第一样）
+  const first = tiles.find((t) => t.classList.contains("hy-want")) || tiles.find((t) => !t.classList.contains("look-poor")) || tiles[0];
   show(first, true);
   return true;
 }

@@ -229,8 +229,16 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(context.inspect().menu, 'sx'); assert.equal(context.inspect().menuArgs?.view ?? 'letters', 'letters');
   assert.match(html(), /要这一包/); clean();
   click('aStoryChoose', 'cotton'); click('aStoryChoose', 'ration'); assert.equal(e.sc.choice, 'cotton');
-  assert.match(html(), /在住宅区救回阿禾/);
-  assert.equal(document.querySelector('#quest-number').textContent, '第二段 · 2/4');
+  // v0.45：开局那一拨还没打完时，第二段在“接回阿禾”前面多一步“守住东边路口”（金色路标在东边路口）；住宅区统一叫废弃居民区
+  if (e.feel?.open?.phase !== 'done') {
+    assert.match(html(), /守住东边路口|打退东边来的感染者|建一段围栏堵上东边路口/);
+    assert.equal(document.querySelector('#quest-number').textContent, '第二段 · 2/5');
+    assert.equal(e.guidance.target?.label, '东边路口');
+  } else {
+    assert.match(html(), /在废弃居民区救回阿禾/);
+    assert.equal(document.querySelector('#quest-number').textContent, '第二段 · 2/4');
+  }
+  assert.doesNotMatch(html(), /住宅区/);
   click('close');
   // Canvas: terminal, pulley, trough, camp and the helper at work, at four viewport sizes.
   e.s.minute = 11 * 60; e.c.workClock = 59.99; run(3);
@@ -608,8 +616,10 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   const money0 = e.s.money;
   press(String(free + 1));
   assert.equal(e.dy.pending.choice, free); assert.equal(e.dy.stats.cards, 1); clean();
-  assert.match(html(), /class="daily-result/); assert.match(html(), /开始第 2 天/);
-  press(String(free + 1)); press('1');
+  // v0.45：不冒险、没有后续的一项，选了就开始这一天（顶上说一句）；冒险的、有后续的照旧翻出结果页
+  const quick = e.dy.pending.win === null && !e.dy.pending.lines.some((l) => /^后续：/.test(l));
+  if (quick) assert.equal(context.inspect().menu, null, 'a plain choice starts the day at once');
+  else { assert.match(html(), /class="daily-result/); assert.match(html(), /开始第 2 天/); press(String(free + 1)); press('1'); }
   assert.equal(context.inspect().menu, null, 'the result button starts the day'); assert.equal(e.dy.stats.cards, 1, 'one choice a day');
   run(5); assert.equal(context.inspect().menu, null, 'the card does not come back the same day');
   // 任务手记的今日抉择条 → 抉择记录
@@ -626,7 +636,7 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // 买不起的选项点了没反应，只提示原因
   const blocked = [0, 1, 2].find((i) => e.optionReason(i));
   if (blocked !== undefined) { const before = JSON.stringify(e.s.storage) + e.s.money; click('dPick', String(blocked)); assert.equal(e.dy.pending.choice, null); assert.equal(JSON.stringify(e.s.storage) + e.s.money, before); }
-  click('dPick', String([0, 1, 2].find((i) => !e.optionReason(i)))); click('dStart'); assert.equal(context.inspect().menu, null);
+  click('dPick', String([0, 1, 2].find((i) => !e.optionReason(i)))); if (context.inspect().menu) click('dStart'); assert.equal(context.inspect().menu, null);
   // 第 6 天以后：补给点（S02）与连贯事件标记（C4-2），都用 E 互动
   const sc = e.sc;
   Object.assign(sc, { act: 9, claimed: ['act1', 'supply', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8'], choice: 'ration', letters: ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8'], camp: { x: 560, y: 735 } });
@@ -3220,14 +3230,17 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   assert.equal(e.s.storage.scrap - scrap0, 3 + 10 + 12, 'scrap back from the barrel, the solar panel and the tending machine');
   assert.equal((e.s.inventory.fertCare || 0), 0); assert.equal((e.s.inventory.fertGrow || 0) + (e.s.storage.fertGrow || 0) >= 2, true);
   e.paused = false; if (e.dy) e.dy.pending = null; run(3);
-  assert.match(document.querySelector('#toasts').innerHTML, /删繁：营地里一样东西只做一件事/, 'told on the first frame');
-  // 消息：多一条“这次简化退回了什么”，点开是清单
+  // v0.45：这一句不再说版本的名字（“删繁”），那一页叫“营地整理退回了什么”
+  const CONV_SHOWN = '营地整理退回了什么';
+  assert.match(document.querySelector('#toasts').innerHTML, /营地整理过了：一样东西只做一件事/, 'told on the first frame');
+  assert.doesNotMatch(document.querySelector('#toasts').innerHTML, /删繁/);
+  // 消息：多一条“营地整理退回了什么”，点开是清单
   context.open('sx', { view: 'messages' }); clean();
-  assert.ok(html().includes(TrimData.CONVERT_TITLE), 'the messages page lists it');
+  assert.ok(html().includes(CONV_SHOWN), 'the messages page lists it');
   click('close');
   context.open('outpost', { view: 'trConv' }); clean();
   assert.match(html(), /拆掉了 雨水桶 ×1，材料全退/); assert.match(html(), /土酒坛 ×1 换成了腌缸/); assert.match(html(), /退进仓库的：/);
-  assert.ok(html().includes('<h2 id="modal-title">' + TrimData.CONVERT_TITLE + '</h2>'), 'the page is titled');
+  assert.ok(html().includes('<h2 id="modal-title">' + CONV_SHOWN + '</h2>'), 'the page is titled');
   click('close');
   // 建造页：26 样以内（锁着的也算），摆件一格，拆掉的那几样不在
   context.open('build'); clean();
@@ -3424,4 +3437,88 @@ click('dWorldResource','herb');assert.equal(context.inspect().menu,'map');assert
   // 老怀表那一句
   assert.match(Data.BUILDINGS.rlWatch?.desc || '全营士气', /全营士气/);
   console.log('Four seasons controller passed (v0.44): every facility on the build page has its own new icon and no old atlas picture is left there; the hotbar build slot is the new hammer; the scene asks for the season of the day (spring, summer, autumn, winter; none underground); the old watch says camp morale.');
+}
+
+// ================= v0.45.0「顺手」：真开一个新档——第一段回信以后金色路标标在东边路口（不说求援信号），手记第二段多一步“守住东边路口”（2/5）；
+// 过 20 游戏分钟开局那一拨就来（不等 13:00）；打退以后手记上“去建围栏”打开建造页，围栏在最上面“现在要建”、默认选中、只列建得起的；
+// 堵上路口才标废弃居民区；灶台页手记要的干粮排第一、做不了的折着；睡一觉早上一页（昨天、今日抉择、今天先做），底下只写“按 1 / 2 / 3 选一项”，
+// 选一项不冒险的直接开始这一天；去掉的东西、版本名字不露字 =================
+{
+  let clock = 45000000;
+  const DD = await import('../dist/daily-data.js');
+  const run = (n) => { for (let i = 0; i < n; i++) context.step((clock += 50)); };
+  const press = (key) => { listeners.keydown({ key, target: { matches: () => false }, preventDefault() {}, repeat: false }); listeners.keyup({ key }); };
+  const ui = () => context.inspect();
+  for (let i = 0; i < 6 && ui().menu; i++) click('close');
+  dailyOn = false;
+  context.open('confirmTitle'); click('backToTitle'); assert.equal(ui().started, false);
+  click('restart'); click('newGame');
+  for (let i = 0; i < 6 && ui().menu; i++) click('close');
+  const e = ui().engine;
+  assert.equal(e.easeFresh(), true, 'a new game');
+  assert.equal(e.feel.open.phase, 'wait');
+  e.paused = false; if (e.dy) e.dy.pending = null;
+  // 第一段做完，到终端回信（按 E）
+  e.s.minute = 600; e.r.claimed.push('harvest', 'meal'); e.sc.flags.well = true; e.sc.flags.camp = true;
+  Object.assign(e.s.player, { x: 754, y: 374 }); run(2);
+  press('e'); run(2);
+  assert.equal(e.sc.act, 2);
+  assert.equal(e.guidance.target?.label, '东边路口', 'the gold mark is on the east road');
+  assert.ok(!/求援信号已标在地图上/.test(document.querySelector('#toasts').innerHTML), 'no residential call yet');
+  for (let i = 0; i < 4 && ui().menu; i++) { if (/aStoryChoose/.test(html())) click('aStoryChoose', 'ration'); click('close'); }
+  context.open('journey'); clean();
+  assert.match(html(), /守住东边路口/); assert.doesNotMatch(html(), /住宅区/);
+  assert.equal(document.querySelector('#quest-number').textContent, '第二段 · 2/5');
+  click('close');
+  // 20 游戏分钟以后那一拨来了（还不到 13:00）
+  e.paused = false; run(Math.ceil((22 / 1.6) * 20));
+  assert.equal(e.feel.open.phase, 'fight'); assert.ok(e.s.minute < 13 * 60);
+  for (const z of e.enemies) if (z.tut) z.dead = true;
+  run(2);
+  assert.equal(e.feel.open.phase, 'fence');
+  context.open('journey'); clean();
+  assert.match(html(), /建一段围栏堵上东边路口/); assert.match(html(), /data-action="hyFence"/);
+  click('hyFence'); assert.equal(ui().menu, 'build'); clean();
+  assert.match(html(), /<h3 class="sx-group">现在要建<\/h3>/);
+  const first = html().match(/<article class="recipe[^"]*"[\s\S]*?<h3>([^<]+)<\/h3>/);
+  assert.equal(first?.[1], '围栏', 'the fence comes first');
+  assert.match(html(), /class="recipe hy-want/, 'marked as the one the journal wants');
+  if (/look-build/.test(html())) assert.match(html(), /class="recipe hy-want[^"]*look-on/, 'and is picked (desktop tiles)');
+  assert.doesNotMatch(html(), /hy-fold/, 'day 1: what you cannot afford is not listed');
+  click('close');
+  e.s.inventory.wood = 20; Object.assign(e.s.player, { x: 1240, y: 330 }); e.buildMode = 'fence'; e.hyKeepBuild = false;
+  assert.ok(e.placeBuilding(1330, 400)); assert.equal(e.buildMode, null, 'one fence, out of build mode');
+  run(2);
+  assert.equal(e.feel.open.phase, 'done');
+  assert.equal(e.guidance.target?.region, 'residential');
+  assert.match(document.querySelector('#toasts').innerHTML, /废弃居民区的求援信号已标在地图上/);
+  // 灶台：手记要的干粮排第一（要做干粮时）
+  e.r.claimed = e.r.claimed.filter((x) => x !== 'meal'); e.s.inventory.radish = 4;
+  const cook = e.s.buildings.find((b) => b.type === 'cook');
+  if (e.storyGoal()?.step?.id === 'meal') {
+    context.open('station', { buildingId: cook.id }); clean();
+    const r1 = html().match(/<article class="recipe[^"]*"[\s\S]*?<h3>([^<]+)/);
+    assert.match(r1?.[1] || '', /^干粮/); assert.match(html(), /手记要的/); assert.match(html(), /<details class="hy-fold"><summary>还做不了 · \d+ 样<\/summary>/);
+    click('close');
+  }
+  e.r.claimed.push('meal');
+  // 睡一觉：口粮紧，早上一页（昨天的总结并进今日抉择）
+  dailyOn = true;
+  for (const id of Object.keys(e.s.storage)) if (Data.ITEMS[id]?.food) delete e.s.storage[id];
+  for (const id of Object.keys(e.s.inventory)) if (Data.ITEMS[id]?.food) e.s.inventory[id] = 0;
+  e.s.minute = 21 * 60; e.paused = false;
+  context.open('home'); click('sleep'); run(3);
+  assert.equal(e.s.day, 2);
+  assert.equal(ui().menu, 'outpost'); assert.equal(ui().outpostUI.view, 'daily', 'one morning page'); clean();
+  assert.match(html(), /<h4 class="hy-sec">昨天 · 第 1 天<\/h4>/); assert.match(html(), /<h4 class="hy-sec">今天先做<\/h4>/);
+  assert.match(html(), /按 1 \/ 2 \/ 3 选一项/); assert.doesNotMatch(html(), /消息记录 · /);
+  const p = e.dailyCard(), opts = DD.EVENTS[p.id].opts;
+  const plain = opts.findIndex((o, i) => !o.p && !o.cost && !o.pay && !e.optionReason(i));
+  if (plain >= 0) {
+    press(String(plain + 1));
+    if (!e.dy.pending.lines.some((l) => /^后续：/.test(l))) assert.equal(ui().menu, null, 'a plain choice starts the day');
+  }
+  for (let i = 0; i < 4 && ui().menu; i++) { if (/data-action="dStart"/.test(html())) click('dStart'); else click('close'); }
+  dailyOn = false;
+  console.log('Handy controller passed (v0.45): a genuinely new game — after the first reply the gold mark sits on the east road with no residential call, the journal adds 守住东边路口 (2/5); the opening wave comes 20 game minutes later, before 13:00; beaten back, 去建围栏 opens the build page with the fence first under 现在要建, picked, and only affordable ones listed; fenced, the residential area is marked; the stove lists the ration first with the rest folded; a hungry night ends in one morning page (yesterday, today\'s choice, what to do first) with only the 1/2/3 keys named, and a plain choice starts the day.');
 }

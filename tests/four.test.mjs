@@ -47,22 +47,21 @@ const withSeason = (id, fn) => {
 };
 
 // ================= 版本、接线 =================
-test("version: v0.44.0 四季 in the title, the loading page and settings; the new files are preloaded and the scene layer is on top", () => {
-  assert.equal(GAME_VERSION, "v0.44.0");
-  assert.equal(GAME_EDITION, "四季");
-  assert.equal(GAME_RELEASE, "v0.44.0 · 四季");
+test("version: the title, the loading page and settings carry the version (moved on to v0.45 顺手, checked in handy.test.mjs); the four files are preloaded and the four scene layer is still in the chain", () => {
+  assert.match(GAME_VERSION, /^v0\.(4[4-9]|[5-9]\d)\.\d+$/);
+  assert.equal(GAME_RELEASE, GAME_VERSION + " · " + GAME_EDITION);
   const html = read("dist/index.html");
-  assert.match(html, /<title>余烬农场 v0\.44\.0 · 四季<\/title>/);
-  assert.match(html, /data-release>v0\.44\.0 · 四季</);
+  assert.ok(html.includes("<title>余烬农场 " + GAME_RELEASE + "</title>"));
+  assert.ok(html.includes("data-release>" + GAME_RELEASE + "<"));
   for (const f of ["four-data.js", "four-renderer.js", "four-art.js", "four-ui.js"]) assert.ok(html.includes('<link rel="modulepreload" href="' + f + '">'), f + " preloaded");
-  assert.equal(CampaignRenderer, FourRenderer);
+  assert.ok(CampaignRenderer === FourRenderer || CampaignRenderer.prototype instanceof FourRenderer);
   assert.ok(FourRenderer.prototype instanceof TrimRenderer);
 });
-test("the engine has no new layer (art only): the top is still v0.43's", async () => {
+test("the four layer added no engine layer (art only): v0.43's engine sits right under whatever is on top now", async () => {
   const ease = await import("../dist/ease.js"),
     trim = await import("../dist/trim.js");
-  assert.equal(C.Engine, ease.Engine);
-  assert.equal(Object.getPrototypeOf(C.Engine), trim.Engine);
+  assert.ok(C.Engine === ease.Engine || C.Engine.prototype instanceof ease.Engine);
+  assert.equal(Object.getPrototypeOf(ease.Engine), trim.Engine);
 });
 
 // ================= 树随时节换叶 =================

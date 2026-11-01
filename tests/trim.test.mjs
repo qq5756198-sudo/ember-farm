@@ -218,10 +218,12 @@ test("an old save: the before-upgrade copy is kept, removed facilities are refun
   const lines = e.trConvLines();
   for (const re of [/拆掉了 雨水桶 ×1/, /土酒坛 ×1 换成了腌缸/, /全营士气 62/, /鸽舍拆了，9000 金币/, /妙手的经验 120 折给了探索/, /退进仓库的：/, /退回的金币：9000/]) assert.ok(lines.some((l) => re.test(l)), String(re));
   e.update(1 / 30, {});
-  assert.ok(said(toasts, /删繁：营地里一样东西只做一件事/), "said once when the game starts");
+  // v0.45：不说版本的名字
+  assert.ok(said(toasts, /营地整理过了：一样东西只做一件事/), "said once when the game starts");
+  assert.ok(!said(toasts, /删繁/), "no version name");
   const n = toasts.length;
   e.update(1 / 30, {});
-  assert.equal(toasts.filter((t) => /删繁：/.test(t.text)).length, 1, "only once");
+  assert.equal(toasts.filter((t) => /营地整理过了：/.test(t.text)).length, 1, "only once");
   assert.ok(toasts.length >= n);
   const page = UI.renderCampaignView(e, { view: "trConv" });
   assert.match(page, /第 42 天读进来时/);

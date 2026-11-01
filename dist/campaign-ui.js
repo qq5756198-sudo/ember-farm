@@ -34,16 +34,20 @@ import { renderHopeView, hopeTitle, handleHopeAction, patchHopeJournal, hopeBuil
 // v0.34：技能页的 6–10 级、重建站上的第二年清单、成就册里的打法挑战和老手、武器台那一页每样近战擅长什么
 import { renderGrowSkillPage, patchGrowStation, patchGrowCollection, patchGrowBench, handleGrowAction } from "./grow-ui.js";
 // v0.42：删繁——去掉的东西不再出现在页面上（田、广播、堆肥、麦穗、技能、设施卡、手记、顶栏、休整点、摆件、农舍）
-import { trimView, trimPatch, trimTitle, trimBuildingExtras, trimStationExtras, trimSkillPage, trimJournal, trimHud, decorCard, trimBuildCardExtras, trimHomeExtras, trimDistricts, trimBeyond, boardHtml, handleTrimAction, trimBuildIds, trimManual } from "./trim-ui.js";
+import { trimView, trimPatch, trimTitle, trimBuildingExtras, trimStationExtras, trimSkillPage, trimJournal, trimHud, decorCard, trimBuildCardExtras, trimHomeExtras as trimHomeExtras0, trimDistricts, trimBeyond, boardHtml, handleTrimAction, trimBuildIds, trimManual } from "./trim-ui.js";
 // v0.43：用得上才出现（菜单十项、士气、任务手记的几行）、角上的小卡、设置里那一行、前三天的“带路”
 import { easeMenus, easeHud, easeJournal, easeView, easeSettings, easeFrame, easeCardHtml, easeCardNow, easeRadial, handleEaseAction } from "./ease-ui.js";
 export { easeMenus, easeSettings, easeFrame, easeCardHtml, easeCardNow, easeRadial };
 // v0.44「四季」：设施图标、快捷栏“建造”换成新画的；标题页动起来
 export { buildToolIcon, decorIcon } from "./four-ui.js";
+// v0.45「顺手」：叫法统一、去掉的东西不露字（页面、提醒、手记）、早上一页、农舍页只列下一样扩建、手记上的“去建围栏”
+import { handyHud, handyView, handyJournal, handyHome, handleHandyAction } from "./handy-ui.js";
+export { handyWords, handyBuildGroups, handyWantCard, handyFold, handyRecipes, handyRecipeTag, handyLaterTitle, handyFooter, handyLockedShown } from "./handy-ui.js";
 const renderSkillPage = (e) => trimSkillPage(e, renderGrowSkillPage(e, thiefSkillPage));
 export const patchHopeDistricts = (e, html) => trimDistricts(e, hopeDistricts(e, html));
 export const patchBeyond = trimBeyond;
-export { decorCard, trimHomeExtras, trimBuildIds };
+export const trimHomeExtras = (e) => handyHome(e, trimHomeExtras0(e));
+export { decorCard, trimBuildIds };
 // v0.35：顶栏和提醒带上夜相、手记长夜那几行、长夜战报里的夜相和守夜笔记、日历、成就册的夜相
 import { nfHud, patchNfAlerts, patchNfJournal, patchNfReport, patchNfCalendar, patchNfCollection } from "./nightfall-ui.js";
 // v0.36：屏幕上方的十凶血条（换段刻度、冰甲、两半、打晃）、成就册里的十凶录、档案馆的十凶柜、传闻卡的说明
@@ -111,13 +115,15 @@ const renderCampaignView1 = (e, ui) => {
   if (ui?.view === "calendar") return patchNfCalendar(e, html);
   return html;
 };
-export const renderCampaignView = (e, ui) => {
+const renderCampaignView2 = (e, ui) => {
   const own = trimView(e, ui);
   return easeView(e, ui, own != null ? own : trimPatch(e, ui, renderCampaignView1(e, ui)));
 };
+// v0.45：今日抉择那一页并进昨天的总结和前三天的“今天先做”（总结那一页照这条链再画一遍）
+export const renderCampaignView = (e, ui) => handyView(e, ui, renderCampaignView2(e, ui), (u) => renderCampaignView2(e, { ...ui, ...u }));
 export const renderCampaignJournal = (e, ui) => {
   const html = renderGardenJournal(e, ui);
-  return ui?.catalog ? html : easeJournal(e, trimJournal(e, patchHopeJournal(e, patchZestJournal(e, patchRelightJournal(e, patchNfJournal(e, patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html)))))))));
+  return handyJournal(e, ui?.catalog ? html : easeJournal(e, trimJournal(e, patchHopeJournal(e, patchZestJournal(e, patchRelightJournal(e, patchNfJournal(e, patchLnJournal(e, patchUnderJournal(e, patchJournal(e, html))))))))));
 };
 export const renderMapPlus = (e, ui) => patchUnderMap(e, ui, renderFarMap(e, ui));
 // 去掉营地手册后，“农业”这一页就是菜地告示牌；其余每页只放那一处的内容
@@ -137,11 +143,11 @@ export function campaignHud(e) {
   const base = outpostHud(e);
   if (!base) return null;
   const ln = tidyLnHud(e);
-  return easeHud(e, trimHud(e, nfHud(e, { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchNfAlerts(e, patchAlerts(e, alertBar(e))), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e), date: almanacDate(e) })));
+  return handyHud(e, easeHud(e, trimHud(e, nfHud(e, { ...base, raid: ln?.banner || base.raid, lnRed: !!ln?.red, season: winterHud(e), alerts: patchNfAlerts(e, patchAlerts(e, alertBar(e))), fresh: !!seasonsHud(e)?.fresh, daily: dailyHud(e), noise: noiseHud(e), date: almanacDate(e) }))));
 }
 // 动作：巨影 → 成长 → 盼头 → 重光 → 人情 → 四时 → 热闹 → 丰年 → 整顿 → 长夜 → 暗涌 → 手感 → 装备 → 菜地 → 妙手 → 每日 → 远方 → 四季 → 寒潮 → 前哨，谁认得谁处理。
 export function handleCampaignAction(action, el, ctx) {
-  return handleEaseAction(action, el, ctx) || handleTrimAction(action, el, ctx) || handleTitanAction(action, el, ctx) || handleGrowAction(action, el, ctx) || handleHopeAction(action, el, ctx) || handleRelightAction(action, el, ctx) || handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
+  return handleHandyAction(action, el, ctx) || handleEaseAction(action, el, ctx) || handleTrimAction(action, el, ctx) || handleTitanAction(action, el, ctx) || handleGrowAction(action, el, ctx) || handleHopeAction(action, el, ctx) || handleRelightAction(action, el, ctx) || handleKinAction(action, el, ctx) || handleAlmanacAction(action, el, ctx) || handleBustleAction(action, el, ctx) || handleBountyAction(action, el, ctx) || handleTidyAction(action, el, ctx) || handleLongNightAction(action, el, ctx) || handleUnderAction(action, el, ctx) || handleFeelAction(action, el, ctx) || handleGearAction(action, el, ctx) || handleGardenAction(action, el, ctx) || handleWinterAction(action, el, ctx) || handleOutpostAction(action, el, ctx);
 }
 
 // v0.25：到这里所有层的物品都登记过了，把还没挂上的新小图挂上

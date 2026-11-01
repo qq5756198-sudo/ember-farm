@@ -559,7 +559,8 @@ test("a quiet night gives a one-line note and a log entry instead of the summary
   h.events.length = 0;
   assert.ok(h.foodDays() < 2);
   h.sleep();
-  assert.ok(h.events.some((v) => v.type === "menu" && v.view === "summary"), "short on food: the page shows");
+  // v0.45：有今日抉择等着的早上，总结并进抉择那一页
+  assert.ok(h.events.some((v) => v.type === "menu" && v.view === "summary") || h.hyMorningReport(), "short on food: the page shows");
 });
 
 // ================= 手记的“今天” =================

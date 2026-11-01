@@ -2351,3 +2351,83 @@ html:not(.desk) #four-fx {
 html.desk .modal-backdrop > #modal.welcome {
   position: relative;
 }
+
+/* ======================================================================
+   v0.45「顺手」：建造页、设施页只列用得上的（手记要的排第一），早上一页
+   ====================================================================== */
+/* 折着的那一组：还缺材料、还做不了（点开看） */
+html.desk #modal .hy-fold {
+  grid-column: 1 / -1;
+  margin: var(--sp4) 0 0;
+}
+html.desk #modal .hy-fold > summary {
+  cursor: pointer;
+  list-style: none;
+  font: 700 var(--fs-h) / 1.4 var(--f-body);
+  color: var(--c-ink-3);
+  padding: 0 0 6px;
+  border-bottom: 2px solid var(--c-line-lo);
+}
+html.desk #modal .hy-fold > summary::-webkit-details-marker {
+  display: none;
+}
+html.desk #modal .hy-fold > summary::before {
+  content: "▸ ";
+  color: var(--c-ink-3);
+}
+html.desk #modal .hy-fold[open] > summary::before {
+  content: "▾ ";
+}
+html.desk #modal .hy-fold > summary:hover {
+  color: var(--c-ink-2);
+}
+html.desk #modal .hy-fold > .recipe-grid {
+  margin-top: var(--sp2);
+}
+/* 手记要的那一格：橙边，名字后面一块“手记要的” */
+html.desk #modal .recipe.hy-want {
+  border-color: var(--c-ember-line);
+  box-shadow: inset 0 0 0 1px var(--c-ember-line);
+}
+html.desk #modal .hy-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 6px;
+  font: 700 var(--fs-s) / 1.6 var(--f-body);
+  color: var(--c-on-ember);
+  background: var(--c-ember);
+  border-radius: 2px;
+  vertical-align: 2px;
+}
+/* 早上一页：昨天、今日抉择、今天先做 */
+html.desk #modal .hy-morning {
+  display: grid;
+  gap: var(--sp4);
+  /* 和今日抉择那张卡一样宽，左右对齐 */
+  max-width: 830px;
+  margin: 0 auto;
+}
+html.desk #modal .hy-morning > section {
+  padding-inline: 22px;
+}
+html.desk #modal .hy-morning .hy-sec {
+  font: 700 var(--fs-h) / 1.4 var(--f-body);
+  color: var(--c-ink-2);
+  margin: 0 0 var(--sp2);
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--c-line);
+}
+html.desk #modal .hy-yesterday .day-summary > h3 {
+  margin-top: 0;
+}
+html.desk #modal .hy-plan p {
+  margin: 0 0 4px;
+}
+html.desk #modal .hy-yesterday .hy-sum {
+  margin: 0 0 var(--sp2);
+  color: var(--c-ink);
+}
+html.desk #modal .hy-yesterday ul {
+  margin: 0 0 var(--sp2);
+  padding-left: 1.2em;
+}

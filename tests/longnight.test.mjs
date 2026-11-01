@@ -1126,10 +1126,12 @@ test("more than seven game days without an export: sleeping shows a one-click ex
   const m0 = g.events.length;
   assert.ok(g.sleep());
   const menus = g.events.slice(m0).filter((ev) => ev.type === "menu");
-  assert.ok(menus.some((ev) => ev.view === "summary"));
+  // v0.45：有今日抉择等着的早上，总结并进抉择那一页（提醒也跟着进去）
+  const merged = !menus.some((ev) => ev.view === "summary");
+  if (merged) assert.ok(g.hyMorningReport(), "the summary went into the morning page");
   assert.ok(!menus.some((ev) => ev.view === "lnExport"));
   assert.equal(g.ln.remindDay, g.s.day);
-  assert.match(UI.renderCampaignView(g, { view: "summary" }), /存档.*没导出[\s\S]*data-action="export"/);
+  assert.match(UI.renderCampaignView(g, { view: merged ? "daily" : "summary" }), /存档.*没导出[\s\S]*data-action="export"/);
   // 存档里记着，坏的拒收
   const raw = e.serialize();
   assert.equal(Engine.parse(raw).longnight.exportDay, e.ln.exportDay);
