@@ -42,8 +42,8 @@ export const HANDY_SAY = [
   [/这次简化退回了什么/g, "营地整理退回了什么"],
   [/这一版退回的东西/g, "营地整理退回的东西"],
 ];
-// 委托列表里做不成了的几件（房间 v0.42 就去掉了）
-export const LESSON_GONE = ["rooms"];
+// 委托列表里做不成了的几件：房间、雨水桶和照看机、特性种子 v0.42 就去掉了；营地订单早并进了订单板，不再出新的
+export const LESSON_GONE = ["rooms", "automation", "genes", "orders"];
 // 走近一块田时最下面那一行：肥力、邻接 v0.42 就不算了
 export const CONTEXT_GONE = [/ · 肥力\d+/g, / · 邻接\+\d+/g];
 // 菜单“消息”那一格下面的小字：[旧档, 新档]
