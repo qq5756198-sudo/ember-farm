@@ -748,6 +748,12 @@ export class Engine extends Base {
     if (t === null) return;
     return super.toast(t, tone);
   }
+  // 直接记进消息记录的话也过一遍（下面各层有的话不弹、只记）
+  olog(text, tone) {
+    const t = this.chSay(text);
+    if (t === null) return;
+    return super.olog(t, tone);
+  }
   chMenuOk(data) {
     if (this.ch.n !== 1) return true;
     if (data.menu === "outpost") return CH1_VIEWS.has(data.view);

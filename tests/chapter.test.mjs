@@ -312,6 +312,18 @@ test("第一章的地图上不摆后面几章的人和东西；还摆着的几�
   assert.equal(said({ menu: "sx", view: "gate" }), "这条路第二章再走。");
   assert.equal(said({ menu: "camp", tab: "projects" }), "集市还在搭，第二章接着建。");
   assert.equal(said({ menu: "outpost", view: "plaza" }), "这里第二章再用。");
+  // 不摆出来的那几样说的话：不弹，也不进消息记录；这一章自己的话照常
+  const before = e.o.log.length;
+  for (const t of ["白桦站在营门口等着入营审查（东侧大门，今天 18:00 前）。", "白桦在营门口等到天黑，离开了。", "秦奶奶在营门等到深夜，走了。", "林姨要的鸡蛋、何大勺要的番茄的单子过期了。", "错过了第7天的「换种集」。", "下午的事 · 货郎：种子贩子阿梅在营门口路南摆摊。"]) {
+    toasts.length = 0;
+    e.toast(t, "warn");
+    e.olog(t, "warn");
+    assert.equal(toasts.length, 0, t);
+  }
+  assert.equal(e.o.log.length, before);
+  e.olog("守住了。12 只，都倒在了路口。", "gold");
+  assert.equal(e.o.log.length, before + 1);
+  assert.equal(e.o.log[0].text, "守住了。12 只，都倒在了路口。");
   // “第一次见到”一个人的小卡：不提送礼和没有的那一页
   assert.equal(e.chSay("送对了礼物信任涨得快；喜欢什么写在“人”那一页"), "");
   assert.equal(e.chSay("和他说话：他是谁、在干什么、喜欢什么"), "和他说话：他是谁、在干什么");

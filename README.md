@@ -67,8 +67,9 @@ python3 -m http.server 8000 --directory dist
 - `dist/*-renderer.js`：画面，一层一层叠；`dist/audio*.js`：声音。
 - `tests/`：`node --test tests/*.test.mjs`。`tests/chapter.test.mjs` 是这一版新加的。
 - `scripts/ch1-bot.mjs`：照手记走第一章的机器人（不开浏览器，量时长、钱粮、倒下几回）。
-- `scripts/play-ch1.py`：真浏览器里用键盘鼠标从标题页玩到第一章结束。
+- `scripts/play-ch1.py`：真浏览器里用键盘鼠标从标题页玩到第一章结束；`SAVE=存档.json` 从一份存档起只练一段。
 - `scripts/check-ui.py`：真浏览器里把每一页、每张卡在两个窗口大小下量一遍（字号、出不出画面、字溢不溢出、有没有开发用词、报不报错）。
+- `scripts/check-toasts.py`：左上角的消息压不压别的（画面、资源明细、每一页）。
 - 其余 `scripts/*-bench.mjs`、`*-sim.mjs`：以前各版量后面几章系统用的台子，现在直接走 `dist/ahead.js`。
 
 ```bash
@@ -77,7 +78,9 @@ npm test                                         # 全部测试
 node scripts/ch1-bot.mjs 1,2,3                   # 第一章机器人，三个种子
 SAVES=/tmp/saves node scripts/ch1-bot.mjs 1      # 顺手每一段存一份档
 python3 scripts/check-ui.py /tmp/saves/seed1-prep.json /tmp/saves/seed1-gate.json /tmp/saves/seed1-end.json
+python3 scripts/check-toasts.py /tmp/saves/seed1-prep.json
 python3 scripts/play-ch1.py /tmp/play 110        # 真键盘鼠标玩一遍，最多 110 分钟
+SAVE=/tmp/saves/seed1-prep.json python3 scripts/play-ch1.py /tmp/drill 8   # 从备战那一段起练 8 分钟
 ```
 
 ## 这一版量出来的数、没做的事
