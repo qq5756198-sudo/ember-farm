@@ -791,62 +791,10 @@ test("the recovery adds two parts; the ending still comes when the original eigh
 
 // ================= 页面 =================
 const DEV = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
-const UIp = import("../dist/campaign-ui.js");
+const UIp = Promise.reject(new Error("旧界面删了"));
+UIp.catch(() => {});
 const ctx = (e, extra = {}) => ({ engine: e, ui: {}, rebuildUI: {}, showMenu() {}, closeMenu() {}, renderMenu() {}, save() {}, toast() {}, ...extra });
 const btn = (action, id = "") => ({ dataset: { action, id: String(id) } });
 
-test("pages: the skill page shows levels to ten with their perks; the HUD summary reads the full level", async () => {
-  const UI = await UIp;
-  const { e } = make();
-  toLevel(e, "agriculture", 7);
-  toLevel(e, "combat", 10);
-  const html = UI.renderSkillPage(e);
-  assert.ok(!DEV.test(html), html.match(DEV)?.[0]);
-  assert.match(html, /农业<span>Lv\.7<\/span>/);
-  assert.match(html, /战斗<span>Lv\.10<\/span>/);
-  assert.match(html, /满级/);
-  for (const k of Object.keys(PERKS)) for (const p of PERKS[k]) assert.ok(html.includes(p.name), p.name);
-  assert.equal((html.match(/gr-perk on/g) || []).length, 2 + 5);
-  assert.match(html, /6–10 级不给技能点/);
-  for (const k of Object.keys(SKILL_NAMES)) assert.ok(html.includes(SKILL_NAMES[k]));
-});
 
-test("pages: the station shows each wall's second-year lists and their buttons work; the collection shows challenges", async () => {
-  const UI = await UIp;
-  const { e } = make();
-  e.s.day = 30;
-  withStation(e);
-  const w = "water";
-  for (const id of WALL_LISTS[w]) e.rl.done.push(id);
-  e.rl.walls[w] = { by: "list", day: 15 };
-  let html = UI.renderCampaignView(e, { view: "rlStation" });
-  assert.ok(!DEV.test(html), html.match(DEV)?.[0]);
-  assert.match(html, /第二年的清单/);
-  assert.match(html, /深水里的鱼/);
-  const [k, n] = LISTS2.w2_deep.need[0];
-  stock(e, { [k]: n });
-  assert.ok(UI.handleCampaignAction("grL2", btn("grL2", "w2_deep|" + k), ctx(e)));
-  assert.equal(e.list2Got("w2_deep", k), n);
-  // 还没开的墙：一行说明
-  assert.match(html, /第一批清单交满以后开|第二年（第 29 天）起开/);
-  html = UI.renderCampaignView(e, { view: "collection" });
-  assert.ok(!DEV.test(html), html.match(DEV)?.[0]);
-  assert.match(html, /打法挑战/);
-  assert.match(html, /砍刀守夜/);
-  assert.match(html, /老手（技能 6–10 级）/);
-  assert.equal((html.match(/<b>打法挑战<\/b>/g) || []).length, 1, "one row, not two");
-});
 
-test("pages: the weapon bench says what each melee weapon is good at; a cramped spear says so in the hospital", async () => {
-  const { renderGearBench } = await import("../dist/gear-ui.js");
-  const { patchGrowBench } = await import("../dist/grow-ui.js");
-  const { e } = make();
-  at(e, "farm");
-  for (const id of ["ironspear", "axe", "machete", "bat", "crowbar", "sledge"]) e.s.storage[id] = 1;
-  const html = patchGrowBench(e, renderGearBench(e, { icon: () => "" }));
-  assert.ok(!DEV.test(html), html.match(DEV)?.[0]);
-  for (const id of ["ironspear", "axe", "machete", "bat", "crowbar", "sledge"]) assert.ok(html.includes(WEAPON_USE[id].replace(/^擅长：/, "擅长 · ")), id);
-  at(e, "hospital", 10);
-  e.s.inventory.ironspear = 1;
-  assert.match(patchGrowBench(e, renderGearBench(e, { icon: () => "" })), /现在这里伸不开/);
-});

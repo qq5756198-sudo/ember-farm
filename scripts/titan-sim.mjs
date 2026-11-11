@@ -16,7 +16,7 @@
 //   凶：hebo scrap zero bear frost diao tide vent train moth；打法：right naive；装备：mid（这凶开出来时手上有的）late（后期）
 // 环境变量：SKILL=0.85 看到预兆的机会；LIMIT=600 一场最长几秒；TRACE=1 打出每一场；TPATCH 换掉某一凶的数（见下）；SEED0=19 从第 20 号种子打起
 const D = new URL("../dist/", import.meta.url).href;
-const { Engine, freshState } = await import(D + "campaign.js");
+const { Engine, freshState } = await import(D + "ahead.js") /* v0.50：这些台子量的是后面几章的系统，不过章节那一层 */;
 const { RULES } = await import(D + "gear-data.js");
 const { TITANS, TRULES, POD_TYPE } = await import(D + "titan-data.js");
 const { BUILDINGS } = await import(D + "data.js");

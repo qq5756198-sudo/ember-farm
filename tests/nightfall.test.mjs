@@ -2,7 +2,7 @@
 // 废墟和隧道里倒下的记号、存档和页面。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, needsUpgrade as needsStoryMigration } from "../dist/ahead.js";
 import * as Grow from "../dist/grow.js";
 import { TASKS } from "../dist/rebuild-data.js";
 import { ITEMS, ZOMBIES, REGIONS } from "../dist/data.js";
@@ -175,42 +175,6 @@ test("phases follow the season and the year: four long nights in a row are four 
   assert.deepEqual(days.map((d) => back.nfPhase(d)), ph);
 });
 
-test("the phase is told a day ahead (morning radio, alert, journal), on the day by an 08:00 card and at 22:00 by one short line", async () => {
-  const UI = await import("../dist/campaign-ui.js");
-  const { alertItems } = await import("../dist/winter-ui.js");
-  const { e, toasts } = postStory(30);
-  const ph = e.nfPhase(FIRST),
-    P = PHASES[ph];
-  // 前一天
-  clock(e, FIRST - 1, 410);
-  run(e, 0.1);
-  assert.ok(!alertItems(e).some((a) => /明晚长夜/.test(a.text)), "not before the 07:00 radio");
-  const parts = e.morningParts(FIRST - 1);
-  assert.match(parts[0], new RegExp("^明晚是长夜，" + P.name + "："));
-  clock(e, FIRST - 1, 430);
-  run(e, 0.1);
-  assert.ok(alertItems(e).some((a) => a.text === "明晚长夜 · " + P.name));
-  assert.ok(e.todayItems().some((x) => x.text === "明天是长夜 · " + P.name));
-  assert.ok(UI.renderCampaignJournal(e, {}).includes("下一个在第 " + FIRST + " 天（明天）· " + P.name + " · 约"));
-  // 当天 08:00：一张卡片，只一张
-  clock(e, FIRST, 470);
-  run(e, 0.2);
-  assert.equal(moments(e, "nfPhase").length, 0);
-  clock(e, FIRST, 481);
-  run(e, 0.5);
-  const cards = moments(e, "nfPhase");
-  assert.equal(cards.length, 1);
-  assert.equal(cards[0].title, "今晚是" + P.name);
-  assert.ok(cards[0].lines.some((l) => l.includes("吃香的")));
-  run(e, 1);
-  assert.equal(moments(e, "nfPhase").length, 1, "once");
-  assert.ok(e.todayItems().some((x) => x.text.startsWith("今晚 22:00 长夜") && x.text.endsWith(" · " + P.name)));
-  // 22:00：一句短的
-  night(e, FIRST);
-  assert.ok(toasts.some((t) => t.text === "今晚是" + P.name + "：" + P.short + "。"));
-  assert.equal(e.nf.seen[ph], FIRST);
-  assert.match(UI.campaignHud(e).raid, new RegExp("长夜 · " + P.name + " · 第 1/3 波"));
-});
 
 test("an old save gets phases only after the day it is loaded, so none comes unannounced, and one card explains", () => {
   const { e } = postStory(30);
@@ -559,63 +523,6 @@ test("the farm sounds like the phase on a long night: rain with thunder, a stron
 });
 
 // ================= 2. 没守住留下的 =================
-test("a lost night always leaves something: a page in the night notes, next morning's card, and the first time for a phase a keepsake; never money", async () => {
-  const UI = await import("../dist/campaign-ui.js");
-  const { e } = postStory(30);
-  e.recruit("medic");
-  const ph = e.nfPhase(FIRST),
-    P = PHASES[ph],
-    item = decorItem(NF_KEEPSAKE[ph]);
-  night(e, FIRST);
-  run(e, 3);
-  const money0 = e.s.money;
-  e.invulnerable = 0;
-  e.damagePlayer(999);
-  assert.equal(e.ln.night, null);
-  assert.equal(e.ln.failed, 1);
-  assert.equal(e.nf.lost[ph], 1);
-  assert.equal(e.nf.hint[ph], FIRST);
-  assert.equal(e.nf.notes.length, 1);
-  assert.equal(e.nf.notes[0].phase, ph);
-  assert.ok(e.s.money <= money0, "no money for losing");
-  // 战报写夜相和记下的那一句
-  const rep = UI.renderCampaignView(e, { view: "lnight" });
-  assert.match(rep, new RegExp("第 1 个长夜 · " + P.name + " · 没守住"));
-  assert.ok(rep.includes("守夜笔记记下了：" + P.hint));
-  assert.doesNotMatch(rep, FORBIDDEN);
-  // 第二天 06:00 前没有卡片
-  e.paused = false;
-  clock(e, FIRST + 1, 300);
-  run(e, 0.2);
-  assert.equal(moments(e, "nfLost").length, 0);
-  clock(e, FIRST + 1, 361);
-  run(e, 0.2);
-  const card = moments(e, "nfLost");
-  assert.equal(card.length, 1);
-  assert.equal(card[0].title, "第 1 个长夜没守住 · " + P.name);
-  assert.ok(MORNING_LINES.medic.includes(card[0].lines[0]), "the medic says it: " + card[0].lines[0]);
-  assert.ok(card[0].lines.some((l) => l.includes(ITEMS[item].name)));
-  assert.equal((e.s.inventory[item] || 0) + (e.s.storage[item] || 0), 1, "the keepsake");
-  assert.equal(e.nf.keep[ph], FIRST + 1);
-  run(e, 1);
-  assert.equal(moments(e, "nfLost").length, 1, "once");
-  // 下一回同样的夜相：前一天的广播多一句
-  const again = FIRST + 56;
-  assert.equal(e.nfPhase(again), ph);
-  assert.ok(e.morningParts(again - 1).some((p) => p.startsWith("上回" + P.name + "没守住，记下了：")));
-  // 同一夜相再输：笔记照记、早上照样一张卡片，不再给纪念物（故意输刷不出东西）
-  night(e, again);
-  e.invulnerable = 0;
-  e.damagePlayer(999);
-  e.paused = false;
-  clock(e, again + 1, 400);
-  run(e, 0.2);
-  assert.equal(moments(e, "nfLost").length, 2);
-  assert.equal(e.nf.notes.length, 2);
-  assert.equal((e.s.inventory[item] || 0) + (e.s.storage[item] || 0), 1, "still one keepsake");
-  assert.equal(ITEMS[item].sell, 0);
-  assert.equal(e.nf.stats.keepsakes, 1);
-});
 
 test("every lost night of a long run leaves a page and a card; the notes keep the last twelve", () => {
   const { e } = postStory(30);
@@ -722,30 +629,3 @@ test("the nightfall record saves and loads; broken records are refused", () => {
 });
 
 // ================= 页面 =================
-test("journal, alerts, report, calendar and the achievements book speak plainly about phases", async () => {
-  const UI = await import("../dist/campaign-ui.js");
-  const { e } = postStory(30);
-  const ph = e.nfPhase(FIRST),
-    P = PHASES[ph];
-  const j = UI.renderCampaignJournal(e, {});
-  assert.match(j, /<b>夜相<\/b>见过 0\/8 种/);
-  assert.doesNotMatch(j, FORBIDDEN);
-  const cal = UI.renderCampaignView(e, { view: "calendar" });
-  assert.ok(cal.includes('<span class="tag danger">长夜 · ' + P.name + "</span>"));
-  clock(e, FIRST, 600);
-  run(e, 0.1);
-  const hud = UI.campaignHud(e);
-  assert.ok(hud.alerts.includes("今晚 22:00 长夜 · " + P.name));
-  const j2 = UI.renderCampaignJournal(e, {});
-  assert.ok(j2.includes("22:00 长夜（第 1 个 · " + P.name + "）"));
-  assert.ok(j2.includes(P.name + "：" + e.nfRule(ph, FIRST)));
-  const rep = UI.renderCampaignView(e, { view: "lnight" });
-  assert.ok(rep.includes("夜相 · 见过 0/8"));
-  assert.ok(rep.includes("今晚：" + P.name));
-  for (const id of PHASE_IDS) assert.ok(rep.includes("<b>" + PHASES[id].name + "</b>"));
-  assert.doesNotMatch(rep, FORBIDDEN);
-  const col = UI.renderCampaignView(e, { view: "collection" });
-  assert.match(col, /见过的夜相/);
-  assert.match(col, /守住过的夜相/);
-  assert.doesNotMatch(col, FORBIDDEN);
-});

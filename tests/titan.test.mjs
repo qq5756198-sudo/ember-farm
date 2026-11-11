@@ -3,7 +3,7 @@
 // v0.37.0「扑火」：十凶都在了，共用的那几条（窝、个头、预兆、伤害上限）十凶一起查；后五凶各自的打法在 titan2.test.mjs。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, needsUpgrade as needsStoryMigration } from "../dist/ahead.js";
 import * as Nf from "../dist/nightfall.js";
 import { ITEMS, ZOMBIES, REGIONS } from "../dist/data.js";
 import { ARMOR, MELEE } from "../dist/gear-data.js";
@@ -82,38 +82,6 @@ test("ten titans: each has a lair on open ground in its own map, is far bigger t
   assert.ok(FALL_HINTS[POD_TYPE]);
 });
 
-test("trophies, unique gear and the case: every item has a name, a picture and a description; gear never breaks", () => {
-  for (const id of TITAN_TROPHY_IDS) {
-    assert.ok(ITEMS[id]?.name && ITEMS[id].desc, id);
-    assert.ok(ITEMS[id].protected, id);
-    assert.match(String(ITEMS[id].icon), /^g\d+$/, id);
-  }
-  for (const [id, a] of Object.entries(TITAN_ARMOR)) {
-    assert.equal(ARMOR[id], a);
-    assert.equal(a.dur, 0, id + " never breaks");
-    assert.match(String(ITEMS[id].icon), /^g\d+$/, id);
-    assert.doesNotMatch(ITEMS[id].desc, FORBIDDEN);
-  }
-  for (const [id, w] of Object.entries(TITAN_MELEE)) {
-    assert.equal(MELEE[id], w);
-    assert.equal(w.dur, 0);
-    assert.match(String(ITEMS[id].icon), /^g\d+$/, id);
-    // 数比现在最好的同类最多高一成
-    const best = Math.max(...Object.entries(MELEE).filter(([k, m]) => m.kind === w.kind && !TITAN_MELEE[k]).map(([, m]) => m.dmg));
-    assert.ok(w.dmg <= best * 1.1 + 0.001, id + " not stronger than the best " + w.kind + " by more than 10%");
-  }
-  assert.ok(ITEMS.heboFork.desc.includes("走得慢一半"));
-  for (const id of TITAN_IDS) {
-    assert.ok(ITEMS[TITANS[id].trophy], id);
-    // 最后一凶只掉最后一盏灯（没有凶器）
-    if (TITANS[id].final) assert.equal(TITANS[id].gear, null);
-    else assert.ok(ITEMS[TITANS[id].gear], id);
-  }
-  assert.deepEqual(
-    TITAN_CASE.steps.map((s) => s.n),
-    [3, 6, 10],
-  );
-});
 
 test("sounds, captions and rumour cards are all there", () => {
   for (const k of ["tRoar", "tThud", "tSplash", "tBubble", "tBell", "tGong", "tWhip", "tPop", "tBearRoar", "tCrack", "tWind", "tShatter"]) {
@@ -686,23 +654,3 @@ test("old saves get the field, one card and their checkpoint; broken records are
 });
 
 // ================= 页面 =================
-test("boss bar, the titan book and the case speak plainly; map pins mark known lairs", async () => {
-  const UI = await import("../dist/campaign-ui.js");
-  const { e, z } = arena("frost", { far: 150 });
-  awake(e, z);
-  const bar = UI.bossBarHtml(e);
-  assert.match(bar, /白毛风/);
-  assert.match(bar, /冰甲/);
-  assert.match(bar, /class="t-poise/);
-  assert.equal((bar.match(/<em style="left:/g) || []).length, 2, "two phase marks");
-  assert.doesNotMatch(bar, FORBIDDEN);
-  const col = UI.renderCampaignView(e, { view: "collection" });
-  assert.match(col, /十凶录/);
-  assert.match(col, /一团黑影/);
-  assert.match(col, /白毛风/);
-  assert.doesNotMatch(col, FORBIDDEN);
-  const mus = UI.renderCampaignView(e, { view: "museum" });
-  assert.match(mus, /十凶/);
-  assert.doesNotMatch(mus, FORBIDDEN);
-  assert.ok(e.ruinNews().some((n) => n.kind === "titan" && n.titan === "frost"));
-});

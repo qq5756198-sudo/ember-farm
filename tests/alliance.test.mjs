@@ -5,8 +5,6 @@ import { Engine as GuidanceEngine, freshState as guidanceFresh } from "../dist/g
 import { freshState as oldEngineFresh } from "../dist/engine.js";
 import { districtDemoState } from "../dist/districts.js";
 import { WELL_SPOT, TERMINAL_SPOT, WELL_COST, CAMP_COST, SUPPLY, storyGoal } from "../dist/alliance-data.js";
-import { renderStoryJournal, handleAllianceAction, storyHud, storyOpening } from "../dist/alliance-ui.js";
-import { preserveBeforeUpgrade, UPGRADE_CHECKPOINT, HISTORY_KEYS, CAMPAIGN_SAVE, CAMPAIGN_BACKUP } from "../dist/player-session.js";
 import { CROPS } from "../dist/data.js";
 
 const make = (state = freshState()) => {
@@ -57,23 +55,6 @@ function playAct1(e) {
   e.interact();
 }
 
-test("new save starts with the alliance letter and the first concrete field step", () => {
-  const { e } = make();
-  assert.deepEqual(
-    { act: e.sc.act, letters: e.sc.letters, unread: e.sc.unread, veteran: e.sc.veteran, helpers: e.sc.helpers },
-    { act: 1, letters: ["act1"], unread: true, veteran: false, helpers: [] },
-  );
-  const g = storyGoal(e);
-  assert.equal(g.step.id, "harvest");
-  assert.match(g.step.title, /清理一块农田/);
-  assert.equal(e.objects.find((o) => o.type === "sign").name, "联盟终端 · 家园留言板");
-  assert.ok(e.objects.some((o) => o.type === "allianceSite"));
-  const html = renderStoryJournal(e, {});
-  for (const line of ["发生了什么", "现在做什么", "完成后获得什么", "标记地点", "楚光来信"]) assert.ok(html.includes(line), line);
-  assert.doesNotMatch(html, /undefined|NaN|试玩|待验证|待完善|开发|版本/);
-  assert.match(storyOpening(e), /联盟终端收到来信/);
-  assert.deepEqual(storyHud(e), { number: "第一段 · 1/5", body: "清理一块农田" });
-});
 
 test("while crops grow the task points to the well, and repairing it charges exactly once", () => {
   const { e, toasts } = make();
@@ -234,51 +215,6 @@ test("the helper eats real bread, carries finished goods, drops and debris, and 
   assert.equal(h.task, "rest");
 });
 
-test("act two completes after the choice, Ahe, her first meal and the table, with rewards only once", () => {
-  const { e } = make();
-  playAct1(e);
-  assert.ok(e.chooseSupply("cotton"));
-  delete e.s.storage.bread;
-  delete e.s.inventory.bread;
-  e.s.region = "residential";
-  e.assignRegion();
-  assert.ok(e.recruit("farmer"));
-  assert.equal(e.sc.flags.farmerFed, false, "no bread means no first meal yet");
-  e.r.finds.push("seedArchive");
-  e.s.region = "farm";
-  e.assignRegion();
-  e.checkStory();
-  assert.ok(e.r.claimed.includes("farmer"));
-  assert.equal(e.s.storage.bread, 2, "the rescue reward brings two meals");
-  delete e.s.storage.bread;
-  at(e, { x: 830, y: 450 });
-  assert.equal(storyGoal(e).step.id, "farmerMeal");
-  assert.match(storyGoal(e).step.text, /没有干粮/);
-  assert.equal(e.feedFarmer(), false);
-  e.s.storage.bread = 4;
-  assert.equal(storyGoal(e).step.kind, "feed");
-  assert.ok(e.feedFarmer());
-  assert.equal(e.s.storage.bread, 3);
-  assert.ok(e.sc.flags.farmerFed);
-  e.c.projects.market = 1;
-  e.s.buildings.push({ id: "t-bench", type: "workbench", x: 1200, y: 760, rotation: 0, hp: 130 });
-  e.s.buildings.push({ id: "t-bed", type: "bed", x: 1260, y: 860, rotation: 0, hp: 90 });
-  const money = e.s.money,
-    rep = e.c.reputation;
-  e.checkStory();
-  assert.ok(e.r.claimed.includes("table"));
-  assert.equal(e.sc.act, 3);
-  assert.ok(e.sc.claimed.includes("act2"));
-  assert.ok(e.sc.letters.includes("act3"));
-  assert.equal(e.s.money, money + 60 + 40, "table reward plus the alliance record");
-  assert.equal(e.c.reputation, rep + 5);
-  const reloaded = new Engine(Engine.parse(e.serialize()));
-  reloaded.checkStory();
-  assert.equal(reloaded.s.money, e.s.money, "reloading never repeats rewards");
-  assert.equal(storyGoal(reloaded), null);
-  assert.match(renderStoryJournal(reloaded, {}), /医院的信号|许医生/);
-  assert.match(renderStoryJournal(reloaded, {}), /棉花地/);
-});
 
 test("meals put fed residents and the helper at the table seats", () => {
   const { e } = make();
@@ -317,30 +253,6 @@ test("cost-free main tasks are recorded on the farm only; delivery tasks still w
   assert.ok(!vet.r.claimed.includes("medical"), "physical delivery is never auto-confirmed");
 });
 
-test("old formal saves join from a letter without losing or re-locking anything", () => {
-  const old = guidanceFresh();
-  old.money = 431;
-  old.day = 9;
-  old.rebuild.claimed = ["harvest", "meal", "farmer", "table"];
-  old.stats.harvested = 12;
-  const text = JSON.stringify(old);
-  assert.ok(needsStoryMigration(text));
-  const expected = GuidanceEngine.parse(text),
-    migrated = Engine.parse(text),
-    { storyCampaign, ...rest } = migrated;
-  assert.deepEqual(rest, expected);
-  assert.equal(storyCampaign.veteran, true);
-  assert.equal(storyCampaign.act, 1);
-  const { e } = make(migrated);
-  const g = storyGoal(e);
-  assert.equal(g.step.id, "well", "harvest and meal already count");
-  assert.match(g.happened, /收成记录/);
-  assert.match(renderStoryJournal(e, {}), /查看主线任务|家园计划/);
-  assert.deepEqual(e.r.claimed, ["harvest", "meal", "farmer", "table"]);
-  const ancient = Engine.parse(JSON.stringify(oldEngineFresh()));
-  assert.equal(ancient.storyCampaign.act, 1);
-  assert.ok(!needsStoryMigration(new Engine().serialize()));
-});
 
 test("story save data round-trips and corrupted story fields are refused", () => {
   const { e } = make();
@@ -366,59 +278,7 @@ test("story save data round-trips and corrupted story fields are refused", () =>
   }
 });
 
-test("the first upgrade keeps the exact old save once, never touching formal or backup keys", () => {
-  const map = new Map(),
-    store = { getItem: (k) => map.get(k) ?? null, setItem: (k, v) => map.set(k, v) };
-  assert.ok(HISTORY_KEYS.includes(UPGRADE_CHECKPOINT));
-  const old = JSON.stringify(guidanceFresh());
-  map.set(CAMPAIGN_SAVE, old);
-  map.set(CAMPAIGN_BACKUP, "spare");
-  assert.ok(preserveBeforeUpgrade(store, needsStoryMigration));
-  const cp = JSON.parse(map.get(UPGRADE_CHECKPOINT));
-  assert.equal(cp.format, "ember-farm-checkpoint");
-  assert.equal(cp.main, old);
-  assert.equal(cp.backup, "spare");
-  map.set(CAMPAIGN_SAVE, new Engine().serialize());
-  assert.equal(preserveBeforeUpgrade(store, needsStoryMigration), false);
-  assert.equal(JSON.parse(map.get(UPGRADE_CHECKPOINT)).main, old, "checkpoint is written only once");
-  assert.equal(map.get(CAMPAIGN_BACKUP), "spare");
-  const fresh = new Map([[CAMPAIGN_SAVE, new Engine().serialize()]]);
-  assert.equal(
-    preserveBeforeUpgrade({ getItem: (k) => fresh.get(k) ?? null, setItem: (k, v) => fresh.set(k, v) }, needsStoryMigration),
-    false,
-  );
-  assert.equal(
-    preserveBeforeUpgrade({ getItem() { throw Error("blocked"); }, setItem() {} }, needsStoryMigration),
-    false,
-  );
-});
 
-test("journal buttons mark real places and perform story actions through the engine", () => {
-  const { e } = make();
-  plant(e);
-  const shown = [];
-  let closed = 0;
-  const c = ctx(e, { showMenu: (m, a) => shown.push([m, a]), closeMenu: () => closed++ });
-  handleAllianceAction("aStoryMark", { dataset: {} }, c);
-  assert.deepEqual(
-    { region: e.guidance.target.region, x: e.guidance.target.x, y: e.guidance.target.y },
-    { region: "farm", ...WELL_SPOT },
-  );
-  assert.equal(closed, 1);
-  at(e, WELL_SPOT);
-  assert.match(renderStoryJournal(e, {}), /就地修好水井/);
-  handleAllianceAction("aStoryDo", { dataset: { id: "well" } }, c);
-  assert.ok(e.sc.flags.well);
-  assert.equal(e.guidance.target, null, "the finished well's marker is taken down");
-  assert.ok(e.events.some((x) => x.type === "clearTarget"));
-  assert.equal(storyGoal(e).step.id, "camp");
-  e.s.region = "market";
-  e.assignRegion();
-  handleAllianceAction("aStoryMark", { dataset: {} }, c);
-  assert.equal(shown.at(-1)[0], "map", "a target in another region opens the map instead of moving the player");
-  assert.equal(e.s.region, "market");
-  assert.equal(handleAllianceAction("gMainAction", { dataset: {} }, c), false);
-});
 
 test("helper never steals the E key from a nearby field or facility", () => {
   const { e } = make();
@@ -515,12 +375,3 @@ test("after act two the residential neighbours trade one meal a day, never charg
   assert.equal(Engine.parse(e.serialize()).storyCampaign.neighborHelps, 2);
 });
 
-test("pressing a world-map place keeps it under the pointer (global :active reset would move it)", async () => {
-  const { readFileSync } = await import("node:fs");
-  const css = (n) => readFileSync(new URL("../dist/" + n, import.meta.url), "utf8");
-  const order = (await import("./style-order.mjs")).styleOrder();
-  assert.ok(order.indexOf("clarity.css") < order.indexOf("wayfinding.css"), "map rules load after the global button reset");
-  assert.match(css("clarity.css"), /button:active\{transform:none\}/);
-  assert.match(css("wayfinding.css"), /\.atlas-node:active\{transform:translate\(-50%,-50%\)\}/);
-  assert.ok(order.includes("alliance.css"));
-});

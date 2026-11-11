@@ -5,7 +5,6 @@ import { Engine as ThiefEngine, freshState as thiefFresh } from "../dist/thief.j
 import { TASKS } from "../dist/rebuild-data.js";
 import { ITEMS, BUILDINGS, CROPS } from "../dist/data.js";
 import { CROP_INFO, BUFFS, CARE, WEEDS, BUGS, CROWS, COVER, FODDER_SOIL, FODDER_FEED, EARLY, LIKED, GARDEN_ITEMS } from "../dist/garden-data.js";
-import { renderCampaignView, campaignTitle, renderCampaignJournal, handleCampaignAction, renderManualPlus, placeTitle } from "../dist/campaign-ui.js";
 import { WEATHER } from "../dist/expansion-data.js";
 
 const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
@@ -85,55 +84,6 @@ test("data: every crop has a buff, soil, liked and feared weather; new items and
 });
 
 // ================= E 在田边 =================
-test("E on a plot: till, open the seed picker, plant from bag or chest, water, tend, then the plot card", () => {
-  const { e, toasts } = make();
-  const p = e.s.plots[1];
-  stand(e, p);
-  assert.match(e.context(e.nearestObject()), /开垦/);
-  e.interact();
-  assert.equal(p.tilled, true);
-  e.events = [];
-  e.interact();
-  assert.deepEqual(e.events.at(-1), { type: "menu", menu: "outpost", view: "gPick", id: String(p.id) });
-  // 选种页：只列手上有的种子，带数字键
-  const html = renderCampaignView(e, { view: "gPick", id: String(p.id) });
-  assert.doesNotMatch(html, FORBIDDEN);
-  assert.match(html, /data-hotkey="1"/);
-  assert.match(html, /萝卜种子/);
-  assert.match(html, /游戏小时熟/);
-  assert.equal(campaignTitle({ view: "gPick" }), "选种");
-  // 仓库里的种子也能直接种
-  delete e.s.inventory.seedPotato;
-  e.s.storage.seedPotato = 2;
-  assert.ok(e.seedOptions(p).some((o) => o.id === "seedPotato" && o.box === 2));
-  handleCampaignAction("gPlant", btn("gPlant", p.id + "|seedPotato"), ctx(e));
-  assert.equal(p.crop, "potato");
-  assert.equal(e.s.storage.seedPotato, 1);
-  assert.equal(e.s.seed, "seedPotato");
-  // v0.32：种下这件日常小事只在头顶飘一下（照料分在田边的提示和这块田的页面里）
-  assert.ok(e.effects.some((f) => f.text === "种下土豆"));
-  assert.ok(!toasts.some((t) => /种下土豆/.test(t.text)));
-  assert.equal(e.g.plots[p.id].pd, e.s.day);
-  // 种下了再按 E：浇水 → 照看 → 打开这块田
-  const c0 = e.careScore(p);
-  e.interact();
-  assert.ok(e.plotWatered(p));
-  assert.equal(e.careScore(p), c0 + CARE.water);
-  const st = e.s.player.stamina;
-  e.interact();
-  assert.equal(e.g.plots[p.id].t, e.s.day);
-  assert.equal(e.careScore(p), c0 + CARE.water + CARE.tend);
-  assert.equal(e.s.player.stamina, st - 1);
-  e.events = [];
-  e.interact();
-  assert.equal(e.events.at(-1).view, "gPlot");
-  const card = renderCampaignView(e, { view: "gPlot", id: String(p.id) });
-  assert.doesNotMatch(card, FORBIDDEN);
-  assert.match(card, /照料分/);
-  assert.match(card, /data-action="gTend"[^>]*disabled/);
-  // 种了作物的田不能再种
-  assert.equal(e.plantSeed(p.id, "seedRadish"), false);
-});
 
 // ================= 搭配 =================
 test("companions: each crop gives its buff only to different crops beside it (not diagonal, not the same crop)", () => {
@@ -510,78 +460,6 @@ test("the first three days grow 1.5× faster; 阿禾 tends 4 plots an hour from 
 });
 
 // ================= 界面 =================
-test("UI: the plot card, the farm board, the journal strip, place pages and every garden button change real state", () => {
-  const { e } = make();
-  e.s.day = 6;
-  const p = plant(e, 1, "tomato");
-  plant(e, 2, "corn");
-  e.g.plots[p.id].b = 1;
-  e.g.plots[p.id].w = 5;
-  // 告示牌
-  const board = renderCampaignView(e, { view: "gBoard" });
-  assert.doesNotMatch(board, FORBIDDEN);
-  assert.match(board, /今天的菜地/);
-  assert.match(board, /这三天的天气/);
-  assert.match(board, /作物怎么搭/);
-  assert.equal(campaignTitle({ view: "gBoard" }), "菜地告示牌");
-  // 营地手册的“农业”一页就是告示牌
-  const farmPage = renderManualPlus(e, "farm", { esc: String, icon: () => "", itemIcon: () => "", costs: () => "", itemName: (id) => id }, {}, {});
-  assert.match(farmPage, /今天的菜地/);
-  assert.doesNotMatch(farmPage, /manual-nav/);
-  assert.equal(placeTitle({ tool: { menu: "frontier", tab: "water" } }, "farm"), "水渠");
-  assert.equal(placeTitle({}, "production"), "生产与加工");
-  // 手记
-  const j = renderCampaignJournal(e, {});
-  assert.match(j, /class="garden-strip"/);
-  assert.doesNotMatch(j, /营地事务与熟悉的功能|data-action="gManage"/);
-  // 这块田的按钮
-  const card = renderCampaignView(e, { view: "gPlot", id: String(p.id) });
-  assert.match(card, /data-action="gWeed"/);
-  assert.match(card, /data-action="gBug"/);
-  handleCampaignAction("gWeed", btn("gWeed", p.id), ctx(e));
-  assert.equal(e.g.plots[p.id].w, 0);
-  handleCampaignAction("gBug", btn("gBug", p.id), ctx(e));
-  assert.equal(e.g.plots[p.id].b, 0);
-  handleCampaignAction("gTend", btn("gTend", p.id), ctx(e));
-  assert.equal(e.g.plots[p.id].t, e.s.day);
-  e.c.water = 5;
-  handleCampaignAction("gWater", btn("gWater", p.id), ctx(e));
-  assert.ok(e.plotWatered(p));
-  e.s.inventory.cloth = 1;
-  handleCampaignAction("gCover", btn("gCover", p.id), ctx(e));
-  assert.ok(e.g.plots[p.id].cv >= e.s.day);
-  const before = JSON.stringify([p.fertility, e.s.inventory, e.s.storage]);
-  handleCampaignAction("gFodder", btn("gFodder", p.id), ctx(e));
-  assert.equal(JSON.stringify([p.fertility, e.s.inventory, e.s.storage]), before, "no fodder, nothing changes");
-  let shown = null;
-  handleCampaignAction("gScare", btn("gScare"), ctx(e, { showMenu: (m, a) => (shown = [m, a.focusBuild]) }));
-  assert.deepEqual(shown, ["build", "scarecrow"]);
-  const soil = !!e.f.soilView;
-  handleCampaignAction("gSoil", btn("gSoil"), ctx(e));
-  assert.equal(e.f.soilView, !soil);
-  ripen(p);
-  e.paused = true; // 菜单开着时世界暂停，页面上的按钮照样管用
-  handleCampaignAction("gHarvest", btn("gHarvest", p.id), ctx(e));
-  // v0.27：番茄收完不用重种，从四成长起再收两茬
-  assert.equal(p.crop, "tomato");
-  assert.equal(p.growth, Math.round(CROPS.tomato.grow * 0.4));
-  const empty = clean(e, 8);
-  e.s.inventory.seedRadish = 2;
-  handleCampaignAction("gPlant", btn("gPlant", empty.id + "|seedRadish"), ctx(e));
-  assert.equal(empty.crop, "radish");
-  e.c.water = 3;
-  handleCampaignAction("gWater", btn("gWater", empty.id), ctx(e));
-  assert.ok(e.plotWatered(empty));
-  assert.equal(e.paused, true);
-  e.paused = false;
-  // 告示牌就是菜地边那块牌子：按 E 打开
-  const sign = e.objects.find((o) => o.type === "frontierBoard");
-  assert.equal(sign.name, "菜地告示牌");
-  Object.assign(e.s.player, { x: sign.x, y: sign.y + 20 });
-  e.events = [];
-  e.interact();
-  assert.equal(e.events.at(-1).view, "gBoard");
-});
 
 // ================= 存档 =================
 test("saves: v0.19 saves load with an empty garden; bad garden data is refused; records for plots that no longer exist are dropped; 30 random days stay finite", () => {
@@ -650,89 +528,4 @@ test("saves: v0.19 saves load with an empty garden; bad garden data is refused; 
 });
 
 // ================= 审查后补的回归 =================
-test("review fixes: no combo from the daily harvest card, fishing comes first, grubs unlock the bait button, 保水 days count as watered", () => {
-  const { e } = make();
-  e.s.day = 6;
-  const plots = [];
-  for (let i = 0; i < 6; i++) plots.push(plant(e, i, "radish"));
-  for (const p of plots) {
-    ripen(p);
-    e.g.plots[p.id].c = 0;
-  }
-  const n0 = e.stockOf("radish");
-  e.applyOp(["harvestRipe"], {}, 1);
-  assert.equal(e.stockOf("radish") - n0, 6 * CROPS.radish.yield, "no combo from a card");
-  assert.equal(e.g.stats.combos, 0);
-  // 钓鱼时按 E 是收线，不是动田
-  const q = clean(e, 20);
-  stand(e, q);
-  e.c.fishing = { elapsed: 0, biteAt: 2, phase: "wait", bait: false };
-  assert.doesNotMatch(e.context(e.nearestObject()) || "", /选种/);
-  e.c.fishing = null;
-  // 只有菜青虫时，“作饵”按钮也能点
-  const pond = e.objects.find((o) => o.type === "pond");
-  if (pond) {
-    Object.assign(e.s.player, { x: pond.x, y: pond.y + 40 });
-    delete e.s.inventory.bean;
-    e.s.inventory.grub = 1;
-    const life = renderManualPlus(e, "farm", { esc: String, icon: () => "", itemIcon: () => "", costs: () => "", itemName: (id) => id }, { tool: { menu: "camp", tab: "life" } }, {});
-    assert.match(life, /data-action="startFishingBait"(?![^>]*disabled)/);
-    assert.match(life, /菜青虫作饵/);
-  }
-  // 保水：被土豆护着的萝卜，第二天不浇也算浇过，照料分照样 +10
-  const { e: f } = make();
-  f.s.day = 6;
-  const rad = plant(f, 20, "radish");
-  plant(f, 21, "potato");
-  f.waterPlot(rad);
-  f.g.plots[rad.id].t = f.s.day;
-  nextDay(f);
-  f.s.weather = "晴朗";
-  // 不让这天下雨替它浇水：只看保水
-  rad.wateredDay = f.s.day - 1;
-  f.g.plots[rad.id].wd = f.s.day - 1;
-  for (const k of Object.keys(f.g.plots)) f.g.plots[k].w = 0;
-  f.g.plots[rad.id].c = 30;
-  const c1 = f.g.plots[rad.id].c;
-  f.g.plots[rad.id].t = f.s.day;
-  f.g.wx = { day: f.s.day, weather: "晴朗" };
-  assert.ok(f.plotWatered(rad));
-  withOdds(WEEDS, { empty: 0, crop: 0 }, () => nextDay(f));
-  // 昨天（保水日）+10；如果今天一早下雨，今天的水也 +10
-  assert.equal(f.g.plots[rad.id].c, Math.min(CARE.cap, c1 + CARE.water + (rad.wateredDay === f.s.day ? CARE.water : 0)));
-  assert.ok(c1 + CARE.water <= CARE.cap, "the test starts below the cap");
-});
 
-test("review fixes: worker replants start a fresh record, partial records load filled, diagonals are not neighbours, the old task marker says what it is", () => {
-  const { e } = make();
-  e.s.day = 6;
-  const p = clean(e, 3);
-  e.g.plots[p.id] = { c: 90, pd: 0, t: 0, wd: 0, w: 5, b: 0, cv: 0, rot: 0, pk: 0 };
-  p.crop = "potato"; // 无人机补种
-  const rec = e.gRec(p);
-  assert.equal(rec.pd, e.s.day);
-  assert.equal(rec.c, CARE.base);
-  assert.equal(rec.w, 5, "the weed stays");
-  // 只有 c 的旧记录：读进来补齐
-  const r = JSON.parse(e.serialize());
-  r.garden.plots[String(e.s.plots[4].id)] = { c: 10 };
-  const back = Engine.parse(JSON.stringify(r));
-  assert.deepEqual(Object.keys(back.garden.plots[String(e.s.plots[4].id)]).sort(), ["b", "c", "cv", "pd", "pk", "rot", "t", "w", "wd"]);
-  // 斜对角不算邻居（生态改耕地的格子只有 28 像素）
-  const base = e.s.idCounter;
-  e.s.plots.push({ id: base, x: 1200, y: 900, tilled: true, crop: "tomato", growth: 0, wateredDay: 0 }, { id: base + 1, x: 1228, y: 928, tilled: true, crop: "corn", growth: 0, wateredDay: 0 }, { id: base + 2, x: 1228, y: 900, tilled: true, crop: "radish", growth: 0, wateredDay: 0 });
-  const t = e.s.plots.find((x) => x.id === base);
-  assert.equal(e.buffsFor(t).yield, false, "the corn is diagonal");
-  assert.equal(e.buffsFor(t).weed, true, "the radish is beside it");
-  // 换一块田，邻居表跟着变
-  e.s.plots = e.s.plots.filter((x) => x.id !== base + 2);
-  e.s.plots.push({ id: base + 3, x: 1200, y: 928, tilled: true, crop: "bean", growth: 0, wateredDay: 0 });
-  assert.equal(e.buffsFor(t).weed, false);
-  assert.equal(e.buffsFor(t).yield, true);
-  // 任务标记
-  const d = e.taskDestination("meal");
-  if (d) assert.doesNotMatch(d.label, /^重建计划板$/);
-  // 选种页能先埋草肥田
-  const empty = clean(e, 8);
-  assert.match(renderCampaignView(e, { view: "gPick", id: String(empty.id) }), /data-action="gFodder"/);
-});

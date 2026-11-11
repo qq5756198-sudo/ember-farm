@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { renderSound, renderLoop, rms } from "../dist/audio-synth.js";
 import { SFX, INSTRUMENTS, PIECES, STINGERS, BEDS, AMBIENCE, REGION_AMBIENCE, SURFACE, INDOOR, soundFor, voiceFor, SOUND_EVENTS, SPACE, MUSIC } from "../dist/audio-data.js";
 import { AudioDirector } from "../dist/audio.js";
-import { Engine, freshState } from "../dist/campaign.js";
+import { Engine, freshState } from "../dist/ahead.js";
 import { REGIONS } from "../dist/data.js";
 
 // ---------- 假的浏览器声音环境：记下建了哪些节点、播了什么 ----------

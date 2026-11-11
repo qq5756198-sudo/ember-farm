@@ -7,7 +7,6 @@ import {demoState as v4Demo} from '../dist/frontier.js';
 import {demoState as v5Demo} from '../dist/rebuild.js';
 import {ECHO_EVENTS} from '../dist/echoes-data.js';
 import {ITEMS,CROPS,RECIPES,BUILDINGS} from '../dist/data.js';
-import {renderEvents,renderWorkReport,renderBattleReport,renderFarmOverlay,renderEchoMap,renderCargoSummary} from '../dist/echoes-ui.js';
 const make=()=>{const e=new Engine(eventDemoState());e.paused=false;e.u.plans={};e.c.nextHordeDay=999;e.s.visited.hospital=true;e.putStorage({wood:80,stone:30,parts:30,circuit:12,cloth:40,cotton:40,radish:80,herb:40,bread:50,ammo:80});return e;};
 const prepare=(e,id)=>{e.paused=false;e.s.minute=600;e.s.player.hunger=100;e.s.player.hp=100;for(const r of e.c.residents){r.fed=true;r.fatigue=0;}let loc=e.echoLocation(id);if(e.s.region!==loc.region){assert.ok(e.travel(loc.region));e.paused=false;loc=e.echoLocation(id);}Object.assign(e.s.player,{x:loc.x,y:loc.y});assert.equal(e.blocked(loc.x,loc.y),false,'event marker must be reachable');for(const [key,n]of Object.entries(e.echoStep(id).cost)){if(!e.costPlan({[key]:n},loc.region==='farm'))assert.ok(e.add({[key]:n}));}};
 function complete(e,id,choice,restore=true){assert.ok(e.acceptEvent(id),id);assert.ok(e.chooseEcho(id,choice));for(let safety=0;e.eventRecord(id).status==='active'&&safety<25;safety++){
@@ -59,8 +58,3 @@ test('four plan upgrade cannot be removed while a fourth job is in flight and ex
  const e=complete(make(),'loadtest','dispatch');Object.assign(e.s.storage,{bread:0,cloth:3,bandage:0,medkit:0});for(const id of ['trailBread','cloth','bandage','medkit'])assert.ok(e.setSupplyPlan(id,12));e.fillSupplyPlans();assert.equal(e.u.autoJobs.length,4);for(const p of Object.values(e.u.plans))p.enabled=false;assert.equal(e.retrofitEcho('loadtest','maintenance'),false);assert.equal(Engine.parse(e.serialize()).supply.autoJobs.length,4);e.processProduction(200);assert.ok(e.retrofitEcho('loadtest','maintenance'));assert.equal(e.droneServiceLimit(),12);e.s.buildings.push({id:'test-drone',type:'drone',hp:BUILDINGS.drone.hp,x:1190,y:850,rotation:0,wear:11});assert.ok(Engine.parse(e.serialize()));assert.ok(e.retrofitEcho('loadtest','dispatch'));assert.equal(e.s.buildings.at(-1).wear,10);assert.ok(Engine.parse(e.serialize()));
 });
 
-test('all six system panels and 20-event catalog render valid human labels; permanent services are visible',()=>{
- const e=make();for(const render of [()=>renderEvents(e,{eventFilter:'all'}),()=>renderWorkReport(e),()=>renderBattleReport(e),()=>renderFarmOverlay(e),()=>renderEchoMap(e,{}),()=>renderCargoSummary(e)])assert.doesNotMatch(render(),/undefined|NaN/);
- const catalog=renderEvents(e,{eventFilter:'all'});assert.equal((catalog.match(/data-action="eSelect"/g)||[]).length,22);assert.equal((catalog.match(/id="event-/g)||[]).length,1);
- for(const d of ECHO_EVENTS){const detail=renderEvents(e,{eventFilter:'all',eventId:d.id});assert.ok(detail.includes('id="event-'+d.id+'"'));assert.ok(detail.includes(d.name));assert.equal((detail.match(/id="event-/g)||[]).length,1);}
-});

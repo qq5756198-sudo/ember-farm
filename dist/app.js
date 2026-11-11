@@ -7,7 +7,7 @@ import { AudioDirector } from "./audio.js";
 import { DISTRICT_ART_IDS, districtAsset } from "./district-art.js";
 import { BEYOND_ART_IDS, beyondAsset } from "./beyond-art.js";
 import { ITEMS, WEAPONS, REGIONS } from "./data.js";
-import { SAVE_KEY, PREFS_KEY } from "./chapter-data.js";
+import { SAVE_KEY, PREFS_KEY, GATE1 } from "./chapter-data.js";
 import { GAME_VERSION, GAME_EDITION, GAME_RELEASE } from "./version.js";
 import { $, $$, esc, paint, setSheets, uiZoom, hhmm } from "./app-kit.js";
 import { hudReset, drawRes, resPopHtml, drawClock, drawAlerts, drawGoal, drawHands, drawDock, drawHint, drawBanner, barkHtml } from "./app-hud.js";
@@ -496,6 +496,8 @@ function easeFrame(dt) {
     if (!c) return;
     // 菜单格那一类旧界面才有；后面几章才能建的先不说
     if (/菜单里多了一格|前三天/.test(c.tag || "")) continue;
+    // 第一章还用不上的（过节、食堂、订单、商队、瞭望塔、电台这些）先不说
+    if (engine.chNow?.() === 1 && /节庆|过节|食堂|订单|商队|摆摊|瞭望塔|电台|广播|夜谈|学徒|过路人|时节|当季/.test([c.name, c.does, c.good, c.now].join(" "))) continue;
     const say = (t) => engine.chSay(String(t || "")) ?? "";
     if (/能建了/.test(c.tag || "") && !/围栏|仓库箱|篝火灶|制作台|居民床位|稻草人|雨水桶|堆肥桶|扩建农田|营地大门|路障陷阱/.test(c.name || "")) continue;
     showTip((c.tag ? c.tag + "：" : "") + c.name, [say(c.does), say(c.good), /菜单|右上角/.test(c.now || "") ? "" : say(c.now)]);
@@ -541,8 +543,8 @@ function goAlert(a) {
   } else if (go.kind === "res") showRes(go.id, $(`.res[data-id="${go.id}"]`));
   else if (go.kind === "page") {
     if (go.page === "event") open("card", "event");
-    else if (go.page === "build") open("drawer", "build", { tab: "guard" });
-    else open("page", go.page, go.page === "journal" ? { tab: "main" } : {});
+    else if (go.page === "build") open("drawer", "build", { tab: "guard", ...(go.ui || {}) });
+    else open("page", go.page, go.ui || (go.page === "journal" ? { tab: "main" } : {}));
   }
 }
 const PAGE_KEYS = { b: ["drawer", "build"], t: ["page", "team"], i: ["page", "store"], tab: ["page", "store"], m: ["page", "map"], j: ["page", "journal"], c: ["page", "store", { tab: "make" }], l: ["page", "journal", { tab: "log" }] };
@@ -752,7 +754,8 @@ document.addEventListener("keydown", (e) => {
   else if (key === "q" && engine.buildMode) engine.rotation = (engine.rotation + 1) % 4;
   else if (key === "v") engine.toggleCrouch?.();
   else if (key === "g") engine.throwStone?.(renderer.worldPoint(mouse.x, mouse.y));
-  else if (key === "f") engine.cycleAim?.();
+  // F：打精英时换瞄准的部位（第三章起才遇得到精英，第一章里不提）
+  else if (key === "f" && engine.chNow?.() > 1) engine.cycleAim?.();
   else if (/^[0-9]$/.test(key)) selectSlot(key === "0" ? 9 : Number(key) - 1);
 });
 document.addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
@@ -865,8 +868,9 @@ function frame(time) {
         }
       }
     }
-    renderer.rebuildTarget = engine.guidance?.target || null;
+    renderer.rebuildTarget = engine.chGateStragglers?.() || engine.guidance?.target || null;
     renderer.draw(engine, mouse, dt);
+    drawLane();
     audio.frame(engine, dt, { menu: !!view, scene: !started, run: input.run, view: wv });
     if (started) easeFrame(dt);
     hudTimer += dt;
@@ -882,11 +886,55 @@ function frame(time) {
   }
   requestAnimationFrame(frame);
 }
+// 第一章摆围栏、大门、陷阱的时候：地上标出尸潮从哪儿进来、往哪儿走（陷阱摆在这条路上才踩得着）
+function drawLane() {
+  if (!engine || !renderer || engine.s.region !== "farm" || engine.chNow?.() !== 1 || engine.chDone?.(1)) return;
+  if (!["trap", "fence", "gate"].includes(engine.buildMode)) return;
+  const L = GATE1.lane,
+    a = renderer.screenPoint(L.x, L.y),
+    b = renderer.screenPoint(L.x - 190, L.y + 4),
+    c = renderer.ctx,
+    k = (renderer.camera?.scale || 1) * 1;
+  c.save();
+  c.setTransform(renderer.dpr, 0, 0, renderer.dpr, 0, 0);
+  c.strokeStyle = "#ff8a75";
+  c.fillStyle = "#ff8a75";
+  c.lineWidth = 2;
+  c.setLineDash([8, 6]);
+  c.beginPath();
+  c.arc(a.x, a.y, 30 * k, 0, Math.PI * 2);
+  c.stroke();
+  c.beginPath();
+  c.moveTo(a.x - 30 * k, a.y);
+  c.lineTo(b.x, b.y);
+  c.stroke();
+  c.setLineDash([]);
+  c.beginPath();
+  c.moveTo(b.x - 12, b.y);
+  c.lineTo(b.x + 4, b.y - 8);
+  c.lineTo(b.x + 4, b.y + 8);
+  c.closePath();
+  c.fill();
+  const text = "它们从这儿进来，顺着路往里走",
+    size = Math.max(14, Math.round(14 * (renderer.hudTop ? renderer.hudTop / 56 : 1)));
+  c.font = "700 " + size + 'px "Microsoft YaHei", "PingFang SC", sans-serif';
+  c.textAlign = "center";
+  const w = c.measureText(text).width + 16,
+    tx = Math.min(renderer.w - w / 2 - 8, Math.max(w / 2 + 8, (a.x + b.x) / 2)),
+    ty = a.y - 30 * k - 14;
+  c.fillStyle = "rgba(21,25,29,0.92)";
+  c.fillRect(tx - w / 2, ty - size, w, size + 10);
+  c.fillStyle = "#ff8a75";
+  c.fillText(text, tx, ty);
+  c.restore();
+}
 function resize() {
   const z = uiZoom(innerWidth, innerHeight);
   document.documentElement.style.setProperty("--z", String(z));
   if (renderer) {
     renderer.resize(innerWidth, innerHeight, devicePixelRatio);
+    renderer.hudTop = Math.round(56 * z);
+    renderer.hudBottom = Math.round(96 * z);
     mouse.x = Math.max(0, Math.min(mouse.x, innerWidth));
     mouse.y = Math.max(0, Math.min(mouse.y, innerHeight));
   }
@@ -945,6 +993,15 @@ async function init() {
 }
 // 自动测试用：只给一份抄下来的数，改不了游戏里的东西
 window.__ember = {
+  // 从你站的地方走到那儿，绕开挡路的东西要经过哪几个点
+  path(x, y) {
+    if (!engine) return [];
+    try {
+      return engine.pathTo(engine.s.player, { x, y }).map((p) => ({ x: p.x, y: p.y }));
+    } catch {
+      return [];
+    }
+  },
   snapshot() {
     if (!engine) return null;
     const s = engine.s;
@@ -966,11 +1023,36 @@ window.__ember = {
         buildings: s.buildings.map((b) => ({ id: b.id, type: b.type, x: b.x, y: b.y })),
         plots: s.plots.map((p) => ({ id: p.id, x: p.x, y: p.y, tilled: p.tilled, crop: p.crop, growth: p.growth })),
         debris: s.debris,
-        enemies: engine.enemies.filter((z) => !z.dead).map((z) => ({ x: z.x, y: z.y, type: z.type })),
+        enemies: engine.enemies.filter((z) => !z.dead && !z.gone).map((z) => ({ x: z.x, y: z.y, type: z.type, lying: !!z.lying })),
+        objects: (engine.objects || []).map((o) => ({ type: o.type, name: o.name || "", x: o.x, y: o.y })),
+        hint: (() => {
+          const o = engine.nearestObject?.();
+          return o ? engine.context(o) : "";
+        })(),
+        food: { portions: engine.foodPortions?.() ?? 0, days: engine.foodDays?.() ?? 0 },
+        prep: engine.chPrepLines(),
+        people: engine.chPeople(),
+        water: engine.c?.water ?? 0,
+        production: (engine.c?.production || []).map((j) => ({ id: j.id, ready: !!j.ready })),
+        trader: Object.fromEntries(["food", "mechanic"].map((t) => [t, engine.s.region === "market" ? engine.traderStock(t) : {}])),
+        tableReq: engine.taskRequirements ? engine.taskRequirements("table").map((r) => ({ label: r.label, pass: !!r.pass })) : [],
+        dailyCard: !!engine.dailyCard?.(),
+        fast,
+        userPaused,
         ch: s.ch,
         goal: engine.chGoal(),
         act: engine.sc?.act,
         buildMode: engine.buildMode,
+        // 手上、身上带着的家伙各剩几成耐久（只读存档里的数）
+        gear: Object.fromEntries(
+          Object.entries(engine.gr?.slots || {})
+            .filter(([, id]) => id)
+            .map(([slot, id]) => {
+              const c = engine.gr.cond?.[id];
+              return [slot, { id, left: c && c.m > 0 ? Math.round((c.d / c.m) * 100) / 100 : 1 }];
+            }),
+        ),
+        fever: !!engine.gr?.fever && !engine.gr?.cure,
         camera: renderer ? { x: renderer.camera.x, y: renderer.camera.y, scale: renderer.camera.scale } : null,
       }),
     );

@@ -6,7 +6,7 @@
 // 用法：node scripts/guide-bot.mjs [种子,种子] [天数]   DIST=别的 dist 目录：拿同一个脚本去跑旧版本对照（旧版本没有上手那一层，只看主线）；FULL=1 小卡上的字全打出来
 // 退出码：有一个种子在给的天数里没做完主线第一段、开局菜单不对、或者要用的菜单格还没出现，就是 1
 const D = process.env.DIST ? new URL("file://" + process.env.DIST.replace(/\/?$/, "/")).href : new URL("../dist/", import.meta.url).href;
-const C = await import(D + "campaign.js");
+const C = await import(D + "ahead.js") /* v0.50：这些台子量的是后面几章的系统，不过章节那一层 */;
 const PJ = await import(D + "player-journey.js");
 const EZ = await import(D + "ease-data.js").catch(() => null);
 

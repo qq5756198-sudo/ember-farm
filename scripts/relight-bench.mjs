@@ -25,7 +25,7 @@
 //   每个种子多一块 fun，最后打一行六个种子合起来的 FUN 汇总：按第 1–3、4–30、31–60、61+ 天分段的每天提示数、金色、
 //   大事卡片、好事之间隔多久（现实秒，游戏里 1.6 分钟 = 现实 1 秒）、一件好事都没有的日子、每周第一次见到的东西、钱。
 const D = new URL("../dist/", import.meta.url).href;
-const { Engine, freshState } = await import(D + "campaign.js");
+const { Engine, freshState } = await import(D + "ahead.js") /* v0.50：这些台子量的是后面几章的系统，不过章节那一层 */;
 const { ITEMS, CROPS, BUILDINGS, RECIPES, REGIONS } = await import(D + "data.js");
 const RD = await import(D + "relight-data.js");
 const KD = await import(D + "kin-data.js");

@@ -3,7 +3,7 @@
 // 电台、档案馆、宵禁、每日抉择、麦穗、手记“今天”，以及存档。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState } from "../dist/campaign.js";
+import { Engine, freshState } from "../dist/ahead.js";
 import { Engine as FeelEngine, freshState as feelFresh } from "../dist/feel.js";
 import { ITEMS, REGIONS, ZOMBIES } from "../dist/data.js";
 import { RULES, RUIN_PACKS, ZSTATS, GRAB_BITE_PARTS, CRAWL_BITE_PARTS } from "../dist/gear-data.js";

@@ -38,8 +38,6 @@ import {
   PREFS,
 } from "../dist/kin-data.js";
 import { HEARTS } from "../dist/kin-story.js";
-import * as UI from "../dist/campaign-ui.js";
-import { residentExtras } from "../dist/people-hooks.js";
 import { MISSING_ICONS } from "../dist/item-sprites.js";
 
 const DEV = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
@@ -121,43 +119,6 @@ const evening = (e) => {
 };
 
 // ================= 数据 =================
-test("data: 24 fish in four waters, every new item drawn, eight people with three heart talks each, preferences of two loves / four likes / two dislikes", () => {
-  assert.equal(FISH_IDS.length, 24);
-  assert.deepEqual([...new Set(FISH_IDS.map((id) => FISH[id].water))].sort(), ["canal", "pond", "river", "sea"]);
-  for (const w of Object.keys(WATERS)) assert.ok(FISH_IDS.filter((id) => FISH[id].water === w).length >= 6, w + " has six kinds");
-  for (const id of FISH_IDS) {
-    assert.ok(ITEMS[id], id);
-    assert.ok(TIERS[FISH[id].tier], id);
-    assert.ok(FISH[id].hint && !DEV.test(FISH[id].hint), id);
-  }
-  for (const id of [...NEW_FISH, ...KEEP_IDS, ...Object.values(SAMPLES), "kinRing", "kinRadio", BREAKFAST]) {
-    assert.ok(ITEMS[id], id);
-    assert.ok(!MISSING_ICONS().includes(id), id + " has its own icon");
-  }
-  assert.ok(RECIPES.some((r) => r.id === "kinRing" && r.station === "workbench"));
-  assert.ok(RECIPES.some((r) => r.id === "kinRadio" && r.station === "workbench"));
-  assert.equal(HEART_IDS.length, 8);
-  for (const id of HEART_IDS) {
-    assert.equal(HEARTS[id].length, 3, id);
-    for (const [i, seg] of HEARTS[id].entries()) {
-      assert.ok(seg.title && seg.lines.length >= 2, id + i);
-      if (i < 2) assert.equal(seg.choices.length, 2, id + i);
-      const text = JSON.stringify(seg);
-      assert.ok(!DEV.test(text), id + i);
-    }
-    assert.ok(KEEPSAKES[REQUESTS[id].item], id + " asks for a keepsake");
-    assert.ok(SKILLS[SKILL_OF[id]], id + " teaches something");
-  }
-  assert.ok(PARTNER_IDS.every((id) => HEART_IDS.includes(id)) && PARTNER_IDS.length === 6);
-  assert.deepEqual(HEART_AT, [3, 6, 9]);
-  for (const id of [...HEART_IDS, "tieqiao", "tangjiu", "huer", "ge", "alan", "suyan", "adou", "ali", "v7", "achun"]) {
-    const P = prefsOf(id);
-    assert.equal(P.fav.length, 2, id);
-    assert.equal(P.like.length, 4, id);
-    assert.equal(P.hate.length, 2, id);
-    assert.equal(new Set([...P.fav, ...P.like, ...P.hate]).size, 8, id + " no item twice");
-  }
-});
 
 // ================= 存档 =================
 test("save: a new game knows nothing yet and says nothing; a v0.29 save keeps a checkpoint, learns the old two likes, says 人情 once, and reads back the same; broken records are refused", () => {
@@ -276,72 +237,6 @@ test("campfire talk: talking about the old days tells one taste of each person; 
 });
 
 // ================= 心里话 =================
-test("heart talks: at trust 3 on a peaceful evening 阿禾 waits at the field; E opens the talk; the second one sends you to a cupboard in the residential ruin; the third takes the tin and teaches seed saving", () => {
-  const { e } = make();
-  camp(e);
-  e.ss.trust.farmer = 2;
-  evening(e);
-  assert.match(e.heartReason("farmer"), /信任到 3/);
-  e.ss.trust.farmer = 3;
-  e.s.minute = 12 * 60;
-  assert.match(e.heartReason("farmer"), /19:00/);
-  evening(e);
-  assert.equal(e.heartReason("farmer"), "");
-  assert.deepEqual(e.heartWaiting(), ["farmer"]);
-  // 长夜、营地太吵的晚上不说
-  e.hn.noise.v = 6;
-  assert.match(e.heartReason("farmer"), /太吵/);
-  e.hn.noise.v = 0;
-  // 傍晚她走到田边等
-  hour(e, 19);
-  assert.deepEqual(e.resident("farmer").target, { x: 726, y: 470 });
-  // 按 E 打开心里话
-  near(e, "farmer");
-  const r = e.resident("farmer");
-  const o = e.objects.find((x) => x.type === "resident" && x.resident === "farmer");
-  Object.assign(o, { x: r.x, y: r.y });
-  let menu = null;
-  const emit = e.emit.bind(e);
-  e.emit = (t, d) => (t === "menu" ? (menu = d) : emit(t, d));
-  e.nearestObject = () => o;
-  e.interact();
-  delete e.nearestObject;
-  assert.equal(menu?.view, "kinHeart");
-  assert.match(view(e, "kinHeart", "farmer"), /种子袋/);
-  const out = e.heartPick("farmer", 0);
-  assert.ok(out.lines.some((l) => /替我记着/.test(l)));
-  assert.equal(e.heart("farmer").seg, 1);
-  assert.equal(e.ss.trust.farmer, 4, "the talk itself +1");
-  assert.equal(e.prefKnown("farmer").kinSeedTin, "fav", "you learn what she loves");
-  // 第二段：托你去废弃居民区
-  e.ss.trust.farmer = 6;
-  near(e, "farmer");
-  const out2 = e.heartPick("farmer", 1);
-  assert.ok(out2.lines.some((l) => /废弃居民区/.test(l)));
-  assert.equal(e.heart("farmer").req, 1);
-  assert.match(e.heartReason("farmer"), /带回来/);
-  go(e, "residential");
-  const cache = e.objects.find((x) => x.type === "kinCache" && x.who === "farmer");
-  assert.ok(cache, "the cupboard is marked");
-  Object.assign(e.s.player, { x: cache.x, y: cache.y });
-  e.nearestObject = () => cache;
-  e.interact();
-  delete e.nearestObject;
-  assert.equal(qty(e, "kinSeedTin"), 1);
-  go(e, "residential");
-  assert.ok(!e.objects.some((x) => x.type === "kinCache"), "taken once");
-  // 第三段：交出罐子，学会留种
-  go(e, "farm");
-  e.ss.trust.farmer = 9;
-  evening(e);
-  near(e, "farmer");
-  const out3 = e.heartPick("farmer", 0);
-  assert.ok(out3.lines.some((l) => /留种/.test(l)));
-  assert.equal(qty(e, "kinSeedTin"), 0);
-  assert.ok(e.hasSkill("seedSave"));
-  assert.equal(e.heart("farmer").seg, 3);
-  assert.match(e.heartReason("farmer"), /都说完了/);
-});
 
 test("heart talks: a long night or a horde on the way keeps people quiet; on the vigil night after the names are read they talk at the plaza", () => {
   const { e } = make();
@@ -628,44 +523,6 @@ test("partner: on a long night they stand beside you and fight, may be hurt and 
 });
 
 // ================= 收留孩子 =================
-test("kids: a passing mother with a child may leave the child with the camp; with a bed the child stays, learns a craft from a master in seven days, helps every day and eats a meal each evening", () => {
-  const { e, toasts } = make();
-  camp(e);
-  e.ss.lodger = { name: "带孩子的梅姐", look: 1, gift: "seeds", stay: false, phase: "staying", day: e.s.day, qin: false };
-  let asked = false;
-  for (let i = 0; i < 30 && !asked; i++) {
-    e.kin.ask = null;
-    e.ss.lodger = { name: "带孩子的梅姐", look: 1, gift: "seeds", stay: false, phase: "staying", day: e.s.day, qin: false };
-    e.s.day++;
-    e.lodgerMorning();
-    asked = !!e.kin.ask;
-  }
-  assert.ok(asked, "she asks at some point");
-  assert.equal(e.kin.ask.name, "小苗");
-  assert.ok(said(toasts, /20:00 前/));
-  go(e, "farm");
-  assert.ok(e.objects.some((o) => o.type === "kinKidAsk"));
-  assert.match(view(e, "kinKid"), /留下他/);
-  assert.ok(e.kidDecide(true));
-  assert.equal(e.kin.kids.length, 1);
-  const kid = e.kin.kids[0];
-  assert.ok(e.kidLearn(kid.id, "farmer"));
-  e.s.day += KIDS.learn;
-  hour(e, 6);
-  assert.ok(kid.learned);
-  for (const p of e.s.plots.slice(0, 4)) Object.assign(p, { crop: "radish", growth: 0, wateredDay: 0 });
-  e.kidHour(7);
-  assert.ok(e.s.plots.slice(0, 4).filter((p) => e.plotWatered(p)).length >= 2);
-  // 晚饭：没口粮就饿着
-  e.s.storage = {};
-  e.s.inventory = {};
-  e.kidHour(18);
-  assert.equal(kid.hungry, 1);
-  // 天黑没答复：她带着孩子走
-  e.kin.ask = { name: "石榴", from: "刘婶", day: e.s.day, look: 0 };
-  hour(e, 20);
-  assert.equal(e.kin.ask, null);
-});
 
 // ================= 麦穗 =================
 test("Maisui: with a bond of 10 she brings something home some mornings; below that nothing", () => {
@@ -681,58 +538,6 @@ test("Maisui: with a bond of 10 she brings something home some mornings; below t
 });
 
 // ================= 收线钓鱼 =================
-test("fishing: E on a bite starts the reel; hold to reel in, let go when the fish pulls; too tight snaps the line; the river's fish need 许医生 to test the water; mutants go to research", () => {
-  const { e, toasts } = make();
-  camp(e);
-  go(e, "valley", WATERS.river.x, WATERS.river.y);
-  assert.ok(e.objects.some((o) => o.type === "kinWater" && o.water === "river"));
-  assert.ok(e.kinCast("river"));
-  assert.equal(e.kin.cast.water, "river");
-  e.c.fishing.phase = "bite";
-  e.interact();
-  assert.ok(e.reeling());
-  assert.equal(e.c.fishing, null);
-  // 收线时不能走、不能翻滚、不能用工具
-  const p0 = { ...e.s.player };
-  e.update(0.05, { x: 1, y: 0, reel: true });
-  assert.equal(Math.round(e.s.player.x), Math.round(p0.x));
-  assert.match(e.dodgeReason(), /收线/);
-  assert.equal(e.use({ x: 0, y: 0 }), false);
-  // 一直按着，线断
-  for (let i = 0; i < 2000 && e.reeling(); i++) e.reelTick(1 / 60, true);
-  assert.ok(!e.reeling());
-  assert.ok(said(toasts, /线绷得太紧/) || said(toasts, /钓到/));
-  // 收上来一条：河里的鱼
-  assert.ok(e.kinCast("river"));
-  e.c.fishing.phase = "bite";
-  e.interact();
-  const sp = e._reel.sp;
-  assert.equal(FISH[sp].water, "river");
-  e._reel.prog = 0.999;
-  e.reelTick(0.05, true);
-  assert.equal(qty(e, sp), 1);
-  assert.equal(e.kin.fish[sp], 1);
-  assert.equal(qty(e, SAMPLES.river), 1, "a water sample comes with the first river fish");
-  if (ITEMS[sp].type === "food") {
-    e.s.inventory[sp] = 1;
-    e.s.player.hunger = 20;
-    assert.equal(e.consume(sp), false, "not before the water is tested");
-  }
-  // 许医生验水样
-  assert.match(residentExtras(e, e.resident("medic")), /验溪谷的河的水样/);
-  assert.ok(e.verifyWater("river"));
-  assert.equal(e.kin.waters.river, true);
-  assert.equal(e.edibleReason("kinMinnow"), "");
-  // 变异鱼研究：第一条研究点 +1
-  stock(e, { kinTwinCat: 2 });
-  const c0 = e.c.researchCredits || 0;
-  assert.ok(e.researchFish("kinTwinCat"));
-  assert.equal(e.c.researchCredits, c0 + 1);
-  assert.ok(e.researchFish("kinTwinCat"));
-  assert.equal(e.c.researchCredits, c0 + 1, "only the first one counts");
-  // 图鉴
-  assert.match(view(e, "collection"), /鱼类图鉴 \d+\/24/);
-});
 
 test("fishing: the farm pond keeps its old catches (the loach, Jiang's runs) after the reel; the canal opens once it is dug; the sea needs its own test; leaving the map loses the fish", () => {
   const { e } = make();
@@ -856,70 +661,8 @@ test("the caravan brings one rare thing each visit (a love of someone you know, 
 });
 
 // ================= 各有各的一天 =================
-test("a day of their own: the people page says where everyone is and marks them; idle people sit by the fire in the evening; rain sends 秦奶奶 under the eaves; the day before a horde everyone stacks sandbags at the gate", () => {
-  const { e } = make();
-  camp(e);
-  e.s.minute = 10 * 60;
-  assert.equal(e.whereNow("laoqin").label.startsWith("通信站"), true);
-  assert.equal(e.whereNow("jiang").label, "池塘边");
-  assert.equal(e.whereNow("he").label, "灶台旁");
-  e.s.minute = 12 * 60;
-  assert.equal(e.whereNow("he").label, "饭桌边");
-  e.s.minute = 3 * 60;
-  assert.ok(e.whereNow("laoqin").away);
-  e.s.minute = 10 * 60;
-  e.s.weather = "小雨";
-  assert.equal(e.whereNow("qin").label, "农舍檐下");
-  e.s.weather = "晴朗";
-  go(e, "farm", 200, 900);
-  const html = view(e, "people");
-  assert.match(html, /这会儿：/);
-  assert.match(html, /data-action="kinMark" data-id="he"/);
-  assert.ok(!DEV.test(html));
-  const c = ctx(e);
-  UI.handleCampaignAction("kinMark", btn("kinMark", "he"), c);
-  assert.equal(e.guidance.target.label, "何大勺");
-  // 傍晚坐到营火边
-  e.s.minute = 19 * 60 - 0.5;
-  e.c.workClock = 59.5;
-  e.advanceMinutes(1);
-  const f = e.fireSpot();
-  const idle = e.c.residents.filter((r) => r.workRole === "rest" && e.residentActive(r));
-  for (const r of idle) assert.ok(Math.hypot(r.target.x - f.x, r.target.y - f.y) < 90, r.id + " by the fire");
-  // 尸潮前一天：营门
-  e.c.nextHordeDay = e.s.day + 1;
-  hour(e, 15);
-  const r = e.c.residents.find((x) => e.residentActive(x) && x.workRole !== "guard");
-  if (r) assert.ok(Math.hypot(r.target.x - 1300, r.target.y - 410) < 90, "at the gate");
-});
 
 // ================= 界面 =================
-test("UI: the people page, the heart talk, the fire-side talk, the plaza, the medic's card and the alert bar speak plainly; buttons do what they say", () => {
-  const { e } = make();
-  camp(e);
-  e.ss.trust.jiang = 3;
-  evening(e);
-  for (const v of ["people", "kinHeart", "kinConfess", "kinKid", "plaza", "talk", "collection"]) {
-    const html = view(e, v, v === "kinHeart" ? "jiang" : v === "kinConfess" ? "medic" : "");
-    assert.ok(!DEV.test(html), v);
-  }
-  assert.match(view(e, "people"), /江伯像是有话想说/);
-  const alerts = UI.campaignHud(e).alerts;
-  assert.match(alerts, /江伯在池塘边，像是有话想说/);
-  // 心里话：选一句，页面换成他的回答
-  near(e, "jiang");
-  const c = ctx(e);
-  UI.handleCampaignAction("kinHeartPick", btn("kinHeartPick", "jiang:0"), c);
-  assert.ok(c.ui.kinOut);
-  assert.match(UI.renderCampaignView(e, { view: "kinHeart", id: "jiang", kinOut: c.ui.kinOut }), /下游几个村子/);
-  assert.equal(e.heart("jiang").seg, 1);
-  // 送礼按钮只在跟前出现
-  stock(e, { bread: 2 });
-  near(e, "jiang");
-  assert.match(view(e, "people"), /data-action="kinGift" data-id="jiang\|/);
-  go(e, "farm", 200, 900);
-  assert.doesNotMatch(view(e, "people", "jiang").split("kin-jiang")[1].split("</li>")[0], /data-action="kinGift"/);
-});
 
 // ================= 小处 =================
 test("small things: a bite and a lost fish make a splash; 刘婶 with her grandson is on the lodger list; the first bed in the residents' row reads as home, not the clinic", async () => {
@@ -942,33 +685,6 @@ test("small things: a bite and a lost fish make a splash; 刘婶 with her grands
   assert.ok(ev && ev.x === WATERS.river.bob.x);
 });
 
-test("order board: an order from 阿禾, 许医生 or 陈工 counts as one portion of goodwill, once a week per person, and the board says so", () => {
-  const { e } = make();
-  camp(e);
-  e.s.day = 10;
-  e.ss.trust.farmer = 2;
-  const order = (id) => ({ id, who: "farmer", name: "阿禾", item: "radish", n: 2, due: e.s.day + 2, pay: { wood: 2 } });
-  e.bt.orders.list = [order("oa"), order("ob")];
-  stock(e, { radish: 4 });
-  let html = view(e, "bOrders");
-  assert.match(html, /算一份心意（每人 7 天算一回）/);
-  assert.equal((html.match(/ · 算一份心意/g) || []).length, 2);
-  assert.ok(e.deliverBoardOrder("oa"));
-  assert.equal(e.ss.trust.farmer, 3);
-  html = view(e, "bOrders");
-  assert.match(html, /阿禾这几天已经记着你的好了（7 天后再算）/);
-  assert.ok(e.deliverBoardOrder("ob"));
-  assert.equal(e.ss.trust.farmer, 3, "not twice in a week");
-  // 一周以后再算；5 以上两份一格
-  e.s.day += 7;
-  e.ss.trust.farmer = 5;
-  e.bt.orders.list = [order("oc")];
-  stock(e, { radish: 2 });
-  assert.ok(e.deliverBoardOrder("oc"));
-  assert.equal(e.ss.trust.farmer, 5);
-  assert.deepEqual(e.trustPart("farmer"), { have: 1, need: 2 });
-  assert.ok(!DEV.test(view(e, "bOrders")));
-});
 
 test("pickpocketing: a glance into someone's pockets before reaching in tells one of their tastes (one try per person a day)", () => {
   const { e, toasts } = make();

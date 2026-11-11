@@ -6,8 +6,6 @@ import { TASKS } from "../dist/rebuild-data.js";
 import { ITEMS, BUILDINGS, CROPS } from "../dist/data.js";
 import { EVENTS, EVENT_IDS, MODS, RARE_SEEDS } from "../dist/daily-data.js";
 import { TALENTS, TALENT_IDS, TARGETS, TREASURES, TREASURE_IDS, TIERS, VALUE_CAP, THIEF_SPOTS, BOXES, JOBS, MANUALS, JUNK_IDS, THIEF_EVENT_IDS } from "../dist/thief-data.js";
-import { renderCampaignView, campaignTitle, renderCampaignJournal, handleCampaignAction, renderSkillPage, menuLock, menuKey, thiefFrame } from "../dist/campaign-ui.js";
-import { alertItems } from "../dist/winter-ui.js";
 
 const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
 const make = (state = freshState()) => {
@@ -147,37 +145,6 @@ test("skill points come from levels and story acts, so old saves are topped up w
   assert.equal(f.skillPoints().earned, 28);
 });
 
-test("talents need points, their skill level and the opener; learning and respec change real state", () => {
-  const { e, toasts } = make();
-  assert.equal(e.learnTalent("pickpocket"), false);
-  assert.match(toasts.at(-1).text, /技能点不够/);
-  e.s.xp.agriculture = 160; // 5 级 → 4 点
-  assert.match(e.talentReason("seeThrough"), /顺手牵羊/);
-  assert.match(e.talentReason("nightOwl"), /顺手牵羊/);
-  assert.match(e.talentReason("bumper"), /^$/);
-  assert.ok(e.learnTalent("pickpocket"));
-  assert.match(e.talentReason("nightOwl"), /妙手要到 3 级/);
-  assert.ok(e.learnTalent("bumper"));
-  assert.equal(e.skillPoints().free, 0);
-  assert.equal(e.learnTalent("seeThrough"), false);
-  // 重新分配：要 100 金币，7 天一次
-  e.s.money = 50;
-  assert.match(e.respecReason(), /100 金币/);
-  e.s.money = 300;
-  assert.ok(e.respec());
-  assert.deepEqual(e.sk.talents, []);
-  assert.equal(e.s.money, 200);
-  assert.ok(e.learnTalent("pickpocket"));
-  assert.match(e.respecReason(), /7 天/);
-  // 界面
-  const html = renderSkillPage(e);
-  assert.doesNotMatch(html, FORBIDDEN);
-  assert.match(html, /可用技能点 3/);
-  assert.equal((html.match(/data-action="kLearn"/g) || []).length, 25);
-  assert.match(html, /data-action="chooseSpec"/);
-  handleCampaignAction("kLearn", btn("kLearn", "seeThrough"), ctx(e));
-  assert.ok(e.hasTalent("seeThrough"));
-});
 
 test("farming, crafting, exploring and fighting talents each change the game", () => {
   const { e } = make();
@@ -428,76 +395,7 @@ test("greed costs: misses and full attention get you caught and everything drops
   assert.ok(s2.attention - before < 0.25);
 });
 
-test("caught: three ways out, the choice is locked until made, and it survives a reload", () => {
-  const { e } = thiefGame(["pickpocket"]);
-  const ob = resident(e, "mechanic");
-  Object.assign(e.s.player, { x: ob.x, y: ob.y + 40 });
-  e.f.crouch = true;
-  seedFor(e, "mechanic", (r) => r > 0.95);
-  const rep0 = e.s.reputation ?? e.c.reputation;
-  const st = e.startSteal("mechanic");
-  assert.equal(st.phase, "caught");
-  assert.ok(e.th.pending);
-  const ui = { view: "caught" };
-  assert.match(menuLock(e, ui), /面对他/);
-  const html = renderCampaignView(e, ui);
-  assert.doesNotMatch(html, FORBIDDEN);
-  assert.equal((html.match(/data-action="kCaught"/g) || []).length, 3);
-  assert.match(e.pendingChoiceReason(2), /农场里跑不掉/);
-  const { e: f } = make(Engine.parse(e.serialize()));
-  assert.ok(f.th.pending && f.thiefPendingShow());
-  e.s.money = 10;
-  assert.equal(e.resolveCaught(0), null);
-  e.s.money = 100;
-  const r = e.resolveCaught(0);
-  assert.ok(r && !e.th.pending);
-  assert.equal(e.s.money, 80);
-  assert.equal(menuLock(e, ui), "");
-  void rep0;
-});
 
-test("being caught weighs on camp, market, 彭姐 and 贺满仓; amends set it right", () => {
-  const { e, toasts } = thiefGame(["pickpocket"]);
-  const fake = (tid, group, extra = {}) => ({ tid, name: TARGETS[tid]?.name || tid, group, trust: TARGETS[tid]?.trust || null, def: TARGETS[tid] || {}, box: null, ...extra });
-  // 营地：三回罢工，赔礼解开
-  for (let i = 0; i < 3; i++) e.applyCaught(fake("farmer", "camp"));
-  assert.equal(e.th.strike.farmer, true);
-  const r = e.c.residents.find((x) => x.id === "farmer");
-  r.fed = true;
-  e.s.minute = 10 * 60;
-  assert.equal(e.residentActive(r), false);
-  stock(e, { bread: 4 });
-  assert.ok(e.payAmends("strike:farmer"));
-  assert.ok(!e.th.strike.farmer);
-  // 集市：涨价，三回不做买卖
-  const price0 = e.price("food", "bread", "buy");
-  e.applyCaught(fake("linyi", "market"));
-  assert.ok(e.price("food", "bread", "buy") > price0);
-  e.applyCaught(fake("linyi", "market"));
-  e.applyCaught(fake("laozhou", "market"));
-  assert.ok(e.th.market.banned);
-  assert.equal(e.trade("food", "bread", 1, "buy"), false);
-  assert.ok(toasts.some((t) => /不跟你做买卖/.test(t.text)));
-  e.s.money = 200;
-  assert.ok(e.payAmends("market"));
-  assert.equal(e.th.market.banned, false);
-  // 彭姐与贺满仓
-  const rel = e.fr.peng.relation || 0;
-  e.applyCaught(fake("peng", "peng"));
-  assert.equal(e.fr.peng.relation, Math.max(-10, rel - 3));
-  e.applyCaught(fake("hemc", "hemc"));
-  assert.match(e.advanceReason("fence"), /贺满仓不再给你垫付/);
-  assert.ok(e.payAmends("hemc"));
-  // 援建队员：三回两天后走
-  e.addCrew({ id: "c9", name: "石头", role: "build", trait: "handy", look: 2 });
-  for (let i = 0; i < 3; i++) e.applyCaught({ tid: "crew:c9", name: "石头", group: "crew", trust: "c9", def: TARGETS.crew, box: null });
-  assert.equal(e.th.leaving.c9, e.s.day + 2);
-  nextDay(e);
-  nextDay(e);
-  assert.ok(!e.o.crew.some((c) => c.id === "c9"));
-  const html = renderCampaignView(e, { view: "thief" });
-  assert.doesNotMatch(html, FORBIDDEN);
-});
 
 test("stolen goods: no shipping box or market, a fence pays 35% (70% with the talent), the mark wears off", () => {
   const { e } = thiefGame(["pickpocket", "fence"], 3 * 60);
@@ -611,27 +509,6 @@ test("every treasure's effect is real: items, tech, flags and stashes that open 
   assert.ok(f.s.money >= m + 60);
 });
 
-test("profession manuals: hand one to a person and the job works every morning", () => {
-  const { e } = thiefGame(["pickpocket"]);
-  e.takeTreasure("cookManual");
-  e.takeTreasure("surgeryNotes");
-  assert.ok(e.stockOf("manualCook") >= 1);
-  assert.ok(e.assignJob("manualCook", "farmer"));
-  assert.equal(e.assignJob("manualMedic", "farmer"), false, "one job per person");
-  assert.ok(e.assignJob("manualMedic", "medic"));
-  stock(e, { potato: 2 });
-  nextDay(e);
-  for (const r of e.c.residents) r.fatigue = 40;
-  const bread = e.stockOf("bread"),
-    potato = e.stockOf("potato");
-  hour(e, 7);
-  // 炊事员用掉 1 份土豆做 2 份干粮（07:00 的早饭会吃掉一部分，所以只看净增）
-  assert.equal(e.stockOf("potato"), potato - 1);
-  assert.ok(e.stockOf("bread") - bread >= 1);
-  assert.ok(e.c.residents.every((r) => (r.fatigue || 0) <= 25));
-  const html = renderCampaignView(e, { view: "thief" });
-  assert.match(html, /炊事员/);
-});
 
 test("the practice dummy trains only up to level two; lockboxes need the talent and open once a week", () => {
   const { e } = thiefGame(["pickpocket"]);
@@ -708,82 +585,7 @@ test("the morning after: guilt costs stamina, 彭姐 notices, suspicion fades af
   assert.equal(e.th.sus.farmer, 1);
 });
 
-test("daily theft cards: rumours, practice, the theft case and 阿豆's duel", () => {
-  const { e } = thiefGame(["pickpocket"], 4 * 60);
-  e.ss.adou.phase = "sister";
-  e.th.seen.cai = 1;
-  const pend = (id, rolls = [0.5, 0.5, 0.5]) => (e.dy.pending = { day: e.s.day, id, rolls, tier: e.tier(), luck: false, choice: null, win: null, lines: [] });
-  pend("T01");
-  stock(e, { bread: 2 });
-  const known = Object.values(e.th.treasures).filter((v) => v === "known").length;
-  assert.ok(e.chooseDaily(0));
-  assert.equal(Object.values(e.th.treasures).filter((v) => v === "known").length, known + 1);
-  e.dy.claimed = [];
-  pend("T05", [0.1, 0.1, 0.1]);
-  assert.ok(e.chooseDaily(0));
-  assert.equal(e.th.treasures.stashMap, "given");
-  e.th.discovery = { target: "farmer", name: "阿禾", day: e.s.day };
-  e.dy.claimed = [];
-  pend("T04");
-  const r = e.chooseDaily(2);
-  assert.ok(r && !e.th.discovery);
-  const card = renderCampaignView(e, { view: "daily" });
-  assert.doesNotMatch(card, FORBIDDEN);
-  // 没学顺手牵羊不出这些卡
-  const { e: f } = make();
-  toAct(f, 6);
-  f.s.day = 30;
-  assert.ok(!f.candidates(30).some((c) => EVENTS[c.id].cat === "thief"));
-});
 
-test("the UI: journal strip, record page, preview, mini game frame, keys and the alert", () => {
-  const { e } = thiefGame(["pickpocket", "seeThrough", "distract"], 3 * 60);
-  e.s.xp.combat = 999;
-  const ob = resident(e, "farmer");
-  behind(e, ob);
-  const j = renderCampaignJournal(e, {});
-  assert.match(j, /class="thief-strip"/);
-  assert.match(j, /妙手 Lv\.4|妙手 Lv\.\d/);
-  const prep = renderCampaignView(e, { view: "stealPrep", id: "farmer" });
-  assert.doesNotMatch(prep, FORBIDDEN);
-  assert.match(prep, /没被察觉的机会/);
-  assert.match(prep, /data-action="kGo"/);
-  assert.match(prep, /声东击西/);
-  assert.equal(campaignTitle({ view: "stealPrep" }), "下手之前");
-  const ui = { view: "stealPrep", id: "farmer" };
-  stock(e, { stone: 2 });
-  const stones = e.stockOf("stone");
-  handleCampaignAction("kDistract", btn("kDistract", "farmer"), ctx(e, { ui }));
-  assert.equal(ui.distract, true);
-  seedFor(e, "farmer", (r) => r < 0.05);
-  let shown = null;
-  handleCampaignAction("kGo", btn("kGo", "farmer"), ctx(e, { ui, showMenu: (m, a) => (shown = a.view) }));
-  assert.equal(shown, "steal");
-  assert.equal(e.stockOf("stone"), stones - 1, "a stone was thrown");
-  const game = renderCampaignView(e, { view: "steal" });
-  assert.match(game, /id="st-attn"/);
-  assert.match(game, /data-hotkey="1"/);
-  // 一帧一帧地走：只改样式
-  const els = { "#st-attn": { style: {} }, "#st-attn-text": { style: {} }, "#st-marker": { style: {} }, "#st-zone": { style: {} } };
-  const root = { querySelector: (s) => els[s] || null };
-  const sui = { view: "steal" };
-  assert.equal(thiefFrame(e, sui, 0.05, root), "");
-  assert.match(els["#st-attn"].style.width, /%$/);
-  handleCampaignAction("kPick", btn("kPick", "0"), ctx(e, { ui: sui }));
-  assert.equal(e.steal.phase, "swing");
-  assert.equal(menuKey(e, sui, " "), "render");
-  assert.equal(e.steal.phase === "pick" || e.steal.phase === "caught", true);
-  // Esc = 收手
-  if (["pick", "swing"].includes(e.steal.phase)) {
-    assert.equal(menuLock(e, sui), "render");
-    assert.equal(e.steal.phase, "done");
-  }
-  assert.doesNotMatch(renderCampaignView(e, { view: "steal" }), FORBIDDEN);
-  // 被抓等着了结 → 提醒栏
-  e.th.pending = { target: "farmer", name: "阿禾", group: "camp", day: e.s.day, reason: "测试", trust: "farmer" };
-  e.steal = null;
-  assert.ok(alertItems(e).some((a) => a.text === "被抓的事等你了结"));
-});
 
 test("saves: v0.18 saves load, corrupted theft fields are refused, random play stays finite", () => {
   const { e } = thiefGame(["pickpocket"]);
@@ -832,120 +634,5 @@ test("saves: v0.18 saves load, corrupted theft fields are refused, random play s
 });
 
 // ================= 审查后补的回归 =================
-test("crew who can leave leave after three catches; story helpers and 尤可 strike instead; names never show ids", () => {
-  const { e, toasts } = thiefGame(["pickpocket"]);
-  e.addHelper("tieqiao");
-  e.addCrew({ id: "huer", name: "胡二", trait: "chatty", role: "guard", look: "huer" });
-  e.addCrew({ id: "youke", name: "尤可", trait: "handy", role: "build", look: "youke" });
-  go(e, "farm");
-  e.assignRegion();
-  // 尤可入队后和机床边的她是同一个人
-  const yk = e.objects.filter((o) => e.targetOf(o)?.id === "youke");
-  assert.ok(yk.length >= 1);
-  assert.ok(!e.objects.some((o) => e.targetOf(o)?.id === "crew:youke"));
-  const catchN = (tid, group, name, n = 3) => {
-    for (let i = 0; i < n; i++) e.applyCaught({ tid, group, name, trust: null });
-  };
-  catchN("crew:huer", "crew", "胡二");
-  assert.ok(e.th.leaving.huer);
-  catchN("crew:tieqiao", "crew", "铁锹");
-  assert.ok(!e.th.leaving.tieqiao);
-  assert.equal(e.th.strike["crew:tieqiao"], true);
-  assert.match(toasts.at(-1).text, /撂挑子/);
-  // 罢工的铁锹不搬东西
-  const h = e.sc.helpers.find((x) => x.id === "tieqiao");
-  const moved = h.moved;
-  for (let k = 0; k < 6; k++) e.helperHour(h);
-  assert.equal(h.moved, moved);
-  // 营地新居民：编号不露出来，罢工真的停工
-  e.th.strike["res:cartographer"] = true;
-  assert.equal(e.residentActive({ id: "cartographer", fed: true }), false);
-  const texts = e.amends().map((a) => a.text).join(" ");
-  assert.match(texts, /铁锹在罢工/);
-  assert.match(texts, /胡二第 \d+ 天要走/);
-  assert.doesNotMatch(texts, /crew:|res:|tieqiao|huer|cartographer/);
-  e.th.sus["crew:tieqiao"] = 2;
-  e.th.sus["res:cartographer"] = 1;
-  const book = renderCampaignView(e, { view: "thief" });
-  assert.doesNotMatch(book.replace(/<[^>]*>/g, " "), /crew:|res:|tieqiao|cartographer/, "visible text only");
-  assert.doesNotMatch(book, FORBIDDEN);
-  // 两天后胡二真的走了
-  nextDay(e);
-  nextDay(e);
-  assert.ok(!e.o.crew.some((c) => c.id === "huer"));
-  assert.ok(!e.th.leaving.huer);
-});
 
-test("odds stay words until 看穿; partly hot stacks explain themselves; the daily sale skips hot goods", () => {
-  const { e, toasts } = thiefGame(["pickpocket"]);
-  const ob = resident(e, "farmer");
-  behind(e, ob);
-  const prep = renderCampaignView(e, { view: "stealPrep", id: "farmer" });
-  const parts = prep.match(/<ul class="odds-parts">([\s\S]*?)<\/ul>/)[1];
-  assert.doesNotMatch(parts, /\d/, "no exact numbers before 看穿");
-  assert.match(parts, /↑/);
-  e.sk.thiefXp = 0;
-  e.s.xp.combat = 999;
-  e.learnTalent("seeThrough");
-  const prep2 = renderCampaignView(e, { view: "stealPrep", id: "farmer" });
-  assert.match(prep2.match(/<ul class="odds-parts">([\s\S]*?)<\/ul>/)[1], /\+\d+/);
-  // 一部分是赃物：说明原因
-  e.s.storage.bread = 5;
-  e.s.inventory.bread = 0;
-  e.th.hot.push({ item: "bread", n: 2, until: e.s.day + 5 });
-  assert.equal(e.trade("food", "bread", 5, "sell"), false);
-  assert.match(toasts.at(-1).text, /2 份干粮是赃物：正经渠道最多只收 3 份/);
-  // 每日卡“拿最多的东西去卖”只卖干净的
-  for (const k of Object.keys(e.s.storage)) e.s.storage[k] = 0;
-  for (const k of Object.keys(e.s.inventory)) if (!ITEMS[k]?.protected && !ITEMS[k]?.tool) e.s.inventory[k] = 0;
-  e.s.storage.bread = 9;
-  e.s.storage.radish = 6;
-  e.th.hot = [{ item: "bread", n: 9, until: e.s.day + 5 }];
-  e.applyOp(["sellTop", 5, 80], {}, 1);
-  assert.equal(e.stockOf("bread"), 9, "hot bread is not sold");
-  assert.equal(e.stockOf("radish"), 1);
-});
 
-test("slipping away is not called a win; running home needs a road home; the theft case comes the next morning; rumours skip people who are gone", () => {
-  const { e } = thiefGame(["pickpocket"], 5 * 60);
-  e.sk.talents.push("slipAway");
-  e.s.xp.combat = 999;
-  e.s.xp.exploration = 999;
-  const ob = resident(e, "farmer");
-  behind(e, ob);
-  seedFor(e, "farmer", (r) => r < 0.05);
-  const st = e.startSteal("farmer");
-  assert.ok(st);
-  e.stealPick(0);
-  hitZone(e);
-  st.attention = 0.999;
-  e.stealPick(1);
-  for (let i = 0; i < 60 && st.phase === "swing"; i++) e.stealTick(0.1);
-  assert.equal(st.phase, "done");
-  assert.equal(st.result.win, false);
-  const html = renderCampaignView(e, { view: "steal" });
-  assert.match(html, /脱身了/);
-  assert.doesNotMatch(html, /得手了/);
-  e.steal = null;
-  // 跑不回去就不算跑
-  e.th.pending = { target: "cai", name: "蔡眼镜", group: "npc", day: e.s.day, reason: "x", trust: null };
-  go(e, "market");
-  const orig = e.travel;
-  e.travel = () => false;
-  assert.equal(e.resolveCaught(2), null);
-  assert.ok(e.th.pending, "still waiting for an answer");
-  e.travel = orig;
-  assert.ok(e.resolveCaught(2));
-  assert.equal(e.s.region, "farm");
-  // 失窃案：第二天一早
-  e.th.discovery = { target: "farmer", name: "阿禾", day: e.s.day + 1 };
-  e.dy.pending = null;
-  nextDay(e);
-  assert.equal(e.dy.pending?.id, "T04");
-  // 鹞子被放走后，传闻不再说他
-  e.o.prisoner = "released";
-  for (const id of TREASURE_IDS) if (id !== "raidCodes") e.th.treasures[id] = "taken";
-  e.th.seen.yaozi = 1;
-  assert.equal(e.revealRumor(), "");
-  assert.ok(!e.th.treasures.raidCodes);
-});

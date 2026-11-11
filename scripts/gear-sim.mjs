@@ -40,7 +40,7 @@
 // v0.28 改良：HNUP=tower:light,trap:spike,fence:iron（每类选一条路线，LNSET 摆出来的这类设施全部改好；双人哨要守卫比塔多）
 //   对照：HNPATCH='{"INJURY":{"chance":0}}'（守塔的人被摸到不受伤）
 const D = new URL("../dist/", import.meta.url).href;
-const { Engine, freshState } = await import(D + "campaign.js");
+const { Engine, freshState } = await import(D + "ahead.js") /* v0.50：这些台子量的是后面几章的系统，不过章节那一层 */;
 const { REGIONS, BUILDINGS: BUILD } = await import(D + "data.js");
 const { RULES, MELEE, ARMOR } = await import(D + "gear-data.js");
 // v0.34：武器的数、擅长的场合（调数用）

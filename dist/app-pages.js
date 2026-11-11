@@ -4,6 +4,7 @@ import { ITEMS, BUILDINGS, RECIPES, TRADERS, REGIONS, WEAPONS } from "./data.js"
 import { BCARD, BUILD_GROUPS } from "./simple-data.js";
 import { LETTERS, letterText, letterTitle } from "./alliance-data.js";
 import { slotOfGear } from "./gear-sprites.js";
+import { gearDef, ARMOR } from "./gear-data.js";
 import { CHAPTERS, CN_NUM, BUILD_TABS, CH_BUILD, GATE1 } from "./chapter-data.js";
 import { GAME_RELEASE } from "./version.js";
 import { esc, svg, itemIcon, portrait, buildArt, costTags, tabsHtml, escBtn, itemName, fmt, hhmm } from "./app-kit.js";
@@ -104,10 +105,30 @@ function itemsTab(G) {
     if (!it.protected && inBag && farm) btns.push(`<button class="btn" data-act="put" data-id="${id}">存进仓库</button>`);
     if (inBox && farm) btns.push(`<button class="btn" data-act="take" data-id="${id}">取到身上</button>`);
     const purpose = e.itemPurpose?.(id) || "";
-    detail = `<div class="row"><div class="cell" style="flex:none">${itemIcon(id, 44)}</div><div><b class="h2">${esc(it.name)}</b><div class="small mut">身上 ${inBag} · 仓库 ${inBox}</div></div></div><p class="small">${esc(it.desc || purpose)}</p>${purpose && purpose !== it.desc ? `<p class="small good">${esc(purpose)}</p>` : ""}${eqWhy && !worn ? `<p class="why">${esc(eqWhy)}</p>` : ""}${useWhy ? `<p class="why">${esc(useWhy)}</p>` : ""}<div class="btn-row" style="margin-top:auto">${btns.join("")}</div>${!farm ? `<p class="small mut">仓库在农场，回去才能存取。</p>` : `<p class="small mut">按住 Shift 点存取，一次一整组。</p>`}`;
+    detail = `<div class="row"><div class="cell" style="flex:none">${itemIcon(id, 44)}</div><div><b class="h2">${esc(it.name)}</b><div class="small mut">身上 ${inBag} · 仓库 ${inBox}</div></div></div><p class="small">${esc(it.desc || purpose)}</p>${purpose && purpose !== it.desc ? `<p class="small good">${esc(purpose)}</p>` : ""}${wearHtml(e, id)}${eqWhy && !worn ? `<p class="why">${esc(eqWhy)}</p>` : ""}${useWhy ? `<p class="why">${esc(useWhy)}</p>` : ""}<div class="btn-row" style="margin-top:auto">${btns.join("")}</div>${!farm ? `<p class="small mut">仓库在农场，回去才能存取。</p>` : `<p class="small mut">按住 Shift 点存取，一次一整组。</p>`}`;
   }
   const used = Object.keys(s.inventory).filter((k) => s.inventory[k] > 0).length;
   return `<div class="pane col" style="gap:14px"><div class="between"><b class="h2">身上</b><span class="small ${used >= e.capacity() ? "bad" : "mut"}">${used} / ${e.capacity()} 格</span></div><div class="cells scroll" style="max-height:44%">${bag.map(([i, n]) => cell(i, n, "bag")).join("") || `<span class="mut">空的</span>`}</div><div class="between"><b class="h2">仓库</b><div class="btn-row"><button class="btn small" data-act="putall" ${farm ? "" : "disabled"}>普通东西都存进去</button></div></div><div class="cells scroll grow">${box.map(([i, n]) => cell(i, n, "box")).join("") || `<span class="mut">仓库里还没有东西。做好的东西、队友搬回来的东西会放在这里。</span>`}</div></div><div class="side card" style="width:320px">${detail}</div>`;
+}
+// 会坏的家伙（武器、防具）：耐久多少、坏了会怎样、能不能修。只读，不动存档里的数。
+function wearOf(e, id) {
+  const def = gearDef(id);
+  if (!def?.dur || !e.gr) return null;
+  const c = e.gr.cond?.[id],
+    max = c?.m ?? e.baseMax(id),
+    d = c?.d ?? max;
+  return { d: Math.max(0, Math.ceil(d)), max, worn: d < max, broken: d <= 0, armor: !!ARMOR[id] };
+}
+function wearHtml(e, id, compact = false) {
+  const w = wearOf(e, id);
+  if (!w) return "";
+  const bar = `<div class="between small"><span class="mut">耐久</span><span class="${w.broken ? "bad" : w.d <= w.max * 0.25 ? "amber" : ""}">${w.d} / ${w.max}${w.broken ? (w.armor ? " · 坏了，没有保护" : " · 坏了，伤害减半") : ""}</span></div><span class="bar"><i style="width:${Math.round((w.d / Math.max(1, w.max)) * 100)}%${w.broken ? ";background:var(--bad)" : ""}"></i></span>`;
+  if (!w.worn) return compact ? "" : bar;
+  let why = e.repairReason(id);
+  const cost = e.repairCost(id);
+  // 农场上还没有武器工作台：说清楚要先建一座
+  if (/武器台/.test(why) && !e.s.buildings.some((b) => b.type === "weaponbench" && b.hp > 0)) why = "要先建一座武器工作台（建造 · 吃住），再在那儿修";
+  return `${bar}<div class="between" style="gap:8px"><span class="cost">${cost ? costTags(e, cost) : ""}</span><button class="btn small${why ? "" : " primary"}" style="height:40px" data-act="repairgear" data-id="${id}" ${why ? "disabled" : ""}>修好它</button></div>${why ? `<p class="why">${esc(why)}</p>` : compact ? "" : `<p class="small mut">修一次，耐久上限少一成；修过 5 次只能换新的。</p>`}`;
 }
 const STATION_ORDER = ["", "cook", "workbench", "weaponbench", "breeder"];
 function makeTab(G) {
@@ -142,8 +163,17 @@ function makeTab(G) {
       return `<div class="item-row"><span class="well">${itemIcon(o, 40)}</span><span class="grow"><b>${esc(itemName(o))} ×${j.out[o]}</b><span class="small ${j.ready ? "good" : "mut"}" style="display:block">${j.ready ? "做好了" : "还要 " + Math.ceil(j.remaining) + " 游戏分钟"}</span></span>${j.ready ? `<button class="btn primary small" style="height:40px" data-act="collect" data-id="${j.id}" ${farm ? "" : "disabled"}>收起来</button>` : ""}</div>`;
     })
     .join("");
+  // 武器台：用旧了的武器、防具在这里修
+  let fix = "";
+  if (st === "weaponbench") {
+    const ids = [...new Set([...Object.keys(e.s.inventory), ...Object.keys(e.s.storage)])].filter((i) => (e.s.inventory[i] || 0) + (e.s.storage[i] || 0) > 0 && wearOf(e, i)?.worn);
+    fix = ids.length
+      ? ids.map((i) => `<div class="item-row" style="align-items:flex-start"><span class="well">${itemIcon(i, 40)}</span><span class="grow col" style="gap:4px"><b>${esc(itemName(i))}${e.isWorn?.(i) ? ` <span class="tag">带着</span>` : ""}</b>${wearHtml(e, i, true)}</span></div>`).join("")
+      : `<div class="empty small">武器和防具都没用旧。用旧了回这里修。</div>`;
+    fix = `<div class="between"><b class="h2">修理</b><span class="small mut">修一次，耐久上限少一成；修过 5 次只能换新的</span></div>${fix}<b class="h2" style="margin-top:6px">做新的</b>`;
+  }
   const stTabs = stations.map((x) => ({ id: x || "hand", name: x ? BUILDINGS[x].name : "随手做" }));
-  return `<div class="pane col" style="gap:10px">${tabsHtml(stTabs, st || "hand", "station")}${!farm && st ? `<p class="why">设施在农场，回去才能用。</p>` : ""}<div class="list scroll grow">${rows || `<div class="empty">这里现在没有能做的东西。</div>`}</div></div><div class="side" style="width:340px"><div class="between"><b class="h2">在做的</b><span class="small mut">${jobs.length} / 12</span></div><div class="list scroll grow">${queue || `<div class="empty small">灶上、台子上都空着。</div>`}</div>${jobs.some((j) => j.ready) ? `<button class="btn primary" data-act="collectall" ${farm ? "" : "disabled"}>做好的都收进仓库</button>` : ""}<p class="small mut">做好的东西到钟点自己进仓库；铁锹在的话会替你搬。</p></div>`;
+  return `<div class="pane col" style="gap:10px">${tabsHtml(stTabs, st || "hand", "station")}${!farm && st ? `<p class="why">设施在农场，回去才能用。</p>` : ""}<div class="list scroll grow">${fix}${rows || `<div class="empty">这里现在没有能做的东西。</div>`}</div></div><div class="side" style="width:340px"><div class="between"><b class="h2">在做的</b><span class="small mut">${jobs.length} / 12</span></div><div class="list scroll grow">${queue || `<div class="empty small">灶上、台子上都空着。</div>`}</div>${jobs.some((j) => j.ready) ? `<button class="btn primary" data-act="collectall" ${farm ? "" : "disabled"}>做好的都收进仓库</button>` : ""}<p class="small mut">做好的东西到钟点自己进仓库；铁锹在的话会替你搬。</p></div>`;
 }
 function tradeTab(G) {
   const e = G.e,
@@ -233,7 +263,7 @@ function mainTab(G) {
   const gateBox =
     gate.state === "won"
       ? `<div class="card col"><b class="h2">第一场尸潮</b><p class="good">守住了。</p></div>`
-      : `<div class="card col${["omen", "tonight", "active"].includes(gate.state) ? " warn" : ""}"><div class="between"><b class="h2">把关的考验：第一场尸潮</b><span class="tag ${["omen", "tonight", "active"].includes(gate.state) ? "bad" : "amber"}">${esc(gate.when)} ${gate.hour}:00</span></div><p class="small">它们从东边的路口进来，来 ${gate.count} 只上下。仓库里的粮越多、围栏越多，来得越多。${gate.tries ? "上一回没守住，这是第 " + (gate.tries + 1) + " 回。" : ""}</p><div class="steps">${e
+      : `<div class="card col${["omen", "tonight", "active"].includes(gate.state) ? " warn" : ""}"><div class="between"><b class="h2">把关的考验：第一场尸潮</b><span class="tag ${["omen", "tonight", "active"].includes(gate.state) ? "bad" : "amber"}">${esc(gate.when)} ${gate.hour}:00</span></div><p class="small">它们从东边的路口进来，来 ${gate.count} 只上下。仓库里的粮越多、围栏越多，来得越多。那一夜倒下一回，铁锹会把你拖回农舍；再倒下就算没守住，下一个夜里重来。${gate.tries ? "上一回没守住，这是第 " + (gate.tries + 1) + " 回。" : ""}</p><div class="steps">${e
           .chPrepLines()
           .map((l) => `<div class="step${l.done ? " done" : ""}"><span>${esc(l.text)}</span><span class="${l.done ? "good" : "bad"}">${esc(l.note)}</span></div>`)
           .join("")}</div>${gate.canCall ? `<button class="btn" data-act="callgate">都备好了：今晚就迎战</button>` : `<p class="small mut">${e.s.day < GATE1.earlyFrom ? "第 " + GATE1.earlyFrom + " 天起，备好了可以提前一晚迎战。" : "备好上面三样、接回阿禾以后，可以提前迎战。"}</p>`}</div>`;
@@ -341,6 +371,9 @@ export function pageAct(G, act, id, el, ev) {
       e.s.seed = id;
       e.s.slot = 2;
       G.toast(itemName(id) + " 放到快捷栏 3 了。");
+      return done();
+    case "repairgear":
+      e.repairGear(id);
       return done();
     case "equip": {
       e.equip(id);

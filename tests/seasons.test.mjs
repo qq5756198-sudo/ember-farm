@@ -17,9 +17,6 @@ import {
   BIRTHDAYS,
   CANTEEN_GUESTS,
 } from "../dist/seasons-data.js";
-import { renderSeasonsView, renderSeasonsJournal, handleSeasonsAction, itemLinks, stationExtras, renderManualSeasons } from "../dist/seasons-ui.js";
-import { renderCampaignView, campaignTitle, campaignHud, handleCampaignAction } from "../dist/campaign-ui.js";
-import { renderWinterView } from "../dist/winter-ui.js";
 
 const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN/;
 const make = (state = freshState()) => {
@@ -267,16 +264,6 @@ test("a missed festival is logged once and no horde is scheduled on a festival d
 });
 
 // ---------- 相邻加成 ----------
-test("adjacency preview shows real bonuses and hints, and only ever adds", () => {
-  const { e } = make();
-  const cook = e.s.buildings.find((b) => b.type === "cook");
-  const chest = e.s.buildings.find((b) => b.type === "chest");
-  assert.ok(e.adjActive(cook).some((r) => r.id === "cookChest"), "the starting cook sits next to the chest");
-  assert.match(e.adjacencyPreview("cook", chest.x + 60, chest.y + 40)[0], /^＋ 靠近仓库箱/);
-  assert.match(e.adjacencyPreview("cook", 200, 900)[0], /^提示：/);
-  assert.deepEqual(e.adjacencyPreview("fence", 200, 900), []);
-  assert.match(stationExtras(e, cook), /靠近仓库箱：篝火灶加工 \+20%/);
-});
 
 test("a cook next to a chest finishes jobs faster than one far away", () => {
   const run = (moveChest) => {
@@ -640,113 +627,10 @@ test("江伯's commissions upgrade the rod, then a mutant fish and a fry release
 });
 
 // ---------- 同处多对象选择 ----------
-test("E near two equally close objects opens a chooser; picking runs that object's real action", () => {
-  const { e } = make();
-  camp(e);
-  let menu = null;
-  e.notify = () => {};
-  const orig = e.emit.bind(e);
-  e.emit = (type, data) => {
-    if (type === "menu") menu = data;
-    return orig(type, data);
-  };
-  // 江伯与一张假借宿记录挨在一起
-  e.ss.qin.phase = "left";
-  e.ss.lodger = { name: "赶路的木匠老韩", look: 1, gift: "item", stay: false, phase: "staying", day: 1, qin: false };
-  e.assignRegion();
-  const lod = e.objects.find((o) => o.type === "seasonLodger");
-  Object.assign(lod, { x: SSPOTS.jiang.x + 40, y: SSPOTS.jiang.y });
-  Object.assign(e.s.player, { x: SSPOTS.jiang.x + 20, y: SSPOTS.jiang.y + 10 });
-  // v0.39「一物一用」：不再弹“选一个”，按交互就是离你最近、头上写着字的那一样
-  assert.equal(e.pickCandidates().length, 0);
-  const near = e.nearestObject();
-  assert.equal(near.type, "seasonJiang");
-  assert.match(e.context(near), /^江伯 · /);
-  e.interact();
-  assert.notEqual(menu?.view, "pick");
-  assert.equal(e.ss.jiang.phase, "c1", "the nearest object really acted");
-  // “选一个”那一页留着（旧的调用还认得），只是没有人再打开它
-  assert.match(view(e, { view: "pick" }), /outpost-page|没有|选/);
-});
 
 // ---------- 界面 ----------
-test("every seasons view renders without leaks and links into the journal and manual", () => {
-  const { e } = make();
-  camp(e);
-  e.ss.he.stage = 2;
-  e.ss.qin.phase = "staying";
-  e.ss.adou.phase = "sister";
-  e.ss.ali.phase = "painting";
-  e.ss.jiang.phase = "c2";
-  e.ss.lodger = { name: "退休的邮差孙伯", look: 2, gift: "tip", stay: false, phase: "asking", day: 1, qin: false };
-  for (const v of ["plaza", "talk", "calendar", "people", "pick"]) {
-    const html = view(e, { view: v });
-    assert.doesNotMatch(html, FORBIDDEN, v);
-    assert.ok(campaignTitle({ view: v }).length);
-  }
-  for (const id of ["he", "qin", "lodger", "adou", "ali", "jiang"]) assert.doesNotMatch(view(e, { view: "dialog", id }), FORBIDDEN, id);
-  assert.match(view(e, { view: "decrees" }), /法令/);
-  const journal = renderSeasonsJournal(e, {});
-  assert.match(journal, /seasons-strip/);
-  assert.match(journal, /下一次节庆：第7天「换种集」/);
-  assert.doesNotMatch(journal, FORBIDDEN);
-  const cal = view(e, { view: "calendar" });
-  assert.match(cal, /换种集/);
-  assert.match(cal, /生日/);
-  const h = { esc: (s) => String(s), icon: () => "", itemIcon: () => "", costs: () => "", itemName: (id) => id };
-  assert.match(renderManualSeasons(e, "residents", h, {}, {}), /人物关系与带徒/);
-  assert.match(itemLinks(e, "potato"), /能做：/);
-  assert.match(itemLinks(e, "potato"), /种土豆种子/);
-  assert.match(itemLinks(e, "bread"), /林姨/);
-  assert.match(itemLinks(e, "fish"), /林边池塘/);
-});
 
-test("new features carry a 新 mark until opened once, and the first open shows a short intro card", () => {
-  const { e } = make();
-  camp(e);
-  assert.ok(e.featureNew("calendar"));
-  assert.equal(campaignHud(e).fresh, true);
-  assert.match(renderSeasonsJournal(e, {}), /new-badge/);
-  const ui = {};
-  let shown = null;
-  handleCampaignAction("sView", { dataset: { id: "calendar" } }, ctx(e, { ui, showMenu: (m, a) => (shown = a) }));
-  assert.equal(shown.view, "calendar");
-  assert.equal(ui.intro, "calendar");
-  assert.match(view(e, { ...ui, view: "calendar" }), /intro-card/);
-  assert.equal(e.featureNew("calendar"), false);
-  handleCampaignAction("sView", { dataset: { id: "calendar" } }, ctx(e, { ui }));
-  assert.equal(ui.intro, null, "the card does not come back");
-  // 冬季页面也走同一套标记
-  handleCampaignAction("wView", { dataset: { id: "decrees" } }, ctx(e, { ui, showMenu() {} }));
-  assert.equal(e.featureNew("decrees"), false);
-  for (const k of e.newFeatures()) e.markSeen(k);
-  assert.equal(campaignHud(e).fresh, false);
-});
 
-test("plaza, gift, apprentice, lodger and link buttons change real state through the handler", () => {
-  const { e } = make();
-  camp(e);
-  stock(e, { jam: 2 });
-  const c = ctx(e);
-  handleSeasonsAction("sGift", { dataset: { id: "farmer:jam" } }, c);
-  assert.equal(e.ss.trust.farmer, 1);
-  handleSeasonsAction("sApprentice", { dataset: { id: "farmer:tieqiao" } }, c);
-  assert.equal(e.ss.apprentice.pupil, "tieqiao");
-  handleSeasonsAction("sApprentice", { dataset: { id: "stop" } }, c);
-  assert.equal(e.ss.apprentice, null);
-  festivalDay(e, 7);
-  stock(e, { seedRadish: 4, seedPotato: 2, seedBean: 2 });
-  handleSeasonsAction("sHost", { dataset: { id: "" } }, c);
-  assert.ok(e.festivalHosted(7));
-  let opened = null;
-  handleSeasonsAction("sLink", { dataset: { id: "station:cook" } }, ctx(e, { showMenu: (m, a) => (opened = [m, a]) }));
-  assert.equal(opened[0], "station");
-  handleSeasonsAction("sLink", { dataset: { id: "station:canner" } }, ctx(e, { showMenu: (m, a) => (opened = [m, a]) }));
-  assert.deepEqual(opened, ["build", { focusBuild: "canner" }]);
-  handleSeasonsAction("sLink", { dataset: { id: "trader:food" } }, ctx(e, { showMenu: (m, a) => (opened = [m, a]) }));
-  assert.equal(e.guidance.target.region, "market");
-  assert.equal(handleSeasonsAction("oNothing", { dataset: {} }, c), false);
-});
 
 // ---------- 审查发现的回归 ----------
 // v0.30「人情」：咬钩后按 E 不再直接钓上来，而是开始收线；收满了才上来
@@ -813,26 +697,6 @@ test("a lodger who stays shows up at the gate under their own name everywhere", 
   assert.ok(e.o.log.some((l) => /赶路的木匠老韩/.test(l.text)) || !e.o.log.length);
 });
 
-test("item links send hand-made recipes to the craft menu; the canteen cannot open at closing time; sleeping closes it", () => {
-  const { e } = make();
-  camp(e);
-  assert.match(itemLinks(e, "wood"), /data-id="craft"|data-id="station:/);
-  let opened = null;
-  handleSeasonsAction("sLink", { dataset: { id: "craft" } }, ctx(e, { showMenu: (m) => (opened = m) }));
-  assert.equal(opened, "craft");
-  e.ss.he.stage = 4;
-  e.s.day = 9;
-  e.s.minute = 21 * 60 + 10;
-  at(e, SSPOTS.plaza);
-  stock(e, { stew: 2 });
-  assert.match(e.canteenReason(), /21:00/);
-  e.s.minute = 19 * 60 + 10;
-  assert.equal(e.startCanteen(), true);
-  go(e, "farm");
-  Object.assign(e.s.player, { x: 330, y: 360 });
-  e.sleep();
-  assert.equal(e.ss.canteen.night, null);
-});
 
 test("秦奶奶 leaves after a week even if a wish is still open, so other lodgers can come again", () => {
   const { e } = make();

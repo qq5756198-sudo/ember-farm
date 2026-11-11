@@ -1,7 +1,7 @@
 // v0.22.0「披挂」：前期感染者加强 + 装备与防具
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState } from "../dist/campaign.js";
+import { Engine, freshState } from "../dist/ahead.js";
 import { Engine as GardenEngine, freshState as gardenFresh } from "../dist/garden.js";
 import { ITEMS, RECIPES, WEAPONS, ZOMBIES, REGIONS } from "../dist/data.js";
 import { EVENTS } from "../dist/daily-data.js";
@@ -32,8 +32,6 @@ import {
   phaseOf,
   slotOf,
 } from "../dist/gear-data.js";
-import { renderCampaignView, campaignTitle, handleCampaignAction, renderGearPanel, gearUI, stationExtras, gearStatusHtml, renderManualPlus, gearDetailHtml } from "../dist/campaign-ui.js";
-import { renderGearBench } from "../dist/gear-ui.js";
 
 const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
 const make = (state = freshState()) => {
@@ -792,88 +790,4 @@ test("sources: raids drop riot gear in turn, the caravan sells a blueprint, the 
 });
 
 // ================= 界面 =================
-test("bag panel, bench and intro render clean text; their buttons change real state through the handler", () => {
-  const { e } = make();
-  bench(e);
-  e.add({ leatherJacket: 1, bat: 1, tireArmor: 1 });
-  Object.assign(e.s.storage, { scrap: 20, cloth: 10, wood: 10 });
-  gearUI.slot = null;
-  let html = renderGearPanel(e);
-  assert.match(html, /gear-slot/);
-  assert.doesNotMatch(html, FORBIDDEN);
-  let rendered = 0;
-  const c = ctx(e, { renderMenu: () => rendered++ });
-  assert.ok(handleCampaignAction("gSlot", btn("gSlot", "body"), c));
-  assert.equal(gearUI.slot, "body");
-  html = renderGearPanel(e);
-  assert.match(html, /废胎护甲/);
-  assert.match(html, /▲|▼/);
-  assert.ok(handleCampaignAction("gEquip", btn("gEquip", "tireArmor"), c));
-  assert.equal(e.gr.slots.body, "tireArmor");
-  assert.ok(handleCampaignAction("gUnequip", btn("gUnequip", "body"), c));
-  assert.equal(e.gr.slots.body, null);
-  gearUI.slot = null;
-  // 武器台：修理与改装就在“武器与潜行”那一页的下面，不是新面板
-  const b = e.s.buildings.find((x) => x.type === "weaponbench");
-  assert.match(stationExtras(e, b), /武器与潜行 · 修理改装/);
-  const h = { esc: (v) => String(v), icon: () => "", itemIcon: () => "", costs: () => "", itemName: (id) => ITEMS[id]?.name || id };
-  html = renderManualPlus(e, "defense", h, { tool: { menu: "frontier", tab: "combat" } }, {});
-  assert.match(html, /修理与改装/);
-  assert.match(html, /data-action="gRepair"/);
-  assert.doesNotMatch(html, FORBIDDEN);
-  // 修理与改装放在同一个滚动区里，跟着整页上下滚（不在旁边单独一栏）
-  assert.ok(html.indexOf('class="detail-scroll"') < html.indexOf("gear-bench-section"));
-  assert.ok(html.endsWith("</section></div></div></div></div>"), "inside .frontier-body");
-  assert.doesNotMatch(renderManualPlus(e, "defense", h, { tool: { menu: "frontier", tab: "kitchen" } }, {}), /gear-bench-section/);
-  // 背包里点一件装备：和身上的比
-  assert.match(gearDetailHtml(e, "tireArmor"), /这一栏空着/);
-  assert.ok(e.equip("leatherJacket"));
-  assert.match(gearDetailHtml(e, "tireArmor"), /身栏/);
-  assert.match(gearDetailHtml(e, "tireArmor"), /▲|▼/);
-  assert.equal(gearDetailHtml(e, "wood"), "");
-  e.cond("bat").d = 5;
-  assert.ok(handleCampaignAction("gRepair", btn("gRepair", "bat"), c));
-  assert.equal(e.cond("bat").d, e.cond("bat").m);
-  assert.ok(handleCampaignAction("gMod", btn("gMod", "bat|wrap"), c));
-  assert.ok(e.cond("bat").mods.wrap);
-  assert.ok(handleCampaignAction("gDismantle", btn("gDismantle", "tireArmor"), c));
-  assert.equal(e.qty("tireArmor", true), 0);
-  // 说明卡
-  e.gr.intro = false;
-  e.gr.old = true;
-  html = renderCampaignView(e, { view: "gIntro", id: "" });
-  assert.match(html, /你的家园已经升级/);
-  assert.doesNotMatch(html, FORBIDDEN);
-  assert.ok(handleCampaignAction("gIntroOk", btn("gIntroOk"), c));
-  assert.equal(e.gr.intro, true);
-  // 顶栏的小图标：点一下说明怎么治
-  e.gx.bleed = 3;
-  e.gr.inf = 20;
-  html = gearStatusHtml(e);
-  assert.match(html, /流血/);
-  assert.match(html, /感染 20%/);
-  assert.match(html, /data-action="gStatus"/);
-  assert.doesNotMatch(html, FORBIDDEN);
-  let told = "";
-  assert.ok(handleCampaignAction("gStatus", btn("gStatus", "bleed"), ctx(e, { toast: (t) => (told = t) })));
-  assert.match(told, /绷带/);
-  // 触屏的推开
-  assert.ok(handleCampaignAction("touchShove", btn("touchShove"), c));
-  assert.ok(rendered > 0);
-});
 
-test("every gear item reads cleanly in the bag panel and bench for each slot", () => {
-  const { e } = make();
-  bench(e);
-  const all = Object.fromEntries([...Object.keys(ARMOR), ...Object.keys(MELEE), "slingshot", "crossbow", "firecracker", "molotov", "bearTrap", "spikeBoard"].map((id) => [id, 1]));
-  Object.assign(e.s.storage, all);
-  for (const slot of ["head", "body", "hands", "legs", "feet", "melee", "ranged", "throw", "trap"]) {
-    gearUI.slot = slot;
-    const html = renderGearPanel(e);
-    assert.doesNotMatch(html, FORBIDDEN, slot);
-  }
-  gearUI.slot = null;
-  const html = renderGearBench(e);
-  assert.doesNotMatch(html, FORBIDDEN);
-  for (const id of Object.keys(all)) if (slotOf(id) && slotOf(id) !== "throw") assert.ok(html.includes(ITEMS[id].name), id);
-});

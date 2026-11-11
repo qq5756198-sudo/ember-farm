@@ -4,7 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { Engine, freshState } from "../dist/campaign.js";
+import { Engine, freshState } from "../dist/ahead.js";
 import { Engine as ClearEngine, VFX_MAX } from "../dist/clear.js";
 import { Engine as SimpleEngine, freshState as simpleFresh } from "../dist/simple.js";
 import { Renderer as CampaignRenderer } from "../dist/campaign-renderer.js";

@@ -3,7 +3,7 @@
 // 打赢以后地方的变化（雕爷的库存只有一回、沉湾的鱼、居住舱两张床、防毒面具）、存档。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, needsUpgrade as needsStoryMigration } from "../dist/ahead.js";
 import { TITANS, TITAN_IDS, FINAL, FINAL_TEXT, FINAL_END, PERK_DROPS, VENT_BEDS, SMOKE_CUT, TITAN_ARMOR, partKeys, mainPart, TITAN_SCHEMA } from "../dist/titan-data.js";
 import { CORE_IDS } from "../dist/relight-data.js";
 

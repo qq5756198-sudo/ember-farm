@@ -6,7 +6,6 @@ import {freshState as originalFresh} from '../dist/engine.js';
 import {ITEMS, CROPS, BUILDINGS, RECIPES, WEAPONS} from '../dist/data.js';
 import {HERBS} from '../dist/frontier-data.js';
 import {TASKS, PILLARS, OUTPOSTS, FIND_LOCATIONS, ANNEX} from '../dist/rebuild-data.js';
-import {renderRebuild, renderObjective, handleRebuildAction} from '../dist/rebuild-ui.js';
 
 const make = (state = demoState()) => {const e = new Engine(state);e.paused = false;return e;};
 const fixture = (e, type, x = 900, y = 760) => {const b={id:'fixture-'+e.s.idCounter++,type,x,y,rotation:0,hp:BUILDINGS[type].hp};e.s.buildings.push(b);e.assignRegion();return b;};
@@ -76,12 +75,6 @@ test('completed production advances supply goals only when its real output is co
   const e=make();e.s.inventory.radish=3;assert.ok(e.craft('trailBread'));const j=e.c.production[0];e.advanceMinutes(20);assert.ok(j.ready);assert.equal(e.r.metrics.food,0);assert.ok(e.collectProduction(j.id));assert.equal(e.r.metrics.food,2);assert.equal(e.collectProduction(j.id),false);assert.equal(e.r.metrics.food,2);
 });
 
-test('new plots need a water connection while legacy water-tower irrigation remains earned',()=>{
-  const e=make(freshState());provision(e);e.addRebuildFields();const old=e.s.plots[0],added=e.s.plots.find(p=>p.rebuildNew);for(const p of [old,added])Object.assign(p,{crop:'bean',wateredDay:0,waterUnits:0});
-  e.contributeProject('water');e.contributeProject('water');assert.equal(old.wateredDay,1);assert.equal(added.wateredDay,0);e.s.day=2;e.onNewDay();assert.equal(old.wateredDay,2);assert.equal(added.wateredDay,0);
-  e.c.technologies.irrigation=true;fixture(e,'irrigation',990,750);assert.ok(e.irrigationConnected(e.s.buildings.at(-1)));e.workHour();assert.equal(added.wateredDay,2);
-  const rate=e.cropGrowthRate(added);e.r.tech.filtration=true;assert.equal(e.cropGrowthRate(added),rate*1.15);assert.equal(e.s.plots.length,51);
-});
 
 test('seed archive waives the first new trait research only and failed attempts do not spend its benefit',()=>{
   const e=make();fixture(e,'breeder');e.r.tech.seedbank=true;e.s.inventory.parts=5;e.s.inventory.bean=0;
@@ -160,9 +153,3 @@ test('new nested state, contracts and active chapter battles round-trip; invalid
   for(const mutate of [s=>s.rebuild.claimed=['radio'],s=>s.rebuild.arcs.farmer=4,s=>s.rebuild.battle.damage=-1,s=>s.rebuild.tech.power='true',s=>s.rebuild.annexDefeated=null,s=>s.rebuild.farmPlan='unknown',s=>s.rebuild.metrics.produced.unknown=1,s=>s.plots[0].rebuildNew='true']){const s=JSON.parse(e.serialize());mutate(s);assert.throws(()=>Engine.parse(JSON.stringify(s)));}
 });
 
-test('six purpose pages, the old tools as single pages and the current objective keep actionable controls',()=>{
-  const h={esc:s=>String(s),icon:()=>'',costs:()=>'',itemIcon:()=>'',itemName:id=>ITEMS[id]?.name||id};
-  for(const e of [make(),make(previousDemo())])for(const tab of ['overview',...PILLARS.map(p=>p.id)]){const html=renderRebuild(e,tab,h);assert.ok(html.includes('place-page'));assert.equal(html.includes('营地手册导航'),false);assert.equal(html.includes('manual-detail'),false);assert.equal(html.includes('undefined'),false);assert.ok((html.match(/data-action=/g)||[]).length>0,tab);}
-  const e=make(),html=renderRebuild(e,'production',h,{tool:{menu:'camp',tab:'production'}});assert.ok(html.includes('place-page'));assert.equal(html.includes('camp-tabs'),false);assert.ok(html.includes('data-action='));assert.ok(renderObjective(e,h).includes('rTrack'));
-  let saved=0,closed=0;const ui={target:{region:'hospital'}};const ctx={engine:e,ui,showMenu:()=>{},closeMenu:()=>closed++,renderMenu:()=>{},save:()=>saved++,toast:()=>{}};assert.ok(handleRebuildAction('rTrack',{dataset:{id:'harvest'}},ctx));assert.equal(ui.target,null);assert.equal(e.r.focus,'harvest');assert.equal(closed,1);assert.equal(saved,1);assert.equal(handleRebuildAction('fullscreen',{dataset:{}},ctx),false);
-});

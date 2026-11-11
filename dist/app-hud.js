@@ -64,7 +64,11 @@ export function drawGoal(e) {
   const g = e.chGoal(),
     lines = g.lines.slice(0, 5),
     done = lines.filter((l) => l.done).length;
-  const body = g.step ? `<span class="s">${esc(g.step.title)}</span>` : "";
+  const dest = e.guidance?.target || (e.r?.focus && e.taskDestination ? e.taskDestination(e.r.focus) : null),
+    away = dest?.region && dest.region !== e.s.region && REGIONS[dest.region] ? `<span class="s amber">去${esc(REGIONS[dest.region].name)}：按 M 开地图</span>` : "";
+  // 备战那一段下面列着五样各差多少，眼下这一步就是头一样没备好的，不重复写
+  const dup = g.stage === "prep" && g.step && g.lines.some((l) => l.text === g.step.title);
+  const body = (g.step && !dup ? `<span class="s">${esc(g.step.title)}</span>` : "") + away;
   const list =
     g.stage === "prep" || g.stage === "gate"
       ? lines.map((l) => `<span class="ln${l.done ? " done" : ""}"><span>${esc(l.text)}</span><span class="${l.done ? "" : "bad"}">${esc(l.note || "")}</span></span>`).join("")
@@ -112,6 +116,19 @@ export function drawHands(e) {
   else if (it?.type === "food" || it?.type === "medicine") text = esc(it.name) + "<span>剩 " + e.qty(item) + " · 左键吃掉</span>";
   else text = esc(it?.name || "") + "<span>左键使用</span>";
   put("handlabel", text);
+  // 身上的状态：被抓住、流血、感染、发烧、回血中（没有就不占地方）
+  const chips = (e.gearHud?.() || [])
+    .map((c) => {
+      const more = c.id === "grab" ? "：按 X 推开" : c.id === "bleed" ? "：用绷带止住" : c.id === "fever" && !/退烧/.test(c.text) ? "：生命上限 −30" : "";
+      return `<span class="tag ${c.tone === "warn" ? "bad" : c.tone === "good" ? "good" : "amber"}" title="${esc(c.title || "")}">${esc(c.text + more)}</span>`;
+    })
+    .join("");
+  put("status", chips);
+  const st = $("#status");
+  if (st && st.hidden !== !chips) {
+    st.hidden = !chips;
+    document.body.classList.toggle("hasstatus", !!chips);
+  }
 }
 
 const DOCK = [

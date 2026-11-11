@@ -4,5 +4,3 @@ export { Engine, freshState, newGameState, chapterDefaults } from "./chapter.js"
 // 其余物品的小图、十凶的战利品和凶器的小图
 import "./item-sprites.js";
 import "./titan-icons.js";
-// 旧界面的几个文件还引这两个名字；新界面不用。跟着旧界面一起删。
-export { newGamePlusState, needsUpgrade as needsStoryMigration } from "./ahead.js";

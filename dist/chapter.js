@@ -8,7 +8,7 @@
 import { Engine as Base, newGameState as baseNewGame } from "./ahead.js";
 import { ITEMS, CROPS, REGIONS, BUILDINGS } from "./data.js";
 import { MEAL_ITEMS } from "./outpost-data.js";
-import { SAVE_FORMAT, CHAPTERS, CN_NUM, CH1_REGIONS, CH1_STAGES, PREP, GATE1, BARKS, CH1_QUIET, CH1_REWORD, TRIP_BOONS, CH_BUILD, CH1_GROW, SCOUT } from "./chapter-data.js";
+import { SAVE_FORMAT, CHAPTERS, CN_NUM, CH1_REGIONS, CH1_STAGES, PREP, GATE1, BARKS, CH1_QUIET, CH1_REWORD, TRIP_BOONS, CH_BUILD, CH1_GROW, SCOUT, CH1_STOCK } from "./chapter-data.js";
 
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const MATERIALS = ["wood", "stone", "scrap", "parts", "cloth"];
@@ -24,7 +24,7 @@ export function chapterDefaults() {
     done: [],
     seen: {},
     barks: {},
-    gate: { day: GATE1.day, state: "far", tries: 0, count: 0, live: false, wonDay: 0 },
+    gate: { day: GATE1.day, state: "far", tries: 0, count: 0, live: false, wonDay: 0, pulled: false },
     trip: null,
     day0: { day: 1, money: 0, food: 0, mat: 0 },
     scene: "intro",
@@ -51,6 +51,7 @@ function normalize(raw) {
       count: Math.max(0, Math.floor(num(g.count, 0))),
       live: !!g.live,
       wonDay: Math.max(0, Math.floor(num(g.wonDay, 0))),
+      pulled: !!g.pulled,
     },
     trip: t
       ? {
@@ -89,7 +90,16 @@ export class Engine extends Base {
     if (!s.ch) s.ch = chapterDefaults();
     s.ch = normalize(s.ch);
     s.format = SAVE_FORMAT;
+    // 下面有一层在摆好场景时会顺手记一遍“谁在哪儿、见过谁”。读档时这会把存下来的数改掉
+    // （存出来再读回去就不是一字不差了）：读进来是什么样，摆完场景还是什么样。
+    const th = s.theft,
+      keep = th ? JSON.stringify([th.where ?? null, th.seen ?? null]) : null;
     super(s, notify);
+    if (keep && this.s.theft) {
+      const [where, seen] = JSON.parse(keep);
+      if (where) this.s.theft.where = where;
+      if (seen) this.s.theft.seen = seen;
+    }
     this._chClock = 0;
     this._chOuting = 0;
   }
@@ -152,7 +162,9 @@ export class Engine extends Base {
     if (!sc || sc.act <= 1) return "settle";
     if (sc.act === 2) {
       const g = this.storyGoal?.();
-      return g?.step?.id === "opening" || (this.feel?.open && this.feel.open.phase !== "done" && sc.choice) ? "road" : "people";
+      // 回了信先挑补给、守路口（“守住东边的路口”），路口堵上了才是“把阿禾接回来”
+      const id = g?.step?.id;
+      return id === "choice" || id === "opening" || (this.feel?.open && this.feel.open.phase !== "done" && sc.choice) ? "road" : "people";
     }
     const gs = this.ch.gate.state;
     if (gs === "tonight" || gs === "active") return "gate";
@@ -196,14 +208,22 @@ export class Engine extends Base {
       if (g?.step) {
         out.step = { id: g.step.id, title: g.step.title, text: g.step.text, gain: g.step.gain || "", target: g.step.target || null, kind: g.step.kind || "mark", doLabel: g.step.doLabel || "", cost: g.step.cost || null };
         out.lines = (g.steps || []).map((s) => ({ id: s.id, text: s.label, done: !!s.done, note: "" }));
+        // 阿禾接回来以后，这一段说的是让她留下
+        if (stage === "people" && (g.step.id === "farmerMeal" || g.step.id === "table")) {
+          out.title = "让阿禾住下来";
+          out.why = "她说，有一张大家坐得下的饭桌，才算是个营地。";
+        }
+        // 公共餐桌那一步：三样各要什么、料从哪来，写全
+        if (g.step.id === "table" && this.taskRequirements?.("table").some((x) => !x.pass))
+          out.step.text = "公共餐桌要三样：交料（木材 12、萝卜 9）、一张制作台（木材 8、石头 4）、再添一张床位（木材 8、布 2）。料不够：废弃居民区的柜子里翻得到，集市的老周也卖；多出来的萝卜、土豆卖给林姨换钱。";
       }
     } else if (stage === "prep") {
       out.lines = this.chPrepLines();
       const miss = out.lines.find((l) => !l.done);
       const tip = {
         food: "多种几块萝卜、土豆，做成干粮和炖汤；来不及就去集市找林姨买。",
-        fence: "打开建造，围栏排在东边的路口，留一扇大门自己走。木头不够：居民区的柜子里有，集市的老周也卖。",
-        trap: "路障陷阱摆在围栏外面：踩上来的会被绊住。",
+        fence: "打开建造，围栏排在东边的路口，留一扇大门自己走；它们啃围栏的时候，隔着围栏打它们够不着你。木头不够：居民区的柜子里有，集市的老周也卖。",
+        trap: "路障陷阱摆在东边路口它们进来的路上（放的时候地上有红圈标着来路）：踩一下挨 45，一个陷阱管 8 下，用完要修。",
         heal: "一块布在制作台能做两条绷带；集市上也买得到。",
         breeder: "育种箱：一份菜换两颗种子，以后不用总跑集市买种子。",
       };
@@ -214,7 +234,7 @@ export class Engine extends Base {
       const h = this.s.horde,
         left = h.phase === "active" ? h.remaining + this.enemies.filter((z) => z.horde && !z.dead).length : this.ch.gate.count;
       out.lines = [{ id: "hold", text: h.phase === "active" ? "还剩 " + left + " 只" : h.phase === "warning" ? "还有 " + Math.ceil(h.timer) + " 秒进场" : "今晚 " + GATE1.hour + ":00 来 " + this.chGateCount() + " 只上下", done: false, note: "" }];
-      out.step = { id: "gate", title: h.phase === "active" ? "守住，别让它们进农舍" : "天黑前回到农场", text: "它们从东边的路口进来。围栏能挡一阵；被围住了按推开，往旁边滚。", gain: "", target: { region: "farm", x: 1330, y: 400, label: "东边路口" }, kind: "mark", doLabel: "", cost: null };
+      out.step = { id: "gate", title: h.phase === "active" ? "守住路口，把它们都打倒" : "天黑前回到农场", text: "它们从东边的路口进来。围栏能挡一阵；被围住了按推开，往旁边滚。", gain: "", target: { region: "farm", x: 1330, y: 400, label: "东边路口" }, kind: "mark", doLabel: "", cost: null };
     } else if (stage === "done") {
       out.step = { id: "done", title: "第二章〈营地〉下一版开放", text: "现在可以留在农场接着经营：地照种，人照吃饭，尸潮过几天还会再来。", gain: "", target: null, kind: "mark", doLabel: "", cost: null };
     }
@@ -286,6 +306,7 @@ export class Engine extends Base {
       }
       g.count = this.chGateCount();
       g.live = true;
+      g.pulled = false;
       g.state = "active";
       s.horde = { phase: "warning", timer: GATE1.prepSeconds, remaining: g.count, spawnTimer: 0, direction: 0 };
       const text = "第一场尸潮来了：" + g.count + " 只上下，从东边的路口进来。还有 " + GATE1.prepSeconds + " 秒。";
@@ -298,19 +319,11 @@ export class Engine extends Base {
         g.live = false;
         g.state = "won";
         g.wonDay = day;
-        const text = "守住了。" + g.count + " 只，一只都没进农舍。";
+        const text = "守住了。" + g.count + " 只，都倒在了路口。";
         this.toast(text, "gold");
         this.olog?.(text, "gold");
         this.emit("victory");
-      } else if (s.horde.phase === "locked") {
-        // 倒下了：尸潮散了，第二天夜里再来
-        g.live = false;
-        g.state = "omen";
-        g.day = day + GATE1.retryDays;
-        g.tries++;
-        this.chBark("gateLost");
-        this.olog?.("第一场尸潮没守住。它们明晚还来。", "warn");
-      }
+      } else if (s.horde.phase === "locked") this.chGateLost();
     }
   }
   // 第 6 天傍晚：几只探路的摸到东边路口（尸潮的前兆）
@@ -319,7 +332,7 @@ export class Engine extends Base {
       s = this.s;
     if (c.n !== 1 || c.seen.scout || this.chDone(1) || s.region !== "farm") return;
     if (s.day < SCOUT.day || (s.day === SCOUT.day && s.minute < SCOUT.from) || s.minute < SCOUT.from || s.minute > SCOUT.to) return;
-    if (["warning", "active"].includes(s.horde.phase) || c.gate.state === "active" || (this.sc?.act || 1) < 2) return;
+    if (["warning", "active"].includes(s.horde.phase) || ["tonight", "active", "won"].includes(c.gate.state) || s.day >= c.gate.day || (this.sc?.act || 1) < 2) return;
     c.seen.scout = true;
     SCOUT.kinds.forEach((kind, i) => this.enemies.push(this.enemy(kind, 1435 - (i % 2) * 25, 380 + i * 45, true)));
     const text = "东边路口有动静：几只探路的摸过来了。大的还在后头。";
@@ -331,10 +344,119 @@ export class Engine extends Base {
     const k = this.ch && this.ch.n === 1 && (this.r?.claimed || []).includes("harvest") ? CH1_GROW : 1;
     return super.cropGrowthRate(p) * k;
   }
+  // 考验那一夜来的，和废弃居民区里碰到的是一样的家伙（血、脚程、手劲按 GATE1.phase 那一段）。
+  // 下面几层的农场尸潮用的是最早那套数（游荡者 65 血、奔跑者比你走路还慢），一个人绕着圈打就一下也挨不着，备不备战都一样。
+  enemy(type, x, y, horde = false) {
+    const z = super.enemy(type, x, y, horde);
+    if (horde && this.gr && this.ch?.n === 1 && this.ch.gate?.live) {
+      const st = this.zstat(type, GATE1.phase);
+      if (st) {
+        z.hp = z.maxHp = st.hp;
+        z.ph = GATE1.phase;
+      }
+    }
+    return z;
+  }
+  // 考验的那一夜：都从东边路口这一处进来（手记、提醒里都这么说，陷阱摆在路上才踩得着），隔得稍开一点
+  updateHorde(dt) {
+    const h = this.s.horde,
+      g = this.ch?.gate,
+      before = h.remaining,
+      n = this.enemies.length;
+    const out = super.updateHorde(dt);
+    if (this.ch?.n === 1 && g?.live && h.phase === "active" && h.remaining < before && this.enemies.length > n) {
+      const z = this.enemies[this.enemies.length - 1],
+        L = GATE1.lane;
+      if (z?.horde) {
+        // 一只一个位置，按进场的次序排开（不用随机数，读档重来还是这个次序）
+        const k = ((before * 7) % 5) - 2;
+        z.x = z.homeX = z.targetX = L.x + (before % 2) * 14;
+        z.y = z.homeY = z.targetY = L.y + (k * L.spread) / 2;
+      }
+      h.spawnTimer = GATE1.gap;
+    }
+    return out;
+  }
   beginHorde() {
     const ok = super.beginHorde();
     if (ok && this.ch?.gate?.live) this.s.horde.remaining = this.ch.gate.count;
     return ok;
+  }
+  // 第一章集市上多卖两份药包（一份货只补一次）
+  traderStock(id) {
+    const stock = super.traderStock(id);
+    if (this.ch?.n === 1) for (const [item, n] of Object.entries(CH1_STOCK[id] || {})) if (!(stock[item] >= 0)) stock[item] = n;
+    return stock;
+  }
+  // 考验的那一夜倒下了：头一回铁锹把你拖回农舍，尸潮不停；同一夜第二回倒下才算没守住，尸潮散掉，下一个夜里再来
+  die() {
+    const g = this.ch?.gate,
+      night = this.ch?.n === 1 && !!g?.live && g.state === "active" && ["warning", "active"].includes(this.s.horde.phase),
+      saved = night && !g.pulled && (this.sc?.helpers || []).some((h) => h.id === "tieqiao"),
+      lost = night && !saved;
+    if (saved) {
+      g.pulled = true;
+      this._chPulledAt = this.s.playSeconds || 0;
+    }
+    if (lost) {
+      for (const z of this.s.enemies?.farm || []) if (z.horde) z.dead = true;
+      this.s.horde = { phase: "locked", timer: 0, remaining: 0, spawnTimer: 0, direction: 0 };
+    }
+    // 下面几层的老规矩是“尸潮里倒下，尸潮就算散了”；被拖回来的这一回尸潮照旧，原样放回去
+    const keep = saved ? { ...this.s.horde } : null;
+    const out = super.die();
+    if (keep) this.s.horde = keep;
+    if (lost) this.chGateLost();
+    return out;
+  }
+  // 记一回没守住：过了半夜倒下的，今晚（同一天的夜里）再来；半夜以前倒下的，明晚再来
+  chGateLost() {
+    const g = this.ch.gate,
+      s = this.s;
+    if (!g.live) return;
+    g.live = false;
+    g.state = "omen";
+    g.day = s.day + (s.minute < 6 * 60 ? 0 : GATE1.retryDays);
+    g.tries++;
+    this._chLostAt = s.playSeconds || 0;
+    // 铁锹连夜把围栏、大门、陷阱扶起来：坏了的修到六成（本来更好的不动），免得一回没守住就越守越难
+    let fixed = 0;
+    if ((this.sc?.helpers || []).some((h) => h.id === "tieqiao"))
+      for (const b of s.buildings) {
+        if (!["fence", "gate", "trap"].includes(b.type) || !BUILDINGS[b.type]) continue;
+        const want = Math.ceil(BUILDINGS[b.type].hp * 0.6);
+        if (b.hp < want) {
+          b.hp = want;
+          fixed++;
+        }
+      }
+    if (fixed) this.navRevision = (this.navRevision || 0) + 1;
+    this._chFixed = fixed;
+    this.chBark("gateLost");
+    this.olog?.("第一场尸潮没守住。它们" + (g.day === s.day ? "今晚" : "明晚") + "还来。" + (fixed ? "铁锹连夜扶起了 " + fixed + " 处围栏和陷阱。" : ""), "warn");
+  }
+  // 没守住那一夜铁锹扶起了几处（醒来的卡上说）
+  chGateFixed() {
+    return this._chFixed || 0;
+  }
+  // 刚才这一回倒下，是不是被铁锹拖回来的那一回（醒来的那张卡上要说：尸潮还在）
+  chGatePulledNow() {
+    return this._chPulledAt != null && (this.s.playSeconds || 0) - this._chPulledAt < 5 && this.ch.gate.state === "active";
+  }
+  // 刚才这一回倒下，是不是倒在考验的那一夜（醒来的那张卡上要说）
+  chGateLostNow() {
+    return this._chLostAt != null && (this.s.playSeconds || 0) - this._chLostAt < 5 && this.ch.gate.state !== "won";
+  }
+  // 考验那一夜都进场了、只剩三只以内：最近的一只在哪儿（画面上给个圈和方向，夜里不用满农场找）
+  chGateStragglers() {
+    const h = this.s.horde,
+      g = this.ch.gate;
+    if (this.ch.n !== 1 || !g.live || h.phase !== "active" || h.remaining > 0 || this.s.region !== "farm") return null;
+    const p = this.s.player,
+      left = this.enemies.filter((z) => z.horde && !z.dead);
+    if (!left.length || left.length > 3) return null;
+    const z = left.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
+    return { region: "farm", x: Math.round(z.x), y: Math.round(z.y - 20), label: "还剩 " + left.length + " 只" };
   }
   // 今晚有考验：不能睡过去
   chGateTonight() {
@@ -545,6 +667,7 @@ export class Engine extends Base {
         ...(this.sc?.helpers || []).map((h) => ({ k: this.helperName?.(h.id) || h.id, v: "援建队 · " + (h.status || "") })),
         ...(this.c?.residents || []).map((r) => ({ k: this.residentName?.(r.id) || r.id, v: "居民 · " + (r.fed ? "吃过了" : "还没吃上") })),
         { k: "床", v: "农舍 1 张，居民床位 " + (this.residentsCapacity() - 1) + " 张" + (this.sc?.flags?.camp ? "，援建营地住援建队" : "") },
+        { k: "怎么来", v: "回了信，联盟会派人；出门时救下的人会住进来" },
       ],
     });
     if (people.n > 1) {
@@ -580,7 +703,11 @@ export class Engine extends Base {
       else if (/感染者还没打退/.test(t.text)) add(0, "bad", "感染者进了东边的路口", "把它们打退", { kind: "point", region: "farm", x: 1330, y: 400 });
       else if (/口粮只够/.test(t.text)) add(2, "warn", t.text, "做干粮，或者去集市换", { kind: "res", id: "food" });
       else if (/发烧/.test(t.text)) add(2, "warn", t.text, "", { kind: "page", page: "store" });
-      else if (/坏了/.test(t.text)) add(3, "warn", t.text, "", { kind: "page", page: "store" });
+      else if (/坏了/.test(t.text)) {
+        // 用坏了的武器、防具：有武器工作台就去那一页修，没有就先去建一座
+        const bench = s.buildings.some((b) => b.type === "weaponbench" && b.hp > 0);
+        add(3, "warn", t.text.replace(/，回武器台修$/, ""), bench ? "回农场，在武器工作台修" : "先建一座武器工作台（建造 · 吃住）", bench ? { kind: "page", page: "store", ui: { tab: "make", station: "weaponbench" } } : { kind: "page", page: "build", ui: { tab: "live", sel: "weaponbench" } });
+      }
     }
     if (s.region === "farm") {
       const ripe = s.plots.filter((p) => p.crop && this.chRipe(p)),
@@ -663,6 +790,16 @@ export class Engine extends Base {
   }
 
   // ================= 存档 =================
+  // 存出来的就是读进来以后的样子：跑掉的感染者这类读档时会清掉的东西，存的时候就不带了，
+  // 这样存出来再读回去一字不差。
+  serialize() {
+    const text = super.serialize();
+    try {
+      return JSON.stringify(Engine.parse(text));
+    } catch {
+      return text;
+    }
+  }
   static parse(text) {
     const raw = JSON.parse(text);
     if (!raw || typeof raw !== "object" || raw.format !== SAVE_FORMAT || !raw.ch) throw Error("这份存档是旧版的，新版读不了。");

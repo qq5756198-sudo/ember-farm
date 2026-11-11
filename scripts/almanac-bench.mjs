@@ -17,7 +17,7 @@
 // 3) 夜里的好事：node scripts/almanac-bench.mjs night [天数]
 //    平安的晚上（没循声来的、没夜袭、不是长夜）出好事的比例，四种各多少。方案的线：平均 25 晚出一件。
 const D = process.env.DIST ? new URL("file://" + process.env.DIST.replace(/\/?$/, "/")).href : new URL("../dist/", import.meta.url).href;
-const { Engine, freshState } = await import(D + "campaign.js");
+const { Engine, freshState } = await import(D + "ahead.js") /* v0.50：这些台子量的是后面几章的系统，不过章节那一层 */;
 const { ITEMS, CROPS, BUILDINGS } = await import(D + "data.js");
 let AL = null;
 try {

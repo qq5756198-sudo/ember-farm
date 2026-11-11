@@ -15,15 +15,6 @@ import {
   NPCS,
 } from "../dist/outpost-data.js";
 import { outpostGoal } from "../dist/outpost-story.js";
-import {
-  renderOutpost,
-  renderOutpostJournal,
-  handleOutpostAction,
-  stationExtras,
-  outpostHud,
-  portrait,
-} from "../dist/outpost-ui.js";
-import { handleAllianceAction } from "../dist/alliance-ui.js";
 
 const make = (state = freshState()) => {
   const toasts = [];
@@ -85,18 +76,6 @@ function hour(e, h) {
   e.advanceMinutes(1);
 }
 
-test("new saves start with outpost defaults, a food estimate and the new version", async () => {
-  const { e } = make();
-  assert.equal(e.o.schema, 1);
-  assert.equal(e.o.raid.phase, "none");
-  assert.deepEqual(e.o.crew, []);
-  const hud = outpostHud(e);
-  assert.match(hud.food.text, /^口粮 [\d.]+ 天$/);
-  assert.equal(e.foodNeed(), UPKEEP.playerDaily, "a lone player needs their own two meals plus sleep");
-  const v = await import("../dist/version.js");
-  assert.match(v.GAME_VERSION, /^v0\.(1[4-9]|[2-9]\d)\.\d+$/, "later rounds keep a newer explicit version");
-  assert.ok(v.GAME_EDITION.length > 0);
-});
 
 test("v0.13 saves without outpost data load unchanged and gain empty outpost state", () => {
   const old = new AllianceEngine(allianceFresh(), () => {});
@@ -154,19 +133,6 @@ test("hunger warnings fire once per dip and starving at zero hunger ends in a fa
   assert.ok(e.s.player.hunger > 0 && e.s.player.hp > 0);
 });
 
-test("sleeping costs extra hunger and opens a day summary with tomorrow's risks", () => {
-  const { e } = make();
-  home(e);
-  e.s.player.hunger = 80;
-  e.s.minute = 21 * 60;
-  assert.ok(e.sleep());
-  assert.ok(e.s.player.hunger <= 80 - 12 - UPKEEP.sleepHunger + 0.001);
-  const ev = e.events.find((x) => x.type === "menu" && x.view === "summary");
-  assert.ok(ev, "summary menu emitted");
-  assert.ok(e.o.report.threats.some((t) => t.startsWith("口粮还能撑")));
-  const html = renderOutpost(e, { view: "summary" });
-  assert.match(html, /今天要留意/);
-});
 
 test("dinner at 18:00 feeds residents, helpers and crew from storage first; the hungry lose morale or speed", () => {
   const { e, toasts } = make();
@@ -887,103 +853,10 @@ test("story save data round-trips; corrupted or inconsistent outpost fields are 
   bad((r) => (r.storyCampaign.claimed = r.storyCampaign.claimed.filter((x) => x !== "act5")));
 });
 
-test("journal story cards offer every new choice with a cost/gain/impact preview and the buttons act through the engine", () => {
-  const { e } = make();
-  toAct(e, 6);
-  home(e);
-  const html = renderOutpostJournal(e, {});
-  assert.match(html, /灰隼团要过路费/);
-  assert.match(html, /class="consequence"/);
-  assert.match(html, /outpost-strip/);
-  assert.match(html, /data-action="aStoryChoose" data-id="refuse"/);
-  handleAllianceAction("aStoryChoose", { dataset: { id: "refuse" } }, ctx(e, { ui: {} }));
-  assert.equal(e.o.toll, "refuse");
-  const html2 = renderOutpostJournal(e, {});
-  assert.match(html2, /选一种备战方式/);
-});
 
-test("outpost menus render with portraits and every button is handled", () => {
-  const { e } = make();
-  toAct(e, 6);
-  home(e);
-  e.addCrew({ id: "youke", name: "尤可", trait: "nightowl", role: "build", look: "youke" });
-  e.o.caravan.next = e.s.day;
-  hour(e, 8);
-  e.o.visitors.current = { id: "v3", name: "祁冬", kind: "honest", huer: null, from: "x", role: "carry", trait: "diligent", look: 0, clues: { papers: "a", body: "b", bag: "c" }, story: "s", checked: ["papers"], day: 1 };
-  e.s.inventory.radish = 3;
-  const views = [
-    ["shipping", ""],
-    ["caravan", ""],
-    ["review", ""],
-    ["lathe", ""],
-    ["crew", "youke"],
-    ["dialog", "cai"],
-    ["dialog", "hongshu"],
-    ["log", ""],
-    ["ledger", ""],
-    ["bundles", ""],
-  ];
-  const handled = new Set();
-  for (const [view, id] of views) {
-    const html = renderOutpost(e, { view, id, toastLog: [{ text: "x", tone: "warn", time: "第1天" }] });
-    assert.ok(html.length > 50, view);
-    for (const m of html.matchAll(/data-action="(o[A-Z]\w+)"/g)) handled.add(m[1]);
-  }
-  assert.match(renderOutpost(e, { view: "caravan" }), /<svg class="portrait"/);
-  for (const a of handled) assert.ok(handleOutpostAction(a, { dataset: { id: "" } }, ctx(e)), a + " handled");
-  assert.ok(portrait("tangjiu").startsWith("<svg"));
-  assert.ok(portrait(2).includes("rect"));
-});
 
-test("shipping and review buttons change real state through the UI handler", () => {
-  const { e } = make();
-  toAct(e, 3);
-  home(e);
-  e.s.inventory.radish = 4;
-  const c = ctx(e);
-  handleOutpostAction("oShip", { dataset: { id: "radish:all" } }, c);
-  assert.equal(e.o.shipBox.radish, 4);
-  handleOutpostAction("oUnship", { dataset: { id: "radish" } }, c);
-  assert.equal(e.s.inventory.radish, 4);
-  e.o.visitors.current = { id: "v3", name: "祁冬", kind: "honest", huer: null, from: "x", role: "carry", trait: "diligent", look: 0, clues: { papers: "a", body: "b", bag: "c" }, story: "s", checked: ["papers"], day: 1 };
-  handleOutpostAction("oCheck", { dataset: { id: "bag" } }, c);
-  assert.ok(e.o.visitors.current.checked.includes("bag"));
-  let closed = false;
-  handleOutpostAction("oVisitor", { dataset: { id: "accept" } }, ctx(e, { closeMenu: () => (closed = true) }));
-  assert.ok(closed);
-  assert.equal(e.o.crew.length, 1);
-});
 
-test("station menus list rush and incident controls with previews", () => {
-  const { e } = make();
-  home(e);
-  e.s.inventory.radish = 3;
-  assert.ok(e.craftBatch("trailBread", 1));
-  const cook = e.s.buildings.find((b) => b.type === "cook");
-  let html = stationExtras(e, cook);
-  assert.match(html, /data-action="oRush"/);
-  assert.match(html, /剩余时间减半/);
-  e.roll = () => 0.01;
-  handleOutpostAction("oRush", { dataset: { id: e.c.production[0].id } }, ctx(e));
-  html = stationExtras(e, cook);
-  assert.match(html, /data-action="oFix"/);
-  assert.match(html, /起火/);
-});
 
-test("HUD shows food days with danger tone and a live raid banner", () => {
-  const { e } = make();
-  toAct(e, 6);
-  home(e);
-  for (const k of Object.keys(e.s.storage)) delete e.s.storage[k];
-  delete e.s.inventory.bread;
-  assert.equal(outpostHud(e).food.tone, "danger");
-  e.s.storage.bread = 40;
-  assert.equal(outpostHud(e).food.tone, "ok");
-  e.chooseStory("toll", "refuse");
-  e.o.raid.phase = "warning";
-  e.o.raid.timer = 30;
-  assert.match(outpostHud(e).raid, /30 秒后进攻/);
-});
 
 test("the old rebuild outpost construction sites keep their own E action", () => {
   const { e } = make();
@@ -1024,25 +897,6 @@ test("a burning supply-plan batch stays frozen through sleep instead of being st
   assert.ok(job && !job.ready && job.remaining === left && job.station === "cook");
 });
 
-test("dying mid-raid shows the raid report after the faint and keeps the loot record", () => {
-  const { e } = make();
-  toAct(e, 6);
-  home(e);
-  e.chooseStory("toll", "refuse");
-  const r = e.o.raid;
-  e.s.day = r.day;
-  e.s.minute = 1139.99;
-  e.update(0.05, {});
-  e.update(0.05, {});
-  r.timer = 0.01;
-  e.update(0.05, {});
-  e.events = [];
-  e.die();
-  const menus = e.events.filter((x) => x.type === "menu");
-  assert.equal(menus.at(-1).view, "raid");
-  assert.equal(r.report.won, false);
-  assert.match(renderOutpostJournal(e, {}), /上次战报/);
-});
 
 test("an infected recruit turns at the farm camp even when the night passes elsewhere", () => {
   const { e } = make();

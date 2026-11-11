@@ -6,8 +6,6 @@ import {freshState as v1State} from '../dist/engine.js';
 import {BUILDINGS,ITEMS,RECIPES,CROPS} from '../dist/data.js';
 import {TASKS,OUTPOSTS} from '../dist/rebuild-data.js';
 import {COOP_COSTS,COOP_THRESHOLDS,PLAN_RECIPES} from '../dist/supply-data.js';
-import {renderSupplyGoal,renderSupplyPlans,renderCooperation,handleSupplyAction} from '../dist/supply-ui.js';
-import {renderRebuild} from '../dist/rebuild-ui.js';
 
 const make=()=>{const e=new Engine(demoState());e.paused=false;return e;};
 const building=(e,type,x=850,y=760)=>{e.s.buildings.push({id:'test-'+e.s.idCounter++,type,x,y,hp:BUILDINGS[type].hp,rotation:0});e.assignRegion();};
@@ -163,15 +161,3 @@ test('new save data rejects bad quantities, unknown plans, duplicate jobs and in
   for(const mutate of mutations){const s=JSON.parse(e.serialize());mutate(s);assert.throws(()=>Engine.parse(JSON.stringify(s)));}
 });
 
-test('every new control is handled and every main stage renders truthful material identifiers',()=>{
-  const e=make();unlock(e);const fields={'supply-goal':'project:market','supply-recipe':'trailBread','supply-target':'6','supply-reserve-item':'radish','supply-reserve-count':'3'};
-  const ctx={engine:e,root:{querySelector:s=>({value:fields[s.slice(1)]})},showMenu(){},renderMenu(){},save(){},toast(){}};
-  for(const action of ['sPin','sPlan','sReserve'])assert.ok(handleSupplyAction(action,{dataset:{action,id:''}},ctx));
-  assert.equal(e.u.pin,'project:market');assert.equal(e.u.plans.trailBread.target,6);assert.equal(e.u.reserves.radish,3);
-  const h={esc:s=>s,icon:i=>String(i),itemIcon:id=>id,itemName:id=>ITEMS[id].name,costs:c=>JSON.stringify(c)};
-  for(let i=0;i<16;i++){e.r.claimed=TASKS.slice(0,i).map(q=>q.id);e.u.pin='auto';for(const tab of ['overview','farm','production','expedition','residents','defense','research'])assert.doesNotThrow(()=>renderRebuild(e,tab,h,{},{}));assert.ok(e.goalMaterials().every(r=>ITEMS[r.id]));}
-  const html=renderSupplyGoal(e)+renderSupplyPlans(e)+renderCooperation(e);
-  const controls=[...html.matchAll(/data-action="(s[^"]+)"/g)].map(m=>m[1]);
-  for(const action of new Set(controls))assert.ok(['sPin','sPlan','sReserve','sToggle','sNeed','sDeposit','sStoreAll','sCoopUpgrade','sPinDirect','sCoopMode','sPack','sFollow'].includes(action));
-  assert.equal(handleSupplyAction('notMine',{dataset:{}},ctx),false);
-});

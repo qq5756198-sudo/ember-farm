@@ -10,7 +10,7 @@
 // 机器人碰到巨型作物就锄三下。
 // DIST=别的 dist 目录：拿同一个脚本去跑旧版本对照
 const D = process.env.DIST ? new URL("file://" + process.env.DIST.replace(/\/?$/, "/")).href : new URL("../dist/", import.meta.url).href;
-const { Engine, freshState } = await import(D + "campaign.js");
+const { Engine, freshState } = await import(D + "ahead.js") /* v0.50：这些台子量的是后面几章的系统，不过章节那一层 */;
 const { ITEMS, CROPS, BUILDINGS } = await import(D + "data.js");
 const { PROJECTS } = await import(D + "expansion-data.js");
 

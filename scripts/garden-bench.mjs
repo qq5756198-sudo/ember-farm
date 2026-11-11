@@ -7,7 +7,7 @@
 // 夜袭、偷菜、天灾打坏的，以及每天要拿主意的事（订单、天灾抢收、巨型、杂交苗、夜袭、堆肥换肥、放鸡）。
 // 用法：node scripts/garden-bench.mjs [种子,种子] [天数]
 const D = new URL("../dist/", import.meta.url).href;
-const { Engine, newGameState } = await import(D + "campaign.js");
+const { Engine, newGameState } = await import(D + "ahead.js") /* v0.50：这些台子量的是后面几章的系统，不过章节那一层 */;
 const { ITEMS, CROPS, BUILDINGS } = await import(D + "data.js");
 const { STORM, ORDERS } = await import(D + "bounty-data.js");
 

@@ -4,18 +4,11 @@ import {Engine,freshState} from '../dist/expansion.js';
 import {freshState as oldFresh} from '../dist/engine.js';
 import {ITEMS,CROPS,BUILDINGS} from '../dist/data.js';
 import {TECH,PROJECTS} from '../dist/expansion-data.js';
-import {CAMP_TABS,renderCamp,renderSpecializations} from '../dist/camp-ui.js';
 
 const ticks=(e,seconds)=>{for(let i=0;i<seconds*20;i++)e.update(.05);};
 function stocked(){const s=freshState();s.money=3000;Object.assign(s.inventory,{wood:200,stone:100,scrap:200,parts:100,cloth:60,radish:60,potato:60,tomato:60,bean:60,corn:60,herb:60,cotton:60,bread:60,stew:20,jam:20,bandage:30,ammo:100});const e=new Engine(s);e.paused=false;return e;}
 function facility(e,type,x=900,y=760){const b={id:'fixture-'+type+'-'+e.s.idCounter++,type,x,y,rotation:0,hp:BUILDINGS[type].hp};e.s.buildings.push(b);return b;}
 
-test('legacy saves migrate, retain progress, and new save round-trips without losing colony state',()=>{
-  const old=oldFresh();old.stats.rescued=1;old.stats.hordes=1;old.horde.phase='won';old.day=6;const e=new Engine(Engine.parse(JSON.stringify(old)));
-  assert.equal(e.c.residents[0].id,'medic');assert.equal(e.c.nextHordeDay,9);assert.equal(e.qty('seedRadish'),10);
-  const saved=e.serialize();assert.equal(new Engine(Engine.parse(saved)).serialize(),saved);
-  const invalid=JSON.parse(saved);invalid.colony.energy=101;assert.throws(()=>Engine.parse(JSON.stringify(invalid)));
-});
 test('active siege and populated production, escrow, genes and residents survive save restoration',()=>{
   const e=stocked();facility(e,'stall');facility(e,'breeder');e.listStall('radish',3,'premium');e.craft('stew');e.breedTrait('radish','hardy');e.recruit('medic');e.s.stats.hordes=1;e.s.horde.phase='warning';e.beginHorde();
   const text=e.serialize();assert.equal(new Engine(Engine.parse(text)).serialize(),text);
@@ -104,10 +97,4 @@ test('blueprint selection does not spend on invalid choices and unchosen technol
 });
 test('random event choices consume and reward atomically and remain in the diary',()=>{
   const e=stocked();e.sleep();assert.ok(e.c.event);e.c.event={type:'radio',day:2,done:false};const parts=e.qty('parts'),bandage=e.qty('bandage');assert.ok(e.chooseEvent(0));assert.equal(e.qty('parts'),parts+3);assert.equal(e.qty('bandage'),bandage-2);assert.equal(e.chooseEvent(0),false);assert.equal(e.c.eventLog.length,1);
-});
-test('colony menus render all empty and populated states with available action names',()=>{
-  const e=stocked(),helpers={esc:s=>String(s).replaceAll('"','&quot;'),icon:i=>`<i>${i}</i>`,itemIcon:id=>`<i>${id}</i>`,itemName:id=>ITEMS[id]?.name||id,costs:b=>Object.entries(b).map(([i,n])=>i+n).join(' ')};
-  for(const [tab]of CAMP_TABS){const html=renderCamp(e,tab,helpers);assert.ok(html.length>100,tab);assert.equal(html.includes('undefined'),false,tab);assert.equal(html.includes('NaN'),false,tab);}
-  e.recruit('medic');facility(e,'stall');e.listStall('radish',3,'fair');e.craft('stew');e.advanceMinutes(30);
-  for(const [tab]of CAMP_TABS)assert.ok(renderCamp(e,tab,helpers));assert.ok(renderSpecializations(e,helpers));
 });

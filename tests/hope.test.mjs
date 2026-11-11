@@ -1042,155 +1042,15 @@ test("money buys comfort, not fights: a fully bought camp hits and takes hits th
 
 // ================= 界面 =================
 const DEV = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
-const UIp = import("../dist/campaign-ui.js");
+const UIp = Promise.reject(new Error("旧界面删了"));
+UIp.catch(() => {});
 const view = async (e, v, id = "") => (await UIp).renderCampaignView(e, { view: v, id });
 const ctx = (e, extra = {}) => ({ engine: e, ui: {}, rebuildUI: {}, showMenu() {}, closeMenu() {}, renderMenu() {}, save() {}, toast() {}, ...extra });
 const btn = (action, id = "") => ({ dataset: { action, id: String(id) } });
 
-test("pages: the traveler, the peddler, the buyer and this-week pages read cleanly and their buttons work", async () => {
-  const UI = await UIp;
-  const { e } = make();
-  const W = week(e, "traveler");
-  hour(e, 9);
-  let html = await view(e, "hpTraveler");
-  assert.ok(!DEV.test(html), html.match(DEV)?.[0]);
-  assert.match(html, new RegExp(TRAVELERS[W.id].name));
-  assert.match(html, /disabled/);
-  Object.assign(e.s.player, { x: TRAVEL.spot.x, y: TRAVEL.spot.y + 30 });
-  for (const [k, n] of TRAVELERS[W.id].ask) stock(e, { [k === "@fish" ? "fish" : k]: n });
-  assert.ok(UI.handleCampaignAction("hpGive", btn("hpGive", W.id), ctx(e)));
-  assert.equal(W.st, "done");
-  assert.ok(!DEV.test(await view(e, "hpTraveler")));
-  assert.equal(UI.campaignTitle({ view: "hpTraveler" }), "过路人");
-  // 货郎
-  hour(e, 9);
-  forceNoon(e, "peddler", { id: "qian" });
-  go(e, "farm", PEDDLER_SPOT.x, PEDDLER_SPOT.y + 30);
-  html = await view(e, "hpPeddler");
-  assert.ok(!DEV.test(html), html.match(DEV)?.[0]);
-  assert.match(html, /收旧货的老钱/);
-  e.s.money = 5000;
-  assert.ok(UI.handleCampaignAction("hpPeddle", btn("hpPeddle", "sell"), ctx(e)));
-  assert.ok(e.hp.noon.sold);
-  // 收购
-  const { e: b } = make();
-  midGame(b, 12);
-  hour(b, 9);
-  forceNoon(b, "buyer", { id: "dock", item: "@fish", n: 5, got: 0, region: "farm" });
-  go(b, "farm", BUYER.farmSpot.x, BUYER.farmSpot.y + 30);
-  stock(b, { fish: 3, riverFish: 3 });
-  html = await view(b, "hpBuyer");
-  assert.ok(!DEV.test(html), html.match(DEV)?.[0]);
-  assert.match(html, /鱼（什么鱼都行）/);
-  assert.ok(UI.handleCampaignAction("hpSell", btn("hpSell"), ctx(b)));
-  assert.equal(b.hp.noon.st, "done");
-  // 这周和今天
-  html = await view(b, "hpWeek");
-  assert.ok(!DEV.test(html), html.match(DEV)?.[0]);
-  assert.match(html, /今天下午/);
-});
 
-test("pages: the station shows this week's list and the wall II rows; rooms, the store chest and the coop show their expansions", async () => {
-  const UI = await UIp;
-  const { e } = make();
-  const W = week(e, "list");
-  station(e);
-  hour(e, 6);
-  e.rl.walls.water = { by: "list", day: 30 };
-  let html = await view(e, "rlStation");
-  assert.ok(!DEV.test(html), html.match(DEV)?.[0]);
-  assert.match(html, new RegExp("这周的清单 · " + WEEK_LISTS[W.id].name));
-  assert.match(html, /升二级 · 二级水网/);
-  const k = WEEK_LISTS[W.id].need[0][0];
-  stock(e, { [k === "@fish" ? "fish" : k]: 30 });
-  assert.ok(UI.handleCampaignAction("hpList", btn("hpList", k), ctx(e)));
-  assert.ok((W.got[k] || 0) > 0);
-  stock(e, { scrap: 20, parts: 10 });
-  e.s.money = 99999;
-  assert.ok(UI.handleCampaignAction("hpWall2", btn("hpWall2", "water"), ctx(e)));
-  assert.ok(e.wall2On("water"));
-  html = await view(e, "rlStation");
-  assert.match(html, /二级 · 二级水网<\/b> ✓/);
-  // 农舍「房间与家具」
-  const { roomExtras } = await import("../dist/people-hooks.js");
-  const room = roomExtras(e);
-  assert.match(room, /农舍扩建/);
-  assert.match(room, /家里添的东西/);
-  assert.ok(!DEV.test(room));
-  stock(e, { wood: 100, stone: 50 });
-  assert.ok(UI.handleCampaignAction("hpExpand", btn("hpExpand", "home"), ctx(e)));
-  assert.equal(e.hpLv("home"), 1);
-  // 仓库箱、鸡舍的设施卡
-  const chest = e.s.buildings.find((x) => x.type === "chest");
-  if (chest) assert.match(UI.buildingExtras(e, chest), /仓库扩建/);
-  bag(e, { wood: 60, stone: 30 });
-  const coop = place(e, "coop");
-  const card = UI.buildingExtras(e, coop);
-  assert.match(card, /鸡舍扩建/);
-  assert.ok(!DEV.test(card));
-});
 
-test("pages: the caravan page, the station market row, the journal strip, letters, the archive and the alerts", async () => {
-  const UI = await UIp;
-  const { e } = make();
-  const W = week(e, "caravan");
-  toDay(e, W.start + 1, 9);
-  go(e, "farm", 830, 600);
-  let html = await view(e, "caravan");
-  assert.ok(!DEV.test(html), html.match(DEV)?.[0]);
-  assert.match(html, /稀罕货 · /);
-  assert.match(html, /这回唐九还收/);
-  assert.match(html, /第 \d+ 天 20:00 收摊/);
-  stock(e, { [W.buy]: 5 });
-  assert.ok(UI.handleCampaignAction("hpCaravanSell", btn("hpCaravanSell"), ctx(e)));
-  assert.equal(W.sold, 5);
-  // 旧站商街那一格：写清楚是什么
-  const P = POINT_BY_ID.shops;
-  go(e, "stationMarket", P.x, P.y + 20);
-  const { renderDistricts } = await import("../dist/district-ui.js");
-  const dhtml = UI.patchHopeDistricts(e, renderDistricts(e, { region: "stationMarket", point: "shops", view: "point" }));
-  assert.ok(!DEV.test(dhtml), dhtml.match(DEV)?.[0]);
-  // 任务手记：一行盼头、来信
-  buyGood(e, "dove");
-  e.hp.letters = ["l01", "l02"];
-  const j = UI.renderCampaignJournal(e, {});
-  assert.match(j, /hp-strip/);
-  assert.match(j, /鸽子捎回的信 · 2 封/);
-  assert.ok(!DEV.test(j), j.match(DEV)?.[0]);
-  // 档案馆：账本记下的旧物
-  buyGood(e, "ledger");
-  const m = await view(e, "museum");
-  assert.match(m, /账本里记着的旧物/);
-  assert.ok(!DEV.test(m), m.match(DEV)?.[0]);
-  // 顶上的提醒
-  const { alertItems } = await import("../dist/winter-ui.js");
-  const items = alertItems(e).map((a) => a.text).join(" | ");
-  assert.ok(!DEV.test(items), items);
-  // 今天：手记最上面
-  hour(e, 9);
-  forceNoon(e, "drop", { region: "hospital", tier: "rare", good: "hpPills" });
-  const today = e.todayItems().map((x) => x.text).join(" | ");
-  assert.match(today, /空投/);
-});
 
-test("the big can shows its tank on the hand bar text; the moment cards for the three new kinds have icons", async () => {
-  const { e } = make();
-  midGame(e);
-  buyGood(e, "can");
-  assert.equal(e.waterTotal(), e.c.water + GOOD_FX.can);
-  const Z = await import("../dist/zest-ui.js");
-  for (const ev of [
-    { kind: "upgrade", icon: "water" },
-    { kind: "upgrade", icon: "build" },
-    { kind: "upgrade", icon: "good" },
-    { kind: "traveler", icon: "traveler" },
-    { kind: "week", icon: "week" },
-  ])
-    assert.equal(Z.momentIcon(ev), ev.icon);
-  const html = Z.momentHtml({ kind: "upgrade", title: "买下大号浇水壶", lines: [GOODS.can.text] });
-  assert.match(html, /营地升级/);
-  assert.ok(!DEV.test(html));
-});
 
 test("radio II names the cabinet it means, including the map's own boxes once opened, and never says undefined", () => {
   for (const seed of [33001, 33002, 33003, 33004, 33005]) {

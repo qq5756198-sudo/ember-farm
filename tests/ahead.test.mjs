@@ -3,11 +3,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { Engine, freshState, newGameState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, newGameState, needsUpgrade as needsStoryMigration } from "../dist/ahead.js";
 import { Engine as AheadEngine, aheadQuiet, aheadDefaults } from "../dist/ahead.js";
 import { Engine as HandyEngine } from "../dist/handy.js";
-import * as UI from "../dist/campaign-ui.js";
-import { aheadPage, aheadJournal, aheadHud, aheadMap, handleAheadAction } from "../dist/ahead-ui.js";
 import { PROJECTS, PROJECT_BY_ID, BATCH1, BATCH2, START, OUTSIDE, KID_LETTERS, NOW, QUIET, PAGE, FARM_SPOTS, CRATE } from "../dist/ahead-data.js";
 import { ITEMS, CROPS } from "../dist/data.js";
 import { decorItem, CROP_SEASON, seasonOf } from "../dist/almanac-data.js";
@@ -64,19 +62,6 @@ const ctx = (e, extra = {}) => ({ engine: e, ui: {}, rebuildUI: {}, showMenu() {
 const btn = (action, id = "") => ({ dataset: { action, id } });
 
 // ================= 版本、层 =================
-test("version: v0.46.0 有奔头 in the title, the loading page and settings; the new files are preloaded; the engine and the scene each got a layer on top", () => {
-  assert.equal(GAME_VERSION, "v0.46.0");
-  assert.equal(GAME_EDITION, "有奔头");
-  assert.equal(GAME_RELEASE, "v0.46.0 · 有奔头");
-  const html = read("dist/index.html");
-  assert.match(html, /<title>余烬农场 v0\.46\.0 · 有奔头<\/title>/);
-  assert.match(html, /data-release>v0\.46\.0 · 有奔头</);
-  for (const f of ["ahead.js", "ahead-data.js", "ahead-ui.js", "ahead-renderer.js"]) assert.ok(html.includes('<link rel="modulepreload" href="' + f + '">'), f + " preloaded");
-  assert.equal(Engine, AheadEngine);
-  assert.equal(Object.getPrototypeOf(AheadEngine), HandyEngine);
-  assert.equal(CampaignRenderer, AheadRenderer);
-  assert.equal(Object.getPrototypeOf(AheadRenderer), HandyRenderer);
-});
 
 // ================= 复兴工程：每个时节开一处 =================
 test("projects: none before the second year; from day 29 one opens on each season's first day, in order, skipping places you can't reach yet", () => {
@@ -250,154 +235,10 @@ test("deliveries: the forest lodge every morning; three days after it's done the
 });
 
 // ================= 眼下 =================
-test("the journal: once the story is over, the top card is the one thing most worth doing now; the old home-plan chapter folds below; the bottom-left goal follows it", () => {
-  const e = late(29);
-  // 主线还没打完：照旧
-  const f = make();
-  assert.equal(f.ahNow(), null);
-  assert.equal(aheadHud(f), null);
-  // 这个时节开的那一处办得起
-  rich(e);
-  let n = e.ahNow();
-  assert.equal(n.kind, "project");
-  assert.equal(n.title, NOW.project.title(PROJECT_BY_ID.waterwheel));
-  assert.match(n.cost, /3,000 金币/);
-  let html = UI.renderCampaignJournal(e, {});
-  assert.match(html, /class="journal-main story-card ah-now"/);
-  assert.match(html, /<span class="journal-eyebrow">眼下<\/span><h2>复兴工程 · 水车<\/h2>/);
-  assert.match(html, /data-action="oView" data-id="ahead"/);
-  // 老的家园计划折在下面
-  assert.match(html, /<details class="journal-extra ah-old"><summary>家园计划（老章节）/);
-  assert.equal((html.match(/class="journal-main/g) || []).length, 1, "one card on top");
-  assert.deepEqual(aheadHud(e), { number: "眼下", body: "复兴工程 · 水车" });
-  assert.equal(e.guidedGoal().title, "复兴工程 · 水车");
-  // 钱不够：攒钱
-  e.s.money = 100;
-  n = e.ahNow();
-  assert.equal(n.kind, "save");
-  assert.match(n.cost, /金币不够/);
-  // 今晚长夜：先说长夜
-  e.ln.storyDay = 20;
-  const pend = e.lnPending;
-  e.lnPending = () => true;
-  n = e.ahNow();
-  assert.equal(n.kind, "night");
-  e.lnPending = pend;
-  // 今晚最后一夜（扑火）：先说它
-  const fin = e.tg.final,
-    open = e.titanOpen;
-  e.tg.final = { ...(fin || {}), day: e.s.day, won: false, on: false };
-  e.titanOpen = (id) => id === "moth" || open.call(e, id);
-  n = e.ahNow();
-  assert.equal(n.kind, "final");
-  assert.equal(n.title, "今晚 22:00 最后一夜");
-  assert.equal(n.go.action, "oDefense");
-  e.tg.final = fin;
-  e.titanOpen = open;
-  // 出了钱：明早完工
-  rich(e);
-  e.ahFund("waterwheel");
-  n = e.ahNow();
-  assert.ok(["building", "rest", "week"].includes(n.kind), n.kind);
-  // 跟着一件委托时照旧
-  e.guidance.focus = "cooking";
-  assert.equal(aheadHud(e), null);
-  e.guidance.focus = null;
-});
-test("the journal keeps the letters: each finished place's letter and the children's letters, newest first", () => {
-  const e = late(29);
-  build(e, "waterwheel", "teahouse");
-  const html = UI.renderCampaignJournal(e, {});
-  assert.match(html, /<details class="journal-extra ah-letters"><summary>复兴工程的来信 · 2 封<\/summary>/);
-  assert.ok(html.includes(PROJECT_BY_ID.teahouse.letter));
-  assert.doesNotMatch(html, DEV);
-});
 
 // ================= 页面 =================
-test("the projects page: what's open and what it costs, what you get when it's done, the one being built, the next one and when, the second batch waits for liberation", () => {
-  const e = late(36);
-  rich(e);
-  e.ahFund("waterwheel");
-  const html = aheadPage(e);
-  assert.match(html, /<div class="outpost-page view-ahead">/);
-  assert.match(html, /旧站商街 · 老茶馆 <small>3,500 金币、木材 20、布料 4<\/small>/);
-  assert.match(html, /data-action="ahFund" data-id="teahouse" class="primary">出钱办（3,500 金）/);
-  assert.match(html, /溪谷试验田 · 水车 <small>工人进场了，明早 6 点完工<\/small>/);
-  assert.match(html, /下一处第 43 天开：雨巷住区的公共澡堂/);
-  assert.match(html, /第二期 · 把余烬地区接回外面/);
-  assert.ok(html.includes(PAGE.wait2));
-  assert.doesNotMatch(html, DEV);
-  assert.equal(UI.campaignTitle({ view: "ahead" }), "复兴工程");
-  assert.equal(UI.renderCampaignView(e, { view: "ahead" }), html);
-  // 不在农场：按钮灰着、写着为什么
-  e.s.region = "valley";
-  assert.match(aheadPage(e), /disabled title="回到农场再办"/);
-  // 出钱的按钮
-  e.s.region = "farm";
-  let saved = 0;
-  assert.ok(handleAheadAction("ahFund", btn("ahFund", "teahouse"), ctx(e, { save: () => saved++ })));
-  assert.equal(saved, 1);
-  assert.ok(e.ahBuilding("teahouse"));
-  // 重建站那一页最上面有一行
-  const st = UI.renderCampaignView(e, { view: "rlStation" });
-  if (st.includes("</header>")) assert.match(st, /<section class="far-strip ah-strip">/);
-});
-test("the world map hangs a small sign on each place that's been rebuilt; the top alert says when this season's project is affordable and opens the page", () => {
-  const e = late(29);
-  const svg = '<div class="atlas"><svg></svg></div>';
-  assert.equal(aheadMap(e, {}, svg), svg);
-  build(e, "waterwheel");
-  const out = aheadMap(e, {}, svg);
-  assert.match(out, /<span class="far-pin ah-pin"[^>]*>水车 ✓<\/span>/);
-  assert.equal(aheadMap(e, { tab: "local" }, svg), svg);
-  e.s.day = 36;
-  e.ahEnsure();
-  rich(e);
-  const hud = UI.campaignHud(e);
-  assert.match(hud.alerts, /复兴工程 · 老茶馆（3,500 金）办得起了/);
-  let opened = null;
-  const idx = (hud.alerts.match(/data-id="(\d+)"[^>]*>复兴工程/) || [])[1];
-  assert.ok(handleAheadAction("wAlert", btn("wAlert", idx), ctx(e, { showMenu: (m, o) => (opened = [m, o.view]) })));
-  assert.deepEqual(opened, ["outpost", "ahead"]);
-});
 
 // ================= 奖励随进度 =================
-test("rewards grow with progress: after the story each long night held adds 0.2 to the daily choice (up to 4x, the saved tier stays 1/1.5/2, the card shows the real one); the week's list, the season boss and a rescued survivor pay more gold", () => {
-  const e = late(60);
-  e.sc.act = 8;
-  assert.equal(e.tier(), 2);
-  assert.equal(e.ahTier(), 2);
-  e.ln.storyDay = 30;
-  e.ln.held = 5;
-  // 存档里那一档照旧是 2（每日抉择的存档只认 1 / 1.5 / 2），算数的时候乘上
-  assert.equal(e.tier(), 2);
-  assert.equal(e.ahTier(), 3);
-  assert.equal(e.scaleN(100, 2), 300);
-  assert.deepEqual(e.scaleB({ wood: 10 }, 2), { wood: 30 });
-  e.ln.held = 24;
-  assert.equal(e.ahTier(), 4);
-  // 主线前几段照旧
-  assert.equal(e.ahTier(1.5), 1.5);
-  assert.equal(e.scaleN(10, 1.5), 15);
-  assert.equal(e.ahGoldMult(), 3);
-  const m = e.s.money;
-  assert.equal(e.ahBonusGold(300, "这周的清单"), 600);
-  assert.equal(e.s.money, m + 600);
-  assert.ok(e.o.log.some((l) => /守住了 10 个长夜，多给 600 金币/.test(l.text)));
-  e.ln.held = 0;
-  assert.equal(e.ahBonusGold(300, "x"), 0);
-  // 今日抉择卡上写的倍数跟着变（存档里照旧是 2）
-  const c = late(61);
-  c.sc.act = 8;
-  c.ln.storyDay = 30;
-  c.ln.held = 3;
-  c.s.minute = 7 * 60;
-  assert.ok(c.dailyGenerate(61));
-  assert.equal(c.dy.pending.tier, 2);
-  const card = UI.renderCampaignView(c, { view: "daily" });
-  assert.match(card, /奖励 ×2\.6</);
-  assert.doesNotMatch(card, /奖励 ×2</);
-});
 
 // ================= 少弹几条提示 =================
 test("fewer pop-ups: the same everyday lines go to the message log (some float over your head); crows and the missing rations still pop up the first three times; warnings stay", () => {

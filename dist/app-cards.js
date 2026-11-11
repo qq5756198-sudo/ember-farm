@@ -277,8 +277,15 @@ function boonCard(G) {
 function deathCard(G) {
   const e = G.e,
     hunger = e.lastDeath === "hunger";
+  if (e.chGatePulledNow?.())
+    return `${cardHead("铁锹把你拖回了农舍", "", "<span></span>")}
+    <p>他给你缠上了绷带。尸潮还在路口，没散。</p>
+    <p class="why">今晚再倒下一回，就算没守住了。先吃一口、缠好绷带再出去；它们踩上陷阱会挨打，隔着围栏打它们够不着你。</p>
+    <div class="row" style="flex-wrap:wrap"><span class="tag">生命回到 ${Math.ceil(e.s.player.hp)}</span><span class="tag bad">还剩 ${e.s.horde.remaining + e.enemies.filter((z) => z.horde && !z.dead).length} 只</span></div>
+    <button class="btn primary" data-act="close">回路口</button>`;
   return `${cardHead(hunger ? "你饿晕了" : "有人把你送回了家", "", "<span></span>")}
     <p>${hunger ? "你在农舍里醒来，金币少了一些。先把肚子填饱：吃一份干粮，或者把萝卜做成干粮。" : "你在农舍里醒来。工具和种子都还在；这一趟翻到的普通材料掉在了原地，地图上标着，可以回去捡。金币少了 5%。"}</p>
+    ${e.chGateLostNow?.() ? `<p class="why">第一场尸潮没守住：它们散了，${e.chGateInfo().when} ${e.chGateInfo().hour}:00 还来。${e.chGateFixed?.() ? "铁锹连夜把 " + e.chGateFixed() + " 处围栏和陷阱扶到了六成；" : ""}白天把剩下的修好、绷带补上，手记里看还差什么。</p>` : ""}
     <div class="row" style="flex-wrap:wrap"><span class="tag">生命回到 ${Math.ceil(e.s.player.hp)}</span>${e.gr ? `<span class="tag amber">身上的装备各磨损了四分之一</span>` : ""}</div>
     <button class="btn primary" data-act="close">起来</button>`;
 }

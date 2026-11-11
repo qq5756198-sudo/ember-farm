@@ -2,16 +2,12 @@
 // 每日抉择“稍后再选”、平安的早上不弹日终总结、手记的“今天”，以及这些在界面上的样子。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState, newGameState } from "../dist/campaign.js";
+import { Engine, freshState, newGameState } from "../dist/ahead.js";
 import { Engine as GearEngine, freshState as gearFresh } from "../dist/gear.js";
 import { ROLL, HITSTOP, REMAINS, OPENING, CAREER, LATER } from "../dist/feel-data.js";
 import { EVENTS } from "../dist/daily-data.js";
 import { RULES } from "../dist/gear-data.js";
 import { ITEMS } from "../dist/data.js";
-import { renderCampaignView, renderCampaignJournal, handleCampaignAction, menuLock, soundRows, helpHtml, patchPadHelp, radialItems, radialHtml, radialPick, coachHtml, CueQueue, careerHtml, todayHtml } from "../dist/campaign-ui.js";
-import { patchPhone } from "../dist/feel-ui.js";
-import { alertItems } from "../dist/winter-ui.js";
-import * as Session from "../dist/player-session.js";
 
 const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
 const make = (state = freshState()) => {
@@ -265,31 +261,6 @@ test("engine events carry where the sound came from; new events for being spotte
 });
 
 // ================= 新档开局那一拨 =================
-test("new games only: around 13:00 three wanderers and a runner come up the east road; old saves never see it", () => {
-  const old = make(freshState());
-  old.s.minute = OPENING.at + 5;
-  run(old, 1);
-  assert.equal(old.feel.open.phase, "done");
-  assert.ok(!old.enemies.some((z) => z.tut));
-  const e = make(newGameState());
-  assert.equal(e.feel.open.phase, "wait");
-  e.s.minute = OPENING.at - 1;
-  run(e, 0.2);
-  assert.equal(e.feel.open.phase, "wait");
-  run(e, 1);
-  assert.equal(e.feel.open.phase, "fight");
-  const tut = e.enemies.filter((z) => z.tut && !z.dead);
-  assert.deepEqual(tut.map((z) => z.type).sort(), ["runner", "slow", "slow", "slow"]);
-  assert.ok(tut.every((z) => z.x > 1200), "they come from the east road");
-  assert.ok(e.events.some((v) => v.type === "wave"));
-  // 一步一步教：先拿木棍，再打
-  e.s.slot = 0;
-  assert.equal(e.coach().id, "arm");
-  e.s.slot = 3;
-  run(e, 0.1);
-  assert.equal(e.coach()?.id, "hit");
-  assert.match(coachHtml(e), /左键/);
-});
 
 test("the opening wave can't kill: health stops at 25, below 30 the rest walk away; bites there don't infect", () => {
   const e = make(newGameState());
@@ -456,84 +427,9 @@ const dailyDay = () => {
   e.s.minute = 361;
   return e;
 };
-test("daily card 'decide later': it stops popping up, can be closed, sleeping still needs a choice, at noon the free option is taken", () => {
-  const e = dailyDay();
-  assert.ok(e.dailyCard());
-  assert.equal(e.dailyShouldShow(), true);
-  assert.equal(menuLock(e, { view: "daily" }), "先选一个，再开始新的一天。");
-  assert.equal(e.dailyLater(), true);
-  assert.equal(e.dailyDeferred(), true);
-  assert.equal(e.dailyShouldShow(), false, "no more popping up");
-  assert.equal(menuLock(e, { view: "daily" }), "", "opened from the journal it can be closed");
-  // 睡前必须选
-  e.events.length = 0;
-  assert.equal(e.sleep(), false);
-  assert.ok(e.events.some((v) => v.type === "menu" && v.view === "daily"));
-  // 中午还没选：按不花钱的那一项算
-  const p = e.dailyCard(),
-    pick = e.freeDailyOption(p);
-  assert.ok(pick >= 0);
-  const o = EVENTS[p.id].opts[pick];
-  assert.ok(!o.cost && !o.pay, "the free option");
-  const money = e.s.money;
-  e.s.minute = LATER.deadline - 0.1;
-  run(e, 0.2);
-  assert.equal(e.dailyCard(), null, "decided at noon");
-  assert.equal(e.dy.pending.choice, pick);
-  assert.ok(e.s.money >= money - 0, "no money spent");
-  assert.match(e.toasts.map((x) => x.t).join("|"), /到中午了，今日抉择按「/);
-});
 
-test("'decide later' only before noon and only once; the card markup gets the button and loses the lock", () => {
-  const e = dailyDay();
-  const card = renderCampaignView(e, { view: "daily" });
-  assert.match(card, /data-action="feelLater"/);
-  assert.match(card, /daily-card[^"]* locked"/);
-  assert.doesNotMatch(card, FORBIDDEN);
-  handleCampaignAction("feelLater", { dataset: { action: "feelLater", id: "" } }, { engine: e, showMenu() {}, closeMenu() {}, renderMenu() {}, save() {}, toast() {} });
-  assert.equal(e.dailyDeferred(), true);
-  const again = renderCampaignView(e, { view: "daily" });
-  assert.doesNotMatch(again, /data-action="feelLater"/);
-  assert.doesNotMatch(again, /daily-card[^"]* locked"/);
-  assert.match(again, /12:00 前选好/);
-  assert.match(e.dailyLaterReason(), /放着/);
-  const late = dailyDay();
-  late.s.minute = LATER.deadline + 1;
-  assert.equal(late.dailyLater(), false);
-  assert.doesNotMatch(renderCampaignView(late, { view: "daily" }), /data-action="feelLater"/);
-});
 
-test("a card with no option that costs nothing comes back at noon to be decided; the note and the toast say which way it will go", () => {
-  const e = dailyDay();
-  e.dy.pending = { day: 2, id: "D01", rolls: [0.5, 0.5, 0.5], tier: 1, luck: false, choice: null, win: null, lines: [] };
-  assert.equal(e.freeDailyOption(), -1, "every option of this card costs or risks something");
-  assert.equal(e.dailyLater(), true);
-  assert.match(e.toasts.at(-1).t, /没有不吃亏的选项，到了中午会再拿出来/);
-  assert.match(renderCampaignView(e, { view: "daily" }), /没有就把卡片拿出来/);
-  e.s.minute = LATER.deadline - 0.1;
-  run(e, 0.2);
-  assert.ok(e.dailyCard(), "nothing was chosen for you");
-  assert.equal(e.dailyDeferred(), false);
-  assert.equal(e.dailyShouldShow(), true, "the card pops up again");
-  assert.match(e.toasts.map((x) => x.t).join("|"), /要你定下来/);
-  assert.equal(e.dailyLater(), false, "and it can't be put off again");
-  // 有不吃亏的选项时，提示里直接写出会按哪一项算
-  const f = dailyDay(),
-    i = f.freeDailyOption();
-  assert.ok(i >= 0);
-  f.dailyLater();
-  assert.ok(f.toasts.at(-1).t.includes("「" + EVENTS[f.dailyCard().id].opts[i].label + "」"));
-});
 
-test("a put-off card shows one reminder at the top, not two, even in the middle of a fight", () => {
-  const e = dailyDay();
-  e.dailySafe = () => false;
-  assert.ok(alertItems(e).some((a) => a.text === "今日抉择等你决定"), "an open card waits while it isn't safe");
-  e.dailyLater();
-  const texts = alertItems(e).map((a) => a.text);
-  assert.ok(texts.includes("今日抉择 · 12:00 前要选"));
-  assert.ok(!texts.includes("今日抉择等你决定"));
-});
 
 // ================= 平安的早上不弹日终总结 =================
 test("a quiet night gives a one-line note and a log entry instead of the summary page; a hungry night still shows the page", () => {
@@ -564,29 +460,6 @@ test("a quiet night gives a one-line note and a log entry instead of the summary
 });
 
 // ================= 手记的“今天” =================
-test("the journal starts with 'today': up to three things — the daily card, the road fence, a coming raid, broken gear", () => {
-  const e = dailyDay();
-  e.dailyLater();
-  let items = e.todayItems();
-  assert.equal(items[0].action, "dView");
-  assert.match(items[0].text, /12:00/);
-  e.add({ riotHelmet: 1 });
-  e.equip("riotHelmet");
-  e.cond("riotHelmet").d = 0;
-  items = e.todayItems();
-  assert.ok(items.some((x) => /坏了/.test(x.text) && x.action === "rOpen"));
-  assert.ok(items.length <= 3);
-  const html = renderCampaignJournal(e, {});
-  assert.match(html, /class="journal-today"/);
-  assert.ok(html.indexOf("journal-today") < html.indexOf("journal-options") || !html.includes("journal-options"));
-  assert.doesNotMatch(html, FORBIDDEN);
-  assert.doesNotMatch(renderCampaignJournal(e, { catalog: true }), /journal-today/);
-  const quiet = make();
-  quiet.s.storage.bread = 40;
-  assert.equal(todayHtml(quiet), "", "nothing pressing, no 'today' box");
-  const hungry = make();
-  assert.match(todayHtml(hungry), /口粮只够/, "a fresh farm is short on food");
-});
 
 // ================= 老存档：空格 =================
 test("an old save hears once that Space now rolls; a new game doesn't", () => {
@@ -603,109 +476,7 @@ test("an old save hears once that Space now rolls; a new game doesn't", () => {
 });
 
 // ================= 界面 =================
-test("settings: four volumes and the sound-cue switch; help lists the eleven common keys first, the rest under 更多按键; pad B rolls", () => {
-  const html = soundRows({ sound: 0.35 }, { music: 0.6, ambience: 0.7, sfx: 0.9, cues: false });
-  for (const id of ["volume", "vol-music", "vol-ambience", "vol-sfx"]) assert.match(html, new RegExp('id="' + id + '"'));
-  assert.match(html, /data-action="feelCues"/);
-  assert.match(html, /已关闭/);
-  const help = helpHtml({});
-  const [main, more] = help.split("更多按键");
-  assert.equal((main.match(/<kbd>/g) || []).length, 11);
-  assert.match(main, /空格<\/kbd>翻滚/);
-  assert.match(more, /K<\/kbd>技能/);
-  assert.doesNotMatch(main, /左键 \/ 空格/);
-  assert.match(patchPadHelp("<div><kbd>B</kbd>返回 / 取消建造</div>"), /翻滚/);
-  for (const s of [html, help]) assert.doesNotMatch(s, FORBIDDEN);
-});
 
-test("radial menu: eight entries (plus 精英部位 with a gun, 远征路线 on an expedition), picked by direction or number", () => {
-  const e = make();
-  const items = radialItems(e);
-  assert.deepEqual(
-    items.map((x) => x.id),
-    ["craft", "build", "map", "journal", "skills", "log", "defense", "photo"],
-  );
-  e.add({ pistol: 1 });
-  e.equip("pistol");
-  e.s.slot = 4;
-  assert.ok(radialItems(e).some((x) => x.id === "aim"));
-  const html = radialHtml(items, 2);
-  assert.equal((html.match(/data-radial=/g) || []).length, 8);
-  assert.match(html, /radial-item selected/);
-  assert.doesNotMatch(html, FORBIDDEN);
-  assert.equal(radialPick(8, 0, -100), 0, "up is the first");
-  assert.equal(radialPick(8, 100, 0), 2, "right is the third");
-  assert.equal(radialPick(8, 0, 100), 4);
-  assert.equal(radialPick(8, -100, 0), 6);
-  assert.equal(radialPick(8, 5, 5), -1, "too close to the centre picks nothing");
-  // 打开时鼠标在哪，轮盘就在哪
-  assert.match(radialHtml(items, -1, { x: 300, y: 220 }), /class="radial-ring" style="left:300px;top:220px"/);
-  assert.match(radialHtml(items, -1), /class="radial-ring">/);
-  // 第十格没有数字键
-  const ten = [...items, { id: "aim", label: "精英部位", glyph: "⌖", key: "T" }, { id: "route", label: "远征路线", glyph: "➤", key: "F" }];
-  const tenHtml = radialHtml(ten, -1);
-  assert.equal((tenHtml.match(/<kbd>/g) || []).length, 9);
-  assert.doesNotMatch(tenHtml, /<kbd>10<\/kbd>/);
-});
 
-test("sound cues: one line with a direction for warnings, only the warning kinds, kept briefly", () => {
-  const e = make(),
-    p = e.s.player,
-    q = new CueQueue();
-  assert.equal(q.push({ type: "hiss", x: p.x - 200, y: p.y }, e, 0), true);
-  assert.equal(q.push({ type: "swing", x: p.x, y: p.y }, e, 0), false);
-  assert.equal(q.push({ type: "stomp", x: p.x + 200, y: p.y - 10 }, e, 0), true);
-  const html = q.html(0.5);
-  assert.match(html, /← 奔跑者在嘶叫/);
-  assert.match(html, /→ 重甲在跺脚/);
-  assert.equal(q.html(5), "");
-  assert.equal(q.push({ type: "hiss", x: p.x + 2000, y: p.y }, e, 0), false, "too far to matter");
-  // 枪声：只有灰隼团的；自己的枪不出字
-  assert.equal(q.push({ type: "shot", weapon: "pistol", x: p.x, y: p.y }, e, 0), false);
-  assert.equal(q.push({ type: "shot", weapon: "raider", x: p.x + 300, y: p.y }, e, 0), true);
-  assert.match(q.html(0.1), /→ 灰隼团在开枪/);
-  // 警报：尸潮、灰隼团、别的事各说各的
-  const w = new CueQueue();
-  w.push({ type: "alarm" }, e, 0);
-  assert.match(w.html(0.1), /警报声/);
-  e.s.horde.phase = "active";
-  w.push({ type: "alarm" }, e, 1);
-  assert.match(w.html(1.1), /尸潮来了/);
-  e.s.horde.phase = "won";
-  e.raidState().phase = "warning";
-  w.push({ type: "alarm" }, e, 2);
-  assert.match(w.html(2.1), /灰隼团来了/);
-});
 
-test("the achievements book gets the career table and recent trips; the quick menu gets 拍照", () => {
-  const e = make();
-  go(e, "residential");
-  go(e, "farm");
-  const html = renderCampaignView(e, { view: "collection", id: "" });
-  assert.match(html, /生涯记录/);
-  assert.match(html, /class="career-table"/);
-  assert.match(html, /废弃居民区/);
-  assert.match(html, /第 1–3 天/);
-  assert.doesNotMatch(html, FORBIDDEN);
-  assert.match(careerHtml(make()), /还没有出过门/);
-  // 饿晕的单说，不写成“被……打倒”
-  const t = e.feel.career.trips.at(-1);
-  e.feel.career.trips.push({ ...t, res: "down", by: "hunger" });
-  const starved = careerHtml(e);
-  assert.match(starved, /饿晕了/);
-  assert.doesNotMatch(starved, /被饥饿打倒|被饿晕了打倒/);
-  const phone = patchPhone('<div class="phone-grid"><button class="phone-tile" data-menu="map">地图</button><button class="phone-tile" data-menu="pause">设置</button></div>');
-  assert.match(phone, /data-action="fPhoto"[^]*data-menu="pause"/);
-});
 
-test("audio preferences live in the existing preferences key and never in the save", () => {
-  const store = new Map(),
-    S = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
-  Session.writePreferences(S, { sound: 0.4, zoom: 1, uiScale: 1, miniMap: true }, { music: 0.2, ambience: 0.3, sfx: 0.5, cues: true });
-  assert.deepEqual([...store.keys()], [Session.PREFERENCES]);
-  assert.deepEqual(Session.readAudioPreferences(S), { music: 0.2, ambience: 0.3, sfx: 0.5, cues: true });
-  Session.writePreferences(S, { sound: 0.6, zoom: 1, uiScale: 1, miniMap: true });
-  assert.deepEqual(Session.readAudioPreferences(S), { music: 0.2, ambience: 0.3, sfx: 0.5, cues: true }, "kept when other settings change");
-  const e = make();
-  assert.ok(!e.serialize().includes('"music"') && !e.serialize().includes('"cues"'));
-});

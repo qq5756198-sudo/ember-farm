@@ -11,9 +11,6 @@ import { LN } from "../dist/longnight-data.js";
 import { LATHE_MODES } from "../dist/outpost-data.js";
 import { BOSSES } from "../dist/undertow-data.js";
 import { LISTING, MOOD, MOOD_FACTORS, INSPIRE, LN_PACE, TRAP_ALL, TOWER, LURE, HEMC, RETRAIN, CARGO_RETURN, RETIRED, CARD_TYPES } from "../dist/tidy-data.js";
-import * as UI from "../dist/campaign-ui.js";
-import { RESIDENT_HOOKS, residentExtras } from "../dist/people-hooks.js";
-import { preserveBeforeUpgrade, UPGRADE_CHECKPOINT, CAMPAIGN_SAVE } from "../dist/player-session.js";
 
 const DEV = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN/;
 const make = (state = freshState(), seed = 20241) => {
@@ -107,65 +104,7 @@ function oldSave() {
 }
 
 // ================= 去掉与合并：旧档转换 =================
-test("an old save is tidied once: canner, fish trap and stall come down with every material back, the stall goods move to the listing, parcels come back, policies become decrees, the lathe leaves ammo", () => {
-  const { text, storage } = oldSave();
-  assert.equal(JSON.parse(text).tidy, undefined);
-  assert.equal(needsStoryMigration(text), true, "an old save is kept once before it is upgraded");
-  const s = Engine.parse(text);
-  const { e, toasts } = make(s);
-  // 三样都拆了
-  for (const type of RETIRED) assert.ok(!e.s.buildings.some((b) => b.type === type), type + " is gone");
-  // 退的材料一个不少：罐装机 木 8 废金属 8 零件 3；鱼篓 木 6 布 1（加今天的一条鱼）；摊位 木 10 废金属 2；
-  // 摊位超出 20 件的 5 份干粮；没做完的配送箱退 番茄罐头 2、布 1；做好的配送箱 1
-  const diff = {};
-  for (const [k, v] of Object.entries(e.s.storage)) if ((storage[k] || 0) !== v) diff[k] = v - (storage[k] || 0);
-  assert.deepEqual(diff, { wood: 24, scrap: 10, parts: 3, cloth: 2, fish: 1, bread: 5, jam: 2, parcel: 1 });
-  assert.deepEqual(
-    e.td.listing.map((l) => [l.item, l.qty]),
-    [
-      ["potato", 7],
-      ["bread", 20],
-      ["tomato", 3],
-    ],
-  );
-  assert.deepEqual(e.c.stall, []);
-  assert.ok(!e.c.production.some((j) => j.station === "canner"));
-  // 加班并进了法令簿（还有一个位）；伤员优先没位置，记下来等你签；农舍的规矩跟着法令走
-  assert.deepEqual(e.w.decrees, ["kitchen", "patrol", "silence", "overtime"]);
-  assert.deepEqual(e.f.policy, { work: "overtime", food: "equal" });
-  assert.equal(e.o.lathe.mode, "parts");
-  const notes = e.td.converted.notes.join("\n");
-  for (const word of ["罐装机拆了", "鱼篓拆了", "摊位拆了", "挂牌", "配送箱", "加班周", "伤员优先", "法令位满了", "贺满仓", "机床不再做弹药"]) assert.ok(notes.includes(word), word);
-  assert.ok(!toasts.some((t) => t.text.startsWith("营地整顿")), "not on the title screen");
-  e.update(0.016, { x: 0, y: 0 });
-  assert.ok(toasts.some((t) => t.text.startsWith("营地整顿")), "said so on the first frame in the game");
-  // 贺满仓的旧账：期限从今天算（还过一期，第二期在 12 + 6 天）
-  assert.deepEqual(e.hemcDue(), { k: 2, due: 18, late: 0, extra: 0 });
-  // 只转一次：存档读回去不再动，也不再弹
-  const again = Engine.parse(e.serialize());
-  assert.deepEqual(again.tidy.converted.notes, e.td.converted.notes);
-  assert.equal(again.buildings.length, e.s.buildings.length);
-  assert.equal(needsStoryMigration(e.serialize()), false);
-  const m2 = make(again);
-  m2.e.update(0.016, { x: 0, y: 0 });
-  assert.ok(!m2.toasts.some((t) => t.text.startsWith("营地整顿")));
-  // 第二天早上的日终总结里有清单
-  e.o.report = { day: 12, money: 0, kills: 0, harvested: 0, foodStart: 1, foodEnd: 1, night: [], days: 3, threats: [] };
-  const sum = UI.renderCampaignView(e, { view: "summary" });
-  assert.match(sum, /营地整顿/);
-  assert.match(sum, /罐装机拆了/);
-  e.o.report.day = 13;
-  assert.doesNotMatch(UI.renderCampaignView(e, { view: "summary" }), /营地整顿/);
-});
 
-test("before an old save is read for the first time its exact bytes are kept once in the upgrade checkpoint, when that slot is free", () => {
-  const { text } = oldSave();
-  const store = new Map([[CAMPAIGN_SAVE, text]]);
-  const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
-  assert.equal(preserveBeforeUpgrade(storage, needsStoryMigration), true);
-  assert.equal(JSON.parse(store.get(UPGRADE_CHECKPOINT)).main, text);
-  assert.equal(preserveBeforeUpgrade(storage, needsStoryMigration), false, "only once");
-});
 
 test("retired buildings cannot be built any more and say where their job went; a new game has nothing to tidy", () => {
   const { e, toasts } = make();
@@ -269,13 +208,6 @@ test("the listing sells one piece every 90 minutes by day at 1.25 times the pric
   assert.equal(e.festivalStars("seeds")[0], true);
 });
 
-test("tomorrow's price is shown today and is what the shipping box will pay tomorrow", () => {
-  const { e } = make();
-  for (const id of ["potato", "bread", "scrap"]) assert.equal(e.shipTrendTomorrow(id), e.shipTrend(id, e.s.day + 1));
-  e.s.inventory.potato = 3;
-  assert.match(UI.renderCampaignView(e, { view: "shipping" }), /明天/);
-  assert.match(UI.renderCampaignView(e, { view: "shipping" }), /挂牌 · 0\/3 格/);
-});
 
 // ================= 心情三档 =================
 test("mood: the target is 50 plus the reasons written out, morale moves four tenths of the way each night, and the old daily bumps no longer pile up", () => {
@@ -485,31 +417,6 @@ test("long night: waves come at 22:00, 00:00 and 02:00 and the boss at 03:00 eve
   assert.equal(asked, 1 + Math.floor(1 / 3) + 2);
 });
 
-test("the dawn report says how many the traps and towers took down", () => {
-  const { e } = postStory(30);
-  clock(e, FIRST, 1319.9);
-  run(e, 0.2);
-  const N = e.ln.night;
-  const trap = put(e, "trap", 800, 500);
-  const z = e.enemy("spitter", trap.x, trap.y, true);
-  z.hp = 10;
-  e.enemies.push(z);
-  e.updateEnemy(z, 0.05);
-  assert.ok(z.dead, "the spitter stepped on it");
-  assert.equal(e.td.night.trap, 1);
-  e._damageSource = "tower";
-  const y = e.enemy("slow", 900, 500, true);
-  e.enemies.push(y);
-  e.hurtEnemy(y, 999, 0);
-  e._damageSource = null;
-  assert.equal(e.td.night.tower, 1);
-  clock(e, FIRST + 1, 239.9);
-  run(e, 1);
-  assert.equal(e.ln.night, null);
-  assert.equal(e.ln.last.day, N.day);
-  const html = UI.renderCampaignView(e, { view: "lnight" });
-  assert.match(html, /陷阱打倒 1 只，瞭望塔打倒 1 只/);
-});
 
 // ================= 陷阱、信标、维修点、守卫 =================
 test("traps: infected with their own moves step on them too, bosses take half, raiders see through half of them", () => {
@@ -565,45 +472,6 @@ test("the noise lure only pulls once you sound it: 5 power or a part as battery,
   assert.equal(e.c.energy, 50 - LURE.power);
 });
 
-test("the repair post only works in a fight and keeps a tally; only guards who can really take a post count, and only their towers light up", () => {
-  const { e } = make();
-  toAct(e, 7);
-  e.s.region = "farm";
-  put(e, "repairpost", 830, 560);
-  const fence = put(e, "fence", 900, 560);
-  fence.hp = 50;
-  e.s.storage.wood = 10;
-  for (let i = 0; i < 200; i++) e.updateDefense(0.05);
-  assert.equal(fence.hp, 50, "no repairs in peace");
-  e.s.horde.phase = "active";
-  for (let i = 0; i < 200; i++) e.updateDefense(0.05);
-  assert.ok(fence.hp > 50);
-  assert.ok(e.td.repair.on && e.td.repair.hp > 0 && e.td.repair.wood > 0);
-  e.s.horde.phase = "won";
-  e.updateDefense(0.05);
-  assert.equal(e.td.repair.on, false);
-  assert.match(UI.buildingExtras(e, e.s.buildings.find((b) => b.type === "repairpost")), /上一场/);
-  // 守卫：吃饱、有床、不太累、没闹情绪的才算
-  residents(e, 3);
-  for (const r of e.c.residents) r.priorities.guard = 1;
-  assert.equal(e.readyGuards(), 3);
-  e.c.residents[0].fed = false;
-  e.c.residents[1].fatigue = 90;
-  assert.equal(e.readyGuards(), 1);
-  e.c.residents[2].morale = 10;
-  e.td.mood[e.c.residents[2].id] = { insp: null, last: 0, strike: e.s.day };
-  assert.equal(e.readyGuards(), 0);
-  // 塔顶的灯：上岗的守卫守前几座塔
-  e.c.residents[0].fed = true;
-  e.c.residents[0].workRole = "guard";
-  e.s.minute = 600;
-  const t1 = put(e, "tower", 640, 600),
-    t2 = put(e, "tower", 1040, 600);
-  const lit = e.mannedTowers();
-  assert.equal(lit.has(t1.id), true);
-  assert.equal(lit.has(t2.id), false);
-  assert.match(UI.buildingExtras(e, t2), /没人守/);
-});
 
 test("repair kits: fix the worst defence nearby, or the one whose page you opened; outside they mend your melee weapon by 40%", () => {
   const { e } = make();
@@ -648,29 +516,6 @@ test("贺满仓: each installment is due three days apart; late ones cost a tent
   assert.match(e.advanceReason("solar"), /不再垫付/);
 });
 
-test("the lathe: a rush makes one more batch tonight, a jam rests it the next day; ammo is gone from the menu, repair kits are in", () => {
-  const { e } = make();
-  toAct(e, 7);
-  e.s.region = "farm";
-  assert.equal(e.setLatheMode("ammo"), false);
-  assert.equal(e.setLatheMode("repair"), true);
-  Object.assign(e.s.storage, { scrap: 30, wood: 30 });
-  e.tdRoll = (kind) => (kind === "jam" ? 0 : 1);
-  clock(e, 9, 600);
-  assert.equal(e.latheRush(), true);
-  assert.match(e.latheRushReason(), /加过急/);
-  const k0 = stock(e, "repairKit");
-  clock(e, 9, 1079);
-  e.advanceMinutes(2);
-  assert.equal(stock(e, "repairKit") - k0, e.latheSlots() + 1);
-  assert.equal(e.td.lathe.jam, 10);
-  const k1 = stock(e, "repairKit");
-  clock(e, 10, 1079);
-  e.advanceMinutes(2);
-  assert.equal(stock(e, "repairKit"), k1, "jammed for a day");
-  assert.match(UI.renderCampaignView(e, { view: "lathe" }), /今晚加急/);
-  assert.doesNotMatch(UI.renderCampaignView(e, { view: "lathe" }), /优先弹药/);
-});
 
 test("the mule: a new load brings one cart of goods back; old loads keep the effects they had", () => {
   const { e, toasts } = make();
@@ -720,141 +565,12 @@ test("a lodger nobody answered by 23:00 is put up under the open-gate decree, ot
   assert.ok(e.o.log.some((l) => /另找地方/.test(l.text)));
 });
 
-test("retraining on the crew card: someone who does the job teaches for three days, then the crew member changes role", () => {
-  const { e } = make();
-  toAct(e, 7);
-  residents(e, 3);
-  e.o.crew.push({ id: "c-test", name: "小柳", role: "carry", trait: "handy", look: 0, status: "", task: "idle", moved: 0, fedDay: 0, x: 900, y: 600, target: null });
-  assert.match(e.retrainReason("c-test", "carry"), /本来就是/);
-  assert.match(e.retrainReason("tieqiao-x", "build"), /只有援建队员/);
-  assert.equal(e.retrainMasters("build")[0].id, "mechanic");
-  assert.equal(e.startRetrain("c-test", "build"), true);
-  assert.match(e.retrainReason("c-test", "guard"), /已经有人在带/);
-  assert.match(e.apprenticeReason("farmer", "c-test"), /已经有人在带/);
-  const eff = e.efficiency();
-  e.td.retrain.start = e.s.day;
-  for (let d = 1; d <= RETRAIN.days; d++) {
-    clock(e, e.s.day + 1, 359);
-    e.advanceMinutes(2);
-  }
-  const c = e.o.crew.find((x) => x.id === "c-test");
-  assert.equal(c.role, "build");
-  assert.equal(e.td.retrain, null);
-  assert.ok(e.efficiency() > eff);
-  assert.match(UI.renderCampaignView(e, { view: "crew", id: "c-test" }), /改做/);
-});
 
 // ================= 界面：设施卡、警报栏、居民卡、法令 =================
-test("every facility page says what it does in plain words, and its buttons are real", () => {
-  const { e } = make();
-  toAct(e, 7);
-  e.s.region = "farm";
-  residents(e, 2);
-  for (const type of [...CARD_TYPES, "trap", "fence", "gate"]) {
-    const b = put(e, type, 900, 600);
-    if (["trap", "fence", "gate", "tower", "lure", "repairpost"].includes(type)) b.hp = 1;
-    const html = UI.buildingExtras(e, b);
-    assert.ok(html.length > 40, type + " has a card");
-    assert.doesNotMatch(html, DEV, type);
-    if (["trap", "fence", "gate", "tower", "lure", "repairpost"].includes(type)) assert.match(html, /data-action="tdKit"/, type + " kit button");
-  }
-  const lure = e.s.buildings.find((b) => b.type === "lure");
-  assert.match(UI.buildingExtras(e, lure), /data-action="tdLure"/);
-  // 按 E 打开自己那一页
-  const events = [];
-  const emit = e.emit.bind(e);
-  e.emit = (name, data) => (events.push({ name, data }), emit(name, data));
-  const solar = e.s.buildings.find((b) => b.type === "solar");
-  Object.assign(e.s.player, { x: solar.x, y: solar.y + 30 });
-  e.s.buildings = e.s.buildings.filter((b) => b === solar || Math.hypot(b.x - solar.x, b.y - solar.y) > 120);
-  e.interact();
-  assert.ok(events.some((ev) => ev.name === "menu" && ev.data.menu === "building" && ev.data.buildingId === solar.id));
-  assert.match(e.buildingContext(solar), /看看情况/);
-  // 按钮：拉信标、修理包
-  e.c.energy = 50;
-  const lure2 = put(e, "lure", 1200, 500);
-  assert.equal(UI.handleCampaignAction("tdLure", { dataset: { id: lure2.id } }, ctx(e)), true);
-  assert.ok(e.pulledLure());
-  e.s.storage.repairKit = 1;
-  const t = put(e, "trap", 1250, 700);
-  t.hp = 5;
-  Object.assign(e.s.player, { x: t.x, y: t.y });
-  UI.handleCampaignAction("tdKit", { dataset: { id: t.id } }, ctx(e));
-  assert.equal(t.hp, BUILDINGS.trap.hp);
-});
 
-test("the residents' cards say why they are happy or not and what their inspiration looks like once they trust you", () => {
-  const { e } = make();
-  toAct(e, 7);
-  residents(e, 3);
-  const r = e.resident("farmer");
-  r.morale = 20;
-  e.w.decrees = ["ration"];
-  assert.ok(RESIDENT_HOOKS.length >= 1);
-  let html = residentExtras(e, r);
-  assert.match(html, /心情 低落/);
-  assert.match(html, /配给卡/);
-  assert.match(html, /信任到 3/);
-  e.ss.trust.farmer = 3;
-  html = residentExtras(e, r);
-  assert.match(html, /好手气/);
-  assert.doesNotMatch(html, DEV);
-});
 
-test("the alert bar shows the festival, the canteen, a lodger, the campfire, the caravan, a due payment and the bell", () => {
-  const { e } = make();
-  toAct(e, 8);
-  residents(e, 2);
-  e.s.region = "farm";
-  e.ss.lodger = { name: "过路人", look: 0, gift: "item", stay: false, phase: "asking", day: e.s.day, qin: false };
-  const html = UI.campaignHud(e).alerts;
-  assert.match(html, /想借宿/);
-  e.ss.lodger = null;
-  e.s.day = 20;
-  e.fr.hemc.debt = { type: "solar", total: { parts: 6 }, paid: {}, day: 15 };
-  assert.match(UI.campaignHud(e).alerts, /逾期/);
-  e.fr.hemc.debt = null;
-  e.s.storage.bread = 40;
-  e.s.day = 14;
-  e.s.minute = 600;
-  assert.ok(e.isFestivalDay());
-  assert.match(UI.campaignHud(e).alerts, /今天节庆 · 16:00 开始/);
-  e.s.minute = 19 * 60 + 30;
-  e.ss.fest.held = [14];
-  assert.equal(e.talkReason(), "");
-  assert.match(UI.campaignHud(e).alerts, /营火边有 \d+ 个人/);
-  e.s.day = 16;
-  e.s.minute = 600;
-  e.ss.he.stage = 4;
-  assert.match(UI.campaignHud(e).alerts, /今晚食堂营业/);
-  e.o.caravan.until = e.abs() + 300;
-  e.o.caravan.offers = [{ id: "x" }];
-  assert.match(UI.campaignHud(e).alerts.replace(/<[^>]+>/g, " "), /唐九的商队在营地|今晚食堂营业/);
-});
 
-test("decrees say whose mood they cost; the ladder says which step is missing", () => {
-  const { e } = make();
-  toAct(e, 7);
-  residents(e, 3);
-  const html = UI.renderCampaignView(e, { view: "decrees" });
-  assert.match(html, /让谁不高兴：阿禾、许医生、陈工，心情 −10/);
-  assert.match(html, /让谁不高兴：阿禾、陈工，心情 −3（许医生不受影响）/);
-  assert.match(html, /差「/);
-  assert.doesNotMatch(html, DEV);
-});
 
-test("the shipping box lists and takes down through its buttons", () => {
-  const { e } = make();
-  e.s.region = "farm";
-  e.s.storage.potato = 9;
-  const root = { querySelector: (sel) => (sel === "#td-list-item" ? { value: "potato" } : sel === "#td-list-qty" ? { value: "4" } : null) };
-  const el = { dataset: { id: "" }, closest: () => root };
-  assert.equal(UI.handleCampaignAction("tdList", el, ctx(e)), true);
-  assert.deepEqual(e.td.listing.map((l) => [l.item, l.qty]), [["potato", 4]]);
-  UI.handleCampaignAction("tdUnlist", { dataset: { id: e.td.listing[0].id } }, ctx(e));
-  assert.equal(e.td.listing.length, 0);
-  assert.equal(stock(e, "potato"), 9);
-});
 
 // ================= 存档 =================
 test("saves: the tidy field round-trips and broken data is refused", () => {

@@ -17,7 +17,7 @@ export const MENU_IDS = ["rebuild", "inventory", "craft", "build", "map", "peopl
 
 // ---------- 小卡上的字 ----------
 // 头上那一行小字
-export const CARD_TAG = { seen: "第一次见到", build: "能建了", menu: "菜单里多了一格", stat: "菜单最上面一行多了一样", day: "前三天" };
+export const CARD_TAG = { seen: "第一次见到", build: "能建了", menu: "菜单里多了一格", stat: "顶上一行多了一样", day: "前三天" };
 // 最下面那一行：去哪里用
 export const CARD_NOW = { menu: "点右上角“☰ 菜单”打开", build: "建造页里就能建", near: (verb) => "走近按交互：" + verb };
 // 新开的档里，菜单格下面那行小字（这一版以前的档才有退回的东西）

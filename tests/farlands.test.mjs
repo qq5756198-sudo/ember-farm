@@ -5,23 +5,6 @@ import { Engine as SeasonsEngine, freshState as seasonsFresh } from "../dist/sea
 import { TASKS } from "../dist/rebuild-data.js";
 import { ITEMS, BUILDINGS } from "../dist/data.js";
 import { NIGHT, NIGHT_SPOTS, HAZARDS, HAZARD_SPOTS, FSPOTS, DOG_MAX, PENG_LEND, PENG_AID, PENG_TRADES, RUINS } from "../dist/farlands-data.js";
-import {
-  renderFarlandsJournal,
-  buildCardExtras,
-  settingsExtras,
-  applyAccess,
-  mapKey,
-  keyLabel,
-  startKeyCapture,
-  captureKey,
-  keyCaptureActive,
-  helpRows,
-  readPad,
-  keymapOf,
-} from "../dist/farlands-ui.js";
-import { renderCampaignView, campaignTitle, campaignHud, handleCampaignAction, renderMapPlus } from "../dist/campaign-ui.js";
-import { alertItems } from "../dist/winter-ui.js";
-import { readPreferences, writePreferences } from "../dist/player-session.js";
 
 const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN/;
 const make = (state = freshState()) => {
@@ -555,52 +538,6 @@ test("ignoring the plea: the camp falls, then 彭姐 trades weekly; purchases ar
 });
 
 // ---------- 贺满仓 ----------
-test("贺满仓 audits the books, then advances one building at a time and is repaid in three installments", () => {
-  const { e } = make();
-  toAct(e, 8);
-  go(e, "farm");
-  assert.equal(e.hemcHere(), false);
-  toAct(e, 9);
-  assert.ok(e.objects.some((o) => o.type === "farHemc"));
-  at(e, { region: "farm", ...FSPOTS.hemc });
-  assert.ok(e.hemcTalk());
-  assert.equal(e.fr.hemc.phase, "met");
-  e.o.ledger = [1, 2, 3].map((d) => ({ day: d, income: 10, items: { radish: 1 } }));
-  e.o.bundles = ["clinic", "caravan"];
-  assert.ok(e.hemcTalk());
-  assert.equal(e.fr.hemc.phase, "open");
-  const [type, def] = Object.entries(BUILDINGS).find(([id, b]) => !b.tech && id !== "field" && Object.keys(b.cost).length >= 1 && Object.values(b.cost).some((n) => n >= 3));
-  const cost = def.cost;
-  clear(e, Object.keys(cost));
-  assert.ok(buildCardExtras(e, type).includes("xAdvance"));
-  const spot = freeSpot(e, type);
-  assert.ok(e.startAdvance(type));
-  const n = e.s.buildings.length;
-  assert.ok(e.placeBuilding(spot.x, spot.y));
-  assert.equal(e.s.buildings.length, n + 1);
-  assert.ok(e.fr.hemc.debt);
-  assert.equal(e.buildMode, null);
-  assert.match(e.advanceReason(type), /还没还清/);
-  assert.equal(buildCardExtras(e, type), "");
-  // 读档后欠账还在
-  const { e: e2 } = make(Engine.parse(e.serialize()));
-  assert.deepEqual(e2.fr.hemc.debt, e.fr.hemc.debt);
-  clear(e, Object.keys(cost));
-  assert.match(e.repayReason(), /还缺/);
-  assert.equal(e.repay(), false);
-  stock(e, cost);
-  let rounds = 0;
-  while (e.fr.hemc.debt && rounds < 5) {
-    assert.ok(e.repay());
-    rounds++;
-  }
-  assert.equal(rounds, 3);
-  assert.equal(e.fr.hemc.advances, 1);
-  assert.equal(e.repay(), false, "nothing left to repay");
-  // 材料够的时候用不着垫付
-  stock(e, cost);
-  assert.match(e.advanceReason(type), /用不着/);
-});
 
 // ---------- 出货行情 ----------
 test("shipping prices drift daily within ±18% and settle at the price of the day goods went in", () => {
@@ -675,172 +612,12 @@ test("calm mode keeps the camera still", () => {
 });
 
 // ---------- 界面 ----------
-test("night, dog, phone, 彭姐 and 贺满仓 pages render clean text and real buttons", () => {
-  const { e } = make();
-  toAct(e, 9);
-  e.f.dog.rescued = true;
-  const n = nightOn(e, 3);
-  at(e, NIGHT_SPOTS[n.region]);
-  e.fr.peng.phase = "asking";
-  for (const [view, id] of [["night", ""], ["dog", ""], ["phone", ""], ["dialog", "peng"], ["dialog", "hemc"], ["nightlog", ""]]) {
-    const html = renderCampaignView(e, { view, id });
-    assert.doesNotMatch(html, FORBIDDEN, view + id);
-    if (view !== "nightlog") assert.ok(html.includes("<button"), view + id);
-    assert.ok(campaignTitle({ view, id }));
-  }
-  assert.match(renderCampaignView(e, { view: "night" }), /就这么办/);
-  assert.match(renderCampaignView(e, { view: "phone" }), /data-menu="inventory"/);
-  for (const phase of ["attacked", "offer", "allied", "trader", "fallen", "waiting"]) {
-    e.fr.peng.phase = phase;
-    assert.doesNotMatch(renderCampaignView(e, { view: "dialog", id: "peng" }), FORBIDDEN, phase);
-  }
-});
 
-test("the journal shows today's hazard, tonight's choice, amends and 彭姐; buttons mark real places", () => {
-  const { e } = make();
-  toAct(e, 4);
-  e.s.day = 9;
-  hour(e, 6);
-  e.fr.hazard = null;
-  e.hazardMorning();
-  const n = nightOn(e, 9);
-  hour(e, 20);
-  e.fr.peng.phase = "attacked";
-  e.fr.peng.day = e.s.day;
-  const html = renderFarlandsJournal(e, {});
-  assert.match(html, /今日险地/);
-  assert.match(html, /明天的险地/);
-  assert.match(html, /今晚/);
-  assert.match(html, /雨巷/);
-  assert.doesNotMatch(html, FORBIDDEN);
-  let shown = null;
-  const c = ctx(e, { showMenu: (m, a) => (shown = [m, a]) });
-  go(e, "farm");
-  assert.ok(handleCampaignAction("xMark", btn("xMark", "night"), c));
-  assert.equal(e.guidance.target.region, n.region);
-  assert.equal(shown[0], "map");
-  const alerts = alertItems(e).map((a) => a.text);
-  assert.ok(alerts.includes("雨巷求援"));
-  const map = renderMapPlus(e, {});
-  assert.match(map, /雨巷求援/);
-  assert.match(map, /今晚/);
-  assert.ok(campaignHud(e));
-});
 
-test("journal actions: deciding the night and paying amends go through the handler", () => {
-  const { e } = make();
-  toAct(e, 3);
-  const n = nightOf(e, "ruin");
-  at(e, NIGHT_SPOTS[n.region]);
-  let closed = 0;
-  const c = ctx(e, { closeMenu: () => closed++ });
-  assert.ok(handleCampaignAction("xNight", btn("xNight", "take"), c));
-  assert.equal(closed, 1);
-  assert.ok(e.fr.night.done);
-  stock(e, { bread: 3, cloth: 2 });
-  assert.ok(handleCampaignAction("xAmends", btn("xAmends", e.fr.amends[0].id), c));
-  assert.equal(e.fr.amends.length, 0);
-  // 重复点击不会再扣
-  const bread = e.qty("bread", true);
-  handleCampaignAction("xAmends", btn("xAmends", "ruin:" + n.day), c);
-  assert.equal(e.qty("bread", true), bread);
-});
 
-test("key remapping translates keys, swaps clashes, refuses reserved keys and resets", () => {
-  const settings = {};
-  assert.equal(mapKey(settings, "e"), "e");
-  assert.ok(startKeyCapture("interact"));
-  assert.ok(keyCaptureActive());
-  // v0.22 起 X 默认是“推开”，这里换一个空着的 Y
-  assert.match(captureKey(settings, "y"), /交互改为 Y/);
-  assert.equal(keyCaptureActive(), false);
-  assert.equal(mapKey(settings, "y"), "e");
-  assert.equal(mapKey(settings, "e"), "", "the old key is freed");
-  assert.equal(keyLabel(settings, "interact"), "Y");
-  startKeyCapture("reload");
-  assert.match(captureKey(settings, "y"), /换成 R/);
-  assert.equal(keymapOf(settings).interact, "r");
-  assert.equal(keymapOf(settings).reload, "y");
-  startKeyCapture("craft");
-  assert.match(captureKey(settings, "f"), /远征路线/);
-  startKeyCapture("craft");
-  assert.match(captureKey(settings, "1"), /字母键/);
-  startKeyCapture("craft");
-  assert.match(captureKey(settings, ";"), /字母键/);
-  startKeyCapture("craft");
-  assert.match(captureKey(settings, "escape"), /取消/);
-  assert.equal(keymapOf(settings).craft, "c");
-  assert.match(helpRows(settings).map((r) => r[0]).join(" "), /R/);
-  settings.keymap = { interact: "r", reload: "r" };
-  assert.equal(keymapOf(settings).interact, "e", "clashing data falls back to defaults");
-  // 旧档里把交互改成了 X：推开换到空着的键，玩家改过的交互键不动
-  assert.equal(keymapOf({ keymap: { interact: "x" } }).interact, "x");
-  assert.notEqual(keymapOf({ keymap: { interact: "x" } }).shove, "x");
-  assert.equal(new Set(Object.values(keymapOf({ keymap: { interact: "x" } }))).size, Object.keys(keymapOf({})).length);
-  const { e } = make();
-  let persisted = 0;
-  e.s.settings.keymap = { interact: "x" };
-  handleCampaignAction("xKeyReset", btn("xKeyReset"), ctx(e, { persist: () => persisted++ }));
-  assert.deepEqual(e.s.settings.keymap, {});
-  assert.equal(persisted, 1);
-});
 
-test("accessibility toggles persist, apply classes and survive preference round trips", () => {
-  const { e } = make();
-  let persisted = 0;
-  const c = ctx(e, { persist: () => persisted++ });
-  assert.ok(handleCampaignAction("xAccess", btn("xAccess", "text"), c));
-  assert.ok(handleCampaignAction("xAccess", btn("xAccess", "calm"), c));
-  assert.deepEqual(e.s.settings.access, { text: true, color: false, calm: true });
-  assert.equal(persisted, 2);
-  const classes = new Set(),
-    props = {};
-  const doc = { body: { classList: { toggle: (k, on) => (on ? classes.add(k) : classes.delete(k)) } }, documentElement: { style: { setProperty: (k, v) => (props[k] = v) } } };
-  applyAccess(e.s.settings, doc);
-  assert.ok(classes.has("a11y-text") && classes.has("a11y-calm") && !classes.has("a11y-color"));
-  assert.equal(props["--ui-font"], "16px", "large text uses zoom, not a second font multiplier");
-  const html = settingsExtras(e.s.settings);
-  assert.match(html, /大号文字/);
-  assert.match(html, /键位/);
-  assert.match(html, /手柄/);
-  assert.doesNotMatch(html, FORBIDDEN);
-  const store = { map: new Map(), getItem(k) { return this.map.get(k) ?? null; }, setItem(k, v) { this.map.set(k, String(v)); } };
-  writePreferences(store, e.s.settings);
-  assert.deepEqual(readPreferences(store).access, { text: true, color: false, calm: true });
-});
 
-test("gamepad buttons report presses once and sticks have a dead zone", () => {
-  const pad = { id: "Test Pad", connected: true, axes: [0.1, -0.9, 0, 0], buttons: Array.from({ length: 16 }, () => ({ pressed: false, value: 0 })) };
-  const nav = { getGamepads: () => [null, pad] };
-  pad.buttons[0].pressed = true;
-  let p = readPad(nav);
-  assert.equal(p.x, 0);
-  assert.equal(p.y, -0.9);
-  assert.ok(p.edge(0));
-  p = readPad(nav);
-  assert.ok(p.held(0) && !p.edge(0), "held, not pressed again");
-  assert.equal(readPad({ getGamepads: () => [] }), null);
-});
 
-test("finishing a night choice, a hazard or 彭姐's request takes down its golden marker", () => {
-  const { e } = make();
-  toAct(e, 4);
-  const n = nightOn(e, 3);
-  go(e, "farm");
-  handleCampaignAction("xMark", btn("xMark", "night"), ctx(e));
-  assert.equal(e.guidance.target.region, n.region);
-  at(e, NIGHT_SPOTS[n.region]);
-  assert.ok(e.chooseNight("leave"));
-  assert.equal(e.guidance.target, null);
-  hour(e, 8);
-  assert.equal(e.fr.peng.phase, "asking");
-  go(e, "farm");
-  handleCampaignAction("xMark", btn("xMark", "peng"), ctx(e));
-  assert.ok(e.guidance.target);
-  at(e, { region: "farm", ...FSPOTS.peng });
-  assert.ok(e.pengDecide("refuse"));
-  assert.equal(e.guidance.target, null);
-});
 
 test("new scene spots never sit on top of another object, so E goes straight to them", () => {
   const { e } = make();
@@ -930,47 +707,5 @@ test("opening the night view by E clears its 新 mark and shows the intro once",
   assert.equal(e.events.find((x) => x.type === "menu").intro, null);
 });
 
-test("an advance still respects the facility's own rules, such as the harvest trophy", () => {
-  const { e } = make();
-  toAct(e, 9);
-  e.fr.hemc.phase = "open";
-  go(e, "farm");
-  e.f.trophies = 0;
-  clear(e, Object.keys(BUILDINGS.harvestTrophy.cost));
-  assert.equal(buildCardExtras(e, "harvestTrophy"), "", "no advance button either");
-  assert.equal(e.startAdvance("harvestTrophy"), false);
-  assert.equal(e.buildMode, null);
-  assert.equal(e.fr.hemc.debt, null);
-});
 
-test("the wounded hunter joins only once; later rescues send thanks instead", () => {
-  const { e } = make();
-  toAct(e, 3);
-  let n = nightOf(e, "stranger");
-  at(e, NIGHT_SPOTS[n.region]);
-  stock(e, { bandage: 3 });
-  assert.ok(e.chooseNight("bandage"));
-  assert.equal(e.ss.pendingGuest, "腿伤的猎户阿川");
-  e.ss.pendingGuest = null;
-  n = nightOf(e, "stranger", e.s.day + 1);
-  at(e, NIGHT_SPOTS[n.region]);
-  assert.match(renderCampaignView(e, { view: "night" }), /送来谢礼/);
-  assert.ok(e.chooseNight("bandage"));
-  assert.equal(e.ss.pendingGuest, null);
-  assert.ok(e.fr.later.some((l) => /thanks/.test(l.id)));
-});
 
-test("彭姐 only deals with you face to face, and the next market day skips a closed one", () => {
-  const { e } = make();
-  toAct(e, 4);
-  hour(e, 8);
-  go(e, "market");
-  stock(e, { bread: 10 });
-  assert.equal(e.pengDecide("lend"), false);
-  assert.equal(e.fr.peng.phase, "asking");
-  e.fr.peng.phase = "trader";
-  while (!e.tradeDay()) e.s.day++;
-  e.s.minute = 19 * 60;
-  go(e, "farm");
-  assert.match(renderCampaignView(e, { view: "dialog", id: "peng" }), new RegExp("下次第 " + (e.s.day + 7) + " 天"));
-});

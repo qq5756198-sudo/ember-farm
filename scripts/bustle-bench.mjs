@@ -25,7 +25,7 @@
 //    方案的线：跟车不被截；不跟车被截 15%–30%；一趟净赚比直接出货多 10%–30%。
 // DIST=别的 dist 目录：拿同一个脚本去跑旧版本对照
 const D = process.env.DIST ? new URL("file://" + process.env.DIST.replace(/\/?$/, "/")).href : new URL("../dist/", import.meta.url).href;
-const { Engine, newGameState } = await import(D + "campaign.js");
+const { Engine, newGameState } = await import(D + "ahead.js") /* v0.50：这些台子量的是后面几章的系统，不过章节那一层 */;
 const { BUILDINGS, ITEMS } = await import(D + "data.js");
 const { TASKS } = await import(D + "rebuild-data.js");
 const { SSPOTS } = await import(D + "seasons-data.js");

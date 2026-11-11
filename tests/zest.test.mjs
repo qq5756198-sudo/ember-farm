@@ -3,15 +3,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { Engine, freshState, needsStoryMigration } from "../dist/campaign.js";
+import { Engine, freshState, needsUpgrade as needsStoryMigration } from "../dist/ahead.js";
 import * as Relight from "../dist/relight.js";
 import { ITEMS, CROPS } from "../dist/data.js";
 import { LISTS, WALL_LISTS, CORES } from "../dist/relight-data.js";
 import { FISH_IDS } from "../dist/kin-data.js";
 import { TEACH_TIMES, HOLD, ROUTINE, PLAIN, MOMENT_KINDS, INTRO_LINES } from "../dist/zest-data.js";
-import { touchWords, touchifyRenderer, momentHtml, patchZestJournal, patchZestCollection, MomentShow, momentIcon } from "../dist/zest-ui.js";
 import { SFX, STINGERS, soundFor, ZEST_SOUND_EVENTS, MOMENT_SOUND } from "../dist/audio-data.js";
-import * as UI from "../dist/campaign-ui.js";
 
 const DEV = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
 const make = (state = freshState(), seed = 32001) => {
@@ -214,33 +212,6 @@ test("big moments: a level, a wall, a boss and precious loot come up as a card a
   for (const ev of moments(e)) assert.ok(MOMENT_KINDS[ev.kind], ev.kind);
 });
 
-test("a wall filled by hand is a card with the wall's own line; handing in one slot stamps and is not gold", () => {
-  const { e, toasts } = make();
-  station(e);
-  const L = WALL_LISTS.water[0],
-    [key, n] = LISTS[L].need[0];
-  stock(e, { [key.startsWith("@") ? "alDecor_teddy" : key]: Math.max(1, n - 1) });
-  e.events.length = 0;
-  const t0 = toasts.length;
-  assert.ok(e.rlDeliver(L, key));
-  assert.ok(e.events.some((x) => x.type === "stamp" && x.list === L));
-  if (!e.listDone(L)) {
-    assert.equal(toasts.length, t0, "one slot is not a line in the bar");
-    assert.match(e.effects.at(-1).text, /^交了.+（\d+\/\d+）$/);
-  }
-  for (const id of WALL_LISTS.water)
-    for (const [k, m] of LISTS[id].need) {
-      stock(e, { [k.startsWith("@") ? "alDecor_teddy" : k]: m });
-      e.rlDeliver(id, k);
-    }
-  assert.ok(e.wallOn("water"));
-  const w = moments(e, "wall").at(-1);
-  assert.equal(w.title, "「通水」通了");
-  assert.equal(w.wall, "water");
-  assert.match(w.lines[0], /旧水厂的支管/);
-  assert.ok(!said(toasts, /「通水」通了/));
-  assert.equal(momentIcon(w), "water");
-});
 
 test("a core is one card with its monologue and the new caps (the old small card is folded in)", () => {
   const { e, toasts } = make();
@@ -347,126 +318,11 @@ test("the plot hint tells about holding until it has been used three times", () 
   assert.doesNotMatch(e.plotContext(p), /按住/);
 });
 
-test("the morning broadcast goes into the journal's today; only a broadcast with news says one short line", () => {
-  const { e, toasts } = make();
-  go(e, "farm");
-  e.toast("电台早间播报：今天废墟里没听到什么动静。");
-  assert.equal(toasts.length, 0);
-  assert.match(e.radioToday(), /没听到什么动静/);
-  e.toast("电台早间播报：明天废弃居民区可能有大块头；老琴抽了支大吉。", "gold");
-  assert.equal(toasts.at(-1).text, "电台：明天废弃居民区可能有大块头（全文在任务手记）");
-  const html = UI.renderCampaignJournal(e, {});
-  assert.match(html, /class="zest-radio"/);
-  assert.match(html, /明天废弃居民区可能有大块头/);
-  assert.doesNotMatch(html, DEV);
-  e.s.day++;
-  assert.equal(e.radioToday(), "");
-});
 
-test("the journal strip leaves out what has not started (0 old things, 0 pages, 0 cores, 0%)", () => {
-  const { e } = make();
-  const html = UI.renderCampaignJournal(e, {});
-  assert.doesNotMatch(html, /旧物 0\/48|残页 0\/24|余烬核 0\/7|收复度 0%/);
-  e.rl.old.push("rlOld_eraser");
-  assert.match(UI.renderCampaignJournal(e, {}), /旧物 1\/48/);
-});
 
-test("the collection book points to all three almanacs", () => {
-  const { e } = make();
-  const html = UI.renderCampaignView(e, { view: "collection", id: "" });
-  assert.match(html, /class="zest-dex"/);
-  assert.match(html, /data-action="gView" data-id="gBoard"/);
-  assert.match(html, /data-action="rOpen" data-id="frontier:investigation"/);
-  assert.doesNotMatch(html, DEV);
-  assert.equal(patchZestCollection(e, html), html, "only once");
-});
 
-test("touch wording: keyboard words become the button names; the moment card has no developer words", () => {
-  assert.equal(touchWords("被抓住了！按 X 推开，或连按 E 挣开，不然会被咬一口。"), "被抓住了！点「推开」，或连点「交互」挣开，不然会被咬一口。");
-  assert.equal(touchWords("旧终端收到联盟来信：先让这片地长出口粮。打开任务手记（J）查看。"), "旧终端收到联盟来信：先让这片地长出口粮。点左下「任务手记」查看。");
-  assert.equal(touchWords("咬钩了！按住 E（手机按住「交互」）收线，鱼一挣就松手。"), "咬钩了！按住「交互」收线，鱼一挣就松手。");
-  assert.equal(touchWords("记住翻滚（空格，触屏上是“翻滚”按钮）：被扑、被撞时往旁边滚"), "记住翻滚（「翻滚」按钮）：被扑、被撞时往旁边滚");
-  assert.equal(touchWords("走到农舍前的荒地，靠近杂物按 E。"), "走到农舍前的荒地，靠近杂物点「交互」。");
-  assert.equal(touchWords("远征行囊没有足够空格"), "远征行囊没有足够空格", "inventory spaces stay");
-  // 画面上写的字也换：营火、路灯、警钟、瞭望塔的提示
-  assert.equal(touchWords("营火 · 夜谈（E）"), "营火 · 夜谈");
-  assert.equal(touchWords("路灯 · 按 E 点亮"), "路灯 · 点「交互」点亮");
-  assert.equal(touchWords("还没有瞭望塔：建造（B）一座，再让居民守塔"), "还没有瞭望塔：建造一座，再让居民守塔");
-  assert.equal(touchWords("蹲着靠近，按交互键（E）下手。"), "蹲着靠近，点「交互」下手。");
-  let touch = true;
-  const drawn = [];
-  const r = touchifyRenderer({ _pixelText: (label) => drawn.push(label), text: (label) => drawn.push(label) }, () => touch);
-  r._pixelText("按 E 敲钟", 0, 0);
-  r.text("营火 · 夜谈（E）", 0, 0);
-  touch = false;
-  r._pixelText("按 E 敲钟", 0, 0);
-  r.text(12, 0, 0);
-  assert.deepEqual(drawn, ["点「交互」敲钟", "营火 · 夜谈", "按 E 敲钟", 12]);
-  assert.equal(touchifyRenderer(r, () => true), r, "wrapped once");
-  const html = momentHtml({ kind: "wall", title: "「通水」通了", lines: ["按 E 打开"], wall: "water" }, true);
-  assert.match(html, /点「交互」打开/);
-  assert.doesNotMatch(html, DEV);
-});
 
-test("touch wording covers every line in the game's text data: no keyboard keys left on a phone", async () => {
-  const { readdirSync, readFileSync: read } = await import("node:fs");
-  const KW = /按\s?[A-Z]\b|（[A-Z]）|按空格|（空格，|连按\s?E|按住\s?E/;
-  const dir = new URL("../dist/", import.meta.url);
-  const left = [];
-  let checked = 0;
-  // 各层代码里写死的提示（game.js 是电脑上的按键说明和设置页，不算）
-  for (const f of readdirSync(dir).filter((x) => x.endsWith(".js") && x !== "game.js")) {
-    const src = read(new URL(f, dir), "utf8");
-    for (const m of src.matchAll(/(["'`])((?:\\.|(?!\1)[^\\\n])*)\1/g)) {
-      if (!KW.test(m[2])) continue;
-      checked++;
-      const t = touchWords(m[2]);
-      if (KW.test(t)) left.push(f + ": " + t.slice(0, 80));
-    }
-  }
-  for (const f of readdirSync(dir).filter((x) => x === "data.js" || x.endsWith("-data.js") || x.endsWith("-story.js"))) {
-    const M = await import(new URL(f, dir));
-    const seen = new Set();
-    const walk = (v, path) => {
-      if (typeof v === "string") {
-        if (!KW.test(v)) return;
-        checked++;
-        const t = touchWords(v);
-        if (KW.test(t)) left.push(f + " " + path + ": " + t.slice(0, 80));
-      } else if (v && typeof v === "object" && !seen.has(v)) {
-        seen.add(v);
-        for (const [k, x] of Object.entries(v)) walk(x, path + "." + k);
-      }
-    };
-    for (const [k, v] of Object.entries(M)) walk(v, k);
-  }
-  assert.ok(checked >= 10, "lines with keys were found: " + checked);
-  assert.deepEqual(left, []);
-});
 
-test("the moment card stays up at least 2.5 s however many notices come, and goes one by one; a tap closes it after a moment", () => {
-  const el = { hidden: true, className: "", innerHTML: "", querySelector: () => null };
-  const show = new MomentShow(el);
-  show.push({ kind: "level", title: "农业 Lv.2", lines: [] });
-  show.push({ kind: "boss", title: "打赢了大块头", lines: [] });
-  show.tick(0.016, false);
-  assert.equal(el.hidden, false);
-  assert.match(el.innerHTML, /农业 Lv\.2/);
-  let t = 0;
-  while (t < 2.5) {
-    show.tick(0.1, false);
-    t += 0.1;
-    assert.match(el.innerHTML, /农业 Lv\.2/);
-  }
-  for (let i = 0; i < 20; i++) show.tick(0.1, false);
-  assert.match(el.innerHTML, /打赢了大块头/);
-  show.tap();
-  assert.equal(el.hidden, true);
-  // 标题页：不放
-  show.push({ kind: "fish", title: "新鱼", lines: [] });
-  show.tick(0.1, true);
-  assert.equal(el.hidden, true);
-});
 
 test("sounds: gift, stamp and the wall, fish and first-harvest phrases exist", () => {
   for (const type of ZEST_SOUND_EVENTS) for (const cat of ["fav", "like", "meh", "hate"]) assert.ok(SFX[soundFor({ type, cat }).sfx], type + cat);
@@ -474,15 +330,6 @@ test("sounds: gift, stamp and the wall, fish and first-harvest phrases exist", (
   assert.equal(soundFor({ type: "moment", kind: "level" }), null, "a level already has its own sound");
 });
 
-test("phones show the newest notice, not the older one", () => {
-  const css = readFileSync(new URL("../dist/clarity.css", import.meta.url), "utf8");
-  assert.ok(css.includes("#toasts .toast:not(:last-child){display:none}"));
-  assert.ok(!css.includes("#toasts .toast:nth-child(2){display:none}"));
-  const html = readFileSync(new URL("../dist/index.html", import.meta.url), "utf8");
-  assert.match(html, /<button class="touch-build" data-menu="build">建造<\/button>/);
-  assert.match(html, /data-action="touchReload" hidden/);
-  assert.match(html, /id="zest-moment"/);
-});
 
 test("saves: the new field is kept, checked and old saves get a checkpoint and a one-time card", () => {
   const { e } = make();

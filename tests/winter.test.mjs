@@ -20,20 +20,6 @@ import {
   SHOWCASES,
 } from "../dist/winter-data.js";
 import { winterSteps } from "../dist/winter-story.js";
-import {
-  renderWinterView,
-  renderWinterJournal,
-  renderRebuildPlus,
-  renderAtlasPlus,
-  handleWinterAction,
-  alertItems,
-  alertBar,
-  winterHud,
-  collectionRows,
-  winterTitle,
-} from "../dist/winter-ui.js";
-import { campaignHud, handleCampaignAction, renderCampaignView } from "../dist/campaign-ui.js";
-import { renderOutpost } from "../dist/outpost-ui.js";
 
 const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN/;
 const make = (state = freshState()) => {
@@ -604,80 +590,6 @@ test("阿默 trades only at night, once a night, and refuses with a full bag or 
 });
 
 // ---------- 第八段 ----------
-test("act eight: 夜莺, 阿默's sample, the museum, evidence and the broadcast assault", () => {
-  const { e, toasts } = make();
-  toAct(e, 8);
-  assert.equal(e.storyGoal().step.id, "yeying");
-  home(e);
-  assert.equal(e.doStory("yeying"), false);
-  at(e, TERMINAL_SPOT);
-  assert.equal(e.doStory("yeying"), true);
-  assert.equal(e.radioHost(), 1.5);
-  at(e, WSPOTS.amo);
-  e.s.minute = 23 * 60;
-  assert.equal(e.doStory("amo"), true);
-  assert.ok(e.qty("amoSample", true) > 0);
-  assert.equal(e.doStory("amo"), false);
-  go(e, "farm");
-  assert.equal(e.storyGoal().step.id, "air");
-  at(e, TERMINAL_SPOT);
-  assert.equal(e.startFinale(), false, "not before every preparation");
-  point(e, "shelter_air", "service");
-  point(e, "shipyard_ferry", "service");
-  e.assignRegion();
-  at(e, WSPOTS.museum);
-  for (const k of Object.keys(SUYAN_COST)) {
-    e.s.storage[k] = 0;
-    delete e.s.inventory[k];
-  }
-  assert.equal(e.buildMuseum(), false);
-  stock(e, SUYAN_COST);
-  e.assignRegion();
-  e.interact();
-  assert.equal(e.w.museum.built, true);
-  assert.equal(e.buildMuseum(), false);
-  at(e, WSPOTS.evidence);
-  assert.equal(e.deliverEvidence(), false, "needs three logs");
-  e.f.clues = ["residential", "hospital", "warehouse"];
-  e.interact();
-  assert.equal(e.w.evidence, true);
-  assert.equal(e.qty("amoSample", true), 0);
-  at(e, TERMINAL_SPOT);
-  assert.equal(e.storyGoal().step.id, "finale");
-  assert.equal(e.doStory("finale"), true);
-  assert.equal(e.raidState(), e.w.assault);
-  assert.equal(e.raidState().phase, "warning");
-  assert.ok(toasts.some((t) => /残部来了/.test(t.text)));
-  // 第一次没守住：明天再来，人多一个
-  e.raidState().timer = 0;
-  e.update(0.05, {});
-  assert.equal(e.w.assault.phase, "active");
-  assert.equal(e.w.assault.total, 12);
-  e.finishRaid(false);
-  assert.equal(e.w.assault.phase, "scheduled");
-  assert.equal(e.w.assault.day, e.s.day + 1);
-  assert.equal(e.w.assault.tries, 1);
-  assert.equal(e.sc.act, 8);
-  assert.equal(e.storyGoal().step.title, "灰隼团残部还会再来");
-  e.w.assault.phase = "active";
-  e.w.assault.total = e.raidSize();
-  assert.equal(e.w.assault.total, 13);
-  const money = e.s.money;
-  e.finishRaid(true);
-  assert.equal(e.w.assault.phase, "won");
-  assert.equal(e.sc.act, 9);
-  assert.equal(e.s.money, money + 150 + 200);
-  assert.ok(e.sc.letters.includes("act9"));
-  const report = renderOutpost(e, { view: "raid" });
-  assert.match(report, /击退灰隼团残部/);
-  assert.doesNotMatch(report, /鹞子/);
-  // 重复结算不会重复发奖
-  e.checkStory();
-  assert.equal(e.s.money, money + 350);
-  assert.equal(e.o.raid.phase, "won", "the first raid record is untouched");
-  const back = Engine.parse(e.serialize());
-  assert.equal(back.winter.assault.phase, "won");
-});
 
 test("an active assault survives save and reload with the right count of gunmen still to come", () => {
   const { e } = make();
@@ -712,46 +624,6 @@ test("夜莺 is recognised after two programs; apologising doubles the radio and
 });
 
 // ---------- 档案馆 ----------
-test("museum donations fill showcases once each and grant their permanent bonus", () => {
-  const { e, toasts } = make();
-  toAct(e, 8);
-  e.w.museum.built = true;
-  e.assignRegion();
-  home(e);
-  assert.equal(e.donate("relics", "seedArchive"), false, "must stand in the museum");
-  at(e, WSPOTS.museum);
-  e.r.finds = [...SHOWCASES.relics.items];
-  const rep = e.c.reputation;
-  for (const id of SHOWCASES.relics.items) assert.equal(e.donate("relics", id), true);
-  assert.equal(e.donate("relics", "seedArchive"), false, "no duplicates");
-  assert.ok(e.showcaseDone("relics"));
-  // v0.28：日志、照片、遗物并成「往事」一柜，一层摆满不再单给奖励
-  if (rep !== undefined) assert.equal(e.c.reputation, rep);
-  assert.ok(toasts.some((t) => /「往事」一柜的「遗物」一层摆满了/.test(t.text)));
-  // 鱼：要真有鱼
-  assert.equal(e.donate("fish", "fish"), false);
-  stock(e, { fish: 1, riverFish: 1, nightFish: 1 });
-  for (const id of SHOWCASES.fish.items) assert.equal(e.donate("fish", id), true);
-  assert.equal(e.s.storage.fish || 0, 0);
-  assert.ok(e.showcaseDone("fish"));
-  // 日志
-  e.f.clues = ["residential", "hospital", "warehouse"];
-  const credits = e.c.researchCredits || 0;
-  for (const id of e.f.clues) e.donate("logs", id);
-  assert.equal(e.c.researchCredits, credits, "the logs shelf alone gives nothing since v0.28");
-  // 药草：要鉴定过，还要 1 份药草
-  e.f.samples = [0, 1, 2, 3];
-  e.f.identified = [0, 1, 2, 3];
-  e.s.storage.herb = 0;
-  delete e.s.inventory.herb;
-  assert.equal(e.donate("herbs", "mint"), false);
-  stock(e, { herb: 4 });
-  for (const id of ["mint", "yarrow", "calendula", "sage"]) assert.equal(e.donate("herbs", id), true);
-  assert.ok(e.showcaseDone("herbs"));
-  const back = Engine.parse(e.serialize());
-  assert.deepEqual(back.winter.museum.claimed.sort(), ["fish", "herbs", "logs", "relics"]);
-  assert.equal(collectionRows(e).find((r) => r.name === "遗物").done, true);
-});
 
 test("evidence makes medkits stronger and lets one bandage cure the sick camp", () => {
   const { e } = make();
@@ -772,81 +644,9 @@ test("evidence makes medkits stronger and lets one bandage cure the sick camp", 
 });
 
 // ---------- 界面 ----------
-test("every winter view renders without leaks and the journal gains the living-standard strip", () => {
-  const { e } = make();
-  startWinter(e);
-  e.recruit("farmer");
-  for (const view of ["decrees", "radio", "museum", "collection", "winter"]) {
-    const html = renderWinterView(e, { view });
-    assert.doesNotMatch(html, FORBIDDEN, view);
-    assert.ok(winterTitle({ view }).length > 0);
-  }
-  for (const id of ["alan", "ge", "amo"]) assert.doesNotMatch(renderWinterView(e, { view: "dialog", id }), FORBIDDEN, id);
-  assert.equal(winterTitle({ view: "dialog", id: "ge" }), "葛队长");
-  assert.match(renderCampaignView(e, { view: "log", toastLog: [] }), /前哨记录/, "older views still render");
-  const journal = renderWinterJournal(e, {});
-  assert.match(journal, /winter-strip/);
-  assert.match(journal, /生活水准/);
-  assert.doesNotMatch(journal, FORBIDDEN);
-  const hud = campaignHud(e);
-  assert.match(hud.season.text, /寒潮 \d+ 天后/);
-  assert.equal(typeof hud.alerts, "string");
-  const map = renderAtlasPlus(e, {});
-  assert.match(map, /亮灯的路/);
-  assert.doesNotMatch(map, FORBIDDEN);
-});
 
-test("decree, program, gift and dialog buttons change real state through the handler", () => {
-  const { e } = make();
-  startWinter(e);
-  let shown = null;
-  const c = ctx(e, { showMenu: (m, a) => (shown = [m, a]) });
-  assert.equal(handleWinterAction("wView", { dataset: { id: "decrees" } }, c), true);
-  assert.deepEqual(shown, ["outpost", { view: "decrees", id: "" }]);
-  handleWinterAction("wDecree", { dataset: { id: "rotation" } }, c);
-  assert.equal(e.decree("rotation"), true);
-  handleWinterAction("wDecree", { dataset: { id: "rotation" } }, c);
-  assert.equal(e.decree("rotation"), true, "the cooldown blocks a double click");
-  handleWinterAction("wProgram", { dataset: { id: "songs" } }, c);
-  assert.equal(e.w.radio.program, "songs");
-  stock(e, ALAN_FEED);
-  handleWinterAction("wAlan", { dataset: { id: "feed" } }, c);
-  assert.equal(e.w.alan.phase, "fed");
-  stock(e, GE_COST);
-  assert.equal(handleCampaignAction("wGe", { dataset: { id: "escort" } }, c), true);
-  assert.equal(e.w.ge.phase, "escorted");
-  assert.equal(handleCampaignAction("oNothing", { dataset: {} }, c), false);
-});
 
-test("the alert bar lists at most three real problems and clicking one plants a gold marker", () => {
-  const { e } = make();
-  startWinter(e);
-  e.w.winter.phase = "cold";
-  e.w.winter.fuelDay = e.s.day;
-  e.w.winter.lit = false;
-  e.o.sick = e.s.day;
-  e.w.ge.phase = "warned";
-  for (const k of Object.keys(e.s.storage)) if (MEAL_ITEMS.includes(k)) delete e.s.storage[k];
-  for (const k of Object.keys(e.s.inventory)) if (MEAL_ITEMS.includes(k)) delete e.s.inventory[k];
-  const items = alertItems(e);
-  assert.ok(items.length <= 3 && items.length > 0);
-  assert.equal(items[0].text, "口粮不到一天");
-  assert.match(alertBar(e), /data-action="wAlert"/);
-  const c = ctx(e);
-  handleWinterAction("wAlert", { dataset: { id: "0" } }, c);
-  assert.equal(e.guidance.target.label, items[0].target.label);
-  assert.equal(winterHud(e).tone, e.playerCold() ? "danger" : "ok");
-});
 
-test("the camp manual residents page shows the decree card", () => {
-  const { e } = make();
-  toAct(e, 7);
-  const h = { esc: (s) => String(s), icon: () => "", itemIcon: () => "", costs: () => "", itemName: (id) => id };
-  const html = renderRebuildPlus(e, "residents", h, {}, {});
-  assert.match(html, /前哨法令簿与生活水准/);
-  assert.match(html, /data-action="wView" data-id="decrees"/);
-  assert.doesNotMatch(html, FORBIDDEN);
-});
 
 test("act seven completes once when the cold is over and pays its reward a single time", () => {
   const { e } = make();
@@ -887,42 +687,7 @@ test("saves keep loading past day 99 with 阿兰's sheep (wool and feed days are
   assert.doesNotThrow(() => Engine.parse(e.serialize()));
 });
 
-test("full showcases stop accepting donations, so the museum can never overflow the save", () => {
-  const { e } = make();
-  toAct(e, 8);
-  e.w.museum.built = true;
-  e.assignRegion();
-  at(e, WSPOTS.museum);
-  for (let i = 1; i <= 14; i++) e.f.photos.unshift({ id: 900 + i, data: "data:image/jpeg;base64,AAAA", day: 1, region: "farm", subjects: ["frog"] });
-  e.f.photos = e.f.photos.slice(0, 6);
-  let n = 0;
-  for (const id of e.donatable("photos")) if (e.donate("photos", id)) n++;
-  assert.equal(n, 3);
-  assert.ok(e.showcaseDone("photos"));
-  e.f.photos.unshift({ id: 999, data: "data:image/jpeg;base64,AAAA", day: 2, region: "farm", subjects: ["rainSign"] });
-  e.f.photos = e.f.photos.slice(0, 6);
-  assert.deepEqual(e.donatable("photos"), []);
-  assert.equal(e.donate("photos", 999), false);
-  assert.doesNotThrow(() => Engine.parse(e.serialize()));
-  assert.doesNotMatch(renderWinterView(e, { view: "museum" }), /wDonate" data-id="photos/);
-});
 
-test("after a reload the last battle report is still the newest one (the act-eight assault)", () => {
-  const { e } = make();
-  toAct(e, 8);
-  e.o.raid.report = { day: 3, won: true, kind: "first", total: 8, killed: 8, retreated: 0, prep: null, power: 3, lost: {}, gain: { ammo: 12 } };
-  e.s.day = 12;
-  home(e);
-  Object.assign(e.w.assault, { phase: "active", day: 12, total: 12, spawned: 12, killed: 2 });
-  e.finishRaid(false);
-  const before = renderOutpost(e, { view: "raid" });
-  assert.match(before, /没守住 · 第12天/);
-  const { e: again } = make(Engine.parse(e.serialize()));
-  const after = renderOutpost(again, { view: "raid" });
-  assert.match(after, /没守住 · 第12天/);
-  assert.match(after, /第13天 19:00 还会再来/);
-  assert.equal(again.lastRaidRecord(), again.w.assault);
-});
 
 test("food priority: a missed dinner in the cold brings two breads from the neighbours next morning", () => {
   const { e, toasts } = make();

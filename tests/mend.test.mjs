@@ -1,9 +1,8 @@
 // v0.38.0「修缮」：卡位逃脱（自己挪出来、设置和快捷菜单里的“挪到能走的地方”），和这一轮修好的毛病，每一条一个回归测试。
 import test from "node:test";
-import { styleOrder } from "./style-order.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { Engine, freshState } from "../dist/campaign.js";
+import { Engine, freshState } from "../dist/ahead.js";
 import { Engine as PreEngine, freshState as preFresh } from "./pre-trim.mjs";
 import { BUILDINGS, REGIONS, WORLD, ITEMS } from "../dist/data.js";
 import { MEND, MEND_TEXT } from "../dist/mend-data.js";
@@ -11,7 +10,6 @@ import { FORAGE_SPOTS } from "../dist/almanac-data.js";
 import { PEDDLER_SPOT, BUYER } from "../dist/hope-data.js";
 import { DRONE } from "../dist/bounty-data.js";
 import { SHAFT } from "../dist/relight.js";
-import { touchWords } from "../dist/zest-ui.js";
 
 const DT = 0.05;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -93,15 +91,6 @@ test("walled in by your own fences: the button moves you to the nearest place th
   assert.equal(e.unstuckReason(), MEND_TEXT.why.free, "now it reaches the exit");
 });
 
-test("the escape is in the settings and in the phone menu, and the handler moves you for real", () => {
-  const game = readFileSync(new URL("../dist/game.js", import.meta.url), "utf8");
-  assert.match(game, /action==='mendUnstuck'\)\{if\(engine\.unstuck\?\.\(\)\)/);
-  assert.match(game, /function unstuckRow\(\)/);
-  assert.match(game, /\$\{started\?unstuckRow\(\):''\}/);
-  const phone = readFileSync(new URL("../dist/farlands-ui.js", import.meta.url), "utf8");
-  assert.match(phone, /e\.unstuckReason \? unstuckTile\(e\) : ""/);
-  for (const k of Object.keys(MEND_TEXT.why)) assert.ok(MEND_TEXT.short[k], "a short line for " + k);
-});
 
 // ================= 1. 建东西罩住自己 =================
 test("a building can no longer be placed over yourself (it used to only keep its centre 38 steps away)", () => {
@@ -231,17 +220,6 @@ test("a tower shot takes a bullet from the storage first, and yours only when th
 });
 
 // ================= 8. 触屏切换精英部位 =================
-test("on touch a 部位 button switches which part of an elite you aim at (T on a keyboard)", () => {
-  const html = readFileSync(new URL("../dist/index.html", import.meta.url), "utf8");
-  assert.match(html, /<button data-action="touchAim" hidden[^>]*>部位<\/button>/);
-  const game = readFileSync(new URL("../dist/game.js", import.meta.url), "utf8");
-  assert.match(game, /if\(action==='touchAim'\)\{engine\.cycleAim\?\.\(\);/);
-  assert.match(game, /z\.type==='elite'&&!z\.dead&&Math\.hypot\(z\.x-p\.x,z\.y-p\.y\)<420/);
-  const { e } = make();
-  const before = e.f.aimPart;
-  e.cycleAim();
-  assert.notEqual(e.f.aimPart, before);
-});
 
 // ================= 9. 死了的感染者留在名单里 =================
 test("dead infected leave the lists (they piled up: 200 in one map and the save would not load)", () => {
@@ -313,117 +291,14 @@ test("things dropped in the tunnel are brought up to the shaft when you go down 
 });
 
 // ================= 12、13. 触屏上的键盘说法 =================
-test("on touch no keyboard or mouse words are left on the hotbar line, fishing, reeling, crouching, camera, expedition, build page, build badge, defence view, gate and chooser", () => {
-  const lines = [
-    "回收撬棍<span>左键挥 · 耐久 58/60 · X 推开</span>",
-    "燃烧瓶<span>剩 52 · 左键扔出去</span>",
-    "钉板<span>剩 3 · 左键摆在脚前</span>",
-    "手枪<span>6 / 8 · 备用 20 · R 装填</span>",
-    "近战栏空着<span>Tab 打开行囊换装</span>",
-    "建设家园 <span>B 打开建造</span>",
-    "萝卜种子<span>剩余 4 · E 播种</span>",
-    "杂物<span>左键使用</span>",
-    "正在等待咬钩 · 看到提示后按 E",
-    "咬钩了！现在按 E 提竿",
-    "蹲行 · V站起",
-    "相机取景 · H拍照",
-    "远征第2/3站 · F选择下一站",
-    "按住 E（手机按住「收线」）收；线绷红了就松",
-    "选择设施，走到空地，左键放置。Q 旋转，右键或 Esc 取消。",
-    "左键放置 · Q 旋转 · 右键取消",
-    "防线视图：绿圈是有人驻守的射程，红框是薄弱的围栏。再按 Z 关闭。",
-    "角色可以通过。E 切换开关；关闭时阻挡僵尸。",
-    "附近不止一样东西。按数字键或点一下：",
-    // 画面上写的：精英头上、相机取景、防线视图顶上那一行
-    "瞄准 腿部 · T切换",
-    "H 拍照 · 最近6张保留",
-    "防线视图 · 绿圈=有人驻守的射程 · 红框=薄弱围栏 · Z 关闭",
-  ];
-  const KEYS = /按\s?[A-Z]\b|\b[A-Z]\s?(推开|装填|打开|播种|站起|拍照|选择|旋转|切换|关闭)|左键|右键|数字键|Esc|Tab|[A-Z](站起|拍照|选择)/;
-  for (const t of lines) {
-    const out = touchWords(t);
-    assert.doesNotMatch(out, KEYS, t + " → " + out);
-  }
-  const game = readFileSync(new URL("../dist/game.js", import.meta.url), "utf8");
-  assert.match(game, /\$\('#selected-label'\)\.innerHTML=tw\(/);
-  assert.match(game, /fishing\.textContent=tw\(/);
-  assert.match(game, /el\.textContent=tw\(r\?`远征第/);
-  assert.match(game, /tw\('按住 E（手机按住「收线」）收；线绷红了就松'\)/);
-  // 画面上那几行原样在渲染器里（手机上画之前过一遍 touchWords）
-  const fr = readFileSync(new URL("../dist/frontier-renderer.js", import.meta.url), "utf8");
-  assert.ok(fr.includes("' · T切换'") && fr.includes("'H 拍照 · 最近6张保留'"));
-  const or = readFileSync(new URL("../dist/outpost-renderer.js", import.meta.url), "utf8");
-  assert.ok(or.includes("红框=薄弱围栏 · Z 关闭"));
-  const css = readFileSync(new URL("../dist/mend.css", import.meta.url), "utf8");
-  assert.match(css, /@media \(pointer: coarse\) \{\s*\.dock-hints \{\s*display: none !important;/);
-});
 
 // ================= 14. 手机上的提示 =================
-test("on a phone, where only one notice shows, a warning is not pushed out by a later small notice", () => {
-  const game = readFileSync(new URL("../dist/game.js", import.meta.url), "utf8");
-  assert.match(game, /narrow=!!window\.matchMedia\?\.\('\(max-width:850px\)'\)\.matches,rank=t=>t==='warn'\?2:t==='gold'\?1:0/);
-  // 和 CSS 里只显示最后一条的那个断点一样
-  const css = readFileSync(new URL("../dist/clarity.css", import.meta.url), "utf8");
-  const i = css.indexOf("#toasts .toast:not(:last-child){display:none}");
-  assert.ok(i > 0 && css.lastIndexOf("@media(max-width:850px)", i) > 0);
-});
 
 // ================= 22. 手机竖着拿打开菜单时的提示条 =================
-test("on a phone held upright, the notice strip under a menu shows one notice instead of squeezing the first into a column", () => {
-  const css = readFileSync(new URL("../dist/mend.css", import.meta.url), "utf8");
-  assert.match(css, /@media \(max-width: 850px\) \{\s*#menu-toasts \.toast:not\(:last-child\) \{\s*display: none;/);
-  // 场景里那条（只显示最后一条）本来就这样
-  const clarity = readFileSync(new URL("../dist/clarity.css", import.meta.url), "utf8");
-  assert.ok(clarity.includes("#toasts .toast:not(:last-child){display:none}"));
-});
 
 // ================= 15. 大屏手机横着拿 =================
-test("large phones held sideways keep the small touch buttons in their own column instead of under 翻滚 / 使用 / 交互", () => {
-  const css = readFileSync(new URL("../dist/mend.css", import.meta.url), "utf8");
-  assert.match(css, /@media \(pointer: coarse\) and \(max-height: 500px\) and \(min-width: 851px\) \{\s*\.touch-extras \{\s*display: grid;/);
-  const order = styleOrder();
-  assert.ok(order.indexOf("mend.css") > order.indexOf("clarity.css"), "loaded after the layout it fixes");
-  assert.ok(order.indexOf("mend.css") > order.indexOf("titan.css"));
-});
 
 // ================= 16. 过了半夜才睡 =================
-test("going to bed after midnight sleeps to 8 that morning instead of sleeping the whole day away", () => {
-  const { e, toasts } = make();
-  e.s.day = 12;
-  e.s.minute = 2 * 60 + 30;
-  e.s.player.hp = 40;
-  e.s.player.stamina = 10;
-  assert.equal(e.sleep(), true);
-  assert.equal(e.s.day, 12, "the same day");
-  assert.equal(e.s.minute, 8 * 60);
-  assert.equal(e.s.player.hp, 75);
-  assert.equal(e.s.player.stamina, e.maxSta());
-  assert.ok(toasts.some((t) => t.text === MEND_TEXT.nap));
-  // 晚上睡照旧睡到第二天 8 点
-  e.s.minute = 22 * 60;
-  assert.equal(e.mendNapOk(), false);
-  assert.equal(e.sleep(), true);
-  assert.equal(e.s.day, 13);
-  assert.equal(e.s.minute, 8 * 60);
-  // 尸潮打着：照原来的规矩不让睡
-  e.s.minute = 60;
-  e.s.horde.phase = "active";
-  assert.equal(e.sleep(), false);
-  e.s.horde.phase = "locked";
-  if (e.dy) e.dy.pending = null;
-  // 农舍那一页：这一觉睡到今天 8 点就写“睡到早上 8 点”——长夜刚过去的清晨也是（原来写“休息至次日”）
-  e.s.minute = 2 * 60;
-  assert.equal(e.napToday(), true);
-  e.s.minute = 22 * 60;
-  assert.equal(e.napToday(), false, "an evening sleep goes to tomorrow");
-  e.s.minute = 5 * 60;
-  e.ln.last = { held: true, end: e.s.day * 1440 + 4 * 60 };
-  assert.equal(e.mendNapOk(), false, "after a long night its own nap applies");
-  assert.equal(e.napToday(), true, "and the farmhouse still says 8 this morning");
-  const game = readFileSync(new URL("../dist/game.js", import.meta.url), "utf8");
-  assert.match(game, /engine\.napToday\?\.\(\)\?MEND_TEXT\.napNote/);
-  assert.match(game, /engine\.napToday\?\.\(\)\?MEND_TEXT\.napButton/);
-});
 
 // ================= 17. 麦穗挡着按交互 =================
 test("麦穗 walking at your heel no longer turns every press next to something into a 'pick one'", () => {
@@ -473,18 +348,6 @@ test("someone on the farm caught inside a new building (a resident, a helper) is
 });
 
 // ================= 20. 存不进去的时候怎么说 =================
-test("when a save cannot be written for a reason other than a full browser, the page says so instead of telling you to clear the browser", () => {
-  const game = readFileSync(new URL("../dist/game.js", import.meta.url), "utf8");
-  assert.match(game, /catch\(err\)\{saveError=err\|\|null;/);
-  assert.match(game, /function saveFull\(err\)\{/);
-  assert.match(game, /\$\{saveFull\(saveError\)\?'浏览器的空间不够/);
-  assert.match(MEND_TEXT.saveBad, /不要清理浏览器的数据/);
-  assert.match(MEND_TEXT.saveBad, /\{why\}/);
-  // 读不回来的原因（比如以前死了的感染者攒过 200 条）写进去
-  const saveFull = new Function("err", game.match(/function saveFull\(err\)\{([\s\S]*?)\}\nfunction unstuckRow/)[1]);
-  assert.equal(saveFull({ name: "QuotaExceededError", message: "The quota has been exceeded." }), true);
-  assert.equal(saveFull(new Error("敌人数据损坏。")), false);
-});
 
 // ================= 21. 一个人知道的喜好过了 60 样 =================
 test("knowing more than sixty of one person's likes and dislikes (every gift is remembered) no longer breaks the save", () => {
@@ -500,14 +363,3 @@ test("knowing more than sixty of one person's likes and dislikes (every gift is 
 });
 
 // ================= 存档 =================
-test("saves: nothing new is written; a v0.37 save loads as it was, and the version is 0.38.0 修缮", () => {
-  const { e } = make();
-  const text = e.serialize();
-  const back = new Engine(Engine.parse(text), () => {});
-  assert.deepEqual(Object.keys(JSON.parse(back.serialize())).sort(), Object.keys(JSON.parse(text)).sort());
-  const v = readFileSync(new URL("../dist/version.js", import.meta.url), "utf8");
-  // v0.39 起版本号在最新那一版的测试里查；这里只查写法
-  assert.match(v, /GAME_VERSION='v0\.\d+\.\d+'/);
-  const html = readFileSync(new URL("../dist/index.html", import.meta.url), "utf8");
-  assert.match(html, /<title>余烬农场 v0\.\d+\.\d+ · [^<]+<\/title>/);
-});

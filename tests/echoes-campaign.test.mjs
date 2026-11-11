@@ -6,7 +6,6 @@ import {freshState as originalFresh} from '../dist/engine.js';
 import {ITEMS, CROPS, BUILDINGS, RECIPES, WEAPONS} from '../dist/data.js';
 import {HERBS} from '../dist/frontier-data.js';
 import {TASKS, PILLARS, OUTPOSTS, FIND_LOCATIONS, ANNEX} from '../dist/rebuild-data.js';
-import {renderRebuild, renderObjective, handleRebuildAction} from '../dist/rebuild-ui.js';
 
 const make = (state = demoState()) => {const e = new Engine(state);e.paused = false;return e;};
 const fixture = (e, type, x = 900, y = 760) => {const b={id:'fixture-'+e.s.idCounter++,type,x,y,rotation:0,hp:BUILDINGS[type].hp};e.s.buildings.push(b);e.assignRegion();return b;};

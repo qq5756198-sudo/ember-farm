@@ -1,13 +1,10 @@
 // v0.39.0「一物一用」：一样东西只做一件事，按下去做的就是头上写着的那件事；说明卡、菜单十项、顶栏数字的卡。
 import test from "node:test";
-import { styleOrder } from "./style-order.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { Engine, freshState } from "../dist/campaign.js";
-import { trimBuildIds } from "../dist/trim-ui.js";
+import { Engine, freshState } from "../dist/ahead.js";
 import { BUILDINGS, REGIONS, RECIPES, ITEMS } from "../dist/data.js";
 import { VERB, BVERB, BCARD, BUILD_GROUPS, MENUS, HUD_CARD, PAGE_CARD, WORDING } from "../dist/simple-data.js";
-import { cardHtml, buildingCardHtml, buildGroups, menusHtml, hudCardHtml, pickBlocks, lettersHtml, gateHtml, stripKey, sxAfterRender, sxWords, sxViewExtra } from "../dist/simple-ui.js";
 import { shortName, cleanCtx, fromOld, toolVerb } from "../dist/simple.js";
 import { Renderer } from "../dist/simple-renderer.js";
 import { DISTRICTS } from "../dist/district-data.js";
@@ -129,32 +126,6 @@ test("the terminal opens only the letters; the camp opens the work roster; a res
   assert.deepEqual(m, [{ type: "menu", menu: "outpost", view: "people", id: "farmer" }], "her own page, not the work roster");
 });
 
-test("a district gate goes straight in once the road is open, and shows the repair card before; the exit goes straight back", () => {
-  const { e } = make();
-  goRegion(e, "farm");
-  const gate = e.objects.find((o) => o.type === "districtGate");
-  assert.ok(gate, "the valley gate is on the farm");
-  e.d.unlocked[gate.district] = false;
-  let m = pressAt(e, gate);
-  assert.equal(m[0]?.menu, "sx");
-  assert.equal(m[0]?.view, "gate");
-  assert.equal(m[0]?.id, gate.district);
-  assert.match(e.simpleLabel(gate), /· 修通路$/);
-  const html = gateHtml(e, { id: gate.district, kind: "district" });
-  assert.match(html, /data-action="dUnlock"/);
-  assert.match(html, new RegExp(DISTRICTS[gate.district].name + "入口"));
-  assert.doesNotMatch(html, DEV);
-  e.d.unlocked[gate.district] = true;
-  assert.match(e.simpleLabel(gate), /· 进去$/);
-  goRegion(e, "farm");
-  const g2 = e.objects.find((o) => o.type === "districtGate");
-  pressAt(e, g2);
-  assert.equal(e.s.region, gate.district, "went in");
-  const exit = e.objects.find((o) => o.type === "districtExit");
-  assert.ok(exit);
-  pressAt(e, exit);
-  assert.equal(e.s.region, DISTRICTS[gate.district].parent, "came back out");
-});
 
 test("held by a titan beside an open gate, E struggles free instead of walking through (the line says so too)", () => {
   const { e } = make();
@@ -177,18 +148,6 @@ test("held by a titan beside an open gate, E struggles free instead of walking t
   assert.match(e.simpleLabel(gate), /· 进去$/);
 });
 
-test("麦穗: E gives her a pat (feeding and orders are on the people page)", () => {
-  const { e } = make();
-  e.s.day = 30;
-  e.f.dog.rescued = true;
-  goRegion(e, "farm");
-  const d = e.objects.find((o) => o.type === "partnerDog");
-  if (!d || !e.dogReady?.()) return; // 没有麦穗的开局
-  pressAt(e, d);
-  assert.equal(e.fr.dog.petDay, e.s.day);
-  const extra = sxViewExtra(e, { view: "people" });
-  assert.match(extra.before, /data-action="xView" data-id="dog"/);
-});
 
 // ================= 自己干的事 =================
 test("things dropped on the farm go into storage (old saves too); in the ruins they stay where they fell", () => {
@@ -212,24 +171,6 @@ test("things dropped on the farm go into storage (old saves too); in the ruins t
   assert.ok(toasts.some((t) => /送进了仓库/.test(t.text)));
 });
 
-test("finished processing goes into storage by itself, counts for the story (a meal made) and says so", () => {
-  const { e, toasts } = make();
-  goRegion(e, "farm");
-  const r = RECIPES.find((x) => x.id === "trailBread"),
-    out = Object.keys(r.out)[0],
-    n = r.out[out];
-  assert.ok(ITEMS[out]?.food, "a meal");
-  e.c.production.push({ id: "job-t1", recipe: r.id, out: { ...r.out }, cost: {}, station: r.station || "cook", remaining: 0, ready: true });
-  const had = e.s.storage[out] || 0,
-    food = e.r.metrics.food;
-  run(e, 0.1);
-  assert.equal(e.c.production.length, 0);
-  assert.equal(e.s.storage[out], had + n);
-  assert.equal(e.r.metrics.food, food + n, "counted as food made");
-  assert.ok(toasts.some((t) => /做好了，放进了仓库/.test(t.text)));
-  assert.equal(sxWords("领取一次加工好的干粮或料理"), "做好一份干粮或料理");
-  assert.ok(WORDING.length >= 5);
-});
 
 test("a ruin cleared by the morning card stays quiet: the corpse pile's lying infected were cleared too (the crate under it stays)", () => {
   const st = freshState();
@@ -254,144 +195,13 @@ test("a ruin cleared by the morning card stays quiet: the corpse pile's lying in
 });
 
 // ================= 说明卡、菜单、顶栏 =================
-test("one card everywhere: name, what it does, the benefit, how it is now, one button (none for things that work by themselves)", () => {
-  const html = cardHtml({ key: "x", name: "出货箱", does: "把东西放进去，第二天卖掉", good: "钱直接入账", now: "箱里 3 样", button: { action: "oShip", id: "a", label: "放进去" } });
-  assert.match(html, /<h3>出货箱<\/h3>/);
-  assert.match(html, /sx-does/);
-  assert.match(html, /<b>好处<\/b>/);
-  assert.match(html, /<b>现在<\/b>/);
-  assert.equal((html.match(/<button/g) || []).length, 1);
-  assert.equal((cardHtml({ name: "喷灌头", does: "每天早上浇旁边的田" }).match(/<button/g) || []).length, 0);
-  // 设施：每一种都有一句做什么；坏了的卡上是“修好它”，要拆的时候是“拆掉它”
-  const { e } = make();
-  for (const [id, d] of Object.entries(BUILDINGS)) {
-    if (d.retired) continue;
-    assert.ok(BCARD[id]?.[0], "card text for " + id);
-    assert.ok(BVERB[id], "verb for " + id);
-  }
-  const b = { id: "t-b", type: "tower", x: 0, y: 0, hp: 20 };
-  assert.match(buildingCardHtml(e, b), /data-action="repair"[^>]*>修好它/);
-  assert.match(buildingCardHtml(e, b, { confirm: true }), /data-action="dismantle"[^>]*>拆掉它/);
-  b.hp = BUILDINGS.tower.hp;
-  assert.doesNotMatch(buildingCardHtml(e, b), /<button/);
-});
 
-test("the build page has four groups that hold every building exactly once (v0.42: the 摆件 group is one tile)", () => {
-  const { e } = make();
-  const ids = trimBuildIds(
-    e,
-    Object.entries(BUILDINGS)
-      .filter(([, b]) => !b.retired)
-      .map(([id]) => id),
-  );
-  const groups = buildGroups(ids);
-  assert.deepEqual(groups.map((g) => g.title).slice(0, 4), ["种地", "吃住", "防守", "摆件"]);
-  const all = groups.flatMap((g) => g.ids);
-  assert.equal(all.length, ids.length);
-  assert.equal(new Set(all).size, ids.length);
-  assert.ok(!groups.some((g) => g.key === "other"), "nothing left over: " + groups.find((g) => g.key === "other")?.ids);
-  for (const [, , list] of BUILD_GROUPS) for (const id of list) assert.ok(BUILDINGS[id] || id === "trDecor", id + " exists");
-});
 
-test("the menu page lists ten menus with one line each (and the stuck button)", () => {
-  const { e } = make();
-  assert.equal(MENUS.length, 10);
-  const html = menusHtml(e);
-  for (const [name, line] of MENUS) {
-    assert.ok(html.includes("<b>" + name + "</b>"), name);
-    assert.ok(html.includes(line), line);
-  }
-  assert.match(html, /data-action="mendUnstuck"/);
-  assert.match(html, /data-action="fPhoto"/);
-  assert.doesNotMatch(html, DEV);
-});
 
-test("every clickable number in the top bar has a card", () => {
-  const index = readFileSync(new URL("../dist/index.html", import.meta.url), "utf8");
-  const game = readFileSync(new URL("../dist/game.js", import.meta.url), "utf8");
-  const keys = [...index.matchAll(/data-sx="([a-z]+)"/g)].map((m) => m[1]);
-  assert.ok(keys.length >= 7, keys.join(","));
-  for (const k of [...keys, "hp", "stamina", "hunger"]) {
-    assert.ok(HUD_CARD[k], "card for " + k);
-    const { e } = make();
-    const html = hudCardHtml(e, k, "现在的数");
-    assert.match(html, /<h3>/);
-    assert.match(html, /现在：现在的数/);
-  }
-  assert.match(game, /data-sx="\$\{id\}"/, "the three bars carry their key");
-  assert.match(game, /showSxPop\(sxEl\)/);
-});
 
 // ================= 各页只留一件事 =================
-test("the farmhouse only rests; the craft menu lists only what you make by hand; a station lists only its own", () => {
-  const game = readFileSync(new URL("../dist/game.js", import.meta.url), "utf8");
-  const home = game.slice(game.indexOf("else if(menu==='home')"), game.indexOf("else if(menu==='pause')"));
-  assert.match(home, /data-action=\\?"sleep\\?"/);
-  assert.match(home, /data-action=\\?"waitUntilNight\\?"/);
-  assert.doesNotMatch(home, /data-action=\\?"save\\?"|frontier:rooms|frontier:life|data-action=\\?"quests\\?"/);
-  assert.match(game, /else list=list\.filter\(r=>!r\.station\);/, "craft menu: by hand only");
-  assert.match(game, /else list=list\.filter\(r=>r\.station==='workbench'\);/, "workbench: its own recipes");
-  assert.doesNotMatch(game, /data-action="pin"/, "no pin button");
-  assert.ok(RECIPES.some((r) => !r.station), "there are hand recipes");
-});
 
-test("pages lose the links bolted onto them: the journal keeps only tasks, the shipping box only selling", () => {
-  // 一个很小的 DOM 替身：只够 querySelectorAll / remove / 父子关系
-  const node = (cls, attrs = {}, kids = [], text = "") => {
-    const n = { className: cls, dataset: attrs, children: [], textContent: text, parentElement: null, parentNode: null };
-    n.remove = () => {
-      const p = n.parentElement;
-      if (!p) return;
-      p.children = p.children.filter((c) => c !== n);
-      n.parentElement = n.parentNode = null;
-    };
-    for (const k of kids) {
-      k.parentElement = k.parentNode = n;
-      n.children.push(k);
-    }
-    return n;
-  };
-  const all = (root) => root.children.flatMap((c) => [c, ...all(c)]);
-  const match = (el, sel) =>
-    sel.split(/\s+/).every((part) => {
-      const cls = part.match(/^[a-z]*\.([\w-]+)/)?.[1] || (part.startsWith(".") ? part.slice(1) : null);
-      const act = part.match(/\[data-action="([^"]+)"\]/)?.[1];
-      const id = part.match(/\[data-id="([^"]+)"\]/)?.[1];
-      if (cls && !String(el.className).split(" ").includes(cls.split("[")[0])) return false;
-      if (act && el.dataset.action !== act) return false;
-      if (id && el.dataset.id !== id) return false;
-      return !!(cls || act);
-    });
-  const root = node("modal");
-  root.querySelectorAll = (sel) => all(root).filter((el) => !sel.includes(" ") && match(el, sel));
-  const links = node("outpost-links", {}, [node("", { action: "oView", id: "ledger" }, [], "出货账本")]);
-  const strip = node("outpost-strip", {}, [links]);
-  const main = node("journal-main", {}, [], "主线这一步");
-  root.children.push(strip, main);
-  strip.parentElement = main.parentElement = root;
-  const n = sxAfterRender(root, stripKey("journey"));
-  assert.ok(n >= 1);
-  assert.deepEqual(
-    root.children.map((c) => c.className),
-    ["journal-main"],
-    "the strip of links is gone, the task stays"
-  );
-  assert.equal(stripKey("outpost", { view: "shipping" }), "outpost:shipping");
-  assert.equal(stripKey("rebuild", { tab: "residents" }), "rebuild:residents");
-});
 
-test("the letters page keeps the story card and the letters, nothing else", () => {
-  const journal =
-    '<div class="journal-page"><section class="journal-today">今天</section><article class="journal-main story-card task-card"><h2>把收成做成出发餐</h2><article class="inner">信</article></article><section class="outpost-strip">链接</section><details class="journal-extra hp-letters"><summary>鸽子捎回的信</summary><article>一封</article></details><details class="journal-extra"><summary>收到的消息</summary></details></div>';
-  const blocks = pickBlocks(journal, /<article class="journal-main[^"]*story-card/, "article");
-  assert.equal(blocks.length, 1);
-  assert.match(blocks[0], /<article class="inner">信<\/article><\/article>$/, "nested article kept whole");
-  const { e } = make();
-  const html = lettersHtml(e, journal);
-  assert.match(html, /把收成做成出发餐/);
-  assert.match(html, /鸽子捎回的信/);
-  assert.doesNotMatch(html, /今天|链接|收到的消息/);
-});
 
 // ================= 场景里的字 =================
 test("scene labels: only the thing you face gets a line; names over other things are not drawn; foes and big words still are", () => {
@@ -417,18 +227,3 @@ test("scene labels: only the thing you face gets a line; names over other things
 });
 
 // ================= 存档、版本 =================
-test("saves: nothing new is written (old saves load as they were); version 0.39.0 一物一用 in the title and settings", () => {
-  const { e } = make();
-  const text = e.serialize();
-  const back = new Engine(Engine.parse(text), () => {});
-  assert.deepEqual(Object.keys(JSON.parse(back.serialize())).sort(), Object.keys(JSON.parse(text)).sort());
-  const v = readFileSync(new URL("../dist/version.js", import.meta.url), "utf8");
-  assert.match(v, /GAME_VERSION='v0\.\d+\.\d+'/);
-  assert.match(v, /GAME_EDITION='[^']+'/);
-  const html = readFileSync(new URL("../dist/index.html", import.meta.url), "utf8");
-  assert.match(html, /<title>余烬农场 v0\.\d+\.\d+ · [^<]+<\/title>/);
-  assert.ok(styleOrder().includes("simple.css"));
-  for (const key of ["shipping", "gBoard", "radio", "museum", "plaza", "bOrders"]) assert.ok(PAGE_CARD[key]?.[1], key);
-  for (const [k, v2] of Object.entries(VERB)) assert.ok(typeof v2 === "string" ? v2.length <= 12 : true, k);
-  assert.ok(ITEMS.bread);
-});

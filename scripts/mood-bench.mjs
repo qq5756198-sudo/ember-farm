@@ -11,7 +11,7 @@
 //    过线：勤快的营地平均士气 55–75，忙的 40–60，不会一直满；高昂的人每人每周来劲 0.5–1.5 次。
 // 用法：node scripts/mood-bench.mjs [天数] [种子,种子]
 const D = new URL("../dist/", import.meta.url).href;
-const { Engine, freshState } = await import(D + "campaign.js");
+const { Engine, freshState } = await import(D + "ahead.js") /* v0.50：这些台子量的是后面几章的系统，不过章节那一层 */;
 const { BUILDINGS, CROPS } = await import(D + "data.js");
 const { TASKS } = await import(D + "rebuild-data.js");
 const { MOOD } = await import(D + "tidy-data.js");

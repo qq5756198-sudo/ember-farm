@@ -1,21 +1,28 @@
 // v0.50「落脚」：照手记走第一章的机器人。新开一个档，只做左下角“眼下的目标”写的那一步，
 // 另外每天种地、做饭、出一趟门、选今天的事、夜里睡觉；到第 9 天夜里守第一场尸潮。
-// 走路按走路的速度算时间，打架真打（会掉血、会倒下）。
+// 走路按走路的速度算时间，打架真打（会掉血、会倒下）：挥一下退一步，被抓住、被围住就推开；
+// 考验那一夜陷阱摆在来路上，人站在路口里面等它们过来。发了烧去集市买药包。
 // 用法：node scripts/ch1-bot.mjs [种子,种子] [最多几天]   SHOW=1 每一步打一行
 // 量：第一章做完是第几天几点、折成真实时间多少分钟（醒着的一天 10 分钟，不算开着页面的时间）、
 //     每一段几点开始、连着多久没有新东西也没有要决定的事、每天的钱粮料、倒下几回、尸潮守了几回。
+// 另外：SAVES=目录 每进一段存一份档（给界面检查用；存档会多用几个随机数，同一个种子走出来的不一样）；
+//       NOPREP=1 备战那一段什么都不备，量不备战时第一场尸潮守不守得住；NAIVE=1 打法换成站着硬打（不退、不推开）；
+//       DEBUG=1、NEWS=1 多打几行。
 // 退出码：有一个种子没在给的天数里做完第一章，或者做完时不在 1.5–3 小时里，就是 1。
 const D = new URL("../dist/", import.meta.url).href;
 const C = await import(D + "campaign.js");
 const PJ = await import(D + "player-journey.js");
-const { BUILDINGS, ITEMS } = await import(D + "data.js");
+const { BUILDINGS, ITEMS, CROPS } = await import(D + "data.js");
 const { ROAD } = await import(D + "handy-data.js");
 const { EVENTS } = await import(D + "daily-data.js");
+const { GATE1 } = await import(D + "chapter-data.js");
 
 const SEEDS = (process.argv[2] || "1,2,3").split(",").map(Number);
 const DAYS = Number(process.argv[3] || 14);
 const DT = 0.05;
+const TRAP_X = 1252; // 头一个陷阱摆在路上的哪儿（东边路口往里 180 步）
 const SHOW = !!process.env.SHOW;
+const NAIVE = !!process.env.NAIVE; // 不会打的：站着硬打，不退、不推开
 
 function seeded(seed) {
   let s = seed % 2147483647 || 1;
@@ -94,18 +101,83 @@ async function run(seed) {
   const heal = () => {
     if (P().hp < 45 && e.qty("bandage") > 0) e.consume("bandage");
   };
+  // 打法照一个会玩的人：挥一下退一步（慢的追不上），被抓住或者被围住就推开，体力见底先拉开喘口气
   const fightIfNear = (range = 260) => {
     const p = P();
-    const z = (e.enemies || []).filter((q) => !q.dead && !q.lying).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
-    if (!z || Math.hypot(z.x - p.x, z.y - p.y) > range) return false;
+    const alive = () => (e.enemies || []).filter((q) => !q.dead && !q.lying && !q.gone),
+      far = (q) => Math.hypot(q.x - p.x, q.y - p.y),
+      nearest = () => alive().sort((a, b) => far(a) - far(b))[0];
+    let z = nearest();
+    if (!z || far(z) > range) return false;
     const slots = e.hotbarSlots();
     if (slots[3]) e.s.slot = 3;
-    for (let t = 0; t < 30 && !z.dead && e.s.player.hp > 0; t += DT) {
+    const reach = Math.max(40, (e.meleeStats?.(slots[3])?.range || 64) - 12);
+    let nav = null,
+      navT = 0;
+    for (let t = 0; t < 60 && p.hp > 0; t += DT) {
+      z = nearest();
+      if (!z || far(z) > range + 140) break;
       const dx = z.x - p.x,
         dy = z.y - p.y,
-        d = Math.hypot(dx, dy);
-      if (d > 52) tick({ x: dx / d, y: dy / d });
-      else {
+        d = Math.hypot(dx, dy) || 1,
+        crowd = alive().filter((q) => far(q) < 64).length;
+      if (!NAIVE && (e.gx?.grab || crowd >= 2) && !(e.gx?.shoveCd > 0) && p.stamina >= 20) {
+        p.facing = Math.atan2(dy, dx);
+        e.shove?.();
+      }
+      if (NAIVE) {
+        // 站着硬打：走到跟前就挥，不退、不推
+        if (d > reach) tick({ x: dx / d, y: dy / d });
+        else {
+          p.facing = Math.atan2(dy, dx);
+          e.use({ x: z.x, y: z.y - 20 });
+          tick();
+        }
+        heal();
+        continue;
+      }
+      if (e.cooldown > 0 || p.stamina < 14) {
+        if (d < 130) {
+          // 往后退，但别退到地图边上去：离农场中间远了就往回偏
+          let rx = -dx / d,
+            ry = -dy / d;
+          const hx = 830 - p.x,
+            hy = 470 - p.y,
+            hd = Math.hypot(hx, hy) || 1;
+          if (e.s.region === "farm" && hd > 220) {
+            rx += (hx / hd) * 0.9;
+            ry += (hy / hd) * 0.9;
+            const rd = Math.hypot(rx, ry) || 1;
+            rx /= rd;
+            ry /= rd;
+          }
+          tick({ x: rx, y: ry });
+        } else tick();
+      } else if (d > reach) {
+        // 离得远：照游戏自己的寻路点绕过去（直着走会顶在房子、树上）
+        let tx = z.x,
+          ty = z.y;
+        if (d > 150) {
+          if (!nav || navT <= 0) {
+            try {
+              nav = e.pathTo(p, z);
+            } catch {
+              nav = null;
+            }
+            navT = 0.5;
+          }
+          navT -= DT;
+          while (nav && nav.length && Math.hypot(nav[0].x - p.x, nav[0].y - p.y) < 24) nav.shift();
+          if (nav && nav.length) {
+            tx = nav[0].x;
+            ty = nav[0].y;
+          }
+        }
+        const ax = tx - p.x,
+          ay = ty - p.y,
+          ad = Math.hypot(ax, ay) || 1;
+        tick({ x: ax / ad, y: ay / ad });
+      } else {
         p.facing = Math.atan2(dy, dx);
         e.use({ x: z.x, y: z.y - 20 });
         tick();
@@ -212,28 +284,73 @@ async function run(seed) {
     let n = 0;
     const keep = e.resident("farmer") && e.projectStage("market") < 1 ? 9 : 0;
     if (process.env.DEBUG) console.error("  cook:", JSON.stringify(e.recipeReason({ id: "trailBread", out: { bread: 2 }, cost: { radish: 3 }, station: "cook", minutes: 20 })), e.s.buildings.filter((b) => b.type === "cook").map((b) => Math.round(b.hp)).join(","));
-    while (e.qty("radish", true) >= 3 + keep && n++ < 4 && e.craft("trailBread")) first("craft:bread", "头一回做干粮");
-    n = 0;
-    while (e.qty("potato", true) >= 2 && n++ < 3 && e.craft("stew")) first("craft:stew", "头一回做炖汤");
+    // 干粮、炖汤只做够带在身上吃的（生菜卖得比干粮贵，多的留着卖）
+    // 口粮只算做熟的：留够四天的，多的生菜留着卖（生菜卖得比干粮贵）
+    const enough = Math.max(20, Math.ceil(e.foodNeed() * 4)),
+      making = (e.c.production || []).length * 2;
+    while (e.foodPortions() + making + n * 2 < enough && e.qty("radish", true) >= 3 + keep && n++ < 4 && e.craft("trailBread")) first("craft:bread", "头一回做干粮");
+    let k = 0;
+    while (e.foodPortions() + making + n * 2 + k < enough && e.qty("potato", true) >= 2 && k++ < 3 && e.craft("stew")) first("craft:stew", "头一回做炖汤");
   };
-  // 集市：多的菜卖掉，换种子（留 12 份萝卜、土豆自己用）
+  // 地里收的都算能卖的菜（豆子、番茄、玉米……连优质的）；萝卜留 12、土豆留 6 自己做饭
+  const KEEP = { radish: 12, potato: 6 };
+  const sellable = () => Object.keys({ ...e.s.inventory, ...e.s.storage }).filter((id) => ITEMS[id] && (CROPS[id] || ITEMS[id].cropBase) && !ITEMS[id].protected);
+  const spare = () => sellable().reduce((n, id) => n + Math.max(0, e.qty(id, true) - (KEEP[id] || 0)), 0);
+  // 家伙用旧了：有武器工作台就修；没有、又建得起，就建一座；都不行先削一根木矛顶着
+  const upkeep = () => {
+    if (e.s.region !== "farm" || !e.gr) return;
+    const worn = Object.values(e.gr.slots || {}).filter((id) => id && e.condRatio(id) < 0.35);
+    const melee = e.gr.slots?.melee;
+    if (!worn.length) return;
+    if (!e.benchReady() && e.sc.act >= 3 && e.afford(BUILDINGS.weaponbench.cost)) build("weaponbench", 980, 620);
+    if (e.benchReady()) {
+      walkTo({ region: "farm", ...(e.s.buildings.find((b) => b.type === "weaponbench") || { x: 980, y: 620 }) }, 60);
+      for (const id of worn) if (!e.repairReason(id) && e.repairGear(id)) first("repair:gear", "头一回在武器工作台修家伙");
+    }
+    if (melee && e.condRatio(melee) < 0.2 && melee !== "spear" && !e.qty("spear", true) && e.qty("wood", true) >= 3 && e.craft("spear")) {
+      e.equip("spear");
+      first("craft:spear", "头一回削木矛");
+    }
+  };
+  // 集市：留 12 个萝卜、6 个土豆自己做饭，多的生菜卖掉；眼下这一步要的料先买，再买种子，剩下的钱囤备战的料
   const market = () => {
-    for (const id of ["radish", "potato"]) if ((e.s.storage[id] || 0) > 0) e.transfer(id, false, true);
+    for (const id of sellable()) if ((e.s.storage[id] || 0) > 0) e.transfer(id, false, true);
     if (!e.travel("market")) return;
     first("region:market", "头一回去集市");
-    for (const id of ["radish", "potato"]) {
-      const n = e.qty(id) - 12;
+    for (const id of sellable()) {
+      const n = e.qty(id) - (KEEP[id] || 0);
       if (n > 0 && e.trade("food", id, n, "sell")) first("sell", "头一回卖菜");
     }
-    for (const [id, n] of [["seedRadish", 12], ["seedPotato", 6]]) {
-      const can = Math.min(n, Math.floor(e.s.money / Math.max(1, e.price("food", id, "buy"))), e.traderStock("food")[id] || 0);
-      if (can > 0 && e.trade("food", id, can, "buy")) first("buy", "头一回买种子");
-    }
-    // 木头、布不够用了：找老周买
-    for (const [id, want] of [["wood", 30], ["stone", 4], ["cloth", 2], ["scrap", 4], ["parts", 1]]) {
+    const buy = (trader, id, want) => {
       const lack = want - e.qty(id, true),
-        can = Math.min(lack, Math.floor(e.s.money / Math.max(1, e.price("mechanic", id, "buy"))), e.traderStock("mechanic")[id] || 0);
-      if (can > 0 && e.trade("mechanic", id, can, "buy")) first("buy:" + id, "头一回买" + ITEMS[id].name);
+        can = Math.min(lack, Math.floor(e.s.money / Math.max(1, e.price(trader, id, "buy"))), e.traderStock(trader)[id] || 0);
+      if (can > 0 && e.trade(trader, id, can, "buy")) first("buy:" + id, "头一回买" + ITEMS[id].name);
+    };
+    const req = e.sc.act === 2 ? e.taskRequirements("table").find((x) => !x.pass) : null;
+    if (req && /集市/.test(req.label)) buy("mechanic", "wood", 12);
+    if (req && /制作台/.test(req.label)) {
+      buy("mechanic", "wood", 8);
+      buy("mechanic", "stone", 4);
+    }
+    if (req && /床位/.test(req.label)) {
+      buy("mechanic", "cloth", 2);
+      buy("mechanic", "wood", 8);
+    }
+    // 发烧了：买一份药包吃掉，睡一晚就退
+    if (e.gr?.fever && !e.gr.cure) {
+      buy("food", "medkit", e.qty("medkit", true) + 1);
+      if (e.qty("medkit") > 0 && e.consume("medkit")) first("medkit", "头一回吃药包退烧");
+    }
+    const plots = e.s.plots.filter((p) => p.tilled).length;
+    buy("food", "seedRadish", Math.min(12, plots));
+    buy("food", "seedPotato", 3);
+    // 手上宽裕了，木头多备一点（后面每一步都要）
+    if (e.sc.act === 2 && e.s.money >= 150) buy("mechanic", "wood", 20);
+    if (e.sc.act >= 3) {
+      // 没有武器工作台时多备它要的料（废铁 6、零件 3）
+      const bench = e.s.buildings.some((b) => b.type === "weaponbench" && b.hp > 0);
+      for (const [id, want] of [["wood", 30], ["scrap", bench ? 5 : 11], ["parts", bench ? 1 : 4], ["cloth", 2]]) buy("mechanic", id, want);
+      if (e.chHeal() < 4) buy("food", "bandage", e.qty("bandage", true) + 4 - e.chHeal());
     }
     e.travel("farm");
     e.depositAll?.();
@@ -243,7 +360,10 @@ async function run(seed) {
     if (!e.travel("residential")) return;
     first("region:residential", "头一回去废弃居民区");
     const want = (o) => ["crate", "gearCrate", "salvage", "poi", "survivor", "rebuildFind", "animalRescue"].includes(o.type);
-    const list = e.objects.filter(want).sort((a, b) => a.x - b.x);
+    // 手记标的那个人先找（阿禾还没接回来的时候），别的柜子顺路再开
+    const dest = e.resident("farmer") ? null : e.taskDestination?.("farmer"),
+      pri = (o) => (dest && dest.region === "residential" && Math.hypot(o.x - dest.x, o.y - dest.y) < 90 ? 0 : 1);
+    const list = e.objects.filter(want).sort((a, b) => pri(a) - pri(b) || a.x - b.x);
     for (const o of list) {
       if (e.s.region !== "residential" || P().hp < 35 || e.s.minute > 17 * 60) break;
       walkTo({ x: o.x, y: o.y + 14 }, 34);
@@ -301,11 +421,29 @@ async function run(seed) {
     }
     const m = s.minute,
       horde = s.horde.phase;
-    // 尸潮：守路口
+    if (horde !== "active") out.hordeFrom = null;
+    // 尸潮：站在路口里面（陷阱在你和它们之间），等它们踩着陷阱过来，到了跟前再打；都进场了还有没过来的，过去找
     if (horde === "warning" || horde === "active") {
       if (s.region !== "farm") e.travel("farm");
-      walkTo({ region: "farm", x: ROAD.x - 60, y: ROAD.y + 20 }, 70);
-      if (!fightIfNear(420)) idle(2);
+      if (P().hp < e.maxHp() - 30 && e.qty("bandage") > 0) e.consume("bandage");
+      const post = { region: "farm", x: TRAP_X - 110, y: GATE1.lane.y },
+        left = e.enemies.filter((z) => !z.dead && !z.lying && !z.gone);
+      if (fightIfNear(140)) continue;
+      // 一场尸潮打了 8 个钟头还没完：记下来还剩谁、在哪儿（多半是卡在哪儿过不来）
+      if (horde === "active") {
+        const now = (s.day - 1) * 1440 + m;
+        out.hordeFrom ??= now;
+        if (now - out.hordeFrom > 480 && !out.hordeLong) {
+          out.hordeLong = true;
+          out.problems.push("一场尸潮打了 8 个钟头还没完（" + hhmm() + "）：没进场的 " + s.horde.remaining + "，场上 " + e.enemies.filter((z) => z.horde && !z.dead).map((z) => z.type + "@" + Math.round(z.x) + "," + Math.round(z.y) + " hp" + Math.round(z.hp) + (z.lying ? " 躺着" : "") + (z.gone ? " 走了" : "") + " " + z.state).join(" | ") + "；人在 " + Math.round(P().x) + "," + Math.round(P().y));
+        }
+      }
+      if (horde === "active" && s.horde.remaining === 0 && left.length) {
+        if (!fightIfNear(1600)) idle(1);
+        continue;
+      }
+      walkTo(post, 30);
+      idle(0.5);
       continue;
     }
     if (e.ch.gate.tries !== out.gateTries) out.gateTries = e.ch.gate.tries;
@@ -324,7 +462,7 @@ async function run(seed) {
       continue;
     }
     // 种子快没了：上午去一趟集市
-    if (s.region === "farm" && e.sc.act >= 2 && m >= 7 * 60 && m < 15 * 60 && s.day !== lastMarket && ((e.qty("seedRadish", true) + e.qty("seedPotato", true) < 6 && e.qty("radish", true) + e.qty("potato", true) > 16) || (e.qty("wood", true) < 8 && e.s.money >= 80 && e.s.day >= 3))) {
+    if (s.region === "farm" && e.sc.act >= 2 && m >= 7 * 60 && m < 15 * 60 && s.day !== lastMarket && (spare() >= 18 || (e.qty("seedRadish", true) + e.qty("seedPotato", true) < 6 && e.s.money >= 48) || (e.gr?.fever && !e.gr.cure && e.s.money >= 75))) {
       lastMarket = s.day;
       market();
       continue;
@@ -335,6 +473,7 @@ async function run(seed) {
       lastChore = slot;
       farm();
       cook();
+      upkeep();
       if (process.env.DEBUG) console.error(hhmm(), "田", e.s.plots.filter((p) => p.tilled).length, "种着", e.s.plots.filter((p) => p.crop).length, "萝卜", e.qty("radish", true), "土豆", e.qty("potato", true), "干粮", e.qty("bread", true), "种子", e.qty("seedRadish", true), e.qty("seedPotato", true), "在做", (e.c.production || []).length, "体力", Math.round(P().stamina), "血", Math.round(P().hp), "饿", Math.round(P().hunger));
       continue;
     }
@@ -465,8 +604,11 @@ async function run(seed) {
       else if (/床位/.test(req.label)) did = build("bed", 420, 330);
       if (!did) {
         if (process.env.DEBUG) console.error(hhmm(), "table 卡在", req.label, "木", e.qty("wood", true), "布", e.qty("cloth", true), "石", e.qty("stone", true), "萝卜", e.qty("radish", true));
-        // 缺东西：出门翻，或者等菜熟
-        if (s.day !== lastTrip && m < 14 * 60 && P().hp >= 60) {
+        // 缺东西：有钱先去集市买，不然出门翻，或者等菜熟
+        if (s.day !== lastMarket && m < 16 * 60 && e.s.money >= 60) {
+          lastMarket = s.day;
+          market();
+        } else if (s.day !== lastTrip && m < 14 * 60 && P().hp >= 60) {
           lastTrip = s.day;
           loot();
         } else {
@@ -477,12 +619,35 @@ async function run(seed) {
       }
       continue;
     }
+    // 没守住过：白天把啃坏的围栏、踩过的陷阱修好（修得起的）
+    if (e.ch.gate.tries > 0 && s.region === "farm" && m < 18 * 60 && s.day !== out.fixDay) {
+      out.fixDay = s.day;
+      for (const b of e.s.buildings)
+        if (["fence", "gate", "trap"].includes(b.type) && BUILDINGS[b.type] && b.hp < BUILDINGS[b.type].hp * 0.9) {
+          walkTo({ region: "farm", x: b.x, y: b.y + 20 }, 40);
+          if (e.repair(b.id)) first("repair:def", "头一回修围栏、陷阱");
+        }
+    }
     if (st.id.startsWith("prep:")) {
       if (s.region !== "farm") e.travel("farm");
+      // NOPREP=1：什么都不备（不建围栏、陷阱、育种箱，不囤绷带），量“不备战守不守得住”
+      if (process.env.NOPREP) {
+        if (s.day !== lastTrip && m < 14 * 60 && P().hp >= 60) {
+          lastTrip = s.day;
+          loot();
+        } else {
+          farm();
+          cook();
+          idle(40);
+        }
+        continue;
+      }
       const miss = st.id.slice(5);
       let did = false;
       if (miss === "fence") did = build(e.chCount("gate") ? "fence" : e.chFences() >= 4 ? "gate" : "fence", ROAD.x - 20, ROAD.y - 60 + 36 * (e.chFences() % 8));
-      else if (miss === "trap") did = build("trap", ROAD.x + 40, ROAD.y + 30 * e.chCount("trap"));
+      // 陷阱摆在它们进来的路上，一个接一个
+      // 路口那一截是出口、放不了东西：陷阱摆在围栏里面的路上，一个接一个（它们啃穿围栏、顺着路进来就踩上）
+      else if (miss === "trap") did = build("trap", TRAP_X - 36 * e.chCount("trap"), GATE1.lane.y);
       else if (miss === "breeder") did = build("breeder", 940, 560);
       else if (miss === "heal" && e.s.buildings.some((b) => b.type === "workbench" && b.hp > 0) && e.qty("cloth", true) > 0) did = e.craft("bandage");
       if (did) news("备战：" + st.title);
@@ -505,6 +670,9 @@ async function run(seed) {
       continue;
     }
     if (st.id === "gate") {
+      // 天黑前：缠好绷带、吃饱，在路口等
+      if (P().hp < e.maxHp() - 30 && e.qty("bandage") > 0) e.consume("bandage");
+      if (P().hunger < 70) for (const id of ["bread", "stew"]) if (e.qty(id) > 0 && e.consume(id)) break;
       idle(10);
       continue;
     }

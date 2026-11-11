@@ -8,7 +8,7 @@
 const D = new URL("../dist/", import.meta.url).href;
 const K = await import(D + "kin-data.js");
 if (process.env.KINPATCH) for (const [k, v] of Object.entries(JSON.parse(process.env.KINPATCH))) for (const [kk, vv] of Object.entries(v)) vv && typeof vv === "object" && !Array.isArray(vv) ? Object.assign((K[k][kk] ??= {}), vv) : (K[k][kk] = vv);
-const { Engine, newGameState } = await import(D + "campaign.js");
+const { Engine, newGameState } = await import(D + "ahead.js") /* v0.50：这些台子量的是后面几章的系统，不过章节那一层 */;
 const { TASKS } = await import(D + "rebuild-data.js");
 const { ITEMS, CROPS } = await import(D + "data.js");
 const mode = process.argv[2] || "reel";

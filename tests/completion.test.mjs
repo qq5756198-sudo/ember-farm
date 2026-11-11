@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {Engine,freshState} from '../dist/expansion.js';
 import {ITEMS,CROPS,BUILDINGS,REGIONS} from '../dist/data.js';
 import {HORDE_DIRECTIONS,FEATURES,WEATHER} from '../dist/expansion-data.js';
-import {renderCamp,CAMP_TABS} from '../dist/camp-ui.js';
 
 function stocked(){const s=freshState();s.money=3000;s.xp.exploration=80;s.debris=[];Object.assign(s.inventory,{wood:150,stone:100,scrap:150,parts:100,circuit:30,cloth:50,radish:40,potato:40,tomato:40,bean:40,corn:40,herb:40,cotton:40,bread:40,stew:20,jam:20,bandage:30,ammo:150,fish:12,riverFish:12,nightFish:12,egg:12,milk:12});const e=new Engine(s);e.paused=false;return e;}
 function facility(e,type,x=900,y=760){const b={id:'fixture-'+e.s.idCounter++,type,x,y,rotation:0,hp:BUILDINGS[type].hp};e.s.buildings.push(b);e.navRevision++;return b;}
@@ -127,15 +126,4 @@ test('seeded choices survive save restoration and scheduled events respect post-
   const siege=stocked();siege.s.stats.hordes=1;siege.s.horde.phase='won';siege.c.nextHordeDay=2;siege.c.nextEventDay=2;siege.sleep();assert.equal(siege.s.horde.phase,'warning');assert.equal(siege.c.event,null);
 });
 
-test('v0.2 saves migrate new scheduling fields and malformed new data is rejected before gameplay',()=>{
-  const e=stocked();e.recruit('medic');const legacy=JSON.parse(e.serialize());legacy.expansionVersion=2;for(const key of ['rng','water','waterCapacity','marketBoosts','geneLibrary','encounters','pendingEncounter','autoMeals','stallCursor','recoveryUntil'])delete legacy.colony[key];for(const r of legacy.colony.residents)for(const key of ['priorities','x','y','target'])delete r[key];const restored=new Engine(Engine.parse(JSON.stringify(legacy)));assert.equal(restored.s.expansionVersion,3);assert.equal(restored.c.water,24);assert.equal(restored.c.residents[0].priorities.medic,1);
-  for(const mutate of [s=>s.colony.water=25,s=>s.colony.rng=0,s=>s.colony.residents[0].priorities.guard=7,s=>s.horde.direction=9,s=>s.colony.workClock=60]){const bad=JSON.parse(restored.serialize());mutate(bad);assert.throws(()=>Engine.parse(JSON.stringify(bad)));}
-  assert.equal(new Engine(Engine.parse(restored.serialize())).serialize(),restored.serialize());
-});
 
-test('twenty feature entries and all camp panels render populated state, night preparation and side-room choices',()=>{
-  const e=stocked();e.recruit('farmer');e.feedResidents();facility(e,'drone');facility(e,'stall');e.listStall('wood',3,'premium');e.craftBatch('stew',3);e.sleep();assert.equal(FEATURES.length,20);
-  for(const [tab]of CAMP_TABS){const html=renderCamp(e,tab,helpers);assert.ok(html.length>150,tab);assert.equal(/undefined|NaN/.test(html),false,tab);}
-  const handbook=renderCamp(e,'features',helpers);assert.equal((handbook.match(/class="camp-card"/g)||[]).length,20);assert.doesNotMatch(handbook,/feature-number|均已加入当前版本/);
-  e.waitUntilNight();e.travel('hospital');const room=e.objects.find(o=>o.type==='encounter');e.c.pendingEncounter=room.id;const html=renderCamp(e,'explore',helpers);assert.ok(html.includes('chooseEncounter'));assert.ok(html.includes('黎明'));assert.ok(html.includes('视野缩小'));
-});

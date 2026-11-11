@@ -6,7 +6,7 @@
 // 东西按卖价算钱（图纸、枪的附件按 60，手电按 30）。
 // 用法：node scripts/loot-sim.mjs 天数 [种子]
 const D = new URL("../dist/", import.meta.url).href;
-const { Engine, freshState } = await import(D + "campaign.js");
+const { Engine, freshState } = await import(D + "ahead.js") /* v0.50：这些台子量的是后面几章的系统，不过章节那一层 */;
 const { ITEMS, ZOMBIES } = await import(D + "data.js");
 const U = await import(D + "undertow-data.js");
 // DESIGN=1：换成方案表里原来的数（看为什么要改）

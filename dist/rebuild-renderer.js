@@ -27,8 +27,9 @@ export class Renderer extends FrontierRenderer {
   drawEnemy(enemy,e){super.drawEnemy(enemy,e);if(enemy.annexGuardian)this.badge('检修间守卫 · 通信核心',enemy.x,enemy.y-167,'#e5be96');}
   draw(e,mouse,dt=.016){
     super.draw(e,mouse,dt);const goal=this.rebuildTarget||(e.r.focus?e.taskDestination(e.r.focus):null);if(!goal||e.paused)return;const c=this.ctx;c.save();c.setTransform(this.dpr,0,0,this.dpr,0,0);
-    if(goal.region===e.s.region){const p=this.screenPoint(goal.x,goal.y),x=Math.max(45,Math.min(this.w-45,p.x)),y=Math.max(56,Math.min(this.h-35,p.y));c.strokeStyle='#f2d48a';c.lineWidth=2;c.beginPath();c.arc(x,y,19+Math.sin(this.time*3)*3,0,Math.PI*2);c.stroke();const label='目标：'+goal.label+' · '+Math.round(Math.hypot(e.s.player.x-goal.x,e.s.player.y-goal.y))+'步';c.font='12px "Microsoft YaHei",sans-serif';const half=Math.min(this.w/2-8,c.measureText(label).width/2+9),bx=Math.max(half+8,Math.min(this.w-half-8,x));this.badge(label,bx,y-34,'#f2d48a');}
+    if(goal.region===e.s.region){const p=this.screenPoint(goal.x,goal.y),x=Math.max(45,Math.min(this.w-45,p.x)),y=Math.max(56+(this.hudTop||0),Math.min(this.h-35-(this.hudBottom||0),p.y));c.strokeStyle='#f2d48a';c.lineWidth=2;c.beginPath();c.arc(x,y,19+Math.sin(this.time*3)*3,0,Math.PI*2);c.stroke();const label='目标：'+goal.label+' · '+Math.round(Math.hypot(e.s.player.x-goal.x,e.s.player.y-goal.y))+'步';c.font='12px "Microsoft YaHei",sans-serif';const half=Math.min(this.w/2-8,c.measureText(label).width/2+9),bx=Math.max(half+8,Math.min(this.w-half-8,x));this.badge(label,bx,y-34,'#f2d48a');}
     // v0.36：触屏上不写 M 键；手机上头目血条在场景上边时，这一行挪到血条下面，不叠在一起
-    else this.badge('目标在'+REGIONS[goal.region].name+(globalThis.matchMedia?.('(pointer:coarse)')?.matches?' · 打开地图':' · M地图'),this.w/2,this.w<=700&&e.bossBar?.()?96:32,'#ead19a');c.restore();
+    // v0.50：新界面顶上有一条资源栏，这一行改由左下角的目标框说（hudTop 有值时不画）
+    else if(!this.hudTop)this.badge('目标在'+REGIONS[goal.region].name+(globalThis.matchMedia?.('(pointer:coarse)')?.matches?' · 打开地图':' · M地图'),this.w/2,this.w<=700&&e.bossBar?.()?96:32,'#ead19a');c.restore();
   }
 }

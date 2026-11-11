@@ -1,14 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState } from "../dist/campaign.js";
+import { Engine, freshState } from "../dist/ahead.js";
 import { Engine as FarEngine, freshState as farFresh } from "../dist/farlands.js";
 import { TASKS } from "../dist/rebuild-data.js";
 import { ITEMS, CROPS } from "../dist/data.js";
 import { EVENTS, EVENT_IDS, CHAINS, PERKS, BUFFS, CATS, NEWBIE_DAYS } from "../dist/daily-data.js";
 import { CACHE_SPOTS } from "../dist/daily.js";
-import { renderCampaignView, campaignTitle, campaignHud, handleCampaignAction, renderCampaignJournal, dailyLocked } from "../dist/campaign-ui.js";
-import { optionModel } from "../dist/daily-ui.js";
-import { alertItems } from "../dist/winter-ui.js";
 
 const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
 // v0.19 的妙手卡另加了 6 个动作（rumor thiefXp confess clearCase blame giveTreasure）；v0.24 加了打听头目（uIntel）和缝口罩（uMask）
@@ -146,78 +143,7 @@ test("no card on day one; days 2–5 draw only newbie events; a card is fixed fo
   assert.equal(new Set(seen).size, seen.length, "different newbie events each day");
 });
 
-test("the card shows from 06:00 and waits while you fight, fish or build", () => {
-  const { e } = make();
-  nextDay(e);
-  e.s.minute = 300;
-  assert.equal(e.dailyShouldShow(), false, "before dawn");
-  e.s.minute = 361;
-  assert.equal(e.dailyShouldShow(), true);
-  e.s.horde.phase = "warning";
-  assert.equal(e.dailyShouldShow(), false, "horde warning");
-  assert.ok(alertItems(e).some((a) => a.text === "今日抉择等你决定"));
-  e.s.horde.phase = "none";
-  const z = e.enemy("runner", e.s.player.x + 80, e.s.player.y);
-  z.state = "chase";
-  e.enemies.push(z);
-  assert.equal(e.dailyShouldShow(), false, "infected chasing nearby");
-  z.dead = true;
-  e.buildMode = "fence";
-  assert.equal(e.dailyShouldShow(), false, "placing a building");
-  e.buildMode = null;
-  assert.equal(e.dailyShouldShow(), true);
-});
 
-test("every option of all 100 events runs, keeps the save loadable and writes clean text", () => {
-  const { e } = make();
-  toAct(e, 9);
-  e.s.day = 40;
-  for (const id of ["farmer", "medic", "mechanic"]) if (!e.resident(id)) e.recruit(id);
-  if (!e.sc.helpers.length) e.addHelper("tieqiao");
-  e.addCrew({ id: "c1", name: "石头", role: "build", trait: "handy", look: 2 });
-  e.f.dog.rescued = true;
-  e.fr.dog.bond = 10;
-  e.r.radio = true;
-  e.d.unlocked.railDepot = true;
-  e.ss.adou.phase = "sister";
-  e.s.buildings.push({ id: "coopT", type: "coop", x: 300, y: 300, rotation: 0, hp: 100, open: false });
-  const basics = {};
-  for (const [id, it] of Object.entries(ITEMS)) if (!it.protected) basics[id] = 120;
-  stock(e, basics);
-  for (const id of ["bread", "potato", "tomato", "radish"]) e.s.inventory[id] = 60;
-  // v0.22：新档手里就有木棍；磨掉一些，“请他修一件”才有东西可修
-  assert.equal(e.gr.slots.melee, "club");
-  e.cond("club").d = 5;
-  e.s.money = 5000;
-  e.c.nextHordeDay = e.s.day + 2;
-  e.scheduleRaid(3);
-  e.craft("stew");
-  const job = e.c.production.find((j) => !j.ready);
-  if (job) job.remaining = Math.max(job.remaining, 30);
-  const base = e.serialize();
-  let runs = 0;
-  for (const id of EVENT_IDS) {
-    const ev = EVENTS[id];
-    for (let i = 0; i < 3; i++)
-      for (const roll of ev.opts[i].p ? [0, 0.999] : [0.5]) {
-        const { e: x } = make(Engine.parse(base));
-        setCard(x, id, [roll, roll, roll]);
-        const card = renderCampaignView(x, { view: "daily" });
-        assert.doesNotMatch(card, FORBIDDEN, id);
-        assert.equal((card.match(/data-action="dPick"/g) || []).length, 3, id);
-        const reason = x.optionReason(i);
-        assert.equal(reason, "", id + " option " + (i + 1) + " should be available: " + reason);
-        const r = x.chooseDaily(i);
-        assert.ok(r, id + " option " + (i + 1));
-        for (const line of r.lines) assert.doesNotMatch(line, FORBIDDEN, id + " " + line);
-        assert.doesNotMatch(renderCampaignView(x, { view: "daily", dailyResult: r }), FORBIDDEN, id);
-        finite(x.s);
-        assert.doesNotThrow(() => Engine.parse(x.serialize()), id + " option " + (i + 1));
-        runs++;
-      }
-  }
-  assert.ok(runs > 300);
-});
 
 test("short materials, money or requirements refuse an option and change nothing; one choice a day", () => {
   const { e, toasts } = make();
@@ -252,43 +178,7 @@ test("short materials, money or requirements refuse an option and change nothing
   assert.equal(e2.s.money, money + e.scaleN(50));
 });
 
-test("rewards and costs scale ×1.5 from act three and ×2 from act six, and the card says so", () => {
-  const { e } = make();
-  setCard(e, "J02");
-  assert.equal(optionModel(e, e.dailyCard(), 1).gain, "金币 +50");
-  toAct(e, 3);
-  setCard(e, "J02");
-  assert.equal(optionModel(e, e.dailyCard(), 1).gain, "金币 +75");
-  assert.match(renderCampaignView(e, { view: "daily" }), /奖励 ×1.5/);
-  toAct(e, 6);
-  setCard(e, "S03");
-  assert.match(optionModel(e, e.dailyCard(), 1).costText, /木材 \d+\/8/);
-});
 
-test("gambles use the roll fixed with the card; two misses in a row bring better luck", () => {
-  const { e } = make();
-  toAct(e, 3);
-  e.s.day = 10;
-  setCard(e, "J01", [0.9, 0.9, 0.9]);
-  const m0 = e.s.money;
-  assert.ok(e.chooseDaily(2));
-  assert.equal(e.s.money, m0);
-  assert.equal(e.dy.streak, 1);
-  e.s.day++;
-  setCard(e, "J01", [0.9, 0.9, 0.9]);
-  e.chooseDaily(2);
-  assert.equal(e.dy.streak, 2);
-  e.s.day++;
-  e.dy.pending = null;
-  e.dailyGenerate(e.s.day);
-  assert.equal(e.dy.pending.luck, true);
-  setCard(e, "J01", [0.65, 0.65, 0.65], { luck: true });
-  assert.equal(e.optionChance(2), 0.7);
-  assert.match(renderCampaignView(e, { view: "daily" }), /运气在你这边/);
-  assert.ok(e.chooseDaily(2));
-  assert.ok(e.s.money > m0, "0.65 < 0.5 + 0.2 wins");
-  assert.equal(e.dy.streak, 0);
-});
 
 // ---------- 连贯事件 ----------
 test("a chain walks step by step to its ending, the ending's perk works, and it never starts again", () => {
@@ -535,77 +425,11 @@ test("corrupted daily fields are refused with a recoverable message", () => {
 });
 
 // ---------- 界面 ----------
-test("the card, result, journal strip and record page render clean text and real buttons", () => {
-  const { e } = make();
-  toAct(e, 3);
-  nextDay(e);
-  const p = e.dailyCard();
-  const html = renderCampaignView(e, { view: "daily" });
-  assert.match(html, /data-hotkey="1"/);
-  assert.match(html, /data-hotkey="3"/);
-  assert.match(html, /第 \d+ 天 · 清晨/);
-  assert.equal(campaignTitle({ view: "daily" }), "今日抉择");
-  assert.equal(dailyLocked(e, { view: "daily" }), false, "opened early by hand, before 06:00, it can still be closed");
-  e.s.minute = 360;
-  assert.ok(dailyLocked(e, { view: "daily" }));
-  assert.match(renderCampaignView(e, { view: "daily" }), /class="daily-card[^"]* locked"/);
-  assert.match(renderCampaignJournal(e, {}), /还没选/);
-  const ui = {};
-  let shut = 0;
-  const said = [];
-  const c = ctx(e, { ui, closeMenu: () => shut++, toast: (t) => said.push(t) });
-  const free = EVENTS[p.id].opts.findIndex((o) => !o.cost && !o.pay && !o.req);
-  assert.ok(handleCampaignAction("dPick", btn("dPick", String(free)), c));
-  // v0.45：不冒险、没有后续的一项，选了就开始这一天（顶上说一句），不再翻出结果页；冒险的、有后续的照旧翻出结果页
-  const q = e.dy.pending;
-  if (q.win === null && !q.lines.some((l) => /^后续：/.test(l))) {
-    assert.equal(shut, 1);
-    assert.ok(!ui.dailyResult);
-    assert.match(said.join(" "), /今日抉择 · /);
-  } else assert.ok(ui.dailyResult);
-  const result = { lines: q.lines, win: q.win, event: q.id, choice: q.choice };
-  const res = renderCampaignView(e, { view: "daily", dailyResult: result });
-  assert.match(res, /开始第 \d+ 天/);
-  assert.doesNotMatch(res, FORBIDDEN);
-  assert.equal(dailyLocked(e, { view: "daily", dailyResult: result }), false);
-  let closed = 0;
-  handleCampaignAction("dStart", btn("dStart"), ctx(e, { ui, closeMenu: () => closed++ }));
-  assert.equal(closed, 1);
-  assert.match(renderCampaignJournal(e, {}), /今日抉择/);
-  const log = renderCampaignView(e, { view: "dlog" });
-  assert.match(log, /迷路的信鸽/);
-  assert.doesNotMatch(log, FORBIDDEN);
-  e.dy.buffs.push({ kind: "growth", from: e.s.day, until: e.s.day + 2, value: 0.1 });
-  assert.match(campaignHud(e).daily.title, /作物生长 \+10%/);
-});
 
 // ---------- 审查后补的回归测试 ----------
 const fillCrew = (e) => {
   for (const id of ["a1", "a2", "a3"]) e.addCrew({ id, name: "队员" + id, role: "carry", trait: "diligent", look: 0 });
 };
-test("a full crew turns newcomers into real items, and the save still loads", () => {
-  for (const [id, opt, flags] of [["C1-E", 2, []], ["C6-E", 1, ["searched"]], ["C2-3", 2, []], ["C3-E", 2, []], ["V03", 1, []]]) {
-    if (!EVENTS[id]) continue;
-    for (const o of EVENTS[id].opts) for (const op of [...(o.fx || []), ...(o.win || [])]) if (op[0] === "crew") for (const k of Object.keys(op[2] || {})) assert.ok(ITEMS[k], id + " fallback " + k);
-    const { e } = make();
-    toAct(e, 6);
-    e.s.day = 40;
-    e.s.minute = 400;
-    fillCrew(e);
-    assert.ok(e.crewFull());
-    setCard(e, id, [0.1, 0.1, 0.1]);
-    if (EVENTS[id].chain) e.dy.chains[EVENTS[id].chain].flags = flags;
-    stock(e, { bread: 10, wood: 10, cloth: 6, parts: 6 });
-    const html = renderCampaignView(e, { view: "daily" });
-    assert.doesNotMatch(html, /seedsAll|research \d/);
-    const r = e.chooseDaily(opt);
-    assert.ok(r, id);
-    assert.match(r.lines.join(" "), /住满了/);
-    assert.ok(Engine.parse(e.serialize()), id + " save loads");
-  }
-  // 同一个人第二次来：不说“住满了”
-  for (const o of Object.values(EVENTS).flatMap((ev) => ev.opts)) for (const op of [...(o.fx || []), ...(o.win || []), ...(o.lose || [])]) if (op[0] === "crew") for (const k of Object.keys(op[2] || {})) assert.ok(ITEMS[k], "fallback item " + k);
-});
 test("a cleared ruin stays quiet today and tomorrow, even after the midnight refill", () => {
   const { e } = make();
   toAct(e, 4);
@@ -631,37 +455,6 @@ test("a cleared ruin stays quiet today and tomorrow, even after the midnight ref
   nextDay(e);
   nextDay(e);
   assert.equal(e.dy.clear, null);
-});
-test("a chain keeps the reward scale of the day it began: borrow and repay match", () => {
-  const { e } = make();
-  toAct(e, 2);
-  e.s.day = 20;
-  e.s.money = 0;
-  setCard(e, "C7-1");
-  e.dy.chains = {};
-  e.chooseDaily(0);
-  assert.equal(e.s.money, 150);
-  assert.equal(e.dy.chains.C7.tier, 1);
-  toAct(e, 6);
-  e.s.day = 30;
-  e.dy.pending = null;
-  e.dailyGenerate(30);
-  assert.equal(e.dailyCard().id, "C7-2");
-  assert.equal(e.dailyCard().tier, 1, "repayment uses the borrowing day's scale");
-  assert.match(optionModel(e, e.dailyCard(), 0).costText, /金币 200/);
-  assert.match(optionModel(e, e.dailyCard(), 1).costText, /抵 200 金币/);
-  assert.doesNotMatch(EVENTS["C7-1"].text + EVENTS["C7-2"].text, /\d/);
-  // 物资抵账也按倍率
-  const { e: f } = make();
-  toAct(f, 6);
-  f.s.day = 30;
-  f.dy.chains.C7 = { step: "C7-2", due: 30, flags: [], mark: null, start: 20, tier: 2 };
-  f.dailyGenerate(30);
-  f.s.inventory.pumpkin = 30;
-  const before = f.goodsValue();
-  assert.equal(f.optionReason(1), "");
-  f.chooseDaily(1);
-  assert.ok(before - f.goodsValue() >= 400, "goods worth the scaled 400 are handed over");
 });
 test("the scavenging buff adds thirty percent of what the crate really gave, never a second key item", () => {
   const { e, toasts } = make();
@@ -711,25 +504,6 @@ test("ambushes only wait in the three ruins; place names never show raw ids", ()
   assert.ok(toasts.some((t) => /刚进旧医院/.test(t.text)));
   for (const id of ["stationMarket", "shelter", "valley", "frost", "courtyard"]) assert.doesNotMatch(e.regionLabel(id), /^[a-zA-Z]+$/);
 });
-test("a marker chosen while standing in its region appears at once", () => {
-  const { e } = make();
-  toAct(e, 6);
-  e.s.day = 20;
-  go(e, "warehouse");
-  setCard(e, "C4-2");
-  e.chooseDaily(1);
-  assert.ok(e.objects.some((o) => o.type === "dailyMark"));
-  // 下井摸清过的线索：不用再跑一趟
-  const { e: f } = make();
-  toAct(f, 6);
-  f.s.day = 20;
-  setCard(f, "C4-2");
-  f.dy.chains.C4.flags = ["clue"];
-  assert.match(optionModel(f, f.dailyCard(), 1).follow, /明天有下文/);
-  f.chooseDaily(1);
-  assert.equal(f.dy.chains.C4.mark, null);
-  assert.equal(f.dy.chains.C4.due, 21);
-});
 test("truck and road still shorten the trip for scouts", () => {
   const trip = (setup) => {
     const { e } = make();
@@ -777,23 +551,6 @@ test("going to bed after midnight first asks for today's card; long errands neve
   assert.equal(e.s.day, day, "still the same day");
   assert.match(r.lines.join(" "), /深夜/);
   assert.equal(e.dy.history.filter((h) => h.day === day).length, 1);
-});
-test("a botched lock halves the seeds; outcomes that continue either way do not say 'only if it works'", () => {
-  const { e } = make();
-  toAct(e, 6);
-  e.s.day = 30;
-  setCard(e, "C8-E");
-  e.dy.chains.C8.flags = ["damaged"];
-  assert.match(optionModel(e, e.dailyCard(), 0).gain, /坏了一半/);
-  const n = e.qty("seedRadish", true);
-  e.chooseDaily(0);
-  assert.equal(e.qty("seedRadish", true) - n, 5);
-  const { e: f } = make();
-  toAct(f, 3);
-  f.s.day = 10;
-  setCard(f, "C4-1");
-  f.s.storage.herb = 4;
-  assert.doesNotMatch(optionModel(f, f.dailyCard(), 1).follow, /成了才有/);
 });
 test("field dogs stop night theft; a closed gate keeps visitors out; dogs warn once per raid", () => {
   const { e } = make();

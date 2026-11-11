@@ -8,7 +8,7 @@
 //   头目：brute（第 4 天）、nurse（第 8 天）、guard（第 5 天）、guard9（第 9 天）
 //   打法：right 木矛+医院那套；mid 铁头矛+中期装备；late 铁头矛+后期装备
 const D = new URL("../dist/", import.meta.url).href;
-const { Engine, freshState } = await import(D + "campaign.js");
+const { Engine, freshState } = await import(D + "ahead.js") /* v0.50：这些台子量的是后面几章的系统，不过章节那一层 */;
 const { RULES } = await import(D + "gear-data.js");
 const U = await import(D + "undertow-data.js");
 const N = Number(process.argv[2] || 30);

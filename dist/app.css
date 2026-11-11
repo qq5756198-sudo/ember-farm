@@ -124,6 +124,8 @@ h1, h2, h3, p { margin: 0; }
 
 /* ---------- 常驻：底下中间，身体和手上的东西 ---------- */
 #hands { position: absolute; left: 326px; bottom: 12px; width: 536px; display: flex; flex-direction: column; gap: 6px; }
+#status { align-self: center; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 3px 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+body.hasstatus #hint { bottom: 184px; }
 #handlabel { align-self: center; padding: 3px 12px; font-size: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; white-space: nowrap; }
 #handlabel span { color: var(--mut); margin-left: 8px; }
 #vitals { display: flex; gap: 10px; padding: 0 4px; }
@@ -191,6 +193,8 @@ h1, h2, h3, p { margin: 0; }
 .cells > .mut { grid-column: 1 / -1; }
 .cost { display: flex; flex-wrap: wrap; gap: 6px; }
 .list { display: flex; flex-direction: column; gap: 6px; }
+/* 一行一行的列表：行不许被压扁（多了就滚），不然字会压到下一行上 */
+.list > *, .steps > * { flex: none; }
 .item-row { display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 6px 10px; text-align: left; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; }
 button.item-row:hover { border-color: var(--dash); }
 .item-row.on { background: var(--amber-bg); border-color: var(--amber); }

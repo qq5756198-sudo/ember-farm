@@ -19,8 +19,7 @@ const { GAME_VERSION, GAME_EDITION, GAME_RELEASE } = await import("../dist/versi
 const D = await import("../dist/data.js");
 await import("../dist/district-data.js");
 await import("../dist/beyond-data.js");
-const C = await import("../dist/campaign.js");
-await import("../dist/campaign-ui.js");
+const C = await import("../dist/ahead.js");
 const maps = await import("../dist/pixel-maps.js");
 const farm = await import("../dist/pixel-farm.js");
 const build = await import("../dist/pixel-build.js");
@@ -47,16 +46,6 @@ const withSeason = (id, fn) => {
 };
 
 // ================= 版本、接线 =================
-test("version: the title, the loading page and settings carry the version (moved on to v0.45 顺手, checked in handy.test.mjs); the four files are preloaded and the four scene layer is still in the chain", () => {
-  assert.match(GAME_VERSION, /^v0\.(4[4-9]|[5-9]\d)\.\d+$/);
-  assert.equal(GAME_RELEASE, GAME_VERSION + " · " + GAME_EDITION);
-  const html = read("dist/index.html");
-  assert.ok(html.includes("<title>余烬农场 " + GAME_RELEASE + "</title>"));
-  assert.ok(html.includes("data-release>" + GAME_RELEASE + "<"));
-  for (const f of ["four-data.js", "four-renderer.js", "four-art.js", "four-ui.js"]) assert.ok(html.includes('<link rel="modulepreload" href="' + f + '">'), f + " preloaded");
-  assert.ok(CampaignRenderer === FourRenderer || CampaignRenderer.prototype instanceof FourRenderer);
-  assert.ok(FourRenderer.prototype instanceof TrimRenderer);
-});
 test("the four layer added no engine layer (art only): v0.43's engine sits right under whatever is on top now", async () => {
   const ease = await import("../dist/ease.js"),
     trim = await import("../dist/trim.js");
@@ -143,24 +132,6 @@ test("maps: baked by season; summer is the old map to the pixel, the other seaso
   assert.equal(shelter.season, null);
 });
 
-test("the early bake and the worker carry the season of the save's day (same formula as the almanac)", () => {
-  const html = read("dist/index.html"),
-    m = html.match(/<script>(\/\* v0\.25：载入页一开[\s\S]*?)<\/script>/),
-    src = m[1];
-  class FakeWorker {
-    postMessage(msg) {
-      this.msg = msg;
-    }
-  }
-  for (const day of [1, 7, 8, 15, 22, 28, 29, 200, 211]) {
-    const win = { Worker: FakeWorker, OffscreenCanvas: function () {} };
-    new Function("window", "localStorage", src)(win, { getItem: () => JSON.stringify({ region: "valley", day }) });
-    assert.deepEqual(win.__emberEarlyBake.worker.msg, { region: "valley", season: seasonOf(day).id }, "day " + day);
-  }
-  const w = read("dist/bake-worker.js");
-  assert.match(w, /bakeMap\(region, \{ season \}\)/);
-  assert.match(w, /self\.postMessage\(\{ region, season, ok: true, bitmap, art: plain \}, \[bitmap\]\)/);
-});
 
 test("the scene asks for the season of the day, re-bakes in the background when it changes and keeps the old picture until the new one is ready", () => {
   const r = Object.create(FourRenderer.prototype);
@@ -335,98 +306,7 @@ test("old-atlas sprites: every one still used in the new look has a new picture,
   assert.equal(drawn.length, 0, "muted: nothing");
 });
 
-test("facility icons: every facility on the build page has its own new 16×16 icon (no more shared chest), the hotbar build slot too", () => {
-  new C.Engine(C.freshState(), () => {}); // 删繁那一层第一次开局时把拆掉的设施标成 retired
-  const ids = Object.entries(D.BUILDINGS)
-    .filter(([, b]) => !b.retired)
-    .map(([id]) => id);
-  const icons = new Map();
-  for (const id of ids) {
-    const icon = D.BUILDINGS[id].icon;
-    assert.match(String(icon), /^g\d+$/, id + " " + icon);
-    assert.ok(!icons.has(icon), id + " shares an icon with " + icons.get(icon));
-    icons.set(icon, id);
-    const key = GEAR_ICON_IDS[gs.gearIconIndex(icon)];
-    assert.equal(key, "b:" + id, id + " points at its own picture");
-  }
-  assert.ok(ids.length >= 25, "the build page facilities: " + ids.length);
-  const tool = art.iconRef("t:buildTool");
-  assert.match(tool, /^g\d+$/);
-  const g = read("dist/game.js");
-  assert.match(g, /icon\(id==='build'\?buildToolIcon\(\):ITEMS\[id\]\.icon\)/, "hotbar build slot");
-  assert.match(g, /typeof b\.icon==='string'\?icon\(b\.icon\):b\.frontierIcon!=null/, "build page prefers the new icon");
-  assert.match(g, /decorCard\(engine,decorIcon\(\)\?icon\(decorIcon\(\)\)/, "the decor tile");
-  assert.match(read("dist/look-ui.js"), /paintGearIcon\(copy, copy\.dataset\.icon, 64\)/, "the detail card repaints at 64 px");
-  // 每个图标都画在 16×16 里、有外框
-  for (const k of Object.keys(art.BUILD_ICONS)) {
-    const P = gs.gearIcon("b:" + k);
-    assert.equal(P.w, 16);
-    assert.equal(P.h, 16);
-    let px = 0;
-    for (let i = 0; i < 256; i++) if (P.d[i * 4 + 3]) px++;
-    assert.ok(px > 60 && px < 250, k + " fills the cell: " + px);
-  }
-});
 
 // ================= 标题页 =================
-test("title page: the camera drifts slowly inside the map and eases back after; motes and embers float above the dark corners; nothing moves with reduced motion", () => {
-  const r = Object.create(FourRenderer.prototype);
-  Object.assign(r, { w: 1920, h: 1080, camera: { x: 400, y: 300, scale: 1.4 }, v: true, dpr: 1 });
-  // 没有页面（测试、后台）：不算标题页
-  assert.equal(r.fourTitleOn(), false);
-  // 1366 宽（镜头 1 倍）：左右能挪 170 个单位，挪满一圈都在地图里
-  Object.assign(r, { w: 1366, h: 768, _fTitleK: 1 });
-  const vw = 1366,
-    vh = 768,
-    xs = [],
-    ys = [];
-  for (let i = 0; i < 40; i++) {
-    r._fTitleT = (FD.TITLE.pan * i) / 40;
-    r.camera = { x: 85, y: 128, scale: 1 };
-    FourRenderer.prototype.snapCamera.call(r);
-    xs.push(r.camera.x);
-    ys.push(r.camera.y);
-  }
-  assert.ok(Math.max(...xs) - Math.min(...xs) > 100, "it swings left and right: " + Math.round(Math.max(...xs) - Math.min(...xs)));
-  assert.ok(Math.max(...ys) - Math.min(...ys) > 20, "and a little up and down");
-  assert.ok(xs.every((x) => x >= 0 && x <= 1536 - vw + 0.01) && ys.every((y) => y >= 0 && y <= 1024 - vh + 0.01), "always inside the map");
-  // 离开标题页：幅度落回 0，镜头回到原来的地方
-  r._fTitleK = 0;
-  r.camera = { x: 85, y: 128, scale: 1 };
-  FourRenderer.prototype.snapCamera.call(r);
-  assert.equal(r.camera.x, 85);
-  const css = read("dist/ui.css");
-  assert.match(css, /@media \(prefers-reduced-motion: no-preference\) \{[\s\S]*body\.title-screen #modal\.welcome \.title-story > \*[\s\S]*four-rise/);
-  assert.match(css, /four-ember 4\.2s ease-in-out 1\.2s infinite/);
-  assert.match(css, /html\.desk body\.title-screen #alert-bar \{\s*visibility: hidden;/);
-  assert.match(css, /html\.desk #four-fx \{[\s\S]*pointer-events: none;/);
-  // 飘着的东西那张画布：一个像素就是一个美术像素（1920 下 960×540，不是满屏），CSS 按 pixelated 放大
-  assert.match(css, /html\.desk #four-fx \{[^}]*image-rendering: pixelated;/);
-  const calls = [],
-    ctx2d = { setTransform() {}, clearRect() {}, fillRect: (x, y, w, h) => calls.push([x, y, w, h]), set globalAlpha(v) {}, set fillStyle(v) {} },
-    fake = { id: "four-fx", isConnected: true, width: 0, height: 0, getContext: () => ctx2d },
-    was = globalThis.document;
-  globalThis.document = { getElementById: (id) => (id === "four-fx" ? fake : null) };
-  try {
-    Object.assign(r, { w: 1920, h: 1080, camera: { x: 0, y: 0, scale: 1 }, _fTitleK: 1, _fTitleT: 3, _fSeason: "thaw", _fFx: null });
-    r.fourTitleFx(1 / 60);
-  } finally {
-    globalThis.document = was;
-  }
-  assert.deepEqual([fake.width, fake.height], [960, 540]);
-  assert.equal(calls.length, FD.TITLE.motes + FD.TITLE.embers);
-  assert.ok(calls.every(([x, y, w, h]) => Number.isInteger(x) && Number.isInteger(y) && w <= 2 && h <= 2), "whole art pixels on the small canvas");
-  assert.match(read("dist/legacy.css"), /\.a11y-calm \*,\s*\.a11y-calm \*::before,\s*\.a11y-calm \*::after \{\s*animation: none !important;/, "reduced flashing stops the title animations");
-  for (const s of ["thaw", "heat", "harvest", "cold"]) assert.ok(FD.TITLE_MOTES[s].colors.length >= 3, s);
-});
 
 // ================= 字 =================
-test("words: camp mood leftovers now say camp morale; the new files have no dev words", () => {
-  for (const f of ["relight-data.js", "relight-story.js", "relight-ui.js", "relight.js", "simple-data.js", "titan-data.js", "titan-ui.js"]) assert.doesNotMatch(read("dist/" + f), /全营心情/, f);
-  assert.match(read("dist/relight.js"), /摆在营地里，全营士气 \+3/);
-  const DEV = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|Joja|祝尼魔|星之果实/;
-  for (const f of ["four-data.js", "four-renderer.js", "four-art.js", "four-ui.js"]) {
-    const src = read("dist/" + f).replace(/\/\/[^\n]*/g, "");
-    assert.doesNotMatch(src.replace(/=== undefined|!== undefined|\?\? undefined/g, ""), DEV, f);
-  }
-});

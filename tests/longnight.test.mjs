@@ -2,7 +2,7 @@
 // 长夜后睡到早上、别的仗让开长夜）以及存档。
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Engine, freshState } from "../dist/campaign.js";
+import { Engine, freshState } from "../dist/ahead.js";
 import { TASKS } from "../dist/rebuild-data.js";
 import { ITEMS, ZOMBIES } from "../dist/data.js";
 import { BOSSES } from "../dist/undertow-data.js";
@@ -534,66 +534,6 @@ test("the long night's thunder, scream and waves have sounds and written cues", 
 });
 
 // ================= 界面 =================
-test("the journal, alerts, top bar, report, ending card, museum, collection and calendar all speak plainly about the long night", async () => {
-  const UI = await import("../dist/campaign-ui.js");
-  const { alertItems } = await import("../dist/winter-ui.js");
-  const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
-  const { e } = postStory(30);
-  const journal = () => UI.renderCampaignJournal(e, {});
-  assert.match(journal(), /下一个在第 38 天/);
-  const cal = UI.renderCampaignView(e, { view: "calendar" });
-  assert.match(cal, /第38天<\/b><span class="tag danger">长夜/);
-  // 当天：日期变红、提醒、手记
-  clock(e, FIRST, 600);
-  run(e, 0.1);
-  let hud = UI.campaignHud(e);
-  assert.equal(hud.lnRed, true);
-  assert.ok(alertItems(e).some((a) => a.text === "今晚 22:00 长夜"));
-  assert.match(journal(), /今晚<\/b>22:00 长夜/);
-  assert.ok(UI.renderCampaignView(e, { view: "outpost" }) !== undefined);
-  // 打着的时候：横幅、提醒、血条
-  clock(e, FIRST, 1319.9);
-  run(e, 0.2);
-  run(e, 3);
-  hud = UI.campaignHud(e);
-  // v0.26：横幅上多一段“下一波还有几秒”；v0.35：“长夜”后面写这一夜的夜相
-  assert.match(hud.raid, /长夜 · (?:[^ ·]+夜 · )?第 1\/3 波 · 还剩 \d+ 只 · 第 2 波 \d+ 秒后 · 天亮还有 5 小时/);
-  assert.match(hud.alerts, /长夜 · (?:[^ ·<]+夜 · )?第 1\/3 波/);
-  assert.doesNotMatch(hud.alerts, /尸潮来袭/);
-  assert.match(journal(), /第 1\/3 波/);
-  // 守住：战报（睡到 8 点的按钮）
-  clock(e, FIRST + 1, 239.9);
-  run(e, 0.5);
-  const report = UI.renderCampaignView(e, { view: "lnight" });
-  assert.equal(UI.campaignTitle({ view: "lnight" }), "长夜战报");
-  assert.match(report, /第 1 个长夜 · (?:[^ ·<]+夜 · )?守住了/);
-  assert.match(report, /lnNap/);
-  assert.match(report, /长夜的铁哨/);
-  assert.match(report, /下一个长夜：第 45 天/);
-  // 档案馆、成就册
-  e.w.museum.built = true;
-  const museum = UI.renderCampaignView(e, { view: "museum" });
-  assert.match(museum, /长夜纪念/);
-  assert.match(museum, /lnDonate/);
-  const book = UI.renderCampaignView(e, { view: "collection" });
-  assert.match(book, /<b>长夜<\/b>/);
-  assert.match(book, /1\/10/);
-  // 按钮：睡到早上 8 点
-  let closed = 0;
-  const ctx = { engine: e, renderMenu: () => {}, closeMenu: () => closed++, save: () => {}, toast: () => {}, showMenu: () => {} };
-  assert.equal(UI.handleCampaignAction("lnNap", { dataset: { id: "" } }, ctx), true);
-  assert.equal(e.s.minute, 480);
-  assert.equal(closed, 1);
-  // 捐纪念品
-  e.museumHere = () => true;
-  assert.equal(UI.handleCampaignAction("lnDonate", { dataset: { id: "lnWhistle" } }, ctx), true);
-  assert.deepEqual(e.ln.mementos, ["lnWhistle"]);
-  // 结局卡
-  const end = UI.renderCampaignView(e, { view: "lnEnd" });
-  assert.equal(UI.campaignTitle({ view: "lnEnd" }), "余烬地区收复");
-  assert.match(end, /余烬地区，收复了/);
-  for (const html of [journal(), cal, report, museum, book, end, hud.alerts, hud.raid]) assert.doesNotMatch(html, FORBIDDEN);
-});
 
 // ================= 灰隼团反扑 =================
 const COUNTERD = await import("../dist/longnight-data.js");
@@ -852,26 +792,6 @@ test("losing the last raid loots the storage and brings them back in two days (n
   }
 });
 
-test("the counterattack shows up in the journal, alerts, calendar and the achievements book in plain words", async () => {
-  const UI = await import("../dist/campaign-ui.js");
-  const { alertItems } = await import("../dist/winter-ui.js");
-  const FORBIDDEN = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
-  const { e } = postStory(30);
-  const c = e.ct;
-  let journal = UI.renderCampaignJournal(e, {});
-  assert.match(journal, /灰隼团<\/b>第 35 天：灰隼团的探子在/);
-  const cal = UI.renderCampaignView(e, { view: "calendar" });
-  assert.match(cal, /第35天<\/b><span class="tag danger">灰隼团的探子/);
-  clock(e, 35, 600);
-  run(e, 0.1);
-  assert.ok(alertItems(e).some((a) => a.text.startsWith("灰隼团的探子")));
-  journal = UI.renderCampaignJournal(e, {});
-  assert.match(journal, /今天：灰隼团的探子/);
-  const book = UI.renderCampaignView(e, { view: "collection" });
-  assert.match(book, /灰隼团反扑/);
-  assert.match(book, /0\/3/);
-  for (const html of [journal, cal, book]) assert.doesNotMatch(html, FORBIDDEN);
-});
 
 // ================= 出身 =================
 const ORI = await import("../dist/longnight.js");
@@ -1026,116 +946,5 @@ test("the opening tip names the weapon you actually have: the hunter's slingshot
 });
 
 // ================= 二周目 =================
-test("a second run carries blueprints, the career record, the achievements and one chosen piece of gear at full durability, and nothing else", async () => {
-  const UI = await import("../dist/campaign-ui.js");
-  const { e } = postStory(30);
-  e.gr.bp.bp_sledge = 12;
-  e.feel.career.trips = Array.from({ length: 5 }, (_, i) => ({ d: i + 1, r: "residential", ph: 0, g: ["club"], res: "done", t: 120, hp: 10, gr: 1, bi: 0, ro: 2, k: 5, f: [12], by: null }));
-  e.s.inventory.riotHelmet = 1;
-  e.cond("riotHelmet").d = 3;
-  e.s.money = 9999;
-  e.ln.held = 4;
-  // 设置里出现“带着记忆重新开始”；没打完主线时没有
-  assert.match(UI.ngPlusRow(e), /restartPlus/);
-  const { e: young } = postStory(30, { act: 8 });
-  assert.equal(UI.ngPlusRow(young), "");
-  // 选出身和装备
-  const args = { plus: true, origin: "medic", keep: "riotHelmet" };
-  const html = UI.restartPicker(e, args);
-  assert.match(html, /卫生员/);
-  assert.match(html, /pickKeep/);
-  assert.match(html, /防暴头盔|riotHelmet/);
-  assert.match(UI.restartTitle(args), /带着记忆/);
-  const s = UI.restartState(args, e);
-  const g = new Engine(s, () => {});
-  assert.equal(g.s.day, 1);
-  assert.equal(g.storyDone(), false);
-  assert.ok(g.s.money < 1000, "money is not carried");
-  assert.equal(g.ln.origin, "medic");
-  assert.equal(g.s.inventory.medkit, 1);
-  assert.ok(g.gr.bp.bp_sledge, "blueprint carried");
-  assert.equal(g.feel.career.trips.length, 5);
-  assert.equal(g.s.inventory.riotHelmet, 1);
-  assert.equal(g.gr.slots.head, "riotHelmet");
-  assert.equal(g.cond("riotHelmet").d, g.cond("riotHelmet").m, "full durability");
-  assert.equal(g.ln.legacy.ng, 1);
-  assert.equal(g.ln.legacy.fromDay, 30);
-  assert.equal(g.ln.legacy.held, 4);
-  assert.equal(g.ln.legacy.keep, "riotHelmet");
-  // 成就册里看得到上一周目
-  const book = UI.renderCampaignView(g, { view: "collection" });
-  if (g.ln.legacy.book.length) assert.match(book, /上一周目/);
-  // 行囊上写着出身和第几周目
-  assert.match(UI.renderGearPanel(g, {}), /出身：卫生员/);
-  assert.match(UI.renderGearPanel(g, {}), /第 2 周目/);
-  // 不能带没有的东西
-  const s2 = UI.restartState({ plus: true, origin: "farmer", keep: "steelVest" }, e);
-  assert.equal(s2.inventory.steelVest, undefined);
-  assert.equal(s2.longnight.legacy.keep, "");
-  // 存档：坏的 legacy 拒收
-  const raw = g.serialize();
-  for (const bad of [(x) => (x.longnight.legacy.ng = -1), (x) => (x.longnight.legacy.book = [1, 2]), (x) => (x.longnight.legacy.keep = "notAThing")]) {
-    const x = JSON.parse(raw);
-    bad(x);
-    assert.throws(() => Engine.parse(JSON.stringify(x)), /长夜/);
-  }
-  assert.deepEqual(Engine.parse(raw).longnight.legacy, g.ln.legacy);
-});
 
 // ================= 存档提醒 =================
-test("more than seven game days without an export: sleeping shows a one-click export card once a week; exporting resets it", async () => {
-  const UI = await import("../dist/campaign-ui.js");
-  const e = fresh("farmer");
-  e.s.day = 8;
-  assert.equal(e.exportDue(), false);
-  assert.match(UI.exportLine(e), /还没导出过/);
-  e.s.day = 9;
-  assert.equal(e.exportDue(), true);
-  e.s.minute = 1300;
-  e.dy.pending = null;
-  // 口粮多一点：平安的夜里不弹总结页，单独弹一张导出卡
-  e.s.storage.bread = 40;
-  const n0 = e.events.length;
-  assert.ok(e.sleep());
-  assert.ok(e.events.slice(n0).some((ev) => ev.type === "menu" && ev.view === "lnExport"), JSON.stringify(e.events.slice(n0).filter((ev) => ev.type === "menu")));
-  const card = UI.renderCampaignView(e, { view: "lnExport" });
-  assert.match(card, /data-action="export"/);
-  assert.match(card, /还没导出过/);
-  assert.equal(UI.campaignTitle({ view: "lnExport" }), "导出一份存档");
-  // 第二晚不再提醒
-  e.s.minute = 1300;
-  const n1 = e.events.length;
-  assert.ok(e.sleep());
-  assert.ok(!e.events.slice(n1).some((ev) => ev.view === "lnExport"));
-  // 导出以后清零，设置里写着第几天
-  e.markExported();
-  assert.equal(e.ln.exportDay, e.s.day);
-  assert.equal(e.exportDue(), false);
-  assert.match(UI.exportLine(e), /上次导出：第 \d+ 天（今天）/);
-  e.s.day += 8;
-  assert.equal(e.exportDue(), true);
-  assert.match(UI.exportLine(e), /8 天前/);
-  assert.match(UI.exportLine(e), /该导出一份了/);
-  // 要弹日终总结的早上：提醒写在总结页里
-  const g = fresh("farmer");
-  g.s.day = 12;
-  g.s.minute = 1300;
-  g.dy.pending = null;
-  g.s.storage = {};
-  g.s.inventory.bread = 0;
-  const m0 = g.events.length;
-  assert.ok(g.sleep());
-  const menus = g.events.slice(m0).filter((ev) => ev.type === "menu");
-  // v0.45：有今日抉择等着的早上，总结并进抉择那一页（提醒也跟着进去）
-  const merged = !menus.some((ev) => ev.view === "summary");
-  if (merged) assert.ok(g.hyMorningReport(), "the summary went into the morning page");
-  assert.ok(!menus.some((ev) => ev.view === "lnExport"));
-  assert.equal(g.ln.remindDay, g.s.day);
-  assert.match(UI.renderCampaignView(g, { view: merged ? "daily" : "summary" }), /存档.*没导出[\s\S]*data-action="export"/);
-  // 存档里记着，坏的拒收
-  const raw = e.serialize();
-  assert.equal(Engine.parse(raw).longnight.exportDay, e.ln.exportDay);
-  const bad = JSON.parse(raw);
-  bad.longnight.exportDay = -3;
-  assert.throws(() => Engine.parse(JSON.stringify(bad)), /长夜/);
-});

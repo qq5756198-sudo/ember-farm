@@ -14,8 +14,6 @@ import { LADDER, SHOWCASES, WSPOTS } from "../dist/winter-data.js";
 import { SSPOTS, TASTES } from "../dist/seasons-data.js";
 import { TRAP_ALL } from "../dist/tidy-data.js";
 import { NOISE, RADIO_CMDS, DROP, ALLY, MULE, UPGRADES, UP_PAPER, INJURY, COMFORT, CANTEEN2, FEST_PICK, PAST, FISH_RUN, DOG_PATROL } from "../dist/bustle-data.js";
-import * as UI from "../dist/campaign-ui.js";
-import { residentExtras, roomExtras } from "../dist/people-hooks.js";
 import { MISSING_ICONS } from "../dist/item-sprites.js";
 
 const DEV = /机制参考|机制借鉴|已体验|试玩|待验证|待完善|可玩点|feature-number|district-number|progress\.html|undefined|NaN|\[object Object\]/;
@@ -134,30 +132,6 @@ test("save: new games stay quiet; a v0.27 save is kept as-is, the radio's own no
 });
 
 // ================= 动静表 =================
-test("noise: radio, lathe rush, canteen, festival, lure and radio commands all add to one meter; the HUD chip warns at 4", () => {
-  const { e } = make();
-  toAct(e, 7);
-  atFarm(e);
-  e.chooseProgram("songs");
-  hour(e, 21);
-  assert.equal(e.hn.noise.v, 2);
-  assert.equal(e.w.radio.noise, 0, "the radio's own counter is retired");
-  assert.equal(UI.campaignHud(e).noise.tone, "");
-  e.td.lathe.rush = 0;
-  e.s.minute = 600;
-  const rushed = e.latheRush();
-  if (rushed) assert.equal(e.hn.noise.v, 2 + NOISE.rush);
-  else e.noiseAdd(NOISE.rush, "rush");
-  const lure = put(e, "lure", 900, 600);
-  e.c.energy = 20;
-  atFarm(e, 900, 640);
-  assert.equal(e.pullLure(lure.id), true);
-  assert.equal(e.hn.noise.v, 2 + NOISE.rush + NOISE.lure);
-  assert.match(e.noiseWhy(), /拉响信标 \+3/);
-  const hud = UI.campaignHud(e).noise;
-  assert.equal(hud.tone, "danger", "7 is in the 6+ band");
-  assert.match(hud.title, /0 点结算/);
-});
 
 test("noise: below 4 it halves at midnight; 4+ brings infected that night from one side; an attack clears the meter; leftovers walk off at dawn", () => {
   const { e, toasts } = make();
@@ -908,29 +882,6 @@ test("comfort: comfort 3 reaches the third rung of the ladder, 4 lifts everyone'
   assert.ok(before - r.fatigue >= 8 + 4 * COMFORT.restFatigue - 1e-9, "dropped " + (before - r.fatigue));
 });
 
-test("comfort: a dining room (a table by the floor) counts one more dish for 「吃得好」", () => {
-  const { e } = make();
-  toAct(e, 7);
-  atFarm(e);
-  e.w.mealLog = [{ day: e.s.day, types: ["bread"] }, { day: e.s.day - 1, types: ["stew"] }];
-  assert.equal(e.ladderChecks()[1], false, "two kinds are not enough");
-  const floor = put(e, "floor", 500, 600);
-  put(e, "chair", 520, 600);
-  put(e, "lamp", 480, 610);
-  put(e, "table", 520, 630);
-  assert.equal(e.roomInfo(floor).type, "食堂");
-  assert.equal(e.ladderChecks()[1], true, "eaten in the dining room they count as three");
-  e.w.mealLog = [{ day: e.s.day, types: ["bread"] }];
-  assert.equal(e.ladderChecks()[1], false, "one kind plus one is still two");
-  assert.match(UI.buildingExtras(e, floor), /食堂（在这里吃的晚饭多算一种菜/);
-  // 书架摆进同一间：成了阅览室，食堂也还算
-  e.w.mealLog = [{ day: e.s.day, types: ["bread"] }, { day: e.s.day - 1, types: ["stew"] }];
-  put(e, "bookshelf", 480, 640);
-  assert.equal(e.roomInfo(floor).type, "阅览室");
-  assert.equal(e.studyRoom(), true);
-  assert.equal(e.ladderChecks()[1], true, "the bookshelf no longer hides the dining room");
-  assert.match(UI.buildingExtras(e, floor), /阅览室（当学习室用.*也是食堂/);
-});
 
 // ================= 食堂、节庆、往事、鱼汛、麦穗 =================
 const canteenReady = (e) => {
@@ -1118,214 +1069,9 @@ test("dog patrol: at bond 15 Maisui learns to patrol — night-walkers stay out,
 });
 
 // ================= 界面 =================
-test("UI: the noise chip, the radio commands, Hong Shu's trade page, Jiang Bo's page and the calendar read in plain words, and their buttons change the game", () => {
-  const { e } = make();
-  toAct(e, 7);
-  atFarm(e);
-  e.c.energy = 40;
-  let hud = UI.campaignHud(e);
-  assert.ok(hud.noise, "the radio works: the chip is on the bar");
-  assert.equal(hud.noise.text, "动静 0");
-  e.noiseAdd(4.5, "radio");
-  hud = UI.campaignHud(e);
-  assert.equal(hud.noise.tone, "warn");
-  assert.match(hud.noise.title, /0 点结算/);
-  assert.doesNotMatch(hud.noise.title, DEV);
-  // 通信站：电台指令
-  const radio = view(e, "radio");
-  assert.match(radio, /电台指令/);
-  assert.doesNotMatch(radio, /满了会引来尸群/, "the old 4-point line is replaced by the meter");
-  assert.equal((radio.match(/data-action="hnCmd"/g) || []).length, 4);
-  assert.doesNotMatch(radio, DEV);
-  let saved = 0;
-  const c = ctx(e, { save: () => saved++ });
-  assert.equal(UI.handleCampaignAction("hnCmd", btn("hnCmd", "scout"), c), true);
-  assert.equal(e.c.energy, 40 - RADIO_CMDS.scout.power);
-  assert.equal(saved, 1);
-  assert.match(view(e, "radio"), /今天的侦察/);
-  assert.match(view(e, "radio"), /第 \d+ 天再发/);
-  // 红薯：跑商那一页
-  assert.equal(UI.campaignTitle({ view: "dialog", id: "hongshu" }), "红薯 · 跑商");
-  assert.match(view(e, "dialog", "hongshu"), /车队到站以后/);
-  muleReady(e);
-  give(e, { potato: 12, radish: 2, medkit: 2 });
-  let page = view(e, "dialog", "hongshu");
-  assert.match(page, /去哪卖/);
-  assert.match(page, /data-action="hnMuleLoad" data-id="potato:5"/);
-  assert.doesNotMatch(page, DEV);
-  UI.handleCampaignAction("hnMuleDest", btn("hnMuleDest", "frontier"), c);
-  assert.equal(e.hn.mule.plan.dest, "frontier");
-  UI.handleCampaignAction("hnMuleBack", btn("hnMuleBack", "cloth"), c);
-  assert.equal(e.hn.mule.plan.back, "cloth");
-  UI.handleCampaignAction("hnMuleLoad", btn("hnMuleLoad", "potato:5"), c);
-  UI.handleCampaignAction("hnMuleLoad", btn("hnMuleLoad", "potato:5"), c);
-  UI.handleCampaignAction("hnMuleLoad", btn("hnMuleLoad", "potato:-1"), c);
-  assert.equal(e.hn.mule.plan.load.potato, 9);
-  assert.match(view(e, "dialog", "hongshu"), /data-id="potato:20">装满</);
-  UI.handleCampaignAction("hnMuleLoad", btn("hnMuleLoad", "potato:20"), c);
-  assert.equal(e.hn.mule.plan.load.potato, 12, "装满 loads everything there is (12 potatoes)");
-  UI.handleCampaignAction("hnMuleLoad", btn("hnMuleLoad", "potato:-3"), c);
-  assert.match(view(e, "dialog", "hongshu"), /车上 <b>9\/20<\/b> 件/);
-  let closed = 0;
-  UI.handleCampaignAction("hnMuleGo", btn("hnMuleGo"), ctx(e, { closeMenu: () => closed++ }));
-  assert.ok(e.hn.mule.trip, "on the road");
-  assert.equal(closed, 1, "the page closes once it leaves");
-  page = view(e, "dialog", "hongshu");
-  assert.match(page, /在路上/);
-  assert.match(page, /想跟车/);
-  assert.doesNotMatch(page, DEV);
-  // 江伯
-  e.ss.jiang.phase = "done";
-  e.fishSince();
-  const jiang = view(e, "hnJiang");
-  assert.match(jiang, /每 7 天报一次鱼汛/);
-  assert.equal(UI.campaignTitle({ view: "hnJiang" }), "江伯 · 鱼汛");
-  assert.doesNotMatch(jiang, DEV);
-  // 日历：鱼汛和红薯回来
-  const cal = view(e, "calendar");
-  assert.match(cal, /鱼汛/);
-  assert.match(cal, /红薯回来/);
-  assert.doesNotMatch(cal, DEV);
-  // 警报栏：动静、跟车
-  e.s.minute = 19 * 60;
-  const alerts = UI.campaignHud(e).alerts;
-  assert.match(alerts, /今夜 0 点会有 3 只循声摸来/);
-  assert.match(alerts, /跟车/);
-  assert.doesNotMatch(alerts, DEV);
-});
 
-test("UI: facility cards pick an upgrade path and upgrade the building; the fence card does nearby segments; the stove page and the water page carry their upgrades", () => {
-  const { e } = make();
-  toAct(e, 7);
-  atFarm(e);
-  const c = ctx(e);
-  const tower = put(e, "tower", 1180, 420);
-  let card = UI.buildingExtras(e, tower);
-  assert.match(card, /改良（二选一）/);
-  assert.equal((card.match(/data-action="hnUpPath"/g) || []).length, 2);
-  assert.doesNotMatch(card, DEV);
-  e.c.researchCredits = 1;
-  UI.handleCampaignAction("hnUpPath", btn("hnUpPath", "tower:light"), c);
-  assert.equal(e.upPath("tower"), "light");
-  assert.equal(e.c.researchCredits, 0);
-  card = UI.buildingExtras(e, tower);
-  assert.match(card, /data-action="hnUpBuild"/);
-  give(e, UPGRADES.tower.cost);
-  UI.handleCampaignAction("hnUpBuild", btn("hnUpBuild", tower.id), c);
-  assert.equal(tower.hnUp, "light");
-  assert.match(UI.buildingExtras(e, tower), /这座已经改成/);
-  // 围栏：附近几段一起改
-  const fences = [0, 1, 2].map((i) => put(e, "fence", 1000 + i * 40, 300));
-  e.c.researchCredits = 1;
-  e.unlockPath("fence", "iron");
-  give(e, { scrap: 20 });
-  card = UI.buildingExtras(e, fences[0]);
-  assert.match(card, /附近还没改的 3 段一起改/);
-  UI.handleCampaignAction("hnUpFences", btn("hnUpFences", fences[0].id), c);
-  assert.ok(fences.every((f) => f.hnUp === "iron"));
-  // 篝火灶的工作台页
-  const cook = put(e, "cook", 700, 420);
-  assert.match(UI.stationExtras(e, cook), /改良（二选一）/);
-  // 水网那一页：雨水桶、喷灌头
-  put(e, "rain", 560, 640);
-  put(e, "irrigation", 495, 520);
-  const water = view(e, "bWater");
-  assert.match(water, /<h3>改良<\/h3>/);
-  assert.match(water, /data-id="rain:big"/);
-  assert.doesNotMatch(water, DEV);
-  // 太阳能板写着电台指令要的电
-  assert.match(UI.buildingExtras(e, put(e, "solar", 420, 880)), /电台指令也用电/);
-});
 
-test("UI: hurt residents and crew show on their cards with the treatment buttons; the infirmary, the room page's comfort card and the alerts; build buttons are real", () => {
-  const { e } = make();
-  toAct(e, 7);
-  atFarm(e);
-  e.recruit("farmer");
-  const c = ctx(e);
-  const r = e.resident("farmer");
-  assert.doesNotMatch(residentExtras(e, r), /受伤了/);
-  e.injure("r:farmer", "阿禾", "测试");
-  const line = residentExtras(e, r);
-  assert.match(line, /受伤了：还要养 48 个钟点/);
-  assert.match(line, /要一间医务室/);
-  assert.doesNotMatch(line, DEV);
-  assert.match(UI.campaignHud(e).alerts, /1 人受伤/);
-  // 医务室：地板 + 床 + 药柜
-  const floor = put(e, "floor", 500, 600);
-  put(e, "bed", 520, 610);
-  const cab = put(e, "medCabinet", 480, 620);
-  assert.equal(e.infirmary()?.floor, floor);
-  const cabCard = UI.buildingExtras(e, cab);
-  assert.match(cabCard, /<h4>伤员<\/h4>/);
-  assert.match(cabCard, /data-action="hnTreat" data-id="r:farmer\|bandage"/);
-  give(e, { bandage: 1 });
-  UI.handleCampaignAction("hnTreat", btn("hnTreat", "r:farmer|bandage"), c);
-  assert.equal(e.hn.hurt["r:farmer"].care, "bandage");
-  assert.ok(e.hurtLeft("r:farmer") <= INJURY.bandage);
-  // 队员受伤：队员卡
-  e.o.crew.push({ id: "c-test", name: "小柳", role: "guard", trait: "handy", look: 0, status: "", task: "idle", moved: 0, fedDay: 0, x: 900, y: 600, target: null });
-  e.injure("c:c-test", "小柳");
-  const crew = view(e, "crew", "c-test");
-  assert.match(crew, /守不了营门/);
-  assert.doesNotMatch(crew, DEV);
-  // 农舍「房间与家具」：舒适度卡，药柜能建，往事陈列柜要挑过才出现
-  let rooms = roomExtras(e);
-  assert.match(rooms, /舒适度和「休息好」/);
-  assert.match(rooms, /data-action="build" data-id="medCabinet"/);
-  assert.doesNotMatch(rooms, /data-id="hnKeepsake"/);
-  assert.doesNotMatch(rooms, DEV);
-  e.hn.past.pick = "keepsake";
-  assert.match(roomExtras(e), /data-id="hnKeepsake"/);
-  put(e, "hnKeepsake", 470, 590);
-  assert.doesNotMatch(roomExtras(e), /data-id="hnKeepsake"/, "only one keepsake");
-  rooms = roomExtras(e);
-  assert.match(rooms, new RegExp("舒适度 \\d/" + COMFORT.max));
-});
 
-test("UI: the plaza shows the walking canteen and the offering picker; the museum shows one 「往事」 case; their buttons work", () => {
-  const { e } = make();
-  toAct(e, 7);
-  e.recruit("farmer");
-  e.ss.he.stage = 4;
-  e.s.day = 21;
-  e.s.minute = 17 * 60;
-  atFarm(e, SSPOTS.plaza.x, SSPOTS.plaza.y + 20);
-  give(e, { radish: 4, potato: 4, pumpkin: 4, fine_pumpkin: 2, fine_herb: 2, fine_cotton: 2 });
-  let plaza = view(e, "plaza");
-  assert.match(plaza, /挑三样菜去评比/);
-  assert.match(plaza, /data-action="hnFestPick" data-id="fine_pumpkin"/);
-  assert.doesNotMatch(plaza, DEV);
-  const c = ctx(e);
-  for (const id of ["fine_pumpkin", "fine_herb", "fine_cotton"]) UI.handleCampaignAction("hnFestPick", btn("hnFestPick", id), c);
-  plaza = view(e, "plaza");
-  assert.match(plaza, /✓ 优质南瓜/);
-  assert.match(plaza, /满堂彩/);
-  // 食堂开着：不开菜单的卡
-  e.s.day = 23;
-  e.s.minute = 19 * 60 + 10;
-  give(e, { stew: 4, bread: 4 });
-  assert.equal(e.startCanteen(), true);
-  plaza = view(e, "plaza");
-  assert.match(plaza, /不开菜单：到何大勺的灶台/);
-  assert.doesNotMatch(plaza, DEV);
-  // 档案馆：日志、照片、遗物并成「往事」一柜
-  e.w.museum.built = true;
-  const museum = view(e, "museum");
-  assert.match(museum, /<h3>往事<\/h3>/);
-  for (const cat of PAST.cats) assert.doesNotMatch(museum, new RegExp("<h3>" + SHOWCASES[cat].name + "</h3>"));
-  assert.match(museum, new RegExp("<h3>" + SHOWCASES.fish.name + "</h3>"), "the fish case stays");
-  assert.doesNotMatch(museum, DEV);
-  e.w.museum.claimed = [...PAST.cats];
-  e.c.researchCredits = 0;
-  UI.handleCampaignAction("hnPast", btn("hnPast", "map"), c);
-  assert.equal(e.hn.past.pick, "", "only at the museum");
-  atFarm(e, WSPOTS.museum.x, WSPOTS.museum.y + 10);
-  UI.handleCampaignAction("hnPast", btn("hnPast", "map"), c);
-  assert.equal(e.hn.past.pick, "map");
-  assert.equal(e.c.researchCredits, PAST.rewards.map.credits);
-  assert.match(view(e, "museum"), /回礼已经挑了：老地图/);
-});
 
 // ================= 三十天乱玩 =================
 test("thirty random days with radio commands, mule runs, upgrades, the canteen, festivals, injuries and noise attacks stay finite and keep loading", () => {

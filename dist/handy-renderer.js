@@ -211,7 +211,11 @@ export class Renderer extends FourRenderer {
   }
   _pixelBadge(label, x, y, color = "#d8cb92") {
     if (this._deferText && this._hyQ) return this.hyDefer("badge", label, x, y, color, 12, true);
-    if (label === GHOST_HINT[0]) label = GHOST_HINT[1];
+    // v0.50：新界面顶上那一条已经写着怎么放、怎么转、怎么取消，鼠标旁边只留“为什么放不下”
+    if (label === GHOST_HINT[0]) {
+      if (this.hudTop) return;
+      label = GHOST_HINT[1];
+    }
     // 字都写完以后才画的（金色路标那一块、建造时跟着鼠标那一行）：不出画面，躲开前面写好的字
     if (!this._hyDrawing && this._hyQ && !this._deferText) {
       if (this._hyEdge && /^\d+步$/.test(String(label))) return;
