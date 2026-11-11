@@ -433,7 +433,7 @@ class Bot:
         if not await self.go_region("market"):
             return
         s = await self.snap()
-        for trader, items in (("food", ["medkit", "seedRadish", "seedPotato", "bandage"]), ("mechanic", ["wood", "stone", "cloth", "scrap", "parts"])):
+        for trader, items in (("food", ["medkit", "seedRadish", "seedPotato", "bandage", "bread"]), ("mechanic", ["wood", "stone", "cloth", "scrap", "parts"])):
             o = next((o for o in s["objects"] if o["type"] == "trader" and (("粮食" in o["name"]) == (trader == "food"))), None)
             if not o:
                 continue
@@ -716,34 +716,45 @@ async def main():
                         else:
                             need_buy.update({"wood": 12, "cloth": 2})
                 elif sid.startswith("prep:"):
-                    miss = sid[5:]
-                    fences = len([b for b in s["buildings"] if b["type"] in ("fence", "gate")])
-                    traps = len([b for b in s["buildings"] if b["type"] == "trap"])
-                    if miss == "fence":
-                        if inv("wood") >= 5:
-                            did = await bot.build("fence", "guard", ROAD[0] - 30, ROAD[1] - 70 + 34 * (fences % 8))
-                        else:
-                            need_buy["wood"] = 30
-                    elif miss == "trap":
-                        if inv("wood") >= 4 and inv("scrap") >= 2:
-                            # 陷阱摆在它们进来的路上，一个接一个
-                            # 路口那一截是出口、放不了东西：摆在围栏里面的路上
-                            did = await bot.build("trap", "guard", TRAP_X - 36 * traps, 396)
-                        else:
-                            need_buy.update({"wood": 10, "scrap": 4})
-                    elif miss == "breeder":
-                        if inv("wood") >= 8 and inv("parts") >= 1:
-                            did = await bot.build("breeder", "farm", 940, 600)
-                        else:
-                            need_buy.update({"wood": 10, "parts": 1})
-                    elif miss == "heal":
-                        need_buy["bandage"] = 4 - inv("bandage")
-                    elif miss == "food":
-                        await bot.cook()
-                    elif miss == "ready":
+                    if sid == "prep:ready":
                         await bot.set_fast(True)
                         await bot.wait(2000)
                         continue
+                    fences = len([b for b in s["buildings"] if b["type"] in ("fence", "gate")])
+                    traps = len([b for b in s["buildings"] if b["type"] == "trap"])
+                    # 备战五样一样一样看：手上的料够就做，不够的记到去集市要买的单子上（不卡在头一样上）
+                    for line in [l for l in s.get("prep", []) if not l["done"]] or [{"id": sid[5:], "have": 0, "need": 4}]:
+                        miss = line["id"]
+                        if miss == "fence":
+                            if inv("wood") >= 5:
+                                did = await bot.build("fence", "guard", ROAD[0] - 30, ROAD[1] - 70 + 34 * (fences % 8))
+                            else:
+                                need_buy["wood"] = 30
+                        elif miss == "trap":
+                            if inv("wood") >= 4 and inv("scrap") >= 2:
+                                # 陷阱摆在它们进来的路上，一个接一个
+                                # 路口那一截是出口、放不了东西：摆在围栏里面的路上
+                                did = await bot.build("trap", "guard", TRAP_X - 36 * traps, 396)
+                            else:
+                                need_buy.update({"wood": max(need_buy.get("wood", 0), 10), "scrap": 4})
+                        elif miss == "breeder":
+                            if inv("wood") >= 8 and inv("parts") >= 1:
+                                did = await bot.build("breeder", "farm", 940, 600)
+                            else:
+                                need_buy.update({"wood": max(need_buy.get("wood", 0), 10), "parts": 1})
+                        elif miss == "heal":
+                            need_buy["bandage"] = max(1, line["need"] - line["have"])
+                        elif miss == "food":
+                            # 先拿地里收的做；菜不够做，就照警报说的“去集市换”：买干粮补到三天半
+                            await bot.cook()
+                            s3 = await bot.snap()
+                            d3 = s3["food"]["days"] or 0
+                            per = (s3["food"]["portions"] / d3) if d3 > 0 else 3 + 2 * (s3["people"]["n"] - 1)
+                            lack = math.ceil(per * 3.5) - s3["food"]["portions"] - 2 * len(s3["production"])
+                            if lack > 0:
+                                need_buy["bread"] = min(20, lack)
+                        if did:
+                            break
                 if did:
                     continue
                 status = (await pg.inner_text("#status")) if await pg.query_selector("#status:not([hidden])") else ""

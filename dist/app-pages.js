@@ -128,7 +128,7 @@ function wearHtml(e, id, compact = false) {
   const cost = e.repairCost(id);
   // 农场上还没有武器工作台：说清楚要先建一座
   if (/武器台/.test(why) && !e.s.buildings.some((b) => b.type === "weaponbench" && b.hp > 0)) why = "要先建一座武器工作台（建造 · 吃住），再在那儿修";
-  return `${bar}<div class="between" style="gap:8px"><span class="cost">${cost ? costTags(e, cost) : ""}</span><button class="btn small${why ? "" : " primary"}" style="height:40px" data-act="repairgear" data-id="${id}" ${why ? "disabled" : ""}>修好它</button></div>${why ? `<p class="why">${esc(why)}</p>` : compact ? "" : `<p class="small mut">修一次，耐久上限少一成；修过 5 次只能换新的。</p>`}`;
+  return `${bar}<div class="between" style="gap:8px"><span class="cost">${cost ? costTags(e, cost) : ""}</span><button class="btn small${why || compact ? "" : " primary"}" style="height:40px" data-act="repairgear" data-id="${id}" ${why ? "disabled" : ""}>修好它</button></div>${why ? `<p class="why">${esc(why)}</p>` : compact ? "" : `<p class="small mut">修一次，耐久上限少一成；修过 5 次只能换新的。</p>`}`;
 }
 const STATION_ORDER = ["", "cook", "workbench", "weaponbench", "breeder"];
 function makeTab(G) {
@@ -168,7 +168,7 @@ function makeTab(G) {
   if (st === "weaponbench") {
     const ids = [...new Set([...Object.keys(e.s.inventory), ...Object.keys(e.s.storage)])].filter((i) => (e.s.inventory[i] || 0) + (e.s.storage[i] || 0) > 0 && wearOf(e, i)?.worn);
     fix = ids.length
-      ? ids.map((i) => `<div class="item-row" style="align-items:flex-start"><span class="well">${itemIcon(i, 40)}</span><span class="grow col" style="gap:4px"><b>${esc(itemName(i))}${e.isWorn?.(i) ? ` <span class="tag">带着</span>` : ""}</b>${wearHtml(e, i, true)}</span></div>`).join("")
+      ? ids.map((i) => `<div class="item-row" style="align-items:flex-start"><span class="well">${itemIcon(i, 40)}</span><span class="grow col" style="gap:4px"><b>${esc(itemName(i))}${e.isWorn?.(i) ? ` <span class="tag">${WEAPONS[i] || ITEMS[i]?.type === "weapon" ? "带着" : "穿着"}</span>` : ""}</b>${wearHtml(e, i, true)}</span></div>`).join("")
       : `<div class="empty small">武器和防具都没用旧。用旧了回这里修。</div>`;
     fix = `<div class="between"><b class="h2">修理</b><span class="small mut">修一次，耐久上限少一成；修过 5 次只能换新的</span></div>${fix}<b class="h2" style="margin-top:6px">做新的</b>`;
   }
