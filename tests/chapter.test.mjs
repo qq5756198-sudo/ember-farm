@@ -587,3 +587,21 @@ test("界面：用旧了的武器看得到耐久，有武器工作台和料才�
   assert.ok(e.cond("club").m < 60);
   assert.ok(e.qty("wood", true) < wood);
 });
+
+test("界面：消息不压过场、整页和小卡", () => {
+  const css = readFileSync(new URL("app.css", DIST), "utf8");
+  // 过场放着的时候不出消息
+  assert.match(css, /#app:has\(#scene:not\(\[hidden\]\)\) #toasts \{ display: none; \}/);
+  // 整页开着：只留最新的一条，挪到页头中间
+  assert.match(css, /#app:has\(#page:not\(\[hidden\]\)\) #toasts \{[^}]*right: 176px;[^}]*top: 88px;/);
+  assert.match(css, /#app:has\(#page:not\(\[hidden\]\)\) #toasts \.toast:not\(:last-child\) \{ display: none; \}/);
+  // 小卡开着：收窄到卡的左边（小卡宽 560、宽卡 760，都居中；界面最窄按 1366 排）
+  const w = Number(css.match(/#app:has\(#card:not\(\[hidden\]\)\) #toasts \{ width: (\d+)px; \}/)?.[1]),
+    wide = Number(css.match(/#app:has\(#card\.wide:not\(\[hidden\]\)\) #toasts \{ width: (\d+)px; \}/)?.[1]),
+    left = Number(css.match(/#toasts \{ position: absolute; left: (\d+)px;/)?.[1]);
+  assert.ok(left + w < (1366 - 560) / 2, "小卡左边放得下");
+  assert.ok(left + wide < (1366 - 760) / 2, "宽卡左边放得下");
+  // 消息那一层在最上面，过场、整页、小卡都在同一个 #app 里
+  const html = readFileSync(new URL("index.html", DIST), "utf8");
+  assert.ok(html.indexOf('id="toasts"') > html.indexOf('id="scene"') && html.indexOf('id="toasts"') < html.indexOf("</main>"));
+});

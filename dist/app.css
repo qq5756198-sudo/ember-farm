@@ -162,6 +162,13 @@ body.hasstatus #hint { bottom: 184px; }
 .toast { padding: 8px 12px; font-size: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; animation: tin 0.18s ease-out; }
 .toast.warn { border-color: var(--bad-line); color: var(--bad-strong); }
 .toast.gold { border-color: var(--amber-line); color: var(--amber); }
+/* 消息不压别的东西：过场放着的时候不出（手记的“消息”里都留着）；整页开着只留最新的一条，放在页头中间空着的那一段；小卡开着收窄，停在卡的左边 */
+#app:has(#scene:not([hidden])) #toasts { display: none; }
+#app:has(#card:not([hidden])) #toasts { width: 372px; }
+#app:has(#card.wide:not([hidden])) #toasts { width: 272px; }
+#app:has(#page:not([hidden])) #toasts { left: auto; right: 176px; top: 88px; width: auto; max-width: 520px; min-height: 44px; justify-content: center; align-items: flex-end; }
+#app:has(#page:not([hidden])) #toasts .toast:not(:last-child) { display: none; }
+#app:has(#page:not([hidden])) #toasts .toast { padding: 4px 12px; }
 @keyframes tin { from { opacity: 0; transform: translateY(-6px); } }
 #bark { position: absolute; left: 12px; bottom: 196px; width: 380px; padding: 10px 12px; display: flex; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--amber-line); border-radius: 10px; animation: tin 0.2s ease-out; pointer-events: none; }
 #bark p { font-size: 15px; }
