@@ -3,6 +3,7 @@
 # 建围栏、选援建物资、选今天的事、出门翻柜子、接回阿禾、去集市买卖、备战、守第一场尸潮、看结尾的过场。
 # 游戏里的数只读（window.__ember.snapshot()），用来决定往哪走、点哪里；不往游戏里写任何东西。
 # 用法：python3 scripts/play-ch1.py [输出目录] [最多几分钟]
+# 只练一段：SAVE=某份存档.json python3 scripts/play-ch1.py [输出目录] [几分钟]（从“继续”进去，照同样的章法玩到时间；PORT 换端口）
 # 退出码：没做完第一章，或者页面上报了错，就是 1。
 import asyncio, json, math, os, subprocess, sys, time
 from playwright.async_api import async_playwright
@@ -10,7 +11,8 @@ from playwright.async_api import async_playwright
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "play-out")
 LIMIT = float(sys.argv[2]) if len(sys.argv) > 2 else 110
-PORT = 8791
+PORT = int(os.environ.get("PORT", "8791"))
+SAVE = os.environ.get("SAVE", "")
 ROAD = (1330, 400)
 os.makedirs(OUT, exist_ok=True)
 LOG = open(os.path.join(OUT, "play.log"), "w", encoding="utf8")
@@ -305,6 +307,8 @@ class Bot:
         if s["region"] != "farm":
             return
         want = 6 + (6 if s["people"]["n"] > 1 else 0)
+        giants = lambda q: sum(n for k, n in list(q["inventory"].items()) + list(q["storage"].items()) if k.startswith("giant_"))
+        before = giants(s)
         tilled = len([p for p in s["plots"] if p["tilled"]])
         seeds = sum(s["inventory"].get(i, 0) for i in ("seedRadish", "seedPotato", "seedBean", "seedCorn", "seedTomato"))
         for p in s["plots"][:18]:
@@ -324,7 +328,8 @@ class Bot:
                     await self.handle_view(s)
                     continue
                 hint = s["hint"] or ""
-                if not any(w in hint for w in ("清理", "开垦", "选种", "浇水", "收获", "拔草", "捉虫")):
+                # “锄（”是巨型作物：对着它按 E，三下才收得动
+                if not any(w in hint for w in ("清理", "开垦", "选种", "浇水", "收获", "拔草", "捉虫", "锄（")):
                     break
                 if "浇水壶没水" in hint:
                     await self.walk(880, 318, 40, 14)
@@ -336,6 +341,10 @@ class Bot:
                 if "选种" in hint:
                     seeds -= 1
                 await self.interact(260)
+        s = await self.snap()
+        got = giants(s) - before
+        if got > 0:
+            log("  锄下了 %d 棵巨型作物" % got)
 
     async def cook(self):
         s = await self.snap()
@@ -343,8 +352,9 @@ class Bot:
             return
         inv = lambda i: s["inventory"].get(i, 0) + s["storage"].get(i, 0)
         ready = any(j["ready"] for j in s["production"])
-        keep = 9 if (s["people"]["residents"] and not next((r["pass"] for r in s["tableReq"] if "集市" in r["label"]), True)) else 0
         days = s["food"]["days"] or 0
+        # 给公共餐桌留九个萝卜；口粮不到一天就不留了，先吃饭
+        keep = 9 if (days >= 1 and s["people"]["residents"] and not next((r["pass"] for r in s["tableReq"] if "集市" in r["label"]), True)) else 0
         need = (s["food"]["portions"] / days) if days > 0 else 3 + 2 * (s["people"]["n"] - 1)
         lack = max(20, math.ceil(need * 4)) - s["food"]["portions"] - 2 * len(s["production"])
         if not ready and (lack <= 0 or (inv("radish") < 3 + keep and inv("potato") < 2)):
@@ -524,6 +534,9 @@ async def main():
         async with async_playwright() as pw:
             br = await pw.chromium.launch()
             ctx = await br.new_context(viewport={"width": 1366, "height": 768}, device_scale_factor=1)
+            if SAVE:
+                # 只练一段：浏览器里先放进这份存档（只放一次），从标题页点“继续”
+                await ctx.add_init_script("if(!sessionStorage.getItem('__seeded')){sessionStorage.setItem('__seeded','1');localStorage.setItem('ember-farm-r1',%s)}" % json.dumps(open(SAVE, encoding="utf8").read()))
             pg = await ctx.new_page()
             bot = Bot(pg)
             pg.on("pageerror", lambda e: bot.errs.append("PAGEERR " + str(e)))
@@ -532,10 +545,13 @@ async def main():
             await pg.wait_for_selector("#loading", state="hidden", timeout=60000)
             await bot.wait(600)
             await bot.shot("title")
-            await bot.click('[data-act="newgame"]')
-            await bot.click('[data-act="origin"][data-id="farmer"]')
-            await bot.shot("origin")
-            await bot.click('[data-act="begin"]', 500)
+            if SAVE:
+                await bot.click('[data-act="continue"]', 700)
+            else:
+                await bot.click('[data-act="newgame"]')
+                await bot.click('[data-act="origin"][data-id="farmer"]')
+                await bot.shot("origin")
+                await bot.click('[data-act="begin"]', 500)
             for _ in range(8):
                 s = await bot.snap()
                 if not (s["view"] and s["view"]["kind"] == "scene"):
@@ -759,6 +775,12 @@ async def main():
                     continue
                 status = (await pg.inner_text("#status")) if await pg.query_selector("#status:not([hidden])") else ""
                 if s.get("fever") or ("发烧" in status and "退烧" not in status):
+                    if farm and s["inventory"].get("medkit", 0) == 0 and s["storage"].get("medkit", 0) > 0:
+                        await bot.open_page("i")
+                        if await bot.click('.cell[data-id="medkit"][data-a="box"]', 150):
+                            await bot.click('[data-act="take"][data-id="medkit"]', 200)
+                        await bot.tap("Escape", 200)
+                        s = await bot.snap()
                     if s["inventory"].get("medkit", 0) > 0:
                         await bot.open_page("i")
                         await bot.click('.cell[data-id="medkit"][data-a="bag"]', 150)
@@ -767,6 +789,16 @@ async def main():
                         await bot.tap("Escape", 200)
                     elif inv("medkit") == 0 and s["money"] >= 75:
                         need_buy["medkit"] = 1
+                # 口粮不到一天半（右边的警报写着“做干粮，或者去集市换”）：不分哪一段，先拿手上的菜做；做不出来就去集市买干粮
+                if farm and (s["act"] or 1) >= 2 and (s["food"]["days"] or 0) < 1.5:
+                    await bot.cook()
+                    s = await bot.snap()
+                    fd = s["food"]["days"] or 0
+                    if fd < 1.5:
+                        per = (s["food"]["portions"] / fd) if fd > 0 else 3 + 2 * (s["people"]["n"] - 1)
+                        lack = math.ceil(per * 3) - s["food"]["portions"] - 2 * len(s["production"])
+                        if lack > 0 and s["money"] >= 18:
+                            need_buy["bread"] = max(need_buy.get("bread", 0), min(20, lack))
                 seeds = inv("seedRadish") + inv("seedPotato")
                 keep = {"radish": 12, "potato": 6}
                 spare = sum(max(0, inv(i) - keep.get(i, 0)) for i in set(list(s["inventory"]) + list(s["storage"])) if i.split("_")[-1] in CROPS)
@@ -803,7 +835,8 @@ async def main():
             await bot.shot("journal-end")
             await bot.tap("Escape", 200)
             s = await bot.snap()
-            log("收尾：第%d天 %02d:%02d，第一章%s，倒下 %d 回，页面报错 %d 条" % (s["day"], s["minute"] // 60, s["minute"] % 60, "做完了" if done else "没做完", bot.deaths, len(bot.errs)))
+            log("收尾：第%d天 %02d:%02d，第一章%s，倒下 %d 回，页面报错 %d 条，金 %d，口粮 %d 份（够 %.1f 天）" % (s["day"], s["minute"] // 60, s["minute"] % 60, "做完了" if done else "没做完", bot.deaths, len(bot.errs), s["money"], s["food"]["portions"], s["food"]["days"] or 0))
+            log("备战", json.dumps([[l["id"], l["have"], l["need"]] for l in s.get("prep", [])], ensure_ascii=False), "发烧", bool(s.get("fever")), "巨型作物在包里", sum(n for k, n in list(s["inventory"].items()) + list(s["storage"].items()) if k.startswith("giant_")))
             log("开过的页面", json.dumps(bot.seen_views, ensure_ascii=False))
             for e in bot.errs[:20]:
                 log("  报错", e)

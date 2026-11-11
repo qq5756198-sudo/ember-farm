@@ -8,7 +8,7 @@
 import { Engine as Base, newGameState as baseNewGame } from "./ahead.js";
 import { ITEMS, CROPS, REGIONS, BUILDINGS } from "./data.js";
 import { MEAL_ITEMS } from "./outpost-data.js";
-import { SAVE_FORMAT, CHAPTERS, CN_NUM, CH1_REGIONS, CH1_STAGES, PREP, GATE1, BARKS, CH1_QUIET, CH1_REWORD, TRIP_BOONS, CH_BUILD, CH1_GROW, SCOUT, CH1_STOCK } from "./chapter-data.js";
+import { SAVE_FORMAT, CHAPTERS, CN_NUM, CH1_REGIONS, CH1_STAGES, PREP, GATE1, BARKS, CH1_QUIET, CH1_REWORD, TRIP_BOONS, CH_BUILD, CH1_GROW, SCOUT, CH1_STOCK, CH1_HIDDEN } from "./chapter-data.js";
 
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const MATERIALS = ["wood", "stone", "scrap", "parts", "cloth"];
@@ -158,7 +158,10 @@ export class Engine extends Base {
   // ================= 第一章的段 =================
   chStage() {
     if (this.chDone(1)) return "done";
-    const sc = this.sc;
+    const sc = this.sc,
+      gs = this.ch.gate.state;
+    // 考验的那一夜不等人：前面几段还没做完，这一夜眼下的事也是守路口（守完了，没做完的那一段接着做）
+    if (gs === "tonight" || gs === "active") return "gate";
     if (!sc || sc.act <= 1) return "settle";
     if (sc.act === 2) {
       const g = this.storyGoal?.();
@@ -166,8 +169,6 @@ export class Engine extends Base {
       const id = g?.step?.id;
       return id === "choice" || id === "opening" || (this.feel?.open && this.feel.open.phase !== "done" && sc.choice) ? "road" : "people";
     }
-    const gs = this.ch.gate.state;
-    if (gs === "tonight" || gs === "active") return "gate";
     if (gs === "won") return "done";
     return "prep";
   }
@@ -756,10 +757,17 @@ export class Engine extends Base {
   emit(type, data = {}) {
     if (type === "menu" && this.ch && !this.chMenuOk(data)) {
       this._chBlocked = data;
-      super.toast("这里第二章再用。", "warn");
+      const what = data.view || data.tab || "";
+      super.toast(data.menu === "sx" && what === "gate" ? "这条路第二章再走。" : data.menu === "camp" && what === "projects" ? "集市还在搭，第二章接着建。" : "这里第二章再用。", "warn");
       return;
     }
     return super.emit(type, data);
+  }
+  // 第一章里先不摆出来的人和东西（下面各层照老规矩摆好以后，从场景里拿掉；它们自己的数不动）
+  assignRegion() {
+    super.assignRegion();
+    if (this.s?.ch?.n !== 1 || !Array.isArray(this.objects)) return;
+    for (let i = this.objects.length - 1; i >= 0; i--) if (CH1_HIDDEN.includes(this.objects[i].type)) this.objects.splice(i, 1);
   }
   // 天赋第二章起自己加，第一章不自动学
   trLearn(force = false, quiet = false) {

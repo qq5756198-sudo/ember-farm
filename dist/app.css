@@ -164,6 +164,8 @@ body.hasstatus #hint { bottom: 184px; }
 .toast.gold { border-color: var(--amber-line); color: var(--amber); }
 /* 消息不压别的东西：过场放着的时候不出（手记的“消息”里都留着）；整页开着只留最新的一条，放在页头中间空着的那一段；小卡开着收窄，停在卡的左边 */
 #app:has(#scene:not([hidden])) #toasts { display: none; }
+/* 点开了顶上哪个数字的明细：明细就在消息平常待的地方，这一会儿消息不出（手记的“消息”里都留着） */
+#app:has(#respop:not([hidden])) #toasts { display: none; }
 #app:has(#card:not([hidden])) #toasts { width: 372px; }
 #app:has(#card.wide:not([hidden])) #toasts { width: 272px; }
 #app:has(#page:not([hidden])) #toasts { left: auto; right: 176px; top: 88px; width: auto; max-width: 520px; min-height: 44px; justify-content: center; align-items: flex-end; }

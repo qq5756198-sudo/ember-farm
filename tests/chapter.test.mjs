@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { Engine, newGameState, freshState } from "../dist/campaign.js";
 import { Engine as AheadEngine, newGameState as aheadNewGame } from "../dist/ahead.js";
-import { SAVE_FORMAT, SAVE_KEY, CHAPTERS, PREP, GATE1, CH1_GROW, SCOUT, CH_BUILD, BARKS, INTRO, INTRO_ORIGIN, CH1_END, TRIP_BOONS } from "../dist/chapter-data.js";
+import { SAVE_FORMAT, SAVE_KEY, CHAPTERS, PREP, GATE1, CH1_GROW, SCOUT, CH_BUILD, BARKS, INTRO, INTRO_ORIGIN, CH1_END, TRIP_BOONS, CH1_HIDDEN } from "../dist/chapter-data.js";
 import { BUILDINGS, CROPS } from "../dist/data.js";
 import { ORIGINS } from "../dist/longnight-data.js";
 
@@ -246,6 +246,83 @@ test("第一场尸潮：前一天傍晚有前兆，当天夜里来，来多少�
   run(e, 1);
   assert.equal(e.s.horde.phase, "active");
   assert.ok(e.s.horde.remaining + e.enemies.filter((z) => z.horde && !z.dead).length <= want);
+});
+
+test("考验的那一夜不等人：前面的段没做完，眼下的事也是守路口；守完了接着做没做完的那一段", () => {
+  // 真键盘鼠标那一遍量出来的：公共餐桌拖到第 9 天还没开张，尸潮来的那一夜左下角还写着“为公共餐桌备料”
+  const { e } = game();
+  const sc = e.sc;
+  if (!sc.claimed.includes("act1")) sc.claimed.push("act1");
+  if (!sc.letters.includes("act2")) sc.letters.push("act2");
+  sc.act = 2;
+  sc.choice = "ration";
+  if (!sc.claimed.includes("supply")) sc.claimed.push("supply");
+  if (e.feel?.open) e.feel.open.phase = "done";
+  e.ch.seen.scout = true;
+  const before = e.chStage();
+  assert.equal(before, "people");
+  e.s.day = GATE1.day;
+  e.s.minute = GATE1.warnHour * 60 + 1;
+  run(e, 1);
+  assert.equal(e.ch.gate.state, "tonight");
+  assert.equal(e.chStage(), "gate");
+  const g = e.chGoal();
+  assert.equal(g.step.id, "gate");
+  assert.ok(/东边的路口/.test(g.step.text));
+  assert.ok(g.lines.length === 1 && /只上下/.test(g.lines[0].text));
+  // 守住了：人还没住下，回到没做完的那一段，第一章不算做完
+  e.ch.gate = { ...e.ch.gate, state: "won", live: false, wonDay: e.s.day };
+  assert.equal(e.chStage(), before);
+  assert.equal(e.chDone(1), false);
+  // 没守住：也回到没做完的那一段，等下一个夜里
+  e.ch.gate = { ...e.ch.gate, state: "omen", day: e.s.day + 1 };
+  assert.equal(e.chStage(), before);
+  // 连第一段都没做完的，这一夜也一样
+  const fresh = game().e;
+  assert.equal(fresh.chStage(), "settle");
+  fresh.ch.gate.state = "tonight";
+  assert.equal(fresh.chStage(), "gate");
+  assert.equal(fresh.chGoal().step.id, "gate");
+});
+
+test("第一章的地图上不摆后面几章的人和东西；还摆着的几样，按 E 说的是它自己的事", () => {
+  const { e, toasts } = game();
+  pastAct2(e);
+  const below = Object.getPrototypeOf(Engine.prototype).assignRegion;
+  // 下面各层照老规矩摆：过节的广场、江伯都在
+  below.call(e);
+  const old = e.objects.map((o) => o.type);
+  assert.ok(old.includes("seasonPlaza") && old.includes("seasonJiang"), old.join(","));
+  // 第一章：拿掉
+  e.assignRegion();
+  for (const o of e.objects) assert.ok(!CH1_HIDDEN.includes(o.type), o.type + " " + o.name);
+  for (const t of ["home", "well", "sign", "exit", "pond"]) assert.ok(e.objects.some((o) => o.type === t), t + " 还在");
+  // 第二章起照常摆
+  e.ch.n = 2;
+  e.assignRegion();
+  assert.ok(e.objects.some((o) => o.type === "seasonPlaza"));
+  e.ch.n = 1;
+  e.assignRegion();
+  // 还摆着的：路口说路，集市工地说集市，别的才是那一句
+  const said = (data) => {
+    toasts.length = 0;
+    e.emit("menu", data);
+    return toasts.map((x) => x.t).join("|");
+  };
+  assert.equal(said({ menu: "sx", view: "gate" }), "这条路第二章再走。");
+  assert.equal(said({ menu: "camp", tab: "projects" }), "集市还在搭，第二章接着建。");
+  assert.equal(said({ menu: "outpost", view: "plaza" }), "这里第二章再用。");
+  // “第一次见到”一个人的小卡：不提送礼和没有的那一页
+  assert.equal(e.chSay("送对了礼物信任涨得快；喜欢什么写在“人”那一页"), "");
+  assert.equal(e.chSay("和他说话：他是谁、在干什么、喜欢什么"), "和他说话：他是谁、在干什么");
+});
+
+test("第一章收下巨型作物：不提后面才有的收获展", () => {
+  const { e, toasts } = game();
+  e.toast("收下了巨型萝卜：萝卜 ×12、巨型萝卜 ×1。巨型的那一个能拿去收获展（一棵顶一组）。", "gold");
+  const t = toasts[toasts.length - 1].t;
+  assert.ok(!/收获展/.test(t), t);
+  assert.ok(/卖个好价钱/.test(t), t);
 });
 
 test("守住了、阿禾也接回来了，第一章才算做完：给一次赏，放结尾的过场", () => {

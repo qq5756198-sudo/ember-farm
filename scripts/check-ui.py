@@ -53,7 +53,9 @@ MEASURE = r"""
       out.off.push(name(el) + " [" + [L, T, R, B].map(Math.round).join(",") + "]");
     }
   }
-  const blocks = ["#topbar", "#alerts", "#goal", "#hands", "#dock", "#hint", "#bark", "#tip", "#banner", "#bossbar", "#coach", "#respop"].map((s) => document.querySelector(s)).filter((el) => el && seen(el) && el.getBoundingClientRect().width > 0);
+  // 左上角的消息：整页、小卡、过场开着的时候它不在常驻那一层上（那几种由 scripts/check-toasts.py 量），只在画面上和常驻的块比
+  const covered = ["#page", "#card", "#scene", "#drawer"].some((q) => { const el = document.querySelector(q); return el && !el.hidden; });
+  const blocks = ["#topbar", "#alerts", "#goal", "#hands", "#dock", "#hint", "#bark", "#tip", "#banner", "#bossbar", "#coach", "#respop"].concat(covered ? [] : ["#toasts"]).map((s) => document.querySelector(s)).filter((el) => el && seen(el) && el.getBoundingClientRect().width > 0);
   for (let i = 0; i < blocks.length; i++) for (let j = i + 1; j < blocks.length; j++) {
     const a = blocks[i].getBoundingClientRect(), b = blocks[j].getBoundingClientRect();
     const w = Math.min(a.right, b.right) - Math.max(a.left, b.left), h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
@@ -186,6 +188,17 @@ async def saved(run, label):
     m = await run.measure(label + "·画面")
     if m["persistent"] > 7:
         run.bad.append("%s：常驻的块 %d 个，多于 7" % (label, m["persistent"]))
+    # 队友说话的那一条、左上角的消息：平常走页面时正好不在。摆上最长的几句再量一遍
+    # （说话的那一条由游戏自己每一帧摆位置：跟着左下角目标框的高矮走）
+    await run.pg.evaluate("""() => {
+      const b = document.querySelector('#bark');
+      b.innerHTML = '<div style="width:40px;height:40px;flex:none"></div><p>铁锹：仓库见底了。我少吃一顿没事，阿禾不行。再长一点的一句，看它折成两行以后压不压下面的目标框。</p>';
+      b.hidden = false;
+      document.querySelector('#toasts').innerHTML = ['修好了破布护手：耐久上限 12（第 2 次）', '破布头巾坏了：没有保护了，回农场修', '第1轮防守胜利 · 明天休整，下一轮3天后', '先让这片地长出口粮。左下角写着眼下要做的事，按 J 看手记。'].map((x, i) => `<div class="toast ${i % 2 ? 'warn' : 'gold'}">${x}</div>`).join('');
+    }""")
+    await run.pg.wait_for_timeout(300)
+    await run.measure(label + "·画面（队友说话、四条消息）")
+    await run.pg.evaluate("() => { document.querySelector('#bark').hidden = true; document.querySelector('#toasts').innerHTML = ''; }")
     # 顶上每个资源：点开都有明细
     n = len(await run.pg.query_selector_all('#res [data-act="res"]'))
     for i in range(n):

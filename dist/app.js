@@ -428,7 +428,7 @@ function updateHUD() {
   if (barkUntil && now > barkUntil) {
     $("#bark").hidden = true;
     barkUntil = 0;
-  }
+  } else if (!$("#bark").hidden) placeBark();
   if (tip && now > tipUntil) {
     tip = null;
     $("#tip").hidden = true;
@@ -458,11 +458,19 @@ function showRes(id, el) {
   pop.style.left = Math.max(12, Math.min(innerWidth / z - 352, (rect ? rect.left : 12) / z)) + "px";
   hudReset();
 }
+// 队友说话的那一条停在左下角目标框的上面：目标框有高有矮（备战那一段列着五样），跟着它走，不压着它
+function placeBark() {
+  const g = $("#goal");
+  if (!g || g.hidden) return ($("#bark").style.bottom = "12px");
+  const z = Number(getComputedStyle(document.documentElement).getPropertyValue("--z")) || 1;
+  $("#bark").style.bottom = Math.round(g.getBoundingClientRect().height / z) + 20 + "px";
+}
 function showBark(who, text) {
   const r = who === "tieqiao" ? null : engine.resident?.(who);
   const el = $("#bark");
   el.innerHTML = barkHtml(who, who === "tieqiao" ? "helper" : r?.workRole || r?.role || "", text);
   el.hidden = false;
+  placeBark();
   paint(el);
   barkUntil = Date.now() + 7000;
   audio.ui("gold");
