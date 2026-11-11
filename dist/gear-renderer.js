@@ -8,7 +8,7 @@ import { gearLook, heldSprite, swingPose, meleeKind, trapSprite, fireSprite, gea
 import { RULES, RANGED, MELEE, ARMOR } from "./gear-data.js";
 import { LOOK41 } from "./pixel-kit.js";
 import { FIRE, nightness } from "./pixel-light.js";
-import { keyLabel } from "./farlands-ui.js";
+import { keyLabel } from "./farlands-data.js";
 
 const SWING_TIME = 0.24;
 const lunge = RULES.lunge,

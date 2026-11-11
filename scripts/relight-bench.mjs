@@ -1305,6 +1305,7 @@ function life(seed) {
       if (process.env.SHOW) console.error("day", today, "walls", Object.keys(X.walls).join(","), "lists", e.rl.done.length, "old", e.rl.old.length, "pages", e.rl.pages.length, "deep", e.rl.tunnel.deepest, "cores", e.rl.cores.join(","), "money", Math.round(e.s.money), "region", e.s.region);
       // 存档、读回
       const text = e.serialize();
+      if (process.env.SAVE_AT && Number(process.env.SAVE_AT.split(':')[0]) === today) FS.writeFileSync(process.env.SAVE_AT.split(':').slice(1).join(':'), text);
       if (/NaN|undefined/.test(text)) {
         X.errors.push("day " + today + ": save text has NaN/undefined");
         // BAD_DUMP=文件名：第一份有问题的存档写出来查
